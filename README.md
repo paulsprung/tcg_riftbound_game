@@ -1,0 +1,113 @@
+# Riftbound Simulator
+
+A fan-made simulator for learning and playing Riot Games' **Riftbound** TCG:
+open booster packs, collect every card, inspect them in 3D with foil effects
+that react to your mouse or your phone's tilt, and (next) build decks and
+play.
+
+```bash
+npm install
+npm run dev            # http://localhost:5173
+```
+
+## What's in it
+
+| | |
+|---|---|
+| **Open packs** | Every booster set, Origins to Radiance. Packs follow each set's real slot layout. Swipe or tap to tear, then flip the cards one at a time; good pulls hum before you flip them and burst when you do. |
+| **Collection** | Everything you pull, per set, with completion, copy and foil counts. Saved in your browser (localStorage). |
+| **Card database** | All 1,541 cards with search and filters for set, rarity, type, domain and printing. |
+| **Inspect** | Click any card: a 3D card with thickness, a moving shadow, foil and glare, gyroscope tilt on phones, and a tap to flip it over. |
+| **Rules** | Links to Riot's official Rules Hub. The interactive guide comes with the play table. |
+
+## Card data
+
+`public/data/cards.json` is a snapshot built by:
+
+```bash
+npm run fetch-cards               # behind a proxy: NODE_USE_ENV_PROXY=1 npm run fetch-cards
+npm run fetch-cards -- --raw      # re-normalise data/raw/ without the network
+```
+
+It merges two sources (see `src/data/normalize.ts`):
+
+- **Riot's official card gallery** (`content.publishing.riotgames.com`) is the
+  primary source: every retail set, including a new set's preview cards before
+  release (that is how Radiance is in here early).
+- **[Riftcodex](https://riftcodex.com)**, a free community API, adds the
+  promo sets, flavour text, supertypes and explicit alt-art, overnumbered and
+  signature flags.
+
+Card art is never copied into the repo. The app loads it from Riot's image
+server, which resizes on request, so grids load small thumbnails.
+
+Re-run `fetch-cards` when a set's previews update or a new set arrives. Then
+add the set to `BOOSTER_SETS` in `src/pack/packConfig.ts` (wrapper colours,
+cover champion, slot layout).
+
+## Pack contents and odds
+
+Slot layouts come from Riot's set overview articles:
+
+- **Origins, Spiritforged:** 7 Common, 3 Uncommon, 1 Foil, 2 Rare-or-better,
+  1 Rune/Token.
+- **Unleashed, Vendetta, Radiance:** 7 Common, 3 Uncommon, 1 Foil, 1 Rare/Epic,
+  1 Showcase slot (Rare, Epic, Alt Art, Overnumbered, Signature or Ultimate),
+  1 Rune/Token.
+
+**Riot does not publish exact odds.** The chase weights in `packConfig.ts` are
+estimates from Riot's wording and community box openings. Each one is
+documented next to its value, so they are easy to correct.
+
+## Foil effects
+
+The foil layers are built from Riot's descriptions and from photos of real
+cards:
+
+| Printing | Finish |
+|---|---|
+| Common / Uncommon | Plain card stock, soft gloss |
+| Foil-slot card | Smooth prismatic sheen over the whole face |
+| Rare / Epic (always foil) | The same, stronger; epics add glitter |
+| Alt art / Overnumbered | Rainbow holo plus **etched lines that trace the card's own linework**: an SVG edge filter run over the art, lit in a band that sweeps across as you tilt |
+| Signature | Etched holo with gold glints |
+| Ultimate (Radiance's *Packed Amphitheater*) | Everything, plus a cracked-ice field |
+
+The header's **Foil** switch toggles between *Subtle*, the warmer English
+printing, and *Vivid*, the stronger rainbow of the Chinese printing.
+
+The tilt engine (`src/card/tilt.ts`) comes from the birthday-card project:
+spring physics, gyroscope with iOS permission handling, and an animation loop
+that sleeps when nothing moves, so a grid of 1,500 cards costs nothing until
+you touch one.
+
+The card images are flat, so there is no true parallax depth (the character
+popping out of the frame). That would need a per-card depth map rendered in
+WebGL, which is listed below as a possible upgrade.
+
+## Roadmap
+
+1. ~~Card data, pack opening, foil effects, collection~~
+2. Rules guide inside the app: turn structure, runes, battlefields, scoring,
+   keyword glossary
+3. Deck builder: Legend, Champion, 40-card main deck, 12 runes, 3 battlefields,
+   with legality checks against the Core Rules
+4. Manual play table: zones, drag-and-drop, score tracking, two players
+5. Rules engine: phases, combat and keywords, then card abilities set by set
+6. Computer opponent
+7. Optional: depth-map parallax for the inspect view
+
+## Scripts
+
+| | |
+|---|---|
+| `npm run dev` | Dev server |
+| `npm run build` | Typecheck and build to `dist/`, deployable to any static host (Cloudflare Pages, GitHub Pages) |
+| `npm test` | Unit tests (normaliser, pack generator) |
+| `npm run typecheck` | TypeScript only |
+| `npm run fetch-cards` | Refresh the card snapshot |
+
+---
+
+Fan project, not affiliated with or endorsed by Riot Games. Riftbound, League
+of Legends and all card art are © Riot Games.

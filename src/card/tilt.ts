@@ -11,6 +11,7 @@
  *   --px/--py   pointer over the card, 0..100
  *   --bgx/--bgy pointer remapped to a narrower travel for the foil
  *   --pfc       0 at the centre, 1 out at the corners; drives intensity
+ *   --on        0 resting ... 1 being handled; foil wakes up with it
  *
  * The animation loop only runs while something is moving, so a grid of a
  * thousand cards costs nothing until you touch one.
@@ -43,7 +44,7 @@ export function createTilt(scene: HTMLElement, opts: TiltOptions = {}) {
   const MIN_FRAME = coarse ? 1000 / 30 : 0;
 
   const s = {
-    tx: 0, ty: 0, vx: 0, vy: 0, sc: 1, vsc: 0, px: 50, py: 50,
+    tx: 0, ty: 0, vx: 0, vy: 0, sc: 1, vsc: 0, px: 50, py: 50, on: 0,
     wx: 0, wy: 0, wpx: 50, wpy: 50,
   };
   let hovering = false;
@@ -62,7 +63,11 @@ export function createTilt(scene: HTMLElement, opts: TiltOptions = {}) {
     scene.style.setProperty(name, value);
   };
 
+  let gyroLive = false;
+  const engaged = () => hovering || idle || gyroLive;
+
   const settled = () =>
+    Math.abs(s.on - (engaged() ? 1 : 0)) < 0.01 &&
     Math.abs(s.tx - s.wx) + Math.abs(s.ty - s.wy) + Math.abs(s.vx) + Math.abs(s.vy) < 0.002 &&
     Math.abs(s.sc - (hovering ? hoverScale : 1)) < 0.001 &&
     Math.abs(s.px - s.wpx) + Math.abs(s.py - s.wpy) < 0.2;
@@ -88,6 +93,7 @@ export function createTilt(scene: HTMLElement, opts: TiltOptions = {}) {
         [s.sc, s.vsc] = step(s.sc, s.vsc, hovering ? hoverScale : 1, 0.1, 0.75);
         s.px += (s.wpx - s.px) * 0.17;
         s.py += (s.wpy - s.py) * 0.17;
+        s.on += ((engaged() ? 1 : 0) - s.on) * 0.12;
       }
       const pfc = clamp(Math.hypot((s.px - 50) / 50, (s.py - 50) / 50), 0, 1);
       put('--tx', s.tx.toFixed(3));
@@ -98,6 +104,7 @@ export function createTilt(scene: HTMLElement, opts: TiltOptions = {}) {
       put('--bgx', (37 + s.px * 0.26).toFixed(1));
       put('--bgy', (33 + s.py * 0.34).toFixed(1));
       put('--pfc', pfc.toFixed(2));
+      put('--on', s.on.toFixed(2));
     }
 
     if (!idle && !hovering && settled()) { running = false; return; }
@@ -166,6 +173,7 @@ export function createTilt(scene: HTMLElement, opts: TiltOptions = {}) {
     s.wpx = 50 + s.wx * 50;
     s.wpy = 50 + s.wy * 50;
     hovering = false;
+    gyroLive = true;
     lastInput = performance.now();
     wake();
   }
