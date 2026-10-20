@@ -136,7 +136,7 @@ export function PackOpening({ set, cards, pack, style, onInspect, onExit }: Prop
           <div className="stack" style={{ width: stageW }}>
             {pulls.slice(index + 1, index + 4).map((p, i) => (
               <div key={p.card.id + i} className="stack__under" style={{ '--i': i + 1 } as CSSProperties}>
-                <CardBack />
+                <CardBack rune={/rune/i.test(p.card.type)} />
               </div>
             ))}
             <div

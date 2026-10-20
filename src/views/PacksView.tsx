@@ -4,6 +4,7 @@ import { useCollection } from '../collection/store.ts';
 import type { CardDb } from '../data/types.ts';
 import { BOOSTER_SETS } from '../pack/packConfig.ts';
 import { PackOpening } from '../pack/PackOpening.tsx';
+import { packArt } from '../data/media.ts';
 import { heroCard, PackWrapper } from '../pack/PackWrapper.tsx';
 
 export function PacksView({ db, onInspect }: { db: CardDb; onInspect: (t: InspectTarget) => void }) {
@@ -36,7 +37,9 @@ export function PacksView({ db, onInspect }: { db: CardDb; onInspect: (t: Inspec
       <div className="pack-shelf">
         {sets.map((s) => (
           <div key={s.id} className="pack-shelf__item">
-            <PackWrapper set={s.info!} style={s.style} hero={heroCard(s.cards, s.style)} width={190}
+            {/* Same height for every pack; the real wrappers differ a little in width. */}
+            <PackWrapper set={s.info!} style={s.style} hero={heroCard(s.cards, s.style)}
+              width={Math.round(312 * (packArt(s.id)?.aspect ?? 1 / 1.72))}
               onClick={() => setOpenSet(s.id)} />
             <div className="pack-shelf__label">
               <strong>{s.info!.name}</strong>

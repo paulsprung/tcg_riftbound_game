@@ -1,4 +1,31 @@
 {
-  "packs": {},
-  "cardBack": null
+  "packs": {
+    "rad": {
+      "file": "pack-rad.webp",
+      "tear": 0.052,
+      "aspect": 0.6111
+    },
+    "ven": {
+      "file": "pack-ven.webp",
+      "tear": 0.0515,
+      "aspect": 0.6133
+    },
+    "unl": {
+      "file": "pack-unl.webp",
+      "tear": 0.054,
+      "aspect": 0.61
+    },
+    "sfd": {
+      "file": "pack-sfd.webp",
+      "tear": 0.053,
+      "aspect": 0.5922
+    },
+    "ogn": {
+      "file": "pack-ogn.webp",
+      "tear": 0.053,
+      "aspect": 0.5924
+    }
+  },
+  "cardBack": "card-back.webp",
+  "cardBackRune": "card-back-rune.webp"
 }

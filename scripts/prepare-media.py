@@ -1,67 +1,35 @@
 #!/usr/bin/env python3
-"""Downloads and crops the product imagery the app ships in public/media/.
+"""Encodes the product imagery the app ships in public/media/.
 
-    python3 scripts/prepare-media.py          (needs Pillow: pip install pillow)
+    python3 scripts/prepare-media.py <dir>      (needs Pillow: pip install pillow)
 
-Reads scripts/media.json:
+<dir> holds the cleaned-up PNG cut-outs: pack-<set>.png, card-back.png and
+optionally card-back-rune.png. Where each one comes from, how it was cropped
+and what was retouched is recorded in scripts/media-sources.json; the packs
+that stand in front of a display box in Riot's renders needed their
+overlapping edge rebuilt by hand, so the cut-outs are the source of truth
+rather than something this script can recreate from the URLs.
 
-    {
-      "packs": {
-        "<set id>": {"url": "...", "crop": [x, y, w, h] | null, "tear": 0.12,
-                     "page": "<where Riot shows it>"}
-      },
-      "cardBack": {"url": "...", "crop": [x, y, w, h] | null, "page": "..."}
-    }
-
-Crop boxes are in pixels of the full-size source. Writes public/media/
-pack-<set>.webp and card-back.webp, plus src/data/media.json, which
+Writes public/media/*.webp plus src/data/media.json, which
 src/data/media.ts reads (file names, tear lines, aspect ratios).
 
-All images are Riot Games' official product shots, used under Riot's fan
-content policy; they are not covered by this project's licence.
+All images are Riot Games' official product renders and print artwork,
+used under Riot's fan content policy; they are not covered by this
+project's licence.
 """
-import io
 import json
 import os
 import sys
-import urllib.request
 
-from PIL import Image, ImageDraw
+from PIL import Image
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SPEC = os.path.join(ROOT, 'scripts', 'media.json')
+SOURCES = os.path.join(ROOT, 'scripts', 'media-sources.json')
 OUT = os.path.join(ROOT, 'public', 'media')
 MANIFEST = os.path.join(ROOT, 'src', 'data', 'media.json')
 
-PACK_HEIGHT = 900      # px; packs show at most ~560 CSS px tall
-BACK_WIDTH = 744       # same as the card scans
-CARD_ASPECT = 744 / 1039
-
-
-def fetch(url):
-    # The image CDN converts on request; ask for a lossless PNG so the crop
-    # is taken from clean pixels and alpha survives.
-    sep = '&' if '?' in url else '?'
-    full = url if 'fm=' in url else f'{url}{sep}fm=png'
-    req = urllib.request.Request(full, headers={'User-Agent': 'riftbound-simulator/prepare-media'})
-    with urllib.request.urlopen(req, timeout=120) as res:
-        return Image.open(io.BytesIO(res.read())).convert('RGBA')
-
-
-def crop(img, box):
-    if not box:
-        return img
-    x, y, w, h = box
-    return img.crop((x, y, x + w, y + h))
-
-
-def round_corners(img, radius_frac=0.047):
-    r = round(img.width * radius_frac)
-    mask = Image.new('L', img.size, 0)
-    ImageDraw.Draw(mask).rounded_rectangle((0, 0, img.width - 1, img.height - 1), r, fill=255)
-    alpha = Image.composite(img.getchannel('A'), Image.new('L', img.size, 0), mask)
-    img.putalpha(alpha)
-    return img
+PACK_HEIGHT = 900      # px; a pack shows at most ~560 CSS px tall
+BACK_SIZE = (744, 1039)  # same as the card scans
 
 
 def save(img, name):
@@ -70,31 +38,28 @@ def save(img, name):
     print(f'  {name}: {img.width}x{img.height}, {os.path.getsize(path) // 1024} KB')
 
 
-def main():
-    spec = json.load(open(SPEC))
+def main(src_dir):
+    sources = json.load(open(SOURCES))
     os.makedirs(OUT, exist_ok=True)
-    manifest = {'packs': {}, 'cardBack': None}
+    manifest = {'packs': {}, 'cardBack': None, 'cardBackRune': None}
 
-    for set_id, p in spec.get('packs', {}).items():
-        img = crop(fetch(p['url']), p.get('crop'))
+    for set_id, meta in sources['packs'].items():
+        path = os.path.join(src_dir, f'pack-{set_id}.png')
+        if not os.path.exists(path):
+            print(f'  (no {os.path.basename(path)}; {set_id} keeps the drawn wrapper)')
+            continue
+        img = Image.open(path).convert('RGBA')
         if img.height > PACK_HEIGHT:
             img = img.resize((round(img.width * PACK_HEIGHT / img.height), PACK_HEIGHT), Image.LANCZOS)
         name = f'pack-{set_id}.webp'
         save(img, name)
-        manifest['packs'][set_id] = {
-            'file': name,
-            'tear': p.get('tear', 0.12),
-            'aspect': round(img.width / img.height, 4),
-        }
+        manifest['packs'][set_id] = {'file': name, 'tear': meta['tear'], 'aspect': round(img.width / img.height, 4)}
 
-    back = spec.get('cardBack')
-    if back:
-        img = crop(fetch(back['url']), back.get('crop'))
-        # Exactly card-shaped, so it lines up with the fronts when it flips.
-        h = round(BACK_WIDTH / CARD_ASPECT)
-        img = round_corners(img.resize((BACK_WIDTH, h), Image.LANCZOS))
-        save(img, 'card-back.webp')
-        manifest['cardBack'] = 'card-back.webp'
+    for key, file in (('cardBack', 'card-back'), ('cardBackRune', 'card-back-rune')):
+        path = os.path.join(src_dir, f'{file}.png')
+        if os.path.exists(path):
+            save(Image.open(path).convert('RGBA').resize(BACK_SIZE, Image.LANCZOS), f'{file}.webp')
+            manifest[key] = f'{file}.webp'
 
     with open(MANIFEST, 'w') as f:
         json.dump(manifest, f, indent=2)
@@ -103,4 +68,6 @@ def main():
 
 
 if __name__ == '__main__':
-    sys.exit(main())
+    if len(sys.argv) != 2:
+        sys.exit(__doc__)
+    main(sys.argv[1])

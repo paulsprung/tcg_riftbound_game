@@ -37,6 +37,7 @@
 .pk__body { filter: drop-shadow(0 18px 30px rgba(0, 0, 0, .5)); }
 .pk.is-torn .pk__body { filter: none; }
 .pk__piece--top {
+  z-index: 1;
   clip-path: var(--clip-top);
   transform: translate(calc(var(--pull, 0) * 10px), calc(var(--pull, 0) * -8px)) rotate(calc(var(--pull, 0) * -4deg));
   transform-origin: 0% 16%;
@@ -155,6 +156,7 @@
 }
 .pack-shelf__item { display: grid; justify-items: center; gap: 14px; }
 .pack-shelf__label { display: grid; justify-items: center; gap: 2px; text-align: center; font-size: 14px; }
+.pack-shelf__label strong { font: 800 20px/1.1 var(--font-display); text-transform: uppercase; letter-spacing: .02em; }
 
 /* ------------------------------------------------------------ opening -- */
 
@@ -235,7 +237,8 @@
 @keyframes spin { to { rotate: 360deg; } }
 
 .reveal-caption { display: grid; justify-items: center; gap: 2px; min-height: 42px; text-align: center; }
-.reveal-caption strong { font: 700 15px/1.2 var(--font-display); letter-spacing: .08em; text-transform: uppercase; }
+.reveal-caption strong { font: 800 16px/1.2 var(--font-display); letter-spacing: .06em; text-transform: uppercase; }
+.reveal-caption span:not(.muted) { font: 800 18px/1.1 var(--font-card); }
 
 .pulled {
   display: grid;

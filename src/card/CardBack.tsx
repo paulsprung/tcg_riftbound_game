@@ -1,12 +1,14 @@
-import { CARD_BACK } from '../data/media.ts';
+import { CARD_BACK, CARD_BACK_RUNE } from '../data/media.ts';
 
-/** The real Riftbound card back when the app ships it (public/media), else
-    a drawn stand-in: a gold rune sigil on deep indigo. */
-export function CardBack() {
-  if (CARD_BACK) {
+/** The real Riftbound card back when the app ships it (public/media): the
+    navy main-deck back, or the white rune-deck back. Otherwise a drawn
+    stand-in: a gold rune sigil on deep indigo. */
+export function CardBack({ rune = false }: { rune?: boolean }) {
+  const src = rune ? CARD_BACK_RUNE : CARD_BACK;
+  if (src) {
     return (
       <div className="cb cb--real">
-        <img className="cb__img" src={CARD_BACK} alt="" draggable={false} />
+        <img className="cb__img" src={src} alt="" draggable={false} />
       </div>
     );
   }

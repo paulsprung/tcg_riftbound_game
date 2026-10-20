@@ -108,7 +108,7 @@ export function HoloCard({
             <span className="hc__fx hc__glare" aria-hidden />
           </div>
           <div className="hc__face hc__face--back">
-            <CardBack />
+            <CardBack rune={/rune/i.test(card.type)} />
             <span className="hc__fx hc__band" aria-hidden />
             <span className="hc__fx hc__glare" aria-hidden />
           </div>

@@ -111,6 +111,8 @@ async function main() {
   process.stdout.write('\n');
 
   // 2. Bundles: covers first, then each set in ~48-card files ----------------
+  // The pack-cover champions get a small bundle of their own, so a drawn
+  // wrapper (a set without a product shot) never waits on a set bundle.
   const covers = new Set(
     BOOSTER_SETS.map((b) => heroCard(db.cards.filter((c) => c.setId === b.id), b.style)?.id).filter(Boolean) as string[],
   );

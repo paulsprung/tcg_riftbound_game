@@ -19,8 +19,11 @@ function jagged(seed: number, tear = TEAR_LINE) {
     pts.push([(i / n) * 100, tear * 100 + j]);
   }
   const fmt = (p: [number, number]) => `${p[0].toFixed(2)}% ${p[1].toFixed(2)}%`;
+  // The top piece reaches a little past the line and sits above the bottom
+  // one, so the two halves overlap and no seam shows before it is torn.
+  const lower = (p: [number, number]): [number, number] => [p[0], p[1] + 0.8];
   return {
-    top: `polygon(0% 0%, 100% 0%, ${[...pts].reverse().map(fmt).join(', ')})`,
+    top: `polygon(0% 0%, 100% 0%, ${[...pts].reverse().map(lower).map(fmt).join(', ')})`,
     bottom: `polygon(${pts.map(fmt).join(', ')}, 100% 100%, 0% 100%)`,
   };
 }

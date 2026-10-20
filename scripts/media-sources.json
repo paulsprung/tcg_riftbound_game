@@ -1,0 +1,46 @@
+{
+  "note": "Provenance of public/media. All images are Riot Games' official product renders and print artwork. Crop boxes are x,y,w,h in pixels of the full-size source. tear = where the crimped top seal ends, as a fraction of the cut-out's height.",
+  "packs": {
+    "rad": {
+      "source": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/consumer_products_live/2cad464988d322563ae71a6b28c765e5c54d32ec-2560x2560.png?accountingTag=RB",
+      "page": "https://merch.riotgames.com/en-us/product/riftbound-radiance-booster-display/",
+      "crop": [1717, 893, 739, 1210],
+      "tear": 0.052,
+      "retouch": "Transparent render; the pack stands in front of the booster display. Left 5 columns recoloured from the pack's own edge where the box's gold trim showed through; top-left corner alpha mirrored from the top-right."
+    },
+    "ven": {
+      "source": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/news_live/9408af9a44e928cde55d1f95f791cf96147e607a-3600x2025.jpg?accountingTag=RB",
+      "page": "https://playriftbound.com/en-us/news/announcements/the-vendetta-overview/",
+      "crop": [2238, 712, 762, 1243],
+      "tear": 0.0515,
+      "retouch": "Opaque JPG on white (Riot has no transparent single-pack render for Vendetta): alpha matted from the white background at the edges and hand-cut where the display box is behind the left edge."
+    },
+    "unl": {
+      "source": "https://cdn.sanity.io/images/dsfx7636/consumer_products_live/aa46ce39877fd9798ad45022c5ebc753f9d4e374-2560x2560.png",
+      "page": "https://merch.riotgames.com/en-us/product/riftbound-unleashed-booster-display/",
+      "crop": [1697, 776, 742, 1216],
+      "tear": 0.054,
+      "retouch": "Transparent render; left edge rebuilt as a sub-pixel mask where the pack overlaps the display box."
+    },
+    "sfd": {
+      "source": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/consumer_products_live/84d112ee2796307fd629bf7f603914e5e86ca337-2560x2560.png?accountingTag=RB",
+      "page": "https://merch.riotgames.com/en-us/product/riftbound-spiritforged-booster-display/",
+      "crop": [622, 166, 1319, 2228],
+      "tear": 0.053,
+      "retouch": "Transparent render of the pack alone; no retouching."
+    },
+    "ogn": {
+      "source": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/news_live/2d2bf39bb3b1c65497866b93f17c12e72c509efe-844x844.png?accountingTag=RB",
+      "page": "https://playriftbound.com/en-us/",
+      "crop": [204, 54, 436, 736],
+      "tear": 0.053,
+      "retouch": "Transparent render of the pack alone; no retouching."
+    }
+  },
+  "cardBack": {
+    "source": "https://cmsassets.rgpub.io/sanity/files/dsfx7636/news_live/3694623875b098a3d0daed824e242b3a0e68dae6.pdf",
+    "page": "https://playriftbound.com/en-us/news/rules-and-releases/how-to-play-get-started/",
+    "crop": "PDF page 5, rendered at 1200 dpi: main deck back at 4536,6267,2976,4156; rune deck back at 1205,6267,2976,4156",
+    "retouch": "Vector artwork from Riot's How to Play PDF. The 10 px page-white band at the very edge repainted in the card's background colour; rounded corners masked at the PDF's own 8.504 pt radius."
+  }
+}

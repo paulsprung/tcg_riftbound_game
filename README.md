@@ -45,6 +45,30 @@ Re-run `fetch-cards` when a set's previews update or a new set arrives. Then
 add the set to `BOOSTER_SETS` in `src/pack/packConfig.ts` (wrapper colours,
 cover champion, slot layout).
 
+## Packaging, card backs and type
+
+- **Booster packs** are Riot's official product renders, one per set, cut
+  out from the Riot Games Store and playriftbound.com images. The pack tears
+  along its real crimp line.
+- **Card backs** are the real ones: the navy main-deck back and the white
+  rune-deck back, from the vector artwork in Riot's How to Play PDF. Rune
+  cards flip over from the white back.
+- Both live in `public/media/`. Where each image comes from, how it was
+  cropped and what was retouched is in `scripts/media-sources.json`, and
+  `python3 scripts/prepare-media.py <dir>` re-encodes the cut-outs.
+- **Type.** Riftbound's own faces are commercial and licensed to Riot:
+  Beaufort for LOL and TT Norms Pro Compact on Riot's site, and Arpona and
+  Lorimer No 2 on the printed cards. They are not copied or hotlinked. The
+  app uses the closest free Google Fonts, picked by side-by-side renders
+  against the real text:
+
+  | Riftbound | Here | Used for |
+  |---|---|---|
+  | Beaufort for LOL | Faustina 800 | Headings and set names, in capitals |
+  | TT Norms Pro Compact | DM Sans | Interface and body text |
+  | Arpona Bold | Proza Libre 800 | Card names and numbers |
+  | Lorimer No 2 | Instrument Sans, 75% width | Rules text, keyword chips, type lines |
+
 ## Pack contents and odds
 
 Slot layouts come from Riot's set overview articles:
