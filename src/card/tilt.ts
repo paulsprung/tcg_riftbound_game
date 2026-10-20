@@ -17,12 +17,17 @@
  * thousand cards costs nothing until you touch one.
  */
 
+/** The same values the CSS variables carry, as numbers. */
+export interface TiltState { tx: number; ty: number; px: number; py: number; pfc: number; on: number }
+
 export interface TiltOptions {
   /** Keep gently swaying when nobody is touching it. */
   idle?: boolean;
   /** Follow the phone's tilt (asks for permission on iOS on first tap). */
   gyro?: boolean;
   hoverScale?: number;
+  /** Called with every frame the engine writes, e.g. to drive a WebGL foil. */
+  onFrame?: (s: TiltState) => void;
 }
 
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
@@ -36,7 +41,7 @@ function step(cur: number, vel: number, target: number, k: number, d: number): [
 }
 
 export function createTilt(scene: HTMLElement, opts: TiltOptions = {}) {
-  const { idle = false, gyro = false, hoverScale = 1.04 } = opts;
+  const { idle = false, gyro = false, hoverScale = 1.04, onFrame } = opts;
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   // Every variable repaints the foil. On a phone, 30 writes a second look
   // the same as 60 and halve the work.
@@ -105,6 +110,7 @@ export function createTilt(scene: HTMLElement, opts: TiltOptions = {}) {
       put('--bgy', (33 + s.py * 0.34).toFixed(1));
       put('--pfc', pfc.toFixed(2));
       put('--on', s.on.toFixed(2));
+      onFrame?.({ tx: s.tx, ty: s.ty, px: s.px, py: s.py, pfc, on: s.on });
     }
 
     if (!idle && !hovering && settled()) { running = false; return; }

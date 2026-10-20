@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { Card } from '../data/types.ts';
-import { useCardImage } from '../data/images.ts';
+import { isReadable, useCardImage } from '../data/images.ts';
 import type { Finish } from '../pack/generate.ts';
 import { CardBack } from './CardBack.tsx';
+import { HoloCanvas, type HoloCanvasHandle } from './HoloCanvas.tsx';
 import { createTilt } from './tilt.ts';
 import './holo.css';
 
@@ -23,6 +24,9 @@ export interface HoloCardProps {
   upright?: boolean;
   /** Width to request from the image server. */
   imageWidth?: number;
+  /** Draw the foil with the WebGL shader (big views only; falls back to CSS
+      when WebGL or a same-origin image is not available). */
+  gl?: boolean;
   onClick?: () => void;
   className?: string;
   style?: CSSProperties;
@@ -32,19 +36,22 @@ const ETCHED: Finish[] = ['etched', 'signature', 'ultimate'];
 
 export function HoloCard({
   card, finish, width, faceDown = false, tilt = 'hover', gyro = false, thick = false,
-  upright = false, imageWidth, onClick, className = '', style,
+  upright = false, imageWidth, gl = false, onClick, className = '', style,
 }: HoloCardProps) {
   const scene = useRef<HTMLDivElement>(null);
+  const holo = useRef<HoloCanvasHandle>(null);
   const [loaded, setLoaded] = useState(false);
   const [broken, setBroken] = useState(false);
+  // null: not tried yet; true: the shader draws the card; false: CSS foil
+  const [glOk, setGlOk] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (tilt === 'off' || !scene.current) return;
-    const t = createTilt(scene.current, { idle: tilt === 'idle', gyro });
+    const t = createTilt(scene.current, { idle: tilt === 'idle', gyro, onFrame: (s) => holo.current?.update(s) });
     return () => t.destroy();
   }, [tilt, gyro]);
 
-  useEffect(() => { setLoaded(false); setBroken(false); }, [card.id]);
+  useEffect(() => { setLoaded(false); setBroken(false); setGlOk(null); }, [card.id]);
 
   const landscape = card.orientation === 'landscape';
   const sideways = landscape && !upright;
@@ -53,6 +60,8 @@ export function HoloCard({
   const src = image.src;
   const failed = broken || image.failed;
   const imgClass = `hc__img${sideways ? ' hc__img--sideways' : ''}`;
+  const useGl = gl && glOk !== false && !!src && isReadable(src);
+  const glShown = useGl && glOk === true;
 
   return (
     <div
@@ -94,18 +103,26 @@ export function HoloCard({
             ) : (
               <div className="hc__loading" aria-hidden />
             )}
-            {ETCHED.includes(finish) && loaded && (
+            {useGl && (
+              <HoloCanvas ref={holo} src={src} finish={finish} rarity={card.rarity}
+                className={`${imgClass} hc__gl${glShown ? ' is-loaded' : ''}`} onReady={setGlOk} />
+            )}
+            {!glShown && ETCHED.includes(finish) && loaded && (
               <span className="hc__etch" aria-hidden>
                 <img className={imgClass + ' is-loaded'} src={src} alt="" draggable={false} />
                 <span className="hc__etch-tint" />
               </span>
             )}
-            {finish === 'ultimate' && <span className="hc__fx hc__cosmos" aria-hidden />}
-            <span className="hc__fx hc__prism" aria-hidden />
-            <span className="hc__fx hc__foil" aria-hidden />
-            <span className="hc__fx hc__sparkle" aria-hidden />
-            <span className="hc__fx hc__band" aria-hidden />
-            <span className="hc__fx hc__glare" aria-hidden />
+            {!glShown && (
+              <>
+                {finish === 'ultimate' && <span className="hc__fx hc__cosmos" aria-hidden />}
+                <span className="hc__fx hc__prism" aria-hidden />
+                <span className="hc__fx hc__foil" aria-hidden />
+                <span className="hc__fx hc__sparkle" aria-hidden />
+                <span className="hc__fx hc__band" aria-hidden />
+                <span className="hc__fx hc__glare" aria-hidden />
+              </>
+            )}
           </div>
           <div className="hc__face hc__face--back">
             <CardBack rune={/rune/i.test(card.type)} />

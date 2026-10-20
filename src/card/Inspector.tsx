@@ -93,6 +93,7 @@ export function Inspector({ target, db, onClose }: { target: InspectTarget; db: 
             thick
             upright={upright}
             imageWidth={744}
+            gl
             faceDown={faceDown}
             onClick={() => setFaceDown((f) => !f)}
           />

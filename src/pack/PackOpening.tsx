@@ -147,7 +147,7 @@ export function PackOpening({ set, cards, pack, style, onInspect, onExit }: Prop
             >
               {flipped && current.hype > 0 && <div className="burst" aria-hidden />}
               <HoloCard card={current.card} finish={current.finish} width={stageW} tilt="idle" gyro
-                faceDown={!flipped} onClick={advance} imageWidth={600} />
+                faceDown={!flipped} onClick={advance} imageWidth={600} gl />
             </div>
           </div>
           <div className="reveal-caption" aria-live="polite">

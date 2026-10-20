@@ -18,7 +18,18 @@ const BUNDLE = 'bundle:';
 export function imageAt(card: Card, width: number): string {
   if (!card.image || card.image.startsWith(BUNDLE)) return '';
   if (!/rgpub\.io/.test(card.image)) return card.image;
-  return `${card.image}${card.image.includes('?') ? '&' : '?'}w=${width}`;
+  const url = `${card.image}${card.image.includes('?') ? '&' : '?'}w=${width}`;
+  // Same-origin through the dev server's proxy (vite.config.ts), so the
+  // WebGL foil can read the pixels while developing.
+  return import.meta.env.DEV ? url.replace(/^https:\/\/cmsassets\.rgpub\.io/, '/riot-img') : url;
+}
+
+/** Can a WebGL texture be made from this URL? Cross-origin images without
+    CORS headers would taint the canvas. */
+export function isReadable(src: string): boolean {
+  if (!src) return false;
+  if (src.startsWith('blob:') || src.startsWith('data:')) return true;
+  try { return new URL(src, location.href).origin === location.origin; } catch { return false; }
 }
 
 type Urls = Record<string, string>;
