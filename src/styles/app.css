@@ -81,6 +81,12 @@ body::before {
 @media (max-width: 760px) {
   .top { flex-wrap: wrap; gap: 8px 12px; }
   .nav { order: 3; flex-basis: 100%; }
+  /* The tabs scroll sideways; fade the edge so a cut-off tab reads as more. */
+  .nav {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+            mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+    padding-right: 24px;
+  }
   .foil-toggle { margin-left: auto; }
 }
 
@@ -246,5 +252,12 @@ body::before {
 
 .prose { max-width: 760px; }
 .link-list { padding-left: 18px; display: grid; gap: 8px; }
+@media (max-width: 420px) {
+  .brand__name em { display: none; }   /* keeps brand and foil switch on one row */
+  .nav__link { padding: 7px 9px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hint { animation: none; }
+}
 .hint { margin: 0; font-size: 12px; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); opacity: .75; animation: breathe 3.4s ease-in-out infinite; text-align: center; }
 @keyframes breathe { 50% { opacity: .35; } }

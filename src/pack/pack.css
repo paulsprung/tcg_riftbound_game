@@ -144,9 +144,14 @@
 
 /* ------------------------------------------------------------ opening -- */
 
-.opening { display: grid; gap: 18px; }
+.opening { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
 .opening__bar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; }
+.opening__bar > :first-child { justify-self: start; }
 .opening__bar > :last-child { justify-self: end; }
+@media (max-width: 420px) {
+  .opening__bar .btn { white-space: nowrap; }
+  .opening__back-label { display: none; }
+}
 .opening__title { margin: 0; font-size: 20px; text-align: center; }
 
 .opening__stage {
@@ -219,7 +224,7 @@
 
 .pulled {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
   gap: 8px;
   max-width: 980px;
   width: 100%;
@@ -239,6 +244,6 @@
 .summary__actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 
 @media (prefers-reduced-motion: reduce) {
-  .burst, .stack__top, .stack__top.is-charged, .pulled__item, .flash.is-on { animation: none; }
+  .burst, .stack__top, .stack__top.is-charged, .stack__top.is-charged::before, .pulled__item, .flash.is-on { animation: none; }
   .pk.is-torn .pk__piece--top, .pk.is-torn .pk__piece--bottom { animation-duration: .01s; }
 }

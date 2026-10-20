@@ -57,24 +57,43 @@ function loadBundle(name: string): Promise<Urls> {
 
 const bundleOf = (card: Card) => (card.image.startsWith(BUNDLE) ? card.image.slice(BUNDLE.length) : null);
 
+/** Start fetching these cards' bundles, one at a time, in this order. */
+export function preloadCards(cards: Card[]): void {
+  const names = [...new Set(cards.map(bundleOf).filter((n): n is string => !!n))];
+  names.reduce<Promise<unknown>>((p, n) => p.then(() => loadBundle(n).catch(() => undefined)), Promise.resolve());
+}
+
+const RETRIES = 4;
+
 /** The card's image URL at roughly `width` px; '' while it loads or if it fails. */
 export function useCardImage(card: Card, width: number): { src: string; failed: boolean } {
   const bundle = bundleOf(card);
   const direct = bundle ? null : imageAt(card, width);
   const peek = () => (bundle ? ready.get(bundle)?.[card.id] ?? '' : direct ?? '');
   const [state, setState] = useState(() => ({ key: card.id, src: peek(), failed: false }));
+  const [tries, setTries] = useState(0);
+
+  useEffect(() => { setTries(0); }, [bundle, card.id]);
 
   useEffect(() => {
     if (!bundle) return;
     if (ready.get(bundle)?.[card.id]) return;
     let alive = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     loadBundle(bundle)
       .then((urls) => alive && setState({ key: card.id, src: urls[card.id] ?? '', failed: !urls[card.id] }))
-      .catch(() => alive && setState({ key: card.id, src: '', failed: true }));
-    return () => { alive = false; };
-  }, [bundle, card.id]);
+      .catch(() => {
+        if (!alive) return;
+        setState({ key: card.id, src: '', failed: true });
+        // A dropped connection should not leave the card blank for good.
+        if (tries < RETRIES) timer = setTimeout(() => setTries((t) => t + 1), 1500 * 2 ** tries);
+      });
+    return () => { alive = false; clearTimeout(timer); };
+  }, [bundle, card.id, tries]);
 
   // A different card (or width) than the one in state: answer from cache.
   if (state.key !== card.id || (!bundle && state.src !== direct)) return { src: peek(), failed: false };
-  return { src: state.src || peek(), failed: state.failed };
+  // Another view may have loaded the bundle since this one failed.
+  const cached = peek();
+  return { src: state.src || cached, failed: state.failed && !cached };
 }

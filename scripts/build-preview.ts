@@ -19,6 +19,7 @@
  *
  * Downloaded art is cached in data/raw/preview-img/ (git-ignored).
  */
+import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
@@ -44,13 +45,16 @@ const safe = (id: string) => id.replace(/[^a-z0-9-]/gi, '_');
 
 async function fetchBytes(url: string): Promise<Buffer> {
   for (let attempt = 0; ; attempt++) {
+    // Network errors, rate limiting and server errors are retried; other
+    // HTTP errors (404, 403) will not get better.
+    let retry = true;
     try {
       const res = await fetch(url);
       if (res.ok) return Buffer.from(await res.arrayBuffer());
-      if (res.status < 500 && res.status !== 429) throw new Error(`HTTP ${res.status}`);
-      throw new Error(`HTTP ${res.status} (retrying)`);
+      retry = res.status === 429 || res.status >= 500;
+      throw new Error(`HTTP ${res.status}`);
     } catch (err) {
-      if (attempt >= 3 || String(err).includes('HTTP 4')) throw new Error(`${url}: ${err}`);
+      if (!retry || attempt >= 3) throw new Error(`${url}: ${err}`);
       await new Promise((r) => setTimeout(r, 800 * 2 ** attempt));
     }
   }
@@ -58,7 +62,9 @@ async function fetchBytes(url: string): Promise<Buffer> {
 
 async function cardArt(card: Card): Promise<Buffer | null> {
   if (!card.image) return null;
-  const file = resolve(cache, `${safe(card.id)}.webp`);
+  // Keyed by size, quality and source too, so changing any of them refetches.
+  const key = createHash('sha1').update(`${card.image}|${WIDTH}|${QUALITY}`).digest('hex').slice(0, 10);
+  const file = resolve(cache, `${safe(card.id)}-${key}.webp`);
   if (existsSync(file)) return readFile(file);
   const sep = card.image.includes('?') ? '&' : '?';
   const bytes = await fetchBytes(`${card.image}${sep}w=${WIDTH}&fm=webp&q=${QUALITY}`);

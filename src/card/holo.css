@@ -71,6 +71,9 @@
 .hc__img {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
+  /* Hosts that reset img{max-width:100%} (the Artifact skeleton does)
+     would squash a battlefield's sideways art into a square. */
+  max-width: none;
   object-fit: cover;
   opacity: 0;
   transition: opacity .35s ease;
@@ -273,6 +276,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .hc__inner { transition-duration: .01s; }
+  .hc__loading { animation: none; }
 }
 
 /* ---------------------------------------------------------- card back -- */

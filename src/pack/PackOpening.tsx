@@ -4,6 +4,7 @@ import type { InspectTarget } from '../card/Inspector.tsx';
 import { collection } from '../collection/store.ts';
 import { RARITY_COLOR, VARIANT_LABEL } from '../data/cardInfo.ts';
 import type { Card, SetInfo } from '../data/types.ts';
+import { preloadCards } from '../data/images.ts';
 import { openPack, type Pull } from './generate.ts';
 import type { PackConfig, SetStyle } from './packConfig.ts';
 import { heroCard, PackWrapper } from './PackWrapper.tsx';
@@ -55,6 +56,12 @@ export function PackOpening({ set, cards, pack, style, onInspect, onExit }: Prop
   const [flipped, setFlipped] = useState(false);
   const { w, h } = useViewport();
 
+  // Opening a set from further down the shelf should start at the top.
+  useEffect(() => { window.scrollTo(0, 0); }, []);
+
+  // Fetch this pack's art in reveal order while the pack is still sealed.
+  useEffect(() => { preloadCards(pulls.map((p) => p.card)); }, [pulls]);
+
   const stageW = Math.round(Math.min(w * 0.62, 300, (h - 260) * (744 / 1039)));
   const packW = Math.round(Math.min(w * 0.6, 290, (h - 220) * 0.58));
 
@@ -89,6 +96,7 @@ export function PackOpening({ set, cards, pack, style, onInspect, onExit }: Prop
   }, [phase, tear, advance]);
 
   const another = () => {
+    window.scrollTo(0, 0);
     setPulls(openPack(cards, pack));
     setIndex(0);
     setFlipped(false);
@@ -101,7 +109,9 @@ export function PackOpening({ set, cards, pack, style, onInspect, onExit }: Prop
   return (
     <section className="opening" data-phase={phase}>
       <div className="opening__bar">
-        <button type="button" className="btn btn--ghost" onClick={onExit}>← All sets</button>
+        <button type="button" className="btn btn--ghost" onClick={onExit} aria-label="All sets">
+          ← <span className="opening__back-label">All sets</span>
+        </button>
         <h2 className="opening__title">{set.name}</h2>
         {phase === 'reveal' && (
           <button type="button" className="btn btn--ghost" onClick={() => { setFlipped(false); setPhase('done'); }}>
