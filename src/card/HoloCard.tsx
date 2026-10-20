@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { Card } from '../data/types.ts';
-import { imageAt } from '../data/useCardDb.ts';
+import { useCardImage } from '../data/images.ts';
 import type { Finish } from '../pack/generate.ts';
 import { CardBack } from './CardBack.tsx';
 import { createTilt } from './tilt.ts';
@@ -36,7 +36,7 @@ export function HoloCard({
 }: HoloCardProps) {
   const scene = useRef<HTMLDivElement>(null);
   const [loaded, setLoaded] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [broken, setBroken] = useState(false);
 
   useEffect(() => {
     if (tilt === 'off' || !scene.current) return;
@@ -44,12 +44,14 @@ export function HoloCard({
     return () => t.destroy();
   }, [tilt, gyro]);
 
-  useEffect(() => { setLoaded(false); setFailed(false); }, [card.id]);
+  useEffect(() => { setLoaded(false); setBroken(false); }, [card.id]);
 
   const landscape = card.orientation === 'landscape';
   const sideways = landscape && !upright;
   const px = typeof width === 'number' ? width : 260;
-  const src = imageAt(card, imageWidth ?? Math.min(744, Math.ceil(px * (window.devicePixelRatio || 1) / 50) * 50));
+  const image = useCardImage(card, imageWidth ?? Math.min(744, Math.ceil(px * (window.devicePixelRatio || 1) / 50) * 50));
+  const src = image.src;
+  const failed = broken || image.failed;
   const imgClass = `hc__img${sideways ? ' hc__img--sideways' : ''}`;
 
   return (
@@ -73,7 +75,7 @@ export function HoloCard({
       <div className="hc__card">
         <div className="hc__inner">
           <div className="hc__face hc__face--front">
-            {!failed && src ? (
+            {src && !failed ? (
               <img
                 className={`${imgClass}${loaded ? ' is-loaded' : ''}`}
                 src={src}
@@ -82,13 +84,15 @@ export function HoloCard({
                 decoding="async"
                 loading="lazy"
                 onLoad={() => setLoaded(true)}
-                onError={() => setFailed(true)}
+                onError={() => setBroken(true)}
               />
-            ) : (
+            ) : failed || !card.image ? (
               <div className="hc__fallback">
                 <strong>{card.name}</strong>
                 <span>{card.type} · {card.code}</span>
               </div>
+            ) : (
+              <div className="hc__loading" aria-hidden />
             )}
             {ETCHED.includes(finish) && loaded && (
               <span className="hc__etch" aria-hidden>

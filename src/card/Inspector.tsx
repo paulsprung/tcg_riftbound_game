@@ -11,7 +11,7 @@ export interface InspectTarget {
   finish?: Finish;
 }
 
-const GLYPHS = 'https://assetcdn.rgpub.io/public/live/riot-shared/player-experiences/riot-glyphs/rb/latest';
+const MIGHT_FALLBACK = 'https://assetcdn.rgpub.io/public/live/riot-shared/player-experiences/riot-glyphs/rb/latest/might.svg';
 
 /** Rules text with Riot's symbol codes (:rb_energy_1:, :rb_rune_fury:,
     :rb_might:, ...) drawn as symbols and [Keywords] as tags. */
@@ -26,7 +26,10 @@ function RulesText({ text, db }: { text: string; db: CardDb }) {
       if (rune[1] === 'rainbow' || !d) return <span key={key} className="sym sym--rainbow" title="Power of any domain" />;
       return <img key={key} className="sym-img" src={d.icon} alt={`${d.label} power`} title={`${d.label} power`} />;
     }
-    if (code === ':rb_might:') return <img key={key} className="sym-img sym-img--glyph" src={`${GLYPHS}/might.svg`} alt="Might" title="Might" />;
+    if (code === ':rb_might:') {
+      const src = db.symbols?.glyphs?.might ?? MIGHT_FALLBACK;
+      return <img key={key} className="sym-img sym-img--glyph" src={src} alt="Might" title="Might" />;
+    }
     if (code === ':rb_exhaust:') return <span key={key} className="sym sym--exhaust" title="Exhaust">⟳</span>;
     return <span key={key} className="sym">{code.slice(4, -1)}</span>;
   };
@@ -94,7 +97,9 @@ export function Inspector({ target, db, onClose }: { target: InspectTarget; db: 
             onClick={() => setFaceDown((f) => !f)}
           />
           <p className="inspector__hint">
-            {matchMedia('(pointer: coarse)').matches ? 'Tilt your phone or drag · tap to flip' : 'Move to tilt · click to flip · Esc to close'}
+            {!matchMedia('(pointer: coarse)').matches
+              ? 'Move to tilt · click to flip · Esc to close'
+              : import.meta.env.VITE_PREVIEW ? 'Drag to tilt · tap to flip' : 'Tilt your phone or drag · tap to flip'}
           </p>
         </div>
 

@@ -1,24 +1,13 @@
 import { useEffect, useMemo, useRef, type CSSProperties, type PointerEvent as RPointerEvent } from 'react';
 import { createTilt } from '../card/tilt.ts';
-import { imageAt } from '../data/useCardDb.ts';
+import { useCardImage } from '../data/images.ts';
 import type { Card, SetInfo } from '../data/types.ts';
 import type { SetStyle } from './packConfig.ts';
 
+export { heroCard } from './hero.ts';
+
 const TEAR_LINE = 0.16;    // fraction of the pack's height
 const PULL_FULL = 120;     // px of sideways drag that rips it
-
-/** The champion art on the wrapper: their showiest printing in the set. */
-export function heroCard(cards: Card[], style: SetStyle): Card | undefined {
-  if (!style.hero) return undefined;
-  const hero = style.hero.toLowerCase();
-  // "Vi" must not match "Viktor": the name is the champion, then a comma.
-  const theirs = cards.filter((c) => {
-    const n = c.name.toLowerCase();
-    return (n === hero || n.startsWith(`${hero},`) || n.startsWith(`${hero} `)) && c.orientation === 'portrait';
-  });
-  const rank = (c: Card) => ({ overnumbered: 0, 'alt-art': 1, signature: 2, base: 3, promo: 4 })[c.variant];
-  return theirs.sort((a, b) => rank(a) - rank(b))[0];
-}
 
 function jagged(seed: number) {
   const n = 30;
@@ -48,10 +37,15 @@ interface Props {
   tilt?: 'idle' | 'hover';
 }
 
+function Hero({ card }: { card: Card }) {
+  const { src } = useCardImage(card, 500);
+  return src ? <div className="pk__hero" style={{ backgroundImage: `url("${src}")` }} /> : null;
+}
+
 function Art({ set, style, hero }: Pick<Props, 'set' | 'style' | 'hero'>) {
   return (
     <div className="pk__art">
-      {hero && <div className="pk__hero" style={{ backgroundImage: `url("${imageAt(hero, 500)}")` }} />}
+      {hero && <Hero card={hero} />}
       <div className="pk__wash" />
       <div className="pk__gloss" />
       <div className="pk__crimp pk__crimp--top" />

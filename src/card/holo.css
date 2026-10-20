@@ -87,6 +87,13 @@
   transform: translate(-50%, -50%) rotate(90deg);
 }
 
+.hc__loading {
+  position: absolute; inset: 0;
+  background: linear-gradient(110deg, #17132a 30%, #251f40 50%, #17132a 70%) 0 0 / 300% 100%;
+  animation: hc-loading 1.4s linear infinite;
+}
+@keyframes hc-loading { to { background-position: -150% 0; } }
+
 .hc__fallback {
   position: absolute; inset: 0;
   display: grid; place-content: center; gap: .4em;

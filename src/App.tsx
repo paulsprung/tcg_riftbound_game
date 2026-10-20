@@ -50,13 +50,13 @@ export function App() {
     <div className="app">
       <FoilDefs />
       <header className="top">
-        <a className="brand" href="#/packs">
+        <a className="brand" href="#packs">
           <span className="brand__mark" aria-hidden>◆</span>
           <span className="brand__name">Riftbound <em>Simulator</em></span>
         </a>
         <nav className="nav" aria-label="Sections">
           {ROUTES.map((r) => (
-            <a key={r.id} href={`#/${r.id}`} className="nav__link" aria-current={route === r.id ? 'page' : undefined}>
+            <a key={r.id} href={`#${r.id}`} className="nav__link" aria-current={route === r.id ? 'page' : undefined}>
               {r.label}
             </a>
           ))}
@@ -92,6 +92,7 @@ export function App() {
       </main>
 
       <footer className="foot">
+        {import.meta.env.VITE_PREVIEW && <>Preview build: card art is bundled at reduced size. </>}
         Fan-made simulator, not affiliated with or endorsed by Riot Games. Riftbound, League of Legends and all
         card art are © Riot Games. Card data: Riot's card gallery and{' '}
         <a href="https://riftcodex.com" target="_blank" rel="noreferrer">Riftcodex</a>.

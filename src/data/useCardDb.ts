@@ -31,10 +31,3 @@ export function useCardDb(): DbState {
   }, []);
   return state;
 }
-
-/** The image server resizes on request; grids don't need the full 744px scan. */
-export function imageAt(card: Card, width: number): string {
-  if (!card.image) return '';
-  if (!/rgpub\.io/.test(card.image)) return card.image;
-  return `${card.image}${card.image.includes('?') ? '&' : '?'}w=${width}`;
-}

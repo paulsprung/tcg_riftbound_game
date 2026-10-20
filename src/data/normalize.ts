@@ -207,12 +207,17 @@ export function collectSymbols(riotRaw: Raw[]): CardDb['symbols'] {
     if (!label || !icon || into[label.toLowerCase()]) return;
     into[label.toLowerCase()] = { label, icon, color: str(get(v, 'icon.colors.primary')) || null };
   };
+  const glyphs: Record<string, string> = {};
   for (const r of riotRaw) {
     add(rarities, get(r, 'rarity.value'));
     const ds = get(r, 'domain.values');
     if (Array.isArray(ds)) ds.forEach((d) => add(domains, d));
+    for (const g of ['might', 'power', 'energy']) {
+      const url = str(get(r, `${g}.value.icon.url`));
+      if (url && !glyphs[g]) glyphs[g] = url;
+    }
   }
-  return { rarities, domains };
+  return { rarities, domains, glyphs };
 }
 
 /** Set names as the products print them, where the sources disagree. */

@@ -55,5 +55,10 @@ export interface CardDb {
   sets: SetInfo[];
   cards: Card[];
   /** Official rarity and domain icons/colours, keyed by lower-case label. */
-  symbols: { rarities: Record<string, CardSymbol>; domains: Record<string, CardSymbol> };
+  symbols: {
+    rarities: Record<string, CardSymbol>;
+    domains: Record<string, CardSymbol>;
+    /** Rules-text glyphs by name (e.g. "might"): image URLs. */
+    glyphs?: Record<string, string>;
+  };
 }

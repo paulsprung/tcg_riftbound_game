@@ -158,7 +158,7 @@ export function PackOpening({ set, cards, pack, style, onInspect, onExit }: Prop
           </p>
           <div className="summary__actions">
             <button type="button" className="btn btn--primary" onClick={another}>Open another</button>
-            <a className="btn btn--ghost" href="#/collection">View collection</a>
+            <a className="btn btn--ghost" href="#collection">View collection</a>
           </div>
         </div>
       )}

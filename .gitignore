@@ -4,3 +4,4 @@ data/raw
 *.local
 .DS_Store
 *.tsbuildinfo
+dist-preview

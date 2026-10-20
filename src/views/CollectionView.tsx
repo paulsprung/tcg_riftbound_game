@@ -14,6 +14,7 @@ export function CollectionView({ db, onInspect }: { db: CardDb; onInspect: (t: I
     .sort((a, b) => boosterIds.indexOf(a.id) - boosterIds.indexOf(b.id));
   const [setId, setSetId] = useState(() => sets.find((s) => owned.packsOpened[s.id])?.id ?? sets[0]?.id ?? '');
   const [show, setShow] = useState<Show>('owned');
+  const [confirming, setConfirming] = useState(false);
 
   const setCards = useMemo(() => db.cards.filter((c) => c.setId === setId), [db, setId]);
   const has = (id: string) => {
@@ -67,16 +68,24 @@ export function CollectionView({ db, onInspect }: { db: CardDb; onInspect: (t: I
               <button key={v} type="button" aria-pressed={show === v} onClick={() => setShow(v)}>{v[0].toUpperCase() + v.slice(1)}</button>
             ))}
           </div>
-          <button type="button" className="btn btn--ghost btn--small" onClick={() => {
-            if (confirm('Delete your whole collection in this browser? This cannot be undone.')) collection.reset();
-          }}>Reset collection</button>
+          {confirming ? (
+            <div className="confirm" role="group" aria-label="Confirm reset">
+              <span>Delete every card in this browser?</span>
+              <button type="button" className="btn btn--danger btn--small" onClick={() => { collection.reset(); setConfirming(false); }}>
+                Delete all
+              </button>
+              <button type="button" className="btn btn--ghost btn--small" onClick={() => setConfirming(false)}>Keep</button>
+            </div>
+          ) : (
+            <button type="button" className="btn btn--ghost btn--small" onClick={() => setConfirming(true)}>Reset collection</button>
+          )}
         </div>
       </div>
 
       {show === 'owned' && stats.unique === 0 ? (
         <div className="empty">
           <p>No cards from this set yet.</p>
-          <a className="btn btn--primary" href="#/packs">Open a pack</a>
+          <a className="btn btn--primary" href="#packs">Open a pack</a>
         </div>
       ) : (
         <CardGrid
