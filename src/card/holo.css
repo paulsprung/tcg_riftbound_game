@@ -81,6 +81,9 @@
   -webkit-user-drag: none;
 }
 .hc__img.is-loaded { opacity: 1; }
+/* The WebGL foil draws the whole card into this box once it is ready. */
+.hc__gl { pointer-events: none; }
+.hc__gl-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 /* A battlefield is printed sideways on a portrait card. */
 .hc__img--sideways {
   inset: auto;

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react';
 import type { Card } from '../data/types.ts';
 import { isReadable, useCardImage } from '../data/images.ts';
 import type { Finish } from '../pack/generate.ts';
@@ -34,6 +34,14 @@ export interface HoloCardProps {
 
 const ETCHED: Finish[] = ['etched', 'signature', 'ultimate'];
 
+/** The header's Subtle/Vivid switch, which lives on <html data-foil>. */
+function subscribeFoil(cb: () => void) {
+  const mo = new MutationObserver(cb);
+  mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-foil'] });
+  return () => mo.disconnect();
+}
+const readFoil = () => (document.documentElement.dataset.foil === 'vivid' ? 'vivid' : 'subtle');
+
 export function HoloCard({
   card, finish, width, faceDown = false, tilt = 'hover', gyro = false, thick = false,
   upright = false, imageWidth, gl = false, onClick, className = '', style,
@@ -44,6 +52,7 @@ export function HoloCard({
   const [broken, setBroken] = useState(false);
   // null: not tried yet; true: the shader draws the card; false: CSS foil
   const [glOk, setGlOk] = useState<boolean | null>(null);
+  const foilStyle = useSyncExternalStore(subscribeFoil, readFoil, readFoil);
 
   useEffect(() => {
     if (tilt === 'off' || !scene.current) return;
@@ -104,7 +113,7 @@ export function HoloCard({
               <div className="hc__loading" aria-hidden />
             )}
             {useGl && (
-              <HoloCanvas ref={holo} src={src} finish={finish} rarity={card.rarity}
+              <HoloCanvas ref={holo} src={src} finish={finish} rarity={card.rarity} style={foilStyle}
                 className={`${imgClass} hc__gl${glShown ? ' is-loaded' : ''}`} onReady={setGlOk} />
             )}
             {!glShown && ETCHED.includes(finish) && loaded && (
