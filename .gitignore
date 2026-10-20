@@ -3,3 +3,4 @@ dist
 data/raw
 *.local
 .DS_Store
+*.tsbuildinfo
