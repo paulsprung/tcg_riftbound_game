@@ -1,21 +1,22 @@
 import { useEffect, useMemo, useRef, type CSSProperties, type PointerEvent as RPointerEvent } from 'react';
 import { createTilt } from '../card/tilt.ts';
 import { useCardImage } from '../data/images.ts';
+import { packArt, type PackArt } from '../data/media.ts';
 import type { Card, SetInfo } from '../data/types.ts';
 import type { SetStyle } from './packConfig.ts';
 
 export { heroCard } from './hero.ts';
 
-const TEAR_LINE = 0.16;    // fraction of the pack's height
+const TEAR_LINE = 0.16;    // drawn wrappers: fraction of the pack's height
 const PULL_FULL = 120;     // px of sideways drag that rips it
 
-function jagged(seed: number) {
+function jagged(seed: number, tear = TEAR_LINE) {
   const n = 30;
   const pts: [number, number][] = [];
   for (let i = 0; i <= n; i++) {
     const edge = i === 0 || i === n;
     const j = edge ? 0 : Math.sin(i * 2.17 + seed) * 0.9 + Math.sin(i * 5.3 + seed * 3) * 0.7;
-    pts.push([(i / n) * 100, TEAR_LINE * 100 + j]);
+    pts.push([(i / n) * 100, tear * 100 + j]);
   }
   const fmt = (p: [number, number]) => `${p[0].toFixed(2)}% ${p[1].toFixed(2)}%`;
   return {
@@ -42,6 +43,20 @@ function Hero({ card }: { card: Card }) {
   return src ? <div className="pk__hero" style={{ backgroundImage: `url("${src}")` }} /> : null;
 }
 
+/** The real wrapper: Riot's product shot of the sealed pack. The foil
+    sheen is masked to the pack's own outline so it never spills onto the
+    transparent background around it. */
+function RealArt({ art }: { art: PackArt }) {
+  const mask = { WebkitMaskImage: `url("${art.src}")`, maskImage: `url("${art.src}")` } as CSSProperties;
+  return (
+    <div className="pk__art pk__art--real">
+      <img className="pk__img" src={art.src} alt="" draggable={false} />
+      <div className="pk__gloss pk__gloss--masked" style={mask} />
+    </div>
+  );
+}
+
+/** Drawn stand-in for sets without a product shot. */
 function Art({ set, style, hero }: Pick<Props, 'set' | 'style' | 'hero'>) {
   return (
     <div className="pk__art">
@@ -65,7 +80,8 @@ function Art({ set, style, hero }: Pick<Props, 'set' | 'style' | 'hero'>) {
 export function PackWrapper({ set, style, hero, width, torn = false, onTear, onClick, tilt = 'hover' }: Props) {
   const scene = useRef<HTMLDivElement>(null);
   const drag = useRef<{ x: number; done: boolean } | null>(null);
-  const clips = useMemo(() => jagged(set.id.length * 1.7), [set.id]);
+  const art = packArt(set.id);
+  const clips = useMemo(() => jagged(set.id.length * 1.7, art?.tear), [set.id, art?.tear]);
 
   useEffect(() => {
     if (!scene.current) return;
@@ -97,6 +113,7 @@ export function PackWrapper({ set, style, hero, width, torn = false, onTear, onC
 
   const vars = {
     width,
+    ...(art ? { aspectRatio: String(art.aspect) } : {}),
     '--c1': style.wrapper[0], '--c2': style.wrapper[1], '--c3': style.wrapper[2],
     '--clip-top': clips.top, '--clip-bottom': clips.bottom,
   } as CSSProperties;
@@ -104,7 +121,7 @@ export function PackWrapper({ set, style, hero, width, torn = false, onTear, onC
   return (
     <div
       ref={scene}
-      className={`pk${torn ? ' is-torn' : ''}${onTear ? ' is-tearable' : ''}`}
+      className={`pk${art ? ' pk--real' : ''}${torn ? ' is-torn' : ''}${onTear ? ' is-tearable' : ''}`}
       style={vars}
       onPointerDown={down}
       onPointerMove={move}
@@ -118,8 +135,17 @@ export function PackWrapper({ set, style, hero, width, torn = false, onTear, onC
     >
       <div className="pk__shadow" />
       <div className="pk__body">
-        <div className="pk__piece pk__piece--top"><Art set={set} style={style} hero={hero} /></div>
-        <div className="pk__piece pk__piece--bottom"><Art set={set} style={style} hero={hero} /></div>
+        {art ? (
+          <>
+            <div className="pk__piece pk__piece--top"><RealArt art={art} /></div>
+            <div className="pk__piece pk__piece--bottom"><RealArt art={art} /></div>
+          </>
+        ) : (
+          <>
+            <div className="pk__piece pk__piece--top"><Art set={set} style={style} hero={hero} /></div>
+            <div className="pk__piece pk__piece--bottom"><Art set={set} style={style} hero={hero} /></div>
+          </>
+        )}
       </div>
     </div>
   );

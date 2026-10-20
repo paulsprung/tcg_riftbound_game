@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { CardBack } from '../card/CardBack.tsx';
 import { HoloCard } from '../card/HoloCard.tsx';
 import type { InspectTarget } from '../card/Inspector.tsx';
 import { collection } from '../collection/store.ts';
@@ -134,7 +135,9 @@ export function PackOpening({ set, cards, pack, style, onInspect, onExit }: Prop
         <div className="opening__stage">
           <div className="stack" style={{ width: stageW }}>
             {pulls.slice(index + 1, index + 4).map((p, i) => (
-              <div key={p.card.id + i} className="stack__under" style={{ '--i': i + 1 } as CSSProperties} />
+              <div key={p.card.id + i} className="stack__under" style={{ '--i': i + 1 } as CSSProperties}>
+                <CardBack />
+              </div>
             ))}
             <div
               key={index}

@@ -1,4 +1,7 @@
 :root {
+  --font-display: Cinzel, Georgia, serif;
+  --font-ui: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-condensed: Inter, system-ui, sans-serif;
   --bg: #0a0812;
   --bg-2: #120f1f;
   --panel: #171329;
@@ -19,12 +22,12 @@ body {
     var(--bg);
   background-attachment: fixed;
   color: var(--text);
-  font: 15px/1.5 Inter, system-ui, -apple-system, Segoe UI, sans-serif;
+  font: 15px/1.5 var(--font-ui);
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
 a { color: var(--accent); }
-h1, h2, h3 { font-family: Cinzel, Georgia, serif; font-weight: 800; letter-spacing: .02em; line-height: 1.15; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing: .02em; line-height: 1.15; }
 h1 { font-size: clamp(24px, 4vw, 34px); margin: 0 0 6px; }
 code { background: var(--panel); padding: 1px 6px; border-radius: 5px; }
 .muted { color: var(--muted); }
@@ -60,7 +63,7 @@ body::before {
 }
 .brand { display: flex; align-items: center; gap: 8px; color: var(--text); text-decoration: none; white-space: nowrap; }
 .brand__mark { color: var(--accent); font-size: 18px; }
-.brand__name { font: 800 17px/1 Cinzel, Georgia, serif; }
+.brand__name { font: 800 17px/1 var(--font-display); }
 .brand__name em { font-style: normal; color: var(--muted); font-weight: 600; }
 .nav { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; flex: 1; }
 .nav__link {
@@ -104,7 +107,7 @@ body::before {
   border: 1px solid var(--line);
   background: var(--panel);
   color: var(--text);
-  font: 600 14px/1 Inter, system-ui, sans-serif;
+  font: 600 14px/1 var(--font-ui);
   text-decoration: none;
   cursor: pointer;
 }
@@ -173,7 +176,7 @@ body::before {
   border: 1px solid var(--line);
   background: var(--bg-2);
   color: var(--text);
-  font: 600 14px/1.2 Inter, system-ui, sans-serif;
+  font: 600 14px/1.2 var(--font-ui);
   white-space: nowrap;
   cursor: pointer;
 }

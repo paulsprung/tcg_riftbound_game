@@ -21,7 +21,7 @@
  */
 import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
@@ -180,9 +180,20 @@ async function main() {
     files.push({ path: `images/${name}.json`, bytes: Buffer.byteLength(body) });
   }
 
-  // covers and the card list go first so the opening screen works as soon
-  // as the first batch is up
-  files.sort((a, b) => Number(b.path.includes('covers')) - Number(a.path.includes('covers')));
+  // Product shots and the card back are ordinary image files.
+  const media = resolve(root, 'public/media');
+  if (existsSync(media)) {
+    await cp(media, resolve(out, 'media'), { recursive: true });
+    for (const name of await readdir(media)) {
+      if (!/\.(webp|png|jpe?g)$/i.test(name)) continue;
+      files.push({ path: `media/${name}`, bytes: (await stat(resolve(media, name))).size });
+    }
+  }
+
+  // The card list, covers and product shots go first, so the opening
+  // screen works as soon as the first batch is up.
+  const early = (p: string) => p.includes('covers') || p.startsWith('media/') || p === 'data/cards.json';
+  files.sort((a, b) => Number(early(b.path)) - Number(early(a.path)));
   const batches: string[][] = [];
   let cur: string[] = [];
   let size = Buffer.byteLength(page);

@@ -1,5 +1,15 @@
-/** A generic card back: a gold rune sigil on deep indigo. Drawn, not an asset. */
+import { CARD_BACK } from '../data/media.ts';
+
+/** The real Riftbound card back when the app ships it (public/media), else
+    a drawn stand-in: a gold rune sigil on deep indigo. */
 export function CardBack() {
+  if (CARD_BACK) {
+    return (
+      <div className="cb cb--real">
+        <img className="cb__img" src={CARD_BACK} alt="" draggable={false} />
+      </div>
+    );
+  }
   return (
     <div className="cb">
       <svg className="cb__sigil" viewBox="0 0 100 140" aria-hidden>
