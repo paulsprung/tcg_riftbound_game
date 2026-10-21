@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { Card } from '../data/types.ts';
 import { isReadable, useCardImage } from '../data/images.ts';
 import type { Finish } from '../pack/generate.ts';
 import { CardBack } from './CardBack.tsx';
 import { HoloCanvas, type HoloCanvasHandle } from './HoloCanvas.tsx';
+import { useFoilStyle } from './foilStyle.ts';
 import { useHoloVersion } from './holoVersion.ts';
 import { createTilt } from './tilt.ts';
 import './holo.css';
@@ -36,13 +37,6 @@ export interface HoloCardProps {
 
 const ETCHED: Finish[] = ['etched', 'signature', 'ultimate'];
 
-/** The header's Subtle/Vivid switch, which lives on <html data-foil>. */
-function subscribeFoil(cb: () => void) {
-  const mo = new MutationObserver(cb);
-  mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-foil'] });
-  return () => mo.disconnect();
-}
-const readFoil = () => (document.documentElement.dataset.foil === 'vivid' ? 'vivid' : 'subtle');
 
 export function HoloCard({
   card, finish, width, faceDown = false, tilt = 'hover', gyro = false, thick = false,
@@ -54,7 +48,7 @@ export function HoloCard({
   const [broken, setBroken] = useState(false);
   // null: not tried yet; true: the shader draws the card; false: CSS foil
   const [glOk, setGlOk] = useState<boolean | null>(null);
-  const foilStyle = useSyncExternalStore(subscribeFoil, readFoil, readFoil);
+  const foilStyle = useFoilStyle();
   const version = useHoloVersion();
   const classic = version === 'a';
 
@@ -179,8 +173,8 @@ export function HoloCard({
           </div>
           <div className="hc__face hc__face--back">
             <CardBack rune={/rune/i.test(card.type)} />
-            <span className="hc__fx hc__band" aria-hidden />
-            <span className="hc__fx hc__glare" aria-hidden />
+            <span className={`hc__fx ${classic ? 'hcc-band' : 'hc__band'}`} aria-hidden />
+            <span className={`hc__fx ${classic ? 'hcc-glare' : 'hc__glare'}`} aria-hidden />
           </div>
           {thick && (
             <>

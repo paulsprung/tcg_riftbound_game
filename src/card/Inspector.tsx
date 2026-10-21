@@ -4,6 +4,7 @@ import { cap, defaultFinish, hasFoilToggle, RARITY_COLOR, symbolFor, VARIANT_LAB
 import type { Card, CardDb } from '../data/types.ts';
 import type { Finish } from '../pack/generate.ts';
 import { HoloCard } from './HoloCard.tsx';
+import { HoloSwitches } from './HoloSwitches.tsx';
 
 export interface InspectTarget {
   card: Card;
@@ -139,6 +140,10 @@ export function Inspector({ target, db, onClose }: { target: InspectTarget; db: 
               <button type="button" aria-pressed={finish === 'foil'} onClick={() => setFinish('foil')}>Foil</button>
             </div>
           )}
+
+          <div className="inspector__switches">
+            <HoloSwitches compact />
+          </div>
 
           <p className="owned">
             {owned ? <>In your collection: <b>{owned.normal}</b> normal · <b>{owned.foil}</b> foil</> : 'Not in your collection yet'}

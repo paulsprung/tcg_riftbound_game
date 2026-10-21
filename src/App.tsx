@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { FoilDefs } from './card/HoloCard.tsx';
-import { HOLO_VERSIONS, setHoloVersion, useHoloVersion } from './card/holoVersion.ts';
+import { HoloSwitches } from './card/HoloSwitches.tsx';
 import { Inspector, type InspectTarget } from './card/Inspector.tsx';
 import { useCardDb } from './data/useCardDb.ts';
 import { CardsView } from './views/CardsView.tsx';
@@ -21,19 +21,11 @@ function routeFromHash(): Route {
   return (ROUTES.find((r) => r.id === id)?.id ?? 'packs') as Route;
 }
 
-type FoilStyle = 'subtle' | 'vivid';
-const FOIL_KEY = 'riftbound-sim:foil';
-
-function readFoil(): FoilStyle {
-  try { return localStorage.getItem(FOIL_KEY) === 'vivid' ? 'vivid' : 'subtle'; } catch { return 'subtle'; }
-}
 
 export function App() {
   const state = useCardDb();
   const [route, setRoute] = useState<Route>(routeFromHash);
   const [inspect, setInspect] = useState<InspectTarget | null>(null);
-  const [foil, setFoil] = useState<FoilStyle>(readFoil);
-  const holoVersion = useHoloVersion();
 
   useEffect(() => {
     const on = () => setRoute(routeFromHash());
@@ -41,10 +33,6 @@ export function App() {
     return () => window.removeEventListener('hashchange', on);
   }, []);
 
-  useEffect(() => {
-    document.documentElement.dataset.foil = foil;
-    try { localStorage.setItem(FOIL_KEY, foil); } catch { /* per-session only */ }
-  }, [foil]);
 
   const onInspect = useCallback((t: InspectTarget) => setInspect(t), []);
 
@@ -63,23 +51,7 @@ export function App() {
             </a>
           ))}
         </nav>
-        <div className="foil-toggle" role="group" aria-label="Holo version">
-          <span className="foil-toggle__label">Holo</span>
-          {HOLO_VERSIONS.map((v) => (
-            <button key={v.id} type="button" aria-pressed={holoVersion === v.id} onClick={() => setHoloVersion(v.id)} title={v.title}>
-              {v.label}
-            </button>
-          ))}
-        </div>
-        <div className="foil-toggle" role="group" aria-label="Foil style">
-          <span className="foil-toggle__label">Foil</span>
-          {(['subtle', 'vivid'] as const).map((f) => (
-            <button key={f} type="button" aria-pressed={foil === f} onClick={() => setFoil(f)}
-              title={f === 'subtle' ? 'English printing: warmer, gentler foil' : 'Chinese printing: stronger rainbow'}>
-              {f === 'subtle' ? 'Subtle' : 'Vivid'}
-            </button>
-          ))}
-        </div>
+        <HoloSwitches />
       </header>
 
       <main className="main">

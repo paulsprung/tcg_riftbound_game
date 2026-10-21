@@ -4,6 +4,7 @@
    ones. Class and custom-property names are prefixed so the two foils never
    meet. The etched layer uses the #rb-etch SVG filter from <FoilDefs/>. */
 
+:root[data-holo="a"] .hc__face--front:has(> .hc__img.is-loaded) { background: #0d0b16; }
 :root[data-holo="a"] .hc__face--front::before,
 :root[data-holo="a"] .hc__face--front::after { content: none; }
 

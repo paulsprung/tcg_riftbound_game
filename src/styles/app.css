@@ -94,6 +94,11 @@ body::before {
 @media (max-width: 760px) {
   .top { flex-wrap: wrap; gap: 8px 12px; }
   .foil-toggle + .foil-toggle { margin-left: 0; }
+  .top { gap: 8px; }
+  .foil-toggle { gap: 0; padding: 2px; }
+  .foil-toggle__label { padding: 0 4px; }
+  .top .foil-toggle[aria-label="Foil style"] .foil-toggle__label { display: none; }
+  .foil-toggle button { padding: 5px 7px; }
   .nav { order: 3; flex-basis: 100%; }
   /* The tabs scroll sideways; fade the edge so a cut-off tab reads as more. */
   .nav {
@@ -286,3 +291,14 @@ body::before {
 }
 .hint { margin: 0; font-size: 12px; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); opacity: .75; animation: breathe 3.4s ease-in-out infinite; text-align: center; }
 @keyframes breathe { 50% { opacity: .35; } }
+
+@media (max-width: 400px) {
+  .brand { gap: 6px; }
+  .brand__mark { font-size: 15px; }
+  .brand__name { font-size: 14px; }
+  .foil-toggle__label { font-size: 11px; padding: 0 3px; }
+  .foil-toggle button { padding: 6px; min-width: 26px; font-size: 12px; }
+}
+
+.inspector__switches { display: flex; flex-wrap: wrap; gap: 8px; }
+.inspector__switches .foil-toggle { margin-left: 0; }
