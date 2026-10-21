@@ -180,15 +180,23 @@
 /* the whole stage advances the reveal, not just the card */
 .opening__stage--reveal { cursor: pointer; -webkit-tap-highlight-color: transparent; user-select: none; }
 
-.flash {
-  position: fixed; inset: 0;
-  pointer-events: none;
-  background: radial-gradient(circle at 50% 40%, rgba(255, 245, 220, .95), rgba(255, 220, 160, .3) 40%, transparent 70%);
+.hint.is-gone { visibility: hidden; }
+
+/* The pack and the cards in it share one spot. */
+.tear-wrap { display: grid; place-items: center; }
+.tear-wrap > * { grid-area: 1 / 1; }
+.tear-stack {
+  aspect-ratio: 744 / 1039;
+  overflow: hidden;
+  border-radius: 4.7% / 3.37%;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, .4);
   opacity: 0;
-  z-index: 5;
 }
-.flash.is-on { animation: flash .9s ease-out; }
-@keyframes flash { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: 0; } }
+.opening[data-emerge] .tear-stack { animation: emerge .9s cubic-bezier(.2, .8, .3, 1) .2s forwards; }
+@keyframes emerge {
+  from { opacity: 1; transform: translateY(14%) scale(.94); }
+  to { opacity: 1; transform: none; }
+}
 
 .stack { position: relative; aspect-ratio: 744 / 1039; }
 .stack__under {
@@ -201,6 +209,8 @@
   opacity: calc(1 - var(--i) * .22);
 }
 .stack__top { position: relative; animation: deal .45s cubic-bezier(.2, .8, .3, 1); }
+/* the first card is already in place, out of the pack */
+.opening[data-emerge] .stack__top.is-first { animation: none; }
 @keyframes deal { from { transform: translateY(26px) scale(.96); opacity: 0; } }
 
 .reveal-caption { display: grid; justify-items: center; gap: 2px; min-height: 42px; text-align: center; }
@@ -262,6 +272,6 @@
 .summary__actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 
 @media (prefers-reduced-motion: reduce) {
-  .stack__top, .pulled__item, .flash.is-on, .reveal-caption__in { animation: none; }
+  .stack__top, .pulled__item, .reveal-caption__in { animation: none; }
   .pk.is-torn .pk__piece--top, .pk.is-torn .pk__piece--bottom { animation-duration: .01s; }
 }

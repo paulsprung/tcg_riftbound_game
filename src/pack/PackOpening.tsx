@@ -227,10 +227,17 @@ export function PackOpening({ set, cards, pack, style, onInspect, onExit }: Prop
 
       {(phase === 'sealed' || phase === 'tearing') && (
         <div className="opening__stage">
-          <div className={`flash${phase === 'tearing' ? ' is-on' : ''}`} />
-          <PackWrapper set={set} style={style} hero={hero} width={packW} tilt="idle"
-            torn={phase === 'tearing'} onTear={tear} />
-          {phase === 'sealed' && <p className="hint">Swipe across the pack to tear it open, or tap</p>}
+          <div className="tear-wrap">
+            {/* the cards, waiting inside: they come into view as the wrapper drops */}
+            {phase === 'tearing' && (
+              <div className="tear-stack" style={{ width: stageW }} aria-hidden>
+                <CardBack rune={/rune/i.test(pulls[0]?.card.type ?? '')} />
+              </div>
+            )}
+            <PackWrapper set={set} style={style} hero={hero} width={packW} tilt="idle"
+              torn={phase === 'tearing'} onTear={tear} />
+          </div>
+          <p className={`hint${phase === 'tearing' ? ' is-gone' : ''}`}>Swipe across the pack to tear it open, or tap</p>
         </div>
       )}
 
@@ -243,7 +250,7 @@ export function PackOpening({ set, cards, pack, style, onInspect, onExit }: Prop
                 <CardBack rune={/rune/i.test(p.card.type)} />
               </div>
             ))}
-            <div key={index} className={`stack__top${flipped ? ' is-flipped' : ''}`}>
+            <div key={index} className={`stack__top${flipped ? ' is-flipped' : ''}${index === 0 && !resumed ? ' is-first' : ''}`}>
               <HoloCard card={current.card} finish={current.finish} width={stageW} tilt="idle" gyro
                 faceDown={!flipped} imageWidth={ART_W} gl />
               {wantFlip && !flipped && <span className="stack__wait" aria-label="Loading the card" />}
