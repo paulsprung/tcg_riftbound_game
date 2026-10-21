@@ -101,3 +101,63 @@ describe('pools and finishes', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 });
+
+describe('real slot layouts and edge cases', () => {
+  const set = makeSet();
+
+  it.each(['ogn', 'sfd', 'unl', 'ven'])('%s has two Rare+ slots (Riot: "2 Rare, Epic, Alt, ... cards")', (id) => {
+    const p = openPack(set, boosterSet(id)!.pack, rng(1));
+    expect(p).toHaveLength(14);
+    expect(p.filter((x) => x.slot === 'Rare+')).toHaveLength(2);
+  });
+
+  it('configures the Unleashed Ultimate Rare', () => {
+    expect(boosterSet('unl')!.pack.ultimate).toEqual(['UNL-238/219']);
+  });
+
+  it('keeps 14 cards when a set has runes but no tokens yet', () => {
+    const noTokens = set.filter((c) => c.supertype !== 'Token');
+    for (let s = 0; s < 300; s++) expect(openPack(noTokens, radiance, rng(s))).toHaveLength(14);
+  });
+
+  it('never deals a foil token, even when a foil-rune roll falls back to one', () => {
+    const noRunes = set.filter((c) => c.type !== 'Rune');
+    const anyToken: PackConfig = { ...origins, tokens: undefined };   // the fixture's tokens are not on Origins' list
+    for (let s = 0; s < 300; s++) {
+      expect(openPack(noRunes, anyToken, rng(s)).find((p) => p.slot === 'Rune')!.foil).toBe(false);
+    }
+  });
+
+  it('never puts two Ultimates in one pack', () => {
+    const unl = boosterSet('unl')!.pack;
+    const always: PackConfig = {
+      ...unl, ultimate: ['TST-999/100'],
+      slots: unl.slots.map((s) => (s.label === 'Rare+' ? { ...s, table: [{ pool: 'ultimate' as const, weight: 1 }] } : s)),
+    };
+    for (let s = 0; s < 50; s++) expect(openPack(set, always, rng(s)).filter((p) => p.finish === 'ultimate')).toHaveLength(1);
+  });
+
+  it('only deals the listed booster tokens when a set lists them', () => {
+    const cfg: PackConfig = { ...origins, tokens: ['TST-t0'] };
+    expect(poolFor(set, 'token', cfg).map((c) => c.id)).toEqual(['t0']);
+  });
+
+  it('gives Unleashed about 12 Legends per box from the rare slots', () => {
+    const withLegends = [...set, ...Array.from({ length: 12 }, (_, i) => makeCard({ id: `L${i}`, rarity: 'rare', type: 'Legend' }))];
+    const random = rng(9);
+    let legends = 0;
+    for (let i = 0; i < 2400; i++) legends += openPack(withLegends, boosterSet('unl')!.pack, random).filter((p) => p.card.type === 'Legend' && p.slot === 'Rare+').length;
+    expect(legends / 100).toBeGreaterThan(11);
+    expect(legends / 100).toBeLessThan(13);
+  });
+
+  it('gives every set about 6-7 Epics per box', () => {
+    for (const { id, pack } of BOOSTER_SETS) {
+      const random = rng(11);
+      let epics = 0;
+      for (let i = 0; i < 2400; i++) epics += openPack(set, pack, random).filter((p) => p.card.rarity === 'epic' && p.card.variant === 'base').length;
+      expect(epics / 100, id).toBeGreaterThan(5.8);
+      expect(epics / 100, id).toBeLessThan(7.2);
+    }
+  });
+});

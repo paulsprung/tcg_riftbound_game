@@ -6549,5 +6549,101 @@
   "artist": "TSWCK逍",
   "image": "https://static.dotgg.gg/riftbound/cards/UNL-178b-P.webp",
   "orientation": "portrait"
+ },
+ {
+  "id": "unl-t06-t04",
+  "name": "Reflection // Buff",
+  "setId": "unl",
+  "setName": "Unleashed",
+  "code": "UNL-T06//T04",
+  "number": 6,
+  "rarity": "common",
+  "variant": "base",
+  "type": "Token",
+  "supertype": "Token",
+  "domains": [
+   "Colorless"
+  ],
+  "energy": null,
+  "might": null,
+  "power": null,
+  "tags": [],
+  "text": "(I become a copy of something when played. I don't get that card's play effects.)\n//\nA unit may have no more than one buff at a time.",
+  "flavor": "",
+  "artist": "Kudos Productions & 黯荧岛Dark Glow // League Splash Team",
+  "image": "https://static.dotgg.gg/riftbound/cards/UNL-T04.webp",
+  "orientation": "portrait"
+ },
+ {
+  "id": "unl-t06-t05",
+  "name": "Reflection // Gold",
+  "setId": "unl",
+  "setName": "Unleashed",
+  "code": "UNL-T06//T05",
+  "number": 6,
+  "rarity": "common",
+  "variant": "base",
+  "type": "Token",
+  "supertype": "Token",
+  "domains": [
+   "Colorless"
+  ],
+  "energy": null,
+  "might": null,
+  "power": null,
+  "tags": [],
+  "text": "(I become a copy of something when played. I don't get that card's play effects.)\n//\n[Reaction][>] Kill this, :rb_exhaust:: [Add] :rb_rune_rainbow:. (Abilities that add resources can't be reacted to.)",
+  "flavor": "",
+  "artist": "Kudos Productions & 黯荧岛Dark Glow // Kudos Productions",
+  "image": "https://static.dotgg.gg/riftbound/cards/UNL-T05.webp",
+  "orientation": "portrait"
+ },
+ {
+  "id": "unl-t02-t04",
+  "name": "Bird // Buff",
+  "setId": "unl",
+  "setName": "Unleashed",
+  "code": "UNL-T02//T04",
+  "number": 2,
+  "rarity": "common",
+  "variant": "base",
+  "type": "Token",
+  "supertype": "Token",
+  "domains": [
+   "Colorless"
+  ],
+  "energy": null,
+  "might": null,
+  "power": null,
+  "tags": [],
+  "text": "[Deflect] (Opponents must pay :rb_rune_rainbow: to choose me with a spell or ability.)\n//\nA unit may have no more than one buff at a time.",
+  "flavor": "",
+  "artist": "Six More Vodka // League Splash Team",
+  "image": "https://static.dotgg.gg/riftbound/cards/UNL-T02.webp",
+  "orientation": "portrait"
+ },
+ {
+  "id": "unl-t03-t04",
+  "name": "Brush // Buff",
+  "setId": "unl",
+  "setName": "Unleashed",
+  "code": "UNL-T03//T04",
+  "number": 3,
+  "rarity": "common",
+  "variant": "base",
+  "type": "Token",
+  "supertype": "Token",
+  "domains": [
+   "Colorless"
+  ],
+  "energy": null,
+  "might": null,
+  "power": null,
+  "tags": [],
+  "text": "Bird, Cat, Dog, Poro, and Ivern units here have +1 :rb_might:.\nWhen you score here, you may replace this with the battlefield it replaced.\n//\nA unit may have no more than one buff at a time.",
+  "flavor": "",
+  "artist": "Kudos Productions // League Splash Team",
+  "image": "https://static.dotgg.gg/riftbound/cards/UNL-T03.webp",
+  "orientation": "portrait"
  }
 ]

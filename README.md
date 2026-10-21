@@ -89,15 +89,22 @@ cover champion, slot layout).
 
 Slot layouts come from Riot's set overview articles:
 
-- **Origins, Spiritforged:** 7 Common, 3 Uncommon, 1 Foil, 2 Rare-or-better,
-  1 Rune/Token.
-- **Unleashed, Vendetta, Radiance:** 7 Common, 3 Uncommon, 1 Foil, 1 Rare/Epic,
-  1 Showcase slot (Rare, Epic, Alt Art, Overnumbered, Signature or Ultimate),
-  1 Rune/Token.
+- **Origins, Spiritforged, Unleashed, Vendetta:** 7 Common, 3 Uncommon,
+  1 Foil, 2 Rare-or-better (Rare, Epic, Alt Art, Overnumbered, Signature or
+  Ultimate), 1 Rune/Token/Alt Rune.
+- **Radiance:** 7 Common, 3 Uncommon, 1 Foil, 1 Rare/Epic, 1 Showcase slot
+  (Rare, Epic, Alt Art, Overnumbered, Signature or Ultimate), 1 Rune/Token/Alt
+  Rune.
 
-**Riot does not publish exact odds.** The chase weights in `packConfig.ts` are
-estimates from Riot's wording and community box openings. Each one is
-documented next to its value, so they are easy to correct.
+**Riot publishes only some of the odds:** Epic about 1 in 4 packs, alt art
+about 2 per box, overnumbered about 1 per 3 boxes with 1 in 10 signed (all
+for Origins), and the Ultimate rares (Unleashed's Baron Nashor under 0.1% of
+packs, Radiance's Packed Amphitheater about 0.025%, never two in a pack).
+The rest, such as alt-art runes and Legends per box, are estimates from
+community box openings. Each value is documented next to it in
+`packConfig.ts`; `tests/generate.test.ts` checks the rates and
+`tests/data.test.ts` checks that every set deals full packs from the real
+card pools.
 
 ## Foil effects
 

@@ -14,7 +14,9 @@ import { plainText } from './normalize.ts';
  *  - carry Riot's errata, the current official wording, next to the
  *    printed text;
  *  - show banned cards without the "BANNED" stamp Riot prints on their
- *    gallery images (dotgg's scans are clean).
+ *    gallery images (dotgg's scans are clean);
+ *  - fix commons and uncommons whose rarity the gallery has backwards (six
+ *    Vendetta cards; the printed gem agrees with dotgg).
  *
  * Matching is by name within the card's home set (dotgg writes "Name - Title"
  * where we write "Name, Title"; our legends carry only the title), then by
@@ -40,6 +42,7 @@ export interface DotggRow {
   promo?: string | null;
   banned?: string | null;
   image?: string | null;
+  rarity?: string | null;
 }
 
 /** The API answers {names, data: rows of values}; zip them into objects. */
@@ -291,6 +294,13 @@ export function enrichFromDotgg(cards: Card[], raw: DotggRow[]): EnrichStats {
       if (ours !== theirs && (cutOff || stray)) {
         c.text = toText(effect, gear); changed('text');
       }
+    }
+    // commons and uncommons only: the pack pools depend on it, and dotgg's
+    // chase rarities are named differently from ours
+    const dRarity = (best.rarity ?? '').toLowerCase();
+    if (c.variant === 'base' && best.print === cardKeys(c)?.print && (c.rarity === 'common' || c.rarity === 'uncommon')
+      && (dRarity === 'common' || dRarity === 'uncommon') && dRarity !== c.rarity) {
+      c.rarity = dRarity; changed('rarity');
     }
     if (best.banned === '1' && best.image && best.print === cardKeys(c)?.print && /rgpub\.io/.test(c.image)) {
       c.image = best.image; changed('banned-image');

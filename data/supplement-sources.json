@@ -2841,5 +2841,45 @@
   "confidence": "partial",
   "product": "Unleashed-season Regional Qualifier promo",
   "notes": "Rules data copied from our unl-178-219 (UNL-178/219). dotgg points its TCGplayer id at the base card, so no separate TCGplayer listing was found. Partial: not on TCGplayer. Image shows the CHAMPION stamp."
+ },
+ "unl-t06-t04": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://www.tcgplayer.com/product/695874",
+   "https://static.dotgg.gg/riftbound/cards/UNL-T04.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Unleashed packs",
+  "notes": "Double-sided token, TCGplayer lists it with the Unleashed booster tokens. dotgg's image shows one face."
+ },
+ "unl-t06-t05": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://www.tcgplayer.com/product/695878",
+   "https://static.dotgg.gg/riftbound/cards/UNL-T05.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Unleashed packs",
+  "notes": "Double-sided token, TCGplayer lists it with the Unleashed booster tokens. dotgg's image shows one face."
+ },
+ "unl-t02-t04": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://www.tcgplayer.com/product/695875",
+   "https://static.dotgg.gg/riftbound/cards/UNL-T02.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Unleashed packs",
+  "notes": "Double-sided token, TCGplayer lists it with the Unleashed booster tokens. dotgg's image shows one face."
+ },
+ "unl-t03-t04": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://www.tcgplayer.com/product/695880",
+   "https://static.dotgg.gg/riftbound/cards/UNL-T03.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Unleashed packs",
+  "notes": "Double-sided token, TCGplayer lists it with the Unleashed booster tokens. dotgg's image shows one face."
  }
 }

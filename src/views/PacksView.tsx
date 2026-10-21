@@ -43,7 +43,8 @@ export function PacksView({ db, onInspect }: { db: CardDb; onInspect: (t: Inspec
       <div className="page-head">
         <h1>Open booster packs</h1>
         <p className="muted">
-          Pick a set. Packs follow each set's real slot layout; the odds for chase cards are community estimates.
+          Pick a set. Packs follow each set's real slot layout. Riot publishes only some of the odds; the rest are
+          community estimates from box openings.
         </p>
       </div>
       <div className="pack-shelf">
