@@ -292,6 +292,9 @@ body::before {
 .hint { margin: 0; font-size: 12px; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); opacity: .75; animation: breathe 3.4s ease-in-out infinite; text-align: center; }
 @keyframes breathe { 50% { opacity: .35; } }
 
+@media (max-width: 430px) {
+  .top .foil-toggle__label { display: none; }   /* Mix A B C | Subtle Vivid still fits beside the brand */
+}
 @media (max-width: 400px) {
   .brand { gap: 6px; }
   .brand__mark { font-size: 15px; }
