@@ -18,7 +18,9 @@
 //   * light ink lets the film bloom; big saturated fields flash as coloured
 //     metal, small saturated icons keep their hue;
 //   * dark mid-tone ink reads as cool polished chrome (the void armour);
-//   * opaque white ink (rules text, labels, numerals) blocks the film;
+//   * opaque white ink (rules text, labels, numerals) blocks the film, and
+//     the coloured panel right behind white type never blooms past its own
+//     tone (a "text halo" found at create time), so titles keep their contrast;
 //   * faces and skin keep their modelling (the white lobe and the band are
 //     held back there).
 //
@@ -29,7 +31,11 @@
 // a warm pastel single grating; 'vivid' (CN) a saturated full spectrum with a
 // second crossed grating, a stronger prism and a chroma boost under ink.
 //
-// Per finish (compiled as a #define variant, nothing unused runs):
+// In vivid, saturated ink is held (it gains colour, not light), and so are
+// small isolated icons and gems.
+//
+// Per finish (compiled as a #define variant, nothing unused runs; the vivid
+// style is a variant too):
 //   none       plain stock: a small varnish glint while handled, nothing at rest
 //   foil/holo  film; epic adds glitter: procedural mirror flakes of a fixed
 //              ~1 css px size (4-point stars on the brightest) that fire near
@@ -59,7 +65,7 @@
 //
 // No dependencies, no network. WebGL2 (ESSL 3.00) when available, else WebGL1
 // (OES_standard_derivatives when present, texel-offset gradients otherwise).
-// Debug views: set createHolo.debug = 'mask'|'etch'|'gold'|'lines'|'lum'|'film'|'skin'.
+// Debug views: set createHolo.debug = 'mask'|'etch'|'gold'|'lines'|'lum'|'film'|'skin'|'halo'.
 
 const DEG = Math.PI / 180;
 const TILT = 14 * DEG;
@@ -73,7 +79,7 @@ function finishParams(finish, rarity) {
   const p = { foil: 0, etch: 0, spark: 0, gold: 0, ice: 0, gloss: 0.65, body: 0 };
   switch (finish) {
     case 'foil': Object.assign(p, { foil: 0.9 }); break;
-    case 'holo': Object.assign(p, { foil: 1.0, body: 0.25 }); if (rarity === 'epic') p.spark = 1.0; break;
+    case 'holo': Object.assign(p, { foil: 1.0, body: 0.1 }); if (rarity === 'epic') p.spark = 1.0; break;
     case 'etched': Object.assign(p, { foil: 1.15, etch: 1.0, spark: 0.3, body: 0.7 }); break;
     case 'signature': Object.assign(p, { foil: 1.15, etch: 0.9, spark: 0.3, gold: 1.0, body: 0.7 }); break;
     case 'ultimate': Object.assign(p, { foil: 1.1, spark: 1.0, ice: 1.0, body: 0.0 }); break;
@@ -84,7 +90,7 @@ function finishParams(finish, rarity) {
 // style: sat (rainbow chroma), gain (rainbow strength), white (zeroth order), sig (angular spread)
 const STYLES = {
   subtle: { sat: 0.62, gain: 1.8, white: 0.85, sig: 0.40, second: 0.0, boost: 0.0, D: 1750, prism: 0.20 },
-  vivid: { sat: 1.0, gain: 2.3, white: 0.9, sig: 0.55, second: 0.55, boost: 0.35, D: 1850, prism: 0.34 },
+  vivid: { sat: 1.0, gain: 2.3, white: 0.9, sig: 0.55, second: 0.55, boost: 0.2, D: 1850, prism: 0.34 },
 };
 
 // ------------------------------------------------------------ GLSL sources
@@ -105,7 +111,7 @@ precision mediump float;
 varying vec2 vUv;
 uniform sampler2D uArt;   // premultiplied sRGB art
 uniform sampler2D uAux;   // r foil mask, g etch mask, b gold mask, a skin (faces)
-uniform sampler2D uFld;   // rg 16-bit contour field, b broad art luminance
+uniform sampler2D uFld;   // rg 16-bit contour field, b broad art luminance, a text halo
 uniform sampler2D uX;     // signature: gold bevel slope xy | ultimate: shard normal xy, orientation, crack
 uniform vec2 uTex;        // art texture size (px)
 uniform vec2 uCard;       // card size in reference px (shading geometry)
@@ -156,12 +162,12 @@ vec3 grating2(float ug, float d) {
 
 // hue-preserving shoulder: the untouched scan passes through (white -> 253),
 // real over-exposure rolls off towards white like a photographed foil
-vec3 tonemap(vec3 c) {
+vec3 tonemap(vec3 c, float wh) {
   float m = max(max(c.r, c.g), c.b);
   if (m > 0.92) {
     float mm = 0.92 + 0.18 * (1.0 - exp(-(m - 0.92) / 0.18));
     c *= mm / m;
-    c = mix(c, vec3(mm), clamp((m - 1.15) * 0.22, 0.0, 0.55));
+    c = mix(c, vec3(mm), clamp((m - 1.15) * 0.22, 0.0, 0.55) * wh);
   }
   return min(c, vec3(1.0));
 }
@@ -226,17 +232,22 @@ void main() {
   vec3 Vl = normalize(uCam - W) * uRot;
   Lit lk = lightAt(W, Vl, uLamp, sig);
   vec3 col = lin;
+  float wh = 1.0;                        // over-exposure whitening (held under saturated ink)
 
 #ifdef HAS_FOIL
   vec4 aux = texture2D(uAux, vUv);
   vec4 fld = texture2D(uFld, vUv);
 #ifdef DEBUG_VIEW
-  float dv = uDebug < 1.5 ? aux.r : uDebug < 2.5 ? aux.g : uDebug < 3.5 ? aux.b : uDebug < 4.5 ? fract((fld.r * 65280.0 + fld.g * 255.0) / 65535.0 * uFv.x) : uDebug < 5.5 ? fld.b : aux.a;
+  float dv = uDebug < 1.5 ? aux.r : uDebug < 2.5 ? aux.g : uDebug < 3.5 ? aux.b : uDebug < 4.5 ? fract((fld.r * 65280.0 + fld.g * 255.0) / 65535.0 * uFv.x) : uDebug < 5.5 ? fld.b : uDebug < 7.5 ? aux.a : fld.a;
   gl_FragColor = vec4(vec3(dv) * alpha, alpha); return;
 #endif
   Lit lf = lightAt(W, Vl, uFill.xyz, sig);
   float fw = uFill.w;
   float mxc = max(max(art.r, art.g), art.b);
+  float asat = (mxc - min(min(art.r, art.g), art.b)) / max(mxc, 0.02);
+  // saturated ink is a colour filter: blown film behind it saturates the
+  // ink's own hue instead of washing it to pastel (purple hair stays purple)
+  wh = 1.0 - 0.8 * smoothstep(0.35, 0.7, asat);
 
   // slowly wandering grating direction (no repeating texture); the art's broad
   // tonal shapes shift the grating phase, so the band bends with the picture
@@ -246,7 +257,10 @@ void main() {
   float ph = (fld.b - 0.5) * 0.07;
   // faces and skin keep their modelling: the white mirror lobe is held back there
   float wk = 1.0 - 0.7 * aux.a;
-  vec3 film = (filmOf(lk, g, g2, ph, wk) + fw * fillOf(lf, g, ph)) * (1.0 - 0.6 * aux.a);
+  // and dark mid-tone ink (a night sky) lets less of it through, or the glare
+  // reads as a grey smoke over the dark art
+  wk *= mix(0.55, 1.0, smoothstep(0.2, 0.55, mxc));
+  vec3 film = (filmOf(lk, g, g2, ph, wk) + fw * fillOf(lf, g, ph)) * (1.0 - 0.85 * aux.a);
 
 #ifdef HAS_ETCH
   // ---- etched marbling: thin grooves along the contours of the field
@@ -290,8 +304,17 @@ void main() {
   film += (hue * 0.5 + 0.5) * ice.w * (glow * 1.2 + flash) * uB.x;   // seams light up only around a lit shard
 #endif
   film *= kOn;
+#ifdef HAS_VIVID
+  // vivid: the stronger rainbow shows through light ink; under saturated ink
+  // it is filtered to the ink's own band (no hue swing on hair and scarves)
+  float sInk = smoothstep(0.35, 0.7, asat);
+  film = mix(vec3(dot(film, vec3(0.2126, 0.7152, 0.0722))), film, 1.0 - 0.45 * sInk);
+  // and saturated mid-tone ink (a red scarf, purple hair) is not blown out
+  // further than in the subtle style: vivid adds colour there, not light
+  film *= 1.0 - 0.3 * sInk * (1.0 - smoothstep(0.7, 0.95, mxc));
+#endif
 #ifdef DEBUG_FILM
-  gl_FragColor = vec4(sqrt(tonemap(film * 0.5)) * alpha, alpha); return;
+  gl_FragColor = vec4(sqrt(tonemap(film * 0.5, 1.0)) * alpha, alpha); return;
 #endif
 
   // ---- compose: ink over film
@@ -299,8 +322,9 @@ void main() {
   float gate = smoothstep(0.05, 0.40, mxc);  // pure black never blooms
   vec3 T = lin * (1.6 - 0.6 * lin) * gate;
   // chrome body: dark mid-tone ink (the void armour) over the film reads as
-  // cool polished metal rather than grey
-  float midW = smoothstep(0.07, 0.24, mxc) * (1.0 - smoothstep(0.30, 0.62, mxc));
+  // cool polished metal rather than grey (not on near-black: a dark sky
+  // would turn into a lilac haze)
+  float midW = smoothstep(0.12, 0.26, mxc) * (1.0 - smoothstep(0.30, 0.62, mxc));
   T *= 1.0 + uB.w * midW * 2.2;
   film += vec3(0.55, 0.62, 0.95) * uB.w * midW * kOn * (0.25 + 0.75 * lk.env);
   float dim = (0.10 + 0.2 * uB.x) * on * (1.0 - clamp(lk.env + fw * lf.env, 0.0, 1.0) * 0.6) + uS2.w * 0.45 * kOn;
@@ -333,9 +357,20 @@ void main() {
   col += fc * gk * mask * ((0.35 + 0.6 * uB.x) * gate + T * 1.6) * 2.2;
 #endif
 
+  float halo = fld.a;
+#ifdef HAS_VIVID
   // vivid (CN): foil under coloured ink reads as more saturated metal
+  // (not right behind white type: the panel must keep its contrast)
   float lc = dot(col, vec3(0.2126, 0.7152, 0.0722));
-  col = max(vec3(lc) + (col - vec3(lc)) * (1.0 + uS2.y * mask * kOn * gate * (1.0 - aux.a)), 0.0);
+  col = max(vec3(lc) + (col - vec3(lc)) * (1.0 + uS2.y * mask * kOn * gate * (1.0 - aux.a) * (1.0 - halo)), 0.0);
+#endif
+  // text halo: the coloured panel right behind white glyphs (title bars,
+  // labels) never blooms past its own tone, so the white type stays readable
+  // (dark art behind rules text may still glow up to a mid tone, which keeps
+  // the type readable without leaving a dark plate behind the line)
+  vec3 hc = min(col, lin * 1.3 + 0.03);
+  float hl = dot(col, vec3(0.2126, 0.7152, 0.0722));
+  col = mix(col, max(hc, col * min(1.0, 0.18 / max(hl, 1e-4))), halo);
 #endif
 
 #ifdef HAS_GOLD
@@ -360,12 +395,12 @@ void main() {
 #endif
 
   // ---- varnish: a narrow clear-coat highlight while handled, nothing at rest
-  // (a small crisp hot spot; its soft skirt only shows on light ink, so black
-  // never turns milky)
+  // (a small crisp hot spot; on near-black ink it keeps only a trace and its
+  // soft skirt only shows on light ink, so black never turns into a grey smudge)
   float inkL = dot(lin, vec3(0.2126, 0.7152, 0.0722));
-  col += vec3((exp(-lk.h2 / 0.0003) * 1.6 + exp(-lk.h2 / 0.004) * 0.4 * inkL) * lk.fres * uB.z * on);
+  col += vec3((exp(-lk.h2 / 0.0003) * 1.6 * mix(0.04, 1.0, smoothstep(0.02, 0.3, inkL)) + exp(-lk.h2 / 0.004) * 0.4 * inkL) * lk.fres * uB.z * on);
 
-  col = tonemap(col);
+  col = tonemap(col, wh);
   gl_FragColor = vec4(sqrt(max(col, 0.0)) * alpha, alpha);
 }`;
 
@@ -396,6 +431,27 @@ function boxBlur(src, w, h, r) {
   return out;
 }
 const gauss = (src, w, h, r) => boxBlur(boxBlur(boxBlur(src, w, h, r), w, h, r), w, h, r);
+// separable square dilation (running max over 2r+1), clamped edges
+function maxFilter(src, w, h, r) {
+  const tmp = new Float32Array(w * h), out = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) {
+    const o = y * w;
+    for (let x = 0; x < w; x++) {
+      let m = 0; const x0 = Math.max(0, x - r), x1 = Math.min(w - 1, x + r);
+      for (let k = x0; k <= x1; k++) if (src[o + k] > m) m = src[o + k];
+      tmp[o + x] = m;
+    }
+  }
+  for (let y = 0; y < h; y++) {
+    const y0 = Math.max(0, y - r), y1 = Math.min(h - 1, y + r);
+    for (let x = 0; x < w; x++) {
+      let m = 0;
+      for (let k = y0; k <= y1; k++) if (tmp[k * w + x] > m) m = tmp[k * w + x];
+      out[y * w + x] = m;
+    }
+  }
+  return out;
+}
 // a wide gaussian computed at half resolution and upsampled (bilinear): the
 // result is smooth anyway, at a quarter of the cost
 function gaussHalf(src, W, H, r) {
@@ -493,14 +549,93 @@ function marbleField(lum, W, H, seed) {
   return { w, h, v: out, range: vmax - vmin, lb };
 }
 
+// Compact, isolated blobs of saturated ink (domain icons, gems, keyword
+// badges) at half resolution: 8-connected components of saturated pixels of a
+// coherent hue (an icon touching the gold frame stays apart from it) whose
+// bounding box is small and well filled (thin strokes and big fields fail).
+function smallBlobs(px, W, H) {
+  const w = Math.ceil(W / 2), h = Math.ceil(H / 2), n = w * h;
+  const on = new Uint8Array(n), hue = new Float32Array(n);
+  // hue (0..6) of one scan pixel, or -1 when it is not saturated ink
+  const hueAt = (k) => {
+    const r = px[k], g = px[k + 1], b = px[k + 2];
+    const mx = r > g ? (r > b ? r : b) : (g > b ? g : b), mn = r < g ? (r < b ? r : b) : (g < b ? g : b), c = mx - mn;
+    if (c <= 51 || c <= 0.35 * mx) return -1;   // chroma > 0.2
+    return mx === r ? ((g - b) / c + 6) % 6 : mx === g ? (b - r) / c + 2 : (r - g) / c + 4;
+  };
+  const hd = (p, q) => { const d = Math.abs(p - q); return Math.min(d, 6 - d); };
+  for (let y = 0; y < h; y++) {
+    const o0 = 4 * W * Math.min(H - 1, 2 * y), o1 = 4 * W * Math.min(H - 1, 2 * y + 1);
+    for (let x = 0; x < w; x++) {
+      const a = 8 * x, c = 4 * Math.min(W - 1, 2 * x + 1);
+      const h0 = hueAt(o0 + a); if (h0 < 0) continue;
+      const h1 = hueAt(o0 + c), h2 = hueAt(o1 + a), h3 = hueAt(o1 + c);
+      if (h1 < 0 || h2 < 0 || h3 < 0) continue;
+      // a block that straddles two inks (an icon's rim against the gold frame)
+      // belongs to neither: it keeps the components apart
+      if (hd(h0, h1) > 0.4 || hd(h0, h2) > 0.4 || hd(h0, h3) > 0.4) continue;
+      const i = y * w + x; on[i] = 1; hue[i] = h0;
+    }
+  }
+  const near = (i, j) => hd(hue[i], hue[j]) < 0.4;   // < 24 deg
+  const par = new Int32Array(n).fill(-1);
+  const find = (a) => { while (par[a] !== a) { par[a] = par[par[a]]; a = par[a]; } return a; };
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = y * w + x; if (!on[i]) continue; par[i] = i;
+    if (x > 0 && on[i - 1] && near(i, i - 1)) { const a = find(i), c = find(i - 1); if (a !== c) par[a] = c; }
+    if (y > 0) for (let dx = -1; dx <= 1; dx++) {
+      const xx = x + dx; if (xx < 0 || xx >= w || !on[i - w + dx] || !near(i, i - w + dx)) continue;
+      const a = find(i), c = find(i - w + dx); if (a !== c) par[a] = c;
+    }
+  }
+  // component boxes, indexed by root
+  const X0 = new Int32Array(n), Y0 = new Int32Array(n), X1 = new Int32Array(n), Y1 = new Int32Array(n), AR = new Int32Array(n);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = y * w + x; if (!on[i]) continue; const r = find(i); par[i] = r;
+    if (AR[r] === 0) { X0[r] = X1[r] = x; Y0[r] = Y1[r] = y; }
+    else { if (x < X0[r]) X0[r] = x; if (x > X1[r]) X1[r] = x; if (y > Y1[r]) Y1[r] = y; }
+    AR[r]++;
+  }
+  const lo = 0.012 * w, hi = 0.14 * w;
+  // isolated: the ring just outside the blob is mostly neutral (the black
+  // frame, white or grey stock); a blob inside the painting (a cube in the sky,
+  // a bracelet on an arm) is surrounded by other inks and keeps the full foil
+  const neutral = (x, y) => {
+    const k = 4 * (Math.min(H - 1, 2 * y) * W + Math.min(W - 1, 2 * x)), r = px[k], g = px[k + 1], b = px[k + 2];
+    return (r > g ? (r > b ? r : b) : (g > b ? g : b)) - (r < g ? (r < b ? r : b) : (g < b ? g : b)) < 26;   // chroma < 0.1
+  };
+  const verdict = new Int8Array(n);   // per root: 0 unknown, 1 small icon, -1 not
+  const out = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    if (!on[i]) continue; const r = par[i];
+    if (verdict[r] === 0) {
+      const bw = X1[r] - X0[r] + 1, bh = Y1[r] - Y0[r] + 1, span = Math.max(bw, bh);
+      let ok = span >= lo && span <= hi && AR[r] >= 0.25 * bw * bh && Math.min(bw, bh) >= 0.35 * span;
+      if (ok) {
+        const d = Math.max(2, Math.round(0.15 * span));
+        const x0 = Math.max(0, X0[r] - d), x1 = Math.min(w - 1, X1[r] + d), y0 = Math.max(0, Y0[r] - d), y1 = Math.min(h - 1, Y1[r] + d);
+        let tot = 0, neu = 0;
+        for (let x = x0; x <= x1; x++) { tot += 2; neu += neutral(x, y0) + neutral(x, y1); }
+        for (let y = y0 + 1; y < y1; y++) { tot += 2; neu += neutral(x0, y) + neutral(x1, y); }
+        ok = neu >= 0.55 * tot;
+      }
+      verdict[r] = ok ? 1 : -1;
+    }
+    if (verdict[r] > 0) out[i] = 1;
+  }
+  // grown by one texel so the icon's own rim (the blocks that straddle the
+  // frame) is held too
+  return { w, h, m: boxBlur(maxFilter(out, w, h, 1), w, h, 1) };
+}
+
 function analyse(px, W, H, finish) {
   const N = W * H, s = W / 744;
-  const lum = new Float32Array(N), sat = new Float32Array(N), minc = new Float32Array(N), lum2 = new Float32Array(N);
+  const lum = new Float32Array(N), sat = new Float32Array(N), minc = new Float32Array(N), lum2 = new Float32Array(N), maxc = new Float32Array(N);
   for (let i = 0; i < N; i++) {
     const r = px[4 * i] / 255, g = px[4 * i + 1] / 255, b = px[4 * i + 2] / 255;
     const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
     lum[i] = 0.2126 * r + 0.7152 * g + 0.0722 * b; lum2[i] = lum[i] * lum[i];
-    sat[i] = mx > 0.02 ? (mx - mn) / mx : 0; minc[i] = mn;
+    sat[i] = mx > 0.02 ? (mx - mn) / mx : 0; minc[i] = mn; maxc[i] = mx;
   }
   const aux = new Uint8Array(N * 4);
   const etched = finish === 'etched' || finish === 'signature';
@@ -517,11 +652,14 @@ function analyse(px, W, H, finish) {
   // small saturated features (domain icons, gems) keep their hue; big
   // saturated fields (a red backdrop) flash as coloured metal
   const satL = gaussHalf(sat, W, H, Math.max(3, Math.round(12 * s)));
-  for (let i = 0; i < N; i++) {
+  // compact saturated blobs (icons, badges) are held harder still
+  const sb = smallBlobs(px, W, H);
+  for (let y = 0, i = 0; y < H; y++) for (let x = 0; x < W; x++, i++) {
     const sd = Math.sqrt(Math.max(0, m2[i] - m1[i] * m1[i]));
     const flat = (1 - smooth(0.02, 0.07, sd)) * smooth(0.80, 0.94, m1[i]);
     const gw = Math.min(1, Math.max(glyph[i], glyphG[i] * 2.2));
-    const m = (1 - 0.5 * sat[i] * Math.sqrt(sat[i]) * smooth(0.12, 0.35, sat[i] - satL[i])) * (1 - 0.5 * flat) * (1 - 0.85 * gw);
+    const small = sb.m[(y >> 1) * sb.w + (x >> 1)];
+    const m = (1 - 0.5 * sat[i] * Math.sqrt(sat[i]) * smooth(0.12, 0.35, sat[i] - satL[i])) * (1 - 0.7 * small) * (1 - 0.5 * flat) * (1 - 0.85 * gw);
     aux[4 * i] = Math.round(255 * Math.min(1, Math.max(0, m)));
   }
 
@@ -555,16 +693,19 @@ function analyse(px, W, H, finish) {
     // strongly saturated areas are the figure and the UI panels (hair, scarf,
     // the name bar): they keep a smooth foil, the marbling lives in the backdrop
     const satB = gaussHalf(sat, W, H, Math.max(2, Math.round(4 * s)));
+    // near-black ink (the card frame, black backdrops) never blooms, so a
+    // groove there would only read as a dark contour line: no etch on it
+    const mxB = boxBlur(maxc, W, H, Math.max(1, Math.round(2 * s)));
     const portrait = H > W;
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
       const i = y * W + x, u = x / W, v = y / H;
       // the rules-text box of the portrait frame: only a trace of etch
       const box = portrait ? smooth(0.62, 0.66, v) * (1 - smooth(0.93, 0.96, v)) * smooth(0.03, 0.06, u) * (1 - smooth(0.94, 0.97, u)) : 0;
-      const e = (1 - smooth(0.12, 0.45, skinB[i])) * (1 - smooth(0.14, 0.3, dens[i])) * (1 - smooth(0.48, 0.72, satB[i])) * (1 - 0.7 * box);
+      const e = (1 - smooth(0.12, 0.45, skinB[i])) * (1 - smooth(0.14, 0.3, dens[i])) * (1 - smooth(0.48, 0.72, satB[i])) * (1 - 0.7 * box) * smooth(0.06, 0.16, mxB[i]);
       aux[4 * i + 1] = Math.round(255 * e);
     }
   }
-  // field texture: rg = 16-bit contour field (etched), b = broad art luminance
+  // field texture: rg = 16-bit contour field (etched), b = broad art luminance, a = text halo (below)
   {
     const mf = etched ? marbleField(lum, W, H, seed) : null;
     const fw = Math.ceil(W / 2), fh = Math.ceil(H / 2);
@@ -575,7 +716,7 @@ function analyse(px, W, H, finish) {
     const fld = new Uint8Array(fw * fh * 4);
     for (let i = 0; i < fw * fh; i++) {
       if (mf) { const F = Math.round(Math.min(65535, Math.max(0, mf.v[i] / mf.range * 65535))); fld[4 * i] = F >> 8; fld[4 * i + 1] = F & 255; }
-      fld[4 * i + 2] = Math.round(255 * lb[i]); fld[4 * i + 3] = 255;
+      fld[4 * i + 2] = Math.round(255 * lb[i]); fld[4 * i + 3] = 0;
     }
     Object.assign(out, { fld, fw, fh, range: mf ? mf.range : 1 });
   }
@@ -638,7 +779,93 @@ function analyse(px, W, H, finish) {
     }
     out.x = x;
   }
+  // text halo (field alpha): the panel right behind white type (title bars,
+  // labels, rules text) is kept from blooming in the shader, or the type
+  // loses its contrast. Only real type counts, never the gold signature.
+  const halo = textHalo(glyph, W, H, s, aux);
+  for (let i = 0; i < out.fw * out.fh; i++) out.fld[4 * i + 3] = Math.round(255 * Math.min(1, halo[i] * 1.25));
   return out;
+}
+
+// White type: glyph components (half resolution) that sit in a row with
+// others of a similar height, or one word-shaped component; sparkles, rims
+// and other art highlights fail the test. Returns the type mask dilated ~6
+// scan px with a soft ~8 px fade, at half resolution (the field texture's size).
+function textHalo(glyph, W, H, s, aux) {
+  const w = Math.ceil(W / 2), h = Math.ceil(H / 2), n = w * h;
+  const g2 = new Float32Array(n), on = new Uint8Array(n);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const X = Math.min(W - 1, 2 * x), Y = Math.min(H - 1, 2 * y), X1 = Math.min(W - 1, X + 1), Y1 = Math.min(H - 1, Y + 1);
+    const a = Y * W + X, b = Y * W + X1, c = Y1 * W + X, d = Y1 * W + X1, i = y * w + x;
+    g2[i] = Math.max(glyph[a], glyph[b], glyph[c], glyph[d]);
+    // not the gold signature, not teeth and eye glints on a face
+    const gold = aux[4 * a + 2] + aux[4 * b + 2] + aux[4 * c + 2] + aux[4 * d + 2];
+    on[i] = g2[i] > 0.35 && gold === 0 && aux[4 * a + 3] < 80 ? 1 : 0;
+  }
+  const par = new Int32Array(n).fill(-1);
+  const find = (a) => { while (par[a] !== a) { par[a] = par[par[a]]; a = par[a]; } return a; };
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = y * w + x; if (!on[i]) continue; par[i] = i;
+    if (x > 0 && on[i - 1]) { const a = find(i), c = find(i - 1); if (a !== c) par[a] = c; }
+    if (y > 0) for (let dx = -1; dx <= 1; dx++) {
+      const xx = x + dx; if (xx < 0 || xx >= w || !on[i - w + dx]) continue;
+      const a = find(i), c = find(i - w + dx); if (a !== c) par[a] = c;
+    }
+  }
+  const id = new Int32Array(n).fill(-1), B = [];   // component boxes: x0, y0, x1, y1, area
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = y * w + x; if (!on[i]) continue; const r = find(i);
+    let k = id[r]; if (k < 0) { k = id[r] = B.length; B.push([x, y, x, y, 0]); }
+    id[i] = k;
+    const b = B[k]; if (x < b[0]) b[0] = x; if (x > b[2]) b[2] = x; if (y > b[3]) b[3] = y; b[4]++;
+  }
+  const hmin = 2.5 * s, hmax = 27 * s, K = B.length;
+  const cand = new Uint8Array(K);
+  for (let k = 0; k < K; k++) {
+    const b = B[k], bh = b[3] - b[1] + 1, bw = b[2] - b[0] + 1;
+    cand[k] = bh >= hmin && bh <= hmax && bw <= 12 * bh && b[4] >= 4 ? 1 : 0;
+  }
+  // neighbours on a row: overlapping vertically, similar height, a small gap
+  const C = Math.max(4, Math.round(16 * s)), gw = Math.ceil(w / C), gh = Math.ceil(h / C);
+  const cells = Array.from({ length: gw * gh }, () => []);
+  for (let k = 0; k < K; k++) {
+    if (!cand[k]) continue; const b = B[k];
+    for (let cy = (b[1] / C) | 0; cy <= ((b[3] / C) | 0); cy++) for (let cx = (b[0] / C) | 0; cx <= ((b[2] / C) | 0); cx++) cells[cy * gw + cx].push(k);
+  }
+  const gp = new Int32Array(K); for (let k = 0; k < K; k++) gp[k] = k;
+  const gf = (a) => { while (gp[a] !== a) { gp[a] = gp[gp[a]]; a = gp[a]; } return a; };
+  for (let k = 0; k < K; k++) {
+    if (!cand[k]) continue; const a = B[k], ah = a[3] - a[1] + 1;
+    const x0 = Math.max(0, ((a[0] - ah) / C) | 0), x1 = Math.min(gw - 1, ((a[2] + ah) / C) | 0);
+    for (let cy = (a[1] / C) | 0; cy <= ((a[3] / C) | 0); cy++) for (let cx = x0; cx <= x1; cx++) for (const j of cells[cy * gw + cx]) {
+      if (j <= k) continue; const b = B[j], bh = b[3] - b[1] + 1;
+      const ov = Math.min(a[3], b[3]) - Math.max(a[1], b[1]) + 1, gap = Math.max(b[0] - a[2], a[0] - b[2]);
+      if (ov >= 0.5 * Math.min(ah, bh) && Math.max(ah, bh) <= 2.6 * Math.min(ah, bh) && gap <= Math.max(ah, bh)) { const p = gf(k), q = gf(j); if (p !== q) gp[p] = q; }
+    }
+  }
+  const cnt = new Int32Array(K);
+  for (let k = 0; k < K; k++) if (cand[k]) cnt[gf(k)]++;
+  const keep = new Uint8Array(K);
+  for (let k = 0; k < K; k++) {
+    if (!cand[k]) continue; const b = B[k], bh = b[3] - b[1] + 1, bw = b[2] - b[0] + 1, fill = b[4] / (bw * bh);
+    let word = 0;
+    if (cnt[gf(k)] < 3 && bw >= 2.5 * bh && fill > 0.15 && fill < 0.7) {
+      // a merged word: its midline crosses several strokes (a streak or a rim crosses one or two)
+      const o = ((b[1] + b[3]) >> 1) * w; let tr = 0, prev = 0;
+      for (let x = b[0]; x <= b[2] + 1; x++) { const c = x <= b[2] && on[o + x] && id[o + x] === k ? 1 : 0; if (c !== prev) tr++; prev = c; }
+      word = tr >= 6 ? 1 : 0;
+    }
+    keep[k] = cnt[gf(k)] >= 3 || word ? 1 : 0;
+  }
+  const t = new Float32Array(n);
+  for (let i = 0; i < n; i++) if (on[i] && keep[id[i]]) t[i] = 1;
+  // full hold within ~6 scan px of a glyph, then a soft fade over ~8 more, so
+  // the held panel does not end in a hard edge that reads as an outline stroke
+  const d = maxFilter(t, w, h, Math.max(1, Math.round(2.5 * s)));
+  const core = boxBlur(d, w, h, 1), rr = Math.max(1, Math.round(2 * s));
+  const wide = boxBlur(boxBlur(d, w, h, rr), w, h, rr);
+  for (let i = 0; i < n; i++) core[i] = Math.max(core[i], Math.min(1, wide[i] * 1.6));
+  return core;
 }
 
 // integer hash -> 4 floats in [0,1)
@@ -745,7 +972,7 @@ export function createHolo(canvas, { image, finish = 'holo', rarity = 'rare', st
   const P = finishParams(finish, rarity);
   const S = STYLES[style] || STYLES.subtle;
   const vivid = style === 'vivid' ? 1 : 0;
-  const debug = { mask: 1, etch: 2, gold: 3, lines: 4, lum: 5, film: 6, skin: 7 }[createHolo.debug] || 0;
+  const debug = { mask: 1, etch: 2, gold: 3, lines: 4, lum: 5, film: 6, skin: 7, halo: 8 }[createHolo.debug] || 0;
   const iw = image.naturalWidth || image.width, ih = image.naturalHeight || image.height;
   const A = P.foil > 0 ? cachedAnalysis(image, finish) : null;
 
@@ -755,7 +982,7 @@ export function createHolo(canvas, { image, finish = 'holo', rarity = 'rare', st
   function initGL() {
     const deriv = gl2 || !!gl.getExtension('OES_standard_derivatives');
     const defs = [P.foil > 0 && 'HAS_FOIL', P.etch > 0 && 'HAS_ETCH', P.ice > 0 && 'HAS_ICE', P.spark > 0 && 'HAS_GLITTER', P.gold > 0 && 'HAS_GOLD',
-      S.second > 0 && 'HAS_SECOND', deriv && 'HAS_DERIV', debug && debug !== 6 && 'DEBUG_VIEW', debug === 6 && 'DEBUG_FILM'].filter(Boolean).map((d) => '#define ' + d + '\n').join('');
+      S.second > 0 && 'HAS_SECOND', S.boost > 0 && 'HAS_VIVID', deriv && 'HAS_DERIV', debug && debug !== 6 && 'DEBUG_VIEW', debug === 6 && 'DEBUG_FILM'].filter(Boolean).map((d) => '#define ' + d + '\n').join('');
     const head = gl2 ? '#version 300 es\n' : '';
     const fsHead = gl2 ? '#define varying in\n#define texture2D texture\nout highp vec4 holoFrag;\n#define gl_FragColor holoFrag\n'
       : (deriv && P.etch > 0 ? '#extension GL_OES_standard_derivatives : enable\n' : '');

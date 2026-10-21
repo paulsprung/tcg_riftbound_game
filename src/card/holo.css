@@ -84,7 +84,9 @@
   -webkit-user-drag: none;
 }
 .hc__img.is-loaded { opacity: 1; }
-/* The WebGL foil draws the whole card into this box once it is ready. */
+/* The WebGL foil draws the whole card into this box once it is ready (the
+   app's HoloCanvas); the CSS foil's markup is then not rendered, and its two
+   pseudo layers (body, tint) are switched off below. */
 .hc__gl { pointer-events: none; }
 .hc__gl-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 /* A battlefield is printed sideways on a portrait card. */
@@ -133,8 +135,8 @@
      foil          the foil-slot card: a smooth prismatic sheen over the
                    whole face, no repeating texture
      holo          rares and epics: the same sheen, stronger; epics glitter
-     etched        alt art / overnumbered: rainbow holo with etched swirl
-                   lines that follow the art
+     etched        alt art / overnumbered: rainbow holo with etched
+                   marbling: dense, flowing, closed contour lines
      signature     etched holo plus a gold-stamped signature
      ultimate      all of it, plus cracked ice and a galaxy of glitter
 
@@ -146,7 +148,12 @@
    rainbow of a diffraction grating: one coherent arc (first order) and a
    fainter, wider second one, that sweep across the face as the card turns.
 
-   How that is done with compositing alone:
+   How that is done with compositing alone, bottom to top:
+     cut     etched / signature: the ink in an etched line sits on matte
+             stock and goes darker while the card is handled (final-gl's
+             inkDim, .12 at rest, .5 handled), which is what makes the
+             marbling read; a multiply group of the marbling texture, its
+             lines lightened away on the figure by the HOLD (see below).
      shine   an isolated group composited in color-dodge (it can only
              brighten, and dodging black leaves black). Inside it, the
              light (::before) is multiplied by a KEY: a copy of the art
@@ -154,53 +161,84 @@
              per channel. So the dodge is strong on light ink, nothing on
              dark ink, and on a red icon only red brightens. brightness()
              on the group caps the dodge source below white, so it never
-             divides by zero and black stays exactly black.
-             Cracked-ice facets sit between light and key, so they only
-             show through light ink. After the key: the etched grooves and
-             ice seams (multiplied in), then the glitter and the etched
-             ridges (::after), mirrors that also catch the light over darker
-             ink (they are still dodged: black stays black).
+             divides by zero and black stays exactly black. After the key:
+             the etched grooves (the foil stops at each line; with the HOLD,
+             in exclusion, so on the figure they give way to a flat half
+             strength) or, on the ultimate, the ice's facets and light seams,
+             multiplied in; then the etched ridges (.hc__ridge), the lit flank
+             of each groove, a mirror that also catches the light over darker
+             ink (still dodged: black stays black), held off the figure too.
+     ice     ultimate: cracked ice, its own capped color-dodge group: the
+             flashing shards (flash map, below) and the cracks, lit around the
+             light, times a soft key of the ink (near black stays out) and a
+             rainbow that gives each shard one colour.
+     glit    glitter (epics, showcase): its own layer after the shine, added
+             with plus-lighter (screen where that is missing), so the flakes
+             also flash over dark ink, as final-gl's do; each flake takes a
+             pastel colour from a rainbow field that slides with the tilt.
+     sig     signature only: the gold-stamped script, a metal gradient cut
+             out by the card's signature mask (or the --auto threshold).
+     body    etched / signature, the face's ::before: a pale cool colour in
+             overlay, final-gl's chrome sheen on dark mid-tone ink.
      tint    the face's ::after: a pale copy of the rainbow arc multiplied
              in. Multiplying changes dark ink only in proportion (it stays
              dark) and gives white ink, which a dodge cannot colour, the
              faint pastel rainbow a foil shows on its text box.
-     sig     signature only: the gold-stamped script, a metal gradient cut
-             out by the card's precomputed signature mask.
      glare   the varnish: a specular hot spot + shading, in overlay (keeps
              black black and white white), only while handled.
+
+   The figure HOLD, without per-card maps: final-gl keeps its etch off skin,
+   strongly saturated areas and fine detail (the marbling lives in the
+   backdrop). Here a copy of the art pushed through colour matrices only
+   (.hc__hold: hue-rotate, saturate, grayscale, a threshold) is white on
+   skin, reds, violets, purples and light neutral ink, black on the blues and
+   cyans of sky and backdrop and on dark ink. It costs a filtered <img> copy
+   in each of the three etched layers (cut, groove, ridge), on etched and
+   signature cards only.
 
    Flashing flakes and facets without per-pixel maths: a "flash map" stores
    one value per flake or shard (its facet normal). background-blend-mode:
    difference against a flat colour computed from --tx/--ty gives
    |value - c|, and filter: invert() brightness() contrast() turns that into
    "lit where the value matches the tilt". Each flake / shard therefore
-   flashes at its own angle, like the mirrors they are. See
+   flashes at its own angle, like the mirrors they are. A flake or a
+   cracked-ice shard stores a 2D normal (two values) and is lit only where
+   both match, so only a few flash at a time, as in final-gl. See
    _work/gen-tex.py.
 
    Per frame only the variables tilt.ts writes change. No SVG filters.
 
-   DOM changes against the app's HoloCard.tsx (front face; see
-   HoloCard-front.snippet.tsx next to this file):
+   DOM changes against the app's HoloCard.tsx (front face; the exact JSX is
+   HoloCard-front.snippet.tsx next to this file), in this order after the
+   main <img>:
      - .hc__prism, .hc__foil, .hc__sparkle, .hc__band, .hc__cosmos and the
        old .hc__etch are gone from the front face.
+     - new <span class="hc__fx hc__cut"> (etched, signature) holding an
+       <img class="hc__img hc__hold"> copy of the art.
      - new <span class="hc__fx hc__shine"> (not for finish "none") holding,
-       in this order: <span class="hc__ice"> (ultimate only), a copy of the
-       art <img class="hc__img hc__key"> (same classes as the main <img>,
-       so sideways battlefields line up), <span class="hc__groove">
-       (etched, signature, ultimate) and <span class="hc__flash"> (epics and
-       showcase cards: glitter).
-     - new <span class="hc__fx hc__sig"> for finish "signature", after the
-       shine.
-     - the front face's ::after is the tint (no markup); .hc__glare stays.
-     - per-card maps, set as inline custom properties on .hc when the card
-       has them (generated at build time by _work/gen-maps.py, see there):
-         --etch-map: url(<card>.etch.png)   etched / signature
-         --etch-map-sideways: url(<card>.etch-sideways.png)   landscape cards
-         --sig-mask: url(<card>.sig.png)    signature
-       (the ultimate uses its cracked-ice seams instead of an etch map)
-       Without --etch-map the generic swirl (tex/etch.png) is used. A
-       signature card without --sig-mask gets .hc__sig--auto instead, with
-       an <img> copy inside (threshold fallback, see the end of this part).
+       in this order, a copy of the art <img class="hc__img hc__key"> (same
+       classes as the main <img>, so sideways battlefields line up) and
+       <span class="hc__groove"> (etched, signature, ultimate), which on
+       etched / signature cards holds another <img class="hc__img
+       hc__hold">, then (etched, signature) <span class="hc__ridge"> holding
+       a third <img class="hc__img hc__hold">.
+     - new <span class="hc__fx hc__ice"> (ultimate), holding
+       <span class="hc__ice-f"/> and an <img class="hc__img hc__key">.
+     - new <span class="hc__fx hc__glit"><span class="hc__flash"/></span>
+       (epics and showcase cards: glitter).
+     - new <span class="hc__fx hc__sig"> for finish "signature", after that.
+     - the front face's ::before (body) and ::after (tint) need no markup;
+       .hc__glare stays.
+     - every <img> copy takes the main <img>'s classes plus is-loaded (the
+       copies render only once the art is loaded), alt="" and
+       draggable={false}.
+     - the app ships no per-card maps: the etched lines are the generic
+       marbling (tex/etch.png, tex/etch-land.png for an upright landscape
+       face, tex/etch-side.png for a battlefield shown sideways) and a
+       signature card uses .hc__sig--auto, an <img> copy inside (threshold,
+       see the end of this part). Optional hooks remain, as inline custom
+       properties on .hc: --etch-map (and --etch-map-sideways) to replace the
+       marbling, --sig-mask for an exact signature (then plain .hc__sig).
      - <FoilDefs/> (the #rb-etch SVG filter) is no longer used.
      - textures in tex/ (regenerate with _work/gen-tex.py).
      - the back face is unchanged (.hc__band + .hc__glare).
@@ -220,7 +258,12 @@
   --floor: #000;     /* film between the features                           */
   --glitter: 0;      /* glitter flakes                                      */
   --ice: 0;          /* cracked-ice facets                                  */
-  --etch: 0;         /* depth of the etched grooves                         */
+  --ice-cap: .92;    /* cap of a lit shard's dodge                          */
+  --ice-base: rgb(40 40 40);  /* every facet, dimly, under the flashes      */
+  --ice-seam: .5;    /* the cracks, lit around the light                    */
+  --etch: 0;         /* depth of the etched grooves (ultimate: ice facets)  */
+  --ink-etch: 0;     /* the ink in a groove darkens while handled ...       */
+  --ink-rest: .12;   /*      ... and only a trace at rest (final-gl .12)    */
   --ridge: 0;        /* glint of the etched ridges                          */
   --tint: 0;         /* pastel rainbow over white ink                       */
   --glare: .3;       /* varnish                                             */
@@ -233,10 +276,10 @@
 .hc[data-finish="etched"],
 .hc[data-finish="signature"],
 .hc[data-finish="ultimate"]  { --shine: 1;   --rest: .28; --tint: 1;   --glare: .42; --sheen: .2;  --floor: #3a3a3a;
-                               --etch: .78; --ridge: .85; --glitter: .45; --k-c: 1.45; }
-.hc[data-finish="signature"] { --etch: .7; --glitter: .35; }
-.hc[data-finish="ultimate"]  { --etch: .3; --glitter: 1; --ice: 1; --rest: .32; --floor: #101010; --arc: .42; --hot: .7; --sheen: .1; --s-max: .7;
-                               --k-b: 1.5; }
+                               --etch: .95; --ridge: 1; --ink-etch: .5; --glitter: .45; --k-c: 1.45; }
+.hc[data-finish="signature"] { --glitter: .35; }
+.hc[data-finish="ultimate"]  { --etch: .9; --ridge: 0; --ink-etch: 0; --glitter: 1.2; --ice: 1; --rest: .32; --floor: #101010;
+                               --arc: .42; --hot: .7; --sheen: .1; --s-max: .62; --k-b: 1.3; }
 
 /* "subtle" is the English printing's warmer, gentler foil; "vivid" the
    stronger, full-spectrum rainbow of the Chinese printing. The arc's
@@ -253,16 +296,24 @@
   --foil-tint: .5;    /* the pastel over white ink                        */
 }
 :root[data-foil="vivid"] {
-  --a-v: hsl(276 90% 44%);  --a-b: hsl(224 100% 54%); --a-c: hsl(188 100% 48%);
-  --a-g: hsl(130 85% 46%);  --a-y: hsl(54 100% 52%);  --a-o: hsl(30 100% 50%);
+  --a-v: hsl(276 90% 44%);  --a-b: hsl(224 100% 54%); --a-c: hsl(188 70% 46%);
+  --a-g: hsl(130 58% 45%);  --a-y: hsl(54 100% 52%);  --a-o: hsl(30 100% 50%);
   --a-r: hsl(345 95% 48%);
   --a2: .42;
-  --t-v: hsl(278 100% 88%); --t-b: hsl(222 100% 89%); --t-c: hsl(186 100% 86%);
-  --t-g: hsl(130 70% 90%);  --t-y: hsl(54 100% 84%);  --t-o: hsl(30 100% 87%);
+  --t-v: hsl(278 100% 88%); --t-b: hsl(222 80% 91%);  --t-c: hsl(186 55% 91%);
+  --t-g: hsl(130 40% 92%);  --t-y: hsl(54 100% 84%);  --t-o: hsl(30 100% 87%);
   --t-r: hsl(352 100% 89%);
   --foil-gain: 1;
-  --foil-tint: .8;
+  --foil-tint: .65;
 }
+/* The vivid arc's cyan and green (above: ~30% less saturated than a pure
+   spectrum) and above all the pastel tint's (lighter still: multiplied in, a
+   cyan pastel takes red out of skin) cast faces green where they cross warm,
+   mid-light ink. A more saturated key holds them back too: warm ink lets
+   mostly warm light through (as final-gl's ink filter, which is fully
+   saturated, does). On etched cards the figure hold also halves the foil
+   on the figure (see .hc__groove > .hc__hold). */
+:root[data-foil="vivid"] .hc { --k-s: .6; }
 
 .hc__fx { position: absolute; inset: 0; pointer-events: none; display: block; }
 .hc__face {
@@ -329,39 +380,49 @@
   opacity: 1;
 }
 
-/* glitter: one flake per cell, each flashing at its own tilt (flash map,
-   see above), thicker near the light. Printed on the film: no parallax. */
-.hc__flash {
-  --c-a: calc(127.5 + var(--tx, 0) * 52 + var(--ty, 0) * 16);
-  --c-b: calc(127.5 + var(--ty, 0) * 52 - var(--tx, 0) * 16);
-  background-image: linear-gradient(rgb(var(--c-a) var(--c-b) var(--c-a)), rgb(var(--c-a) var(--c-b) var(--c-a))),
-    url("./tex/glitter-v.png");
-  background-size: 100% 100%, cover;
-  background-position: center;
-  background-blend-mode: difference, normal;
-  /* 1-|v-c|: lit for |v-c| < .025, dark beyond .065; both flake families
-     to white */
-  filter: invert(1) brightness(.5236) contrast(47.75) grayscale(1) brightness(3.5);
-  -webkit-mask-image: url("./tex/glitter-a.png"),
-    radial-gradient(ellipse 75% calc(75% / var(--ar)) at var(--lx) var(--ly), #000 0%, rgb(0 0 0 / .55) 45%, rgb(0 0 0 / .18) 100%);
-  -webkit-mask-size: cover, 100% 100%;
-  -webkit-mask-position: center;
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-composite: source-in;
-          mask-image: url("./tex/glitter-a.png"),
-    radial-gradient(ellipse 75% calc(75% / var(--ar)) at var(--lx) var(--ly), #000 0%, rgb(0 0 0 / .55) 45%, rgb(0 0 0 / .18) 100%);
-          mask-size: cover, 100% 100%;
-          mask-position: center;
-          mask-repeat: no-repeat;
-          mask-composite: intersect;
-  mix-blend-mode: screen;
-  opacity: calc(var(--glitter) * var(--on, 0));
-}
+/* cracked ice (ultimate): Voronoi shards ~1/14 of the card wide, as in
+   final-gl (its computeIce(w, h, 17)). Each is a mirror facet with a 2D
+   normal (two values in the flash map, .hc__ice-f): the first threshold
+   lights the shards whose value matches the tilt in either channel,
+   grayscale() + the second threshold keep the ones lit in both, so a shard
+   flashes only when the light meets its own normal (a few at a time,
+   anywhere on the face, strongest near the light), with a dimmer glow on
+   the shards that nearly match. Under the flashes (lighten) every facet
+   shows dimly (--ice-base) and the cracks light up (::before: the seams of
+   tex/ice-seams.png, which the shine also multiplies in, so the foil breaks
+   into facets there too). Then a soft key of the ink (final-gl's facets
+   bloom on dark-mid ink as well, only near black stays out: black type stays
+   black) and the ::after, a rainbow that gives each lit shard one colour.
+   The group is its own colour-dodge, capped by brightness(), lit within a
+   wide ellipse around the light (no floor at rest: nothing at rest). */
+.hc[data-upright] .hc__cut { clip-path: inset(0 round 4% / 5.6%); }
 
-/* cracked ice: shards, each a mirror facet with its own normal (flash map,
-   like the glitter), flashing as the light passes; the seams show only
-   where the foil is lit (they are part of the grooves below) */
+/* The ultimate's ice washed lit shards out to flat white on light ink. */
+.hc[data-finish="ultimate"] { --ice-cap: .8; }
+.hc[data-finish="ultimate"] .hc__ice { opacity: calc(.72 * var(--ice) * var(--on, 0)); }
+
 .hc__ice {
+  isolation: isolate;
+  background: var(--ice-base);
+  mix-blend-mode: color-dodge;
+  filter: brightness(calc(var(--ice-cap) * var(--foil-gain)));
+  --ice-light: radial-gradient(ellipse 170% calc(170% / var(--ar)) at var(--lx) var(--ly), #000 0%, rgb(0 0 0 / .9) 40%, rgb(0 0 0 / .35) 100%);
+  -webkit-mask-image: var(--ice-light);
+          mask-image: var(--ice-light);
+  opacity: calc(var(--ice) * var(--on, 0));
+}
+.hc__ice::before {
+  content: "";
+  position: absolute; inset: 0;
+  mix-blend-mode: lighten;
+  /* the seams (the only pixels of tex/ice-seams.png that reach white),
+     lit around the light (the group's mask) */
+  background: url("./tex/ice-seams.png") center / cover no-repeat;
+  filter: grayscale(1) brightness(.5208) contrast(24) brightness(var(--ice-seam));
+}
+.hc__ice-f {
+  position: absolute; inset: 0;
+  mix-blend-mode: lighten;
   --c-a: calc(127.5 + var(--tx, 0) * 50 + var(--ty, 0) * 12);
   --c-b: calc(127.5 + var(--ty, 0) * 50 - var(--tx, 0) * 12);
   background-image: linear-gradient(rgb(var(--c-a) var(--c-b) var(--c-a)), rgb(var(--c-a) var(--c-b) var(--c-a))),
@@ -369,42 +430,233 @@
   background-size: 100% 100%, cover;
   background-position: center;
   background-blend-mode: difference, normal;
-  /* lit for |v-c| < .025, dark beyond .065 */
-  filter: invert(1) brightness(.5236) contrast(47.75) grayscale(1) brightness(3.5);
-  -webkit-mask-image: radial-gradient(ellipse 90% calc(90% / var(--ar)) at var(--lx) var(--ly), #000 0%, rgb(0 0 0 / .5) 50%, rgb(0 0 0 / .15) 100%);
-          mask-image: radial-gradient(ellipse 90% calc(90% / var(--ar)) at var(--lx) var(--ly), #000 0%, rgb(0 0 0 / .5) 50%, rgb(0 0 0 / .15) 100%);
-  mix-blend-mode: screen;
-  opacity: calc(var(--ice) * (.15 + .85 * var(--on, 0)));
+  image-rendering: pixelated;   /* see .hc__flash */
+  /* per channel: 1 for |v-c| < .04 falling to 0 at .13; then
+     L = .285 t(a) + .715 t(b) mapped from .4..1 to 0..1: full where both
+     normals match (the flash: ~3% of the shards, final-gl ~4%), a dimmer
+     glow on the ~15% that nearly do (final-gl's exp(-d2/.014) glow) */
+  filter: invert(1) brightness(.5464) contrast(20.33) grayscale(1) brightness(.7143) contrast(2.333);
 }
-
-/* etched ridges: the same lines, pulled out of the map with a threshold
-   (lines > .7 after invert(), the figure's hold < .45), glinting where the
-   light falls. After the key, so a ridge also catches the light over darker
-   ink, as the embossed film under it does; black stays black (dodge). It is
-   the group's ::after, so it comes after the grooves. */
-.hc[data-finish="etched"] .hc__shine::after,
-.hc[data-finish="signature"] .hc__shine::after {
+/* the ice's own key: final-gl's facets bloom on dark-mid ink too (only near
+   black stays out: its gate), so this one is soft: 0 at ink .06, full from
+   ink .31 (the shine's key is about the ink squared) */
+.hc__ice > .hc__key { filter: saturate(.5) brightness(2.7) contrast(1.48); }
+.hc__ice::after {
   content: "";
   position: absolute; inset: 0;
-  background: var(--etch-map, url("./tex/etch.png")) center / 100% 100% no-repeat;
-  filter: invert(1) brightness(.833) contrast(4);
-  -webkit-mask-image: radial-gradient(ellipse 55% calc(55% / var(--ar)) at var(--lx) var(--ly), #000 0%, rgb(0 0 0 / .45) 45%, transparent 100%);
-          mask-image: radial-gradient(ellipse 55% calc(55% / var(--ar)) at var(--lx) var(--ly), #000 0%, rgb(0 0 0 / .45) 45%, transparent 100%);
+  mix-blend-mode: multiply;
+  /* each lit shard throws one colour, set by where it sits and by the tilt
+     (bands a few shards wide, sliding as the card turns) */
+  background-image: repeating-linear-gradient(118deg,
+    #ff9a9a 0, #ffd98f 26px, #b8ff9c 52px, #8fe8ff 78px, #a99cff 104px, #ff9ce4 130px, #ff9a9a 156px);
+  background-size: 300% 300%;
+  background-position: calc(50% + var(--tx, 0) * 90px) calc(50% + var(--ty, 0) * 90px);
+}
+
+/* which marbling: portrait, an upright landscape face, or a battlefield
+   shown sideways in a portrait frame (its art turned 90deg clockwise) */
+.hc__face--front { --etch-tex: var(--etch-map, url("./tex/etch.png")); }
+.hc[data-upright] .hc__face--front { --etch-tex: var(--etch-map, url("./tex/etch-land.png")); }
+.hc__face--front:has(> .hc__img--sideways) { --etch-tex: var(--etch-map-sideways, url("./tex/etch-side.png")); }
+
+/* etched ridges: the lit flank of each groove. The same lines, pulled out of
+   the map with a threshold (full lines only: the held lines over the text
+   panels stay out), shifted a pixel towards the light and glinting where it
+   falls; an inverted figure hold multiplied in keeps them off the figure.
+   After the key, so a ridge also catches the light over darker ink, as the
+   embossed film under it does; black stays black (dodge). Last in the shine
+   group, after the grooves. */
+.hc__ridge {
+  isolation: isolate;
+  -webkit-mask-image: radial-gradient(ellipse 60% calc(60% / var(--ar)) at var(--lx) var(--ly), #000 0%, rgb(0 0 0 / .5) 45%, transparent 100%);
+          mask-image: radial-gradient(ellipse 60% calc(60% / var(--ar)) at var(--lx) var(--ly), #000 0%, rgb(0 0 0 / .5) 45%, transparent 100%);
   mix-blend-mode: screen;
   opacity: calc(var(--ridge) * var(--on, 0));
 }
+.hc__ridge::before {
+  content: "";
+  position: absolute; inset: 0;
+  background: var(--etch-tex) no-repeat;
+  background-size: 100% 100%;
+  background-position: calc(50% + (var(--px, 50) - 50) * .026px) calc(50% + (var(--py, 50) - 50) * .026px);
+  filter: invert(1) brightness(.833) contrast(4);
+}
 
-/* etched grooves (or the ice's seams), multiplied into the light: dark
-   lines that show where the foil is lit */
-/* a battlefield shown sideways in a portrait frame takes its sideways map */
-.hc__shine:has(> .hc__img--sideways) { --etch-map: var(--etch-map-sideways, url("./tex/etch.png")); }
+/* etched grooves, multiplied into the light: the foil stops at each line
+   (final-gl: film x (1 - .92 cut)). The group lightens its lines with the
+   figure hold (.hc__hold, below), so they keep off faces, hair and the like.
+   The ultimate's groove is its ice instead: each facet's own colour and
+   brightness, and light seams (tex/ice-seams.png). */
 .hc__groove {
-  background: var(--etch-map, url("./tex/etch.png")) center / 100% 100% no-repeat;
+  isolation: isolate;
+  background: var(--etch-tex) center / 100% 100% no-repeat;
   mix-blend-mode: multiply;
   opacity: var(--etch);
 }
 .hc[data-finish="ultimate"] .hc__groove {
   background: url("./tex/ice-seams.png") center / cover no-repeat;
+}
+
+/* the ink in an etched line sits on matte stock: it darkens while the card
+   is handled (final-gl's inkDim: .12 at rest, .5 handled), so the marbling
+   reads as cut lines; a resting card in a grid keeps only a trace. Under the
+   shine, with the same figure hold. */
+.hc__cut {
+  isolation: isolate;
+  /* A multiply over the scan's transparent, anti-aliased corners would show
+     the white etch texture as a light rim: clip a little inside them. */
+  clip-path: inset(0 round 5.6% / 4%);
+  background: var(--etch-tex) center / 100% 100% no-repeat;
+  mix-blend-mode: multiply;
+  opacity: calc(var(--ink-etch) * (var(--ink-rest) + (1 - var(--ink-rest)) * var(--on, 0)));
+}
+
+/* Figure hold, without a per-card map: a copy of the art pushed through
+   colour matrices only (no SVG filter, no blur), white where the etch should
+   keep off, lightening the lines away there. hue-rotate() + a strong
+   saturate() turn every coloured pixel into a pure hue whose luminance
+   depends on the hue: rotated by 145deg, skin (hue 0-35), red, violet and
+   purple (250-360) land on yellow / green / cyan (luminance > .7), the sky's
+   and the backdrop's blues and cyans (180-235) on red / magenta (< .35);
+   light neutral ink (white cloth, highlights, type) stays light, dark ink
+   dark. A threshold (> .55) keeps the figure. Close to final-gl's etch mask
+   (skin, strongly saturated areas and fine detail stay clean, the marbling
+   lives in the backdrop), on any card. */
+.hc__hold {
+  mix-blend-mode: lighten;
+  filter: hue-rotate(145deg) saturate(9) grayscale(1) brightness(.909) contrast(7.86);
+  transition: none;
+}
+/* In the shine's groove the hold also takes half the light off the figure,
+   as final-gl holds its film back on skin (the vivid arc's cyan and green
+   would cast faces green): at half strength and in exclusion,
+   e + h (1 - 2e) with h = .5 is .5 whatever the line e is, so on the figure
+   the groove is a flat .5 (no lines, half the foil), elsewhere the lines. */
+.hc__groove > .hc__hold {
+  mix-blend-mode: exclusion;
+  filter: hue-rotate(145deg) saturate(9) grayscale(1) brightness(.909) contrast(7.86) brightness(.5);
+}
+.hc__ridge > .hc__hold {
+  mix-blend-mode: multiply;
+  filter: hue-rotate(145deg) saturate(9) grayscale(1) brightness(.909) contrast(7.86) invert(1);
+}
+
+/* glitter (epics, showcase): one flake per cell, each a flat mirror with
+   its own 2D normal (flash map, see above; the value map is the flakes'
+   shape too, no coverage map), thicker near the light. Its own layer after
+   the shine (inside the dodge group, capped by its brightness() and
+   multiplied by the key, the flakes vanished over dark ink), added with
+   plus-lighter (screen where that is missing) so the flakes also flash over
+   dark ink, as final-gl's do. The ::after colours each flake with the pastel
+   rainbow field it sits on, sliding with the tilt, times the light's falloff
+   (a colour, not a mask: the layer is additive, so it is the same, and
+   cheaper). Printed on the film: no parallax. The black border keeps none
+   (a clip, not a mask). */
+.hc__glit {
+  --glit-light: radial-gradient(ellipse 85% calc(85% / var(--ar)) at var(--lx) var(--ly), #fff 0%, rgb(217 217 217) 40%, rgb(102 102 102) 100%);
+  --glit-rb: repeating-linear-gradient(62deg,
+    #ffb8b8 0, #ffecb5 4px, #c9ffbc 8px, #b8f4ff 12px, #c6beff 16px, #ffbff1 20px, #ffb8b8 24px);
+  --glit-rb-at: calc(50% + var(--tx, 0) * 40px) calc(50% + var(--ty, 0) * 40px);
+  --glit-size: cover;
+  isolation: isolate;
+  clip-path: inset(2.85% 4%);
+  mix-blend-mode: screen;
+  mix-blend-mode: plus-lighter;
+  opacity: calc(var(--glitter) * var(--on, 0));
+}
+.hc[data-upright] .hc__glit { clip-path: inset(4% 2.85%); }
+/* the ultimate's galaxy: finer, denser flakes (final-gl: 5 css px cells),
+   more of them glinting */
+.hc[data-finish="ultimate"] .hc__glit { --glit-size: 85% auto; }
+.hc[data-finish="ultimate"][data-upright] .hc__glit { --glit-size: 62% auto; }
+.hc[data-finish="ultimate"] .hc__flash { filter: invert(1) brightness(.5319) contrast(23.5) grayscale(1) brightness(.6667) contrast(3); }
+.hc__flash {
+  position: absolute; inset: 0;
+  --c-a: calc(127.5 + var(--tx, 0) * 52 + var(--ty, 0) * 16);
+  --c-b: calc(127.5 + var(--ty, 0) * 52 - var(--tx, 0) * 16);
+  background-image: linear-gradient(rgb(var(--c-a) var(--c-b) var(--c-a)), rgb(var(--c-a) var(--c-b) var(--c-a))),
+    url("./tex/glitter-v.png");
+  background-size: 100% 100%, var(--glit-size);
+  background-position: center;
+  background-repeat: no-repeat, repeat;
+  background-blend-mode: difference, normal;
+  /* no interpolation: a flake's edge would blend its value with the 0
+     around it, and those in-between values match the tilt at random */
+  image-rendering: pixelated;
+  /* per channel: 1 for |v-c| < .02 falling to 0 at .1; then
+     L = .285 t(a) + .715 t(b) mapped from .66..1 to 0..1: a flake fires
+     white-hot only when the light meets its own 2D normal, and glints
+     faintly where one of the two nearly matches, like the soft tail of
+     final-gl's flakes. Tuned so the count of bright flakes (> 30, 60, 100
+     over the card, per 10k px) matches final-gl's on the epic. */
+  filter: invert(1) brightness(.5319) contrast(23.5) grayscale(1) brightness(.6024) contrast(4.882);
+}
+.hc__glit::after {
+  content: "";
+  position: absolute; inset: 0;
+  mix-blend-mode: multiply;
+  background-image: var(--glit-light), var(--glit-rb);
+  background-size: 100% 100%, 300% 300%;
+  background-position: 0 0, var(--glit-rb-at);
+  background-blend-mode: multiply;
+}
+
+/* battlefield frame (every landscape card is a battlefield, all in the same
+   frame): the small white "BATTLEFIELD" label on its pale panel and the
+   collector-number pill would bloom away under the foil (the vivid printing
+   above all), so the light layers keep ~40% there. Static masks, set once. */
+.hc[data-upright] .hc__face--front {
+  --bf-l: radial-gradient(ellipse 9.5% 3.6% at 13.5% 65%, rgb(0 0 0 / .4) 55%, #000 100%);
+  --bf-p: radial-gradient(ellipse 11% 3.2% at 12% 95%, rgb(0 0 0 / .45) 55%, #000 100%);
+  --bf-lc: radial-gradient(ellipse 9.5% 3.6% at 13.5% 65%, rgb(102 102 102) 55%, #fff 100%);
+  --bf-pc: radial-gradient(ellipse 11% 3.2% at 12% 95%, rgb(115 115 115) 55%, #fff 100%);
+}
+/* shown sideways in a portrait frame: the art is turned 90deg clockwise, so
+   (x, y) of the battlefield lands at (1 - y, x) */
+.hc__face--front:has(> .hc__img--sideways) {
+  --bf-l: radial-gradient(ellipse 3.6% 9.5% at 35% 13.5%, rgb(0 0 0 / .4) 55%, #000 100%);
+  --bf-p: radial-gradient(ellipse 3.2% 11% at 5% 12%, rgb(0 0 0 / .45) 55%, #000 100%);
+  --bf-lc: radial-gradient(ellipse 3.6% 9.5% at 35% 13.5%, rgb(102 102 102) 55%, #fff 100%);
+  --bf-pc: radial-gradient(ellipse 3.2% 11% at 5% 12%, rgb(115 115 115) 55%, #fff 100%);
+}
+.hc[data-upright] .hc__shine,
+.hc__face--front:has(> .hc__img--sideways) > .hc__shine {
+  -webkit-mask-image: var(--bf-l), var(--bf-p);
+  -webkit-mask-composite: source-in;
+          mask-image: var(--bf-l), var(--bf-p);
+          mask-composite: intersect;
+}
+.hc[data-upright] .hc__ice,
+.hc__face--front:has(> .hc__img--sideways) > .hc__ice {
+  -webkit-mask-image: var(--ice-light), var(--bf-l), var(--bf-p);
+  -webkit-mask-composite: source-in;
+          mask-image: var(--ice-light), var(--bf-l), var(--bf-p);
+          mask-composite: intersect;
+}
+.hc[data-upright] .hc__glit::after,
+.hc__face--front:has(> .hc__img--sideways) > .hc__glit::after {
+  background-image: var(--bf-lc), var(--bf-pc), var(--glit-light), var(--glit-rb);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 300% 300%;
+  background-position: 0 0, 0 0, 0 0, var(--glit-rb-at);
+}
+
+/* -- body: chrome on the dark mid-tones (etched, signature) ----------------
+   final-gl lifts dark mid-tone ink with a cool chrome sheen (its "body":
+   the void armour reads as polished metal, not grey). Overlay with a pale
+   cool colour does that without a key: 2 x ink x colour below mid-grey, so
+   black stays black, mid-dark ink lifts by up to ~1.7x (more in blue), white
+   stays white; mid-grey (far from the light) changes nothing. The face's
+   ::before, over the shine. Nothing at rest. */
+.hc[data-finish="etched"] .hc__face--front::before,
+.hc[data-finish="signature"] .hc__face--front::before {
+  content: "";
+  position: absolute; inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(ellipse 110% calc(110% / var(--ar)) at var(--lx) var(--ly),
+    rgb(165 175 225) 0%, rgb(150 156 200) 45%, rgb(134 136 152) 100%);
+  mix-blend-mode: overlay;
+  opacity: var(--on, 0);
 }
 
 /* -- tint: the pastel rainbow on white ink ---------------------------------- */
@@ -420,6 +672,10 @@
   opacity: calc(var(--tint) * var(--foil-tint) * (.25 * var(--rest) + var(--on, 0)) * var(--shine));
 }
 .hc__sig, .hc__glare { z-index: 2; }
+/* the WebGL canvas draws its own foil: no CSS body or tint over it */
+.hc__face--front:has(> .hc__gl.is-loaded)::before,
+.hc__face--front:has(> .hc__gl.is-loaded)::after { content: none; }
+
 
 /* -- glare: the varnish ------------------------------------------------------ */
 .hc__glare {

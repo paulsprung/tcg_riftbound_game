@@ -70,6 +70,11 @@ export function HoloCard({
   const failed = broken || image.failed;
   const imgClass = `hc__img${sideways ? ' hc__img--sideways' : ''}`;
   const glitter = (finish === 'holo' && card.rarity === 'epic') || ETCHED.includes(finish);
+  // the ultimate's groove is its ice, not marbling
+  const marbled = finish === 'etched' || finish === 'signature';
+  const copy = (extra: string) => (
+    <img className={`${imgClass} is-loaded ${extra}`} src={src} alt="" draggable={false} />
+  );
   const useGl = gl && glOk !== false && !!src && isReadable(src);
   const glShown = useGl && glOk === true;
 
@@ -117,20 +122,36 @@ export function HoloCard({
               <HoloCanvas ref={holo} src={src} finish={finish} rarity={card.rarity} style={foilStyle}
                 className={`${imgClass} hc__gl${glShown ? ' is-loaded' : ''}`} onReady={setGlOk} />
             )}
-            {/* CSS foil (holo.css): one colour-dodge group whose light is
-                multiplied by a copy of the art, so the shine blooms where the
-                ink is light and black stays black. */}
-            {!glShown && finish !== 'none' && loaded && (
+            {/* CSS foil (holo.css). cut: the ink in the etched lines darkens
+                while the card is handled. shine: one colour-dodge group whose
+                light is multiplied by a copy of the art (the key), so it
+                blooms where the ink is light and black stays black; the groove
+                cuts the marbling (or the ultimate's ice facets) into it, the
+                ridge lights each line's flank. ice: the ultimate's cracked-ice
+                flashes. glit: glitter flakes, added on top. The .hc__hold
+                copies keep the marbling off the figure. */}
+            {!glShown && loaded && marbled && (
+              <span className="hc__fx hc__cut" aria-hidden>{copy('hc__hold')}</span>
+            )}
+            {!glShown && loaded && finish !== 'none' && (
               <span className="hc__fx hc__shine" aria-hidden>
-                {finish === 'ultimate' && <span className="hc__ice" />}
-                <img className={imgClass + ' is-loaded hc__key'} src={src} alt="" draggable={false} />
-                {ETCHED.includes(finish) && <span className="hc__groove" />}
-                {glitter && <span className="hc__flash" />}
+                {copy('hc__key')}
+                {ETCHED.includes(finish) && <span className="hc__groove">{marbled && copy('hc__hold')}</span>}
+                {marbled && <span className="hc__ridge">{copy('hc__hold')}</span>}
               </span>
             )}
-            {!glShown && finish === 'signature' && loaded && (
+            {!glShown && loaded && finish === 'ultimate' && (
+              <span className="hc__fx hc__ice" aria-hidden>
+                <span className="hc__ice-f" />
+                {copy('hc__key')}
+              </span>
+            )}
+            {!glShown && loaded && finish !== 'none' && glitter && (
+              <span className="hc__fx hc__glit" aria-hidden><span className="hc__flash" /></span>
+            )}
+            {!glShown && loaded && finish === 'signature' && (
               <span className="hc__fx hc__sig hc__sig--auto" aria-hidden>
-                <img className={imgClass + ' is-loaded'} src={src} alt="" draggable={false} />
+                <img className={`${imgClass} is-loaded`} src={src} alt="" draggable={false} />
               </span>
             )}
             {!glShown && <span className="hc__fx hc__glare" aria-hidden />}
