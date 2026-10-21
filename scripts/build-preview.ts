@@ -144,7 +144,9 @@ async function main() {
     publicDir: false,
     logLevel: 'warn',
     define: { 'import.meta.env.VITE_PREVIEW': JSON.stringify('1') },
-    build: { outDir: out, emptyOutDir: false, assetsInlineLimit: 0 },
+    // The page is one file: the foil textures referenced from holo.css are
+    // inlined as data: URIs, since the assets folder is not published.
+    build: { outDir: out, emptyOutDir: false, assetsInlineLimit: 4 * 1024 * 1024 },
   });
 
   const html = await readFile(resolve(out, 'index.html'), 'utf8');

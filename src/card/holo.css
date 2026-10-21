@@ -65,6 +65,9 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 0 0 1px rgba(255, 255, 255, .05);
 }
 .hc[data-upright] .hc__face { border-radius: 3.37% / 4.7%; }
+/* Once the art is in, the face's own fill would only show as a dark rim
+   through the scan's anti-aliased corners. */
+.hc__face--front:has(> .hc__img.is-loaded) { background: transparent; }
 .hc__face--front { transform: translateZ(calc(var(--thick, 0px) / 2)); }
 .hc__face--back { transform: rotateY(180deg) translateZ(calc(var(--thick, 0px) / 2)); }
 
@@ -126,155 +129,378 @@
 /* -- finishes ------------------------------------------------------------
 
    What Riot says and what photos of real cards show:
-     plain stock   commons/uncommons: no foil, only a soft gloss
+     none          commons/uncommons: plain stock, only a soft gloss
      foil          the foil-slot card: a smooth prismatic sheen over the
                    whole face, no repeating texture
-     holo          rares and epics, always foil: the same sheen, stronger
-     etched        alt art / overnumbered: rainbow holo plus etched lines
-                   that follow the art's own linework
+     holo          rares and epics: the same sheen, stronger; epics glitter
+     etched        alt art / overnumbered: rainbow holo with etched swirl
+                   lines that follow the art
      signature     etched holo plus a gold-stamped signature
-     ultimate      all of it, plus a cracked-ice field
+     ultimate      all of it, plus cracked ice and a galaxy of glitter
 
-   The trick that makes foil read as foil rather than a colour wash (from
-   the birthday card): stack gradients, crush them with contrast(), and
-   composite in color-dodge, so highlights bloom where the art is already
-   bright and dark art stays dark.
+   The model is the WebGL foil's (gl-physical), so a card keeps its
+   character when it opens in the inspector: the ink is a filter over a
+   sheet of holographic film. Light ink lets the film bloom, saturated ink
+   only lets its own colour through, dark ink stays dark. The film sends
+   back a white hot spot where the light is mirrored and, around it, the
+   rainbow of a diffraction grating: one coherent arc (first order) and a
+   fainter, wider second one, that sweep across the face as the card turns.
+
+   How that is done with compositing alone:
+     shine   an isolated group composited in color-dodge (it can only
+             brighten, and dodging black leaves black). Inside it, the
+             light (::before) is multiplied by a KEY: a copy of the art
+             pushed through contrast(), about the ink's own value squared,
+             per channel. So the dodge is strong on light ink, nothing on
+             dark ink, and on a red icon only red brightens. brightness()
+             on the group caps the dodge source below white, so it never
+             divides by zero and black stays exactly black.
+             Cracked-ice facets sit between light and key, so they only
+             show through light ink. After the key: the etched grooves and
+             ice seams (multiplied in), then the glitter and the etched
+             ridges (::after), mirrors that also catch the light over darker
+             ink (they are still dodged: black stays black).
+     tint    the face's ::after: a pale copy of the rainbow arc multiplied
+             in. Multiplying changes dark ink only in proportion (it stays
+             dark) and gives white ink, which a dodge cannot colour, the
+             faint pastel rainbow a foil shows on its text box.
+     sig     signature only: the gold-stamped script, a metal gradient cut
+             out by the card's precomputed signature mask.
+     glare   the varnish: a specular hot spot + shading, in overlay (keeps
+             black black and white white), only while handled.
+
+   Flashing flakes and facets without per-pixel maths: a "flash map" stores
+   one value per flake or shard (its facet normal). background-blend-mode:
+   difference against a flat colour computed from --tx/--ty gives
+   |value - c|, and filter: invert() brightness() contrast() turns that into
+   "lit where the value matches the tilt". Each flake / shard therefore
+   flashes at its own angle, like the mirrors they are. See
+   _work/gen-tex.py.
+
+   Per frame only the variables tilt.ts writes change. No SVG filters.
+
+   DOM changes against the app's HoloCard.tsx (front face; see
+   HoloCard-front.snippet.tsx next to this file):
+     - .hc__prism, .hc__foil, .hc__sparkle, .hc__band, .hc__cosmos and the
+       old .hc__etch are gone from the front face.
+     - new <span class="hc__fx hc__shine"> (not for finish "none") holding,
+       in this order: <span class="hc__ice"> (ultimate only), a copy of the
+       art <img class="hc__img hc__key"> (same classes as the main <img>,
+       so sideways battlefields line up), <span class="hc__groove">
+       (etched, signature, ultimate) and <span class="hc__flash"> (epics and
+       showcase cards: glitter).
+     - new <span class="hc__fx hc__sig"> for finish "signature", after the
+       shine.
+     - the front face's ::after is the tint (no markup); .hc__glare stays.
+     - per-card maps, set as inline custom properties on .hc when the card
+       has them (generated at build time by _work/gen-maps.py, see there):
+         --etch-map: url(<card>.etch.png)   etched / signature
+         --etch-map-sideways: url(<card>.etch-sideways.png)   landscape cards
+         --sig-mask: url(<card>.sig.png)    signature
+       (the ultimate uses its cracked-ice seams instead of an etch map)
+       Without --etch-map the generic swirl (tex/etch.png) is used. A
+       signature card without --sig-mask gets .hc__sig--auto instead, with
+       an <img> copy inside (threshold fallback, see the end of this part).
+     - <FoilDefs/> (the #rb-etch SVG filter) is no longer used.
+     - textures in tex/ (regenerate with _work/gen-tex.py).
+     - the back face is unchanged (.hc__band + .hc__glare).
    -------------------------------------------------------------------- */
 
-.hc[data-finish="foil"]      { --holo: .6;  --prism: .5; --glare: .45; --band: .25; }
-.hc[data-finish="holo"]      { --holo: .8;  --prism: .8; --glare: .5;  --band: .3; }
-.hc[data-finish="holo"][data-rarity="epic"] { --holo: .95; --prism: 1; --sparkle: .45; }
-.hc[data-finish="etched"]    { --holo: .9;  --prism: 1;  --glare: .5;  --band: .3; --etch: .9; --sparkle: .6; }
-.hc[data-finish="signature"] { --holo: .9;  --prism: 1;  --glare: .5;  --band: .3; --etch: .9; --sparkle: 1; }
-.hc[data-finish="ultimate"]  { --holo: 1;   --prism: 1;  --glare: .55; --band: .4; --etch: 1;  --sparkle: 1; }
+.hc {
+  --ar: 1.3965;      /* face height / width: the light's circles stay round */
+  --shine: 0;        /* strength of the holo while handled                  */
+  --rest: 0;         /* fraction of it a resting card keeps (grid views)     */
+  --s-max: .62;      /* cap of the dodge source (see above)                 */
+  --k-c: 1.55;       /* key: contrast() on the art copy ...                 */
+  --k-b: 1;          /*      ... and brightness()                           */
+  --k-s: .35;        /* saturated ink holds the foil back (only its own hue) */
+  --hot: 1;          /* white hot spot (zeroth order)                       */
+  --arc: 1;          /* rainbow arcs                                        */
+  --sheen: .2;       /* soft diagonal sheen racing ahead of the light       */
+  --floor: #000;     /* film between the features                           */
+  --glitter: 0;      /* glitter flakes                                      */
+  --ice: 0;          /* cracked-ice facets                                  */
+  --etch: 0;         /* depth of the etched grooves                         */
+  --ridge: 0;        /* glint of the etched ridges                          */
+  --tint: 0;         /* pastel rainbow over white ink                       */
+  --glare: .3;       /* varnish                                             */
+}
+.hc[data-upright] { --ar: .7161; }
+
+.hc[data-finish="foil"]      { --shine: .9;  --rest: .2;  --tint: .8;  --glare: .38; --sheen: .16; }
+.hc[data-finish="holo"]      { --shine: 1;   --rest: .24; --tint: .9;  --glare: .4;  --sheen: .14; --floor: #0c0c0c; }
+.hc[data-finish="holo"][data-rarity="epic"] { --glitter: 1; }
+.hc[data-finish="etched"],
+.hc[data-finish="signature"],
+.hc[data-finish="ultimate"]  { --shine: 1;   --rest: .28; --tint: 1;   --glare: .42; --sheen: .2;  --floor: #3a3a3a;
+                               --etch: .78; --ridge: .85; --glitter: .45; --k-c: 1.45; }
+.hc[data-finish="signature"] { --etch: .7; --glitter: .35; }
+.hc[data-finish="ultimate"]  { --etch: .3; --glitter: 1; --ice: 1; --rest: .32; --floor: #101010; --arc: .42; --hot: .7; --sheen: .1; --s-max: .7;
+                               --k-b: 1.5; }
 
 /* "subtle" is the English printing's warmer, gentler foil; "vivid" the
-   stronger rainbow of the Chinese printing. Toggle in the header. */
-:root { --foil-sat: .9; --foil-bright: .6; --foil-hue: 0deg; }
-:root[data-foil="vivid"] { --foil-sat: 1.6; --foil-bright: .78; --foil-hue: 0deg; }
+   stronger, full-spectrum rainbow of the Chinese printing. The arc's
+   colours are listed from the inside out (violet diffracts least). */
+:root {
+  --a-v: hsl(290 30% 40%); --a-b: hsl(220 40% 52%); --a-c: hsl(185 40% 56%);
+  --a-g: hsl(95 40% 58%);  --a-y: hsl(45 75% 62%);  --a-o: hsl(25 75% 56%);
+  --a-r: hsl(345 50% 46%);
+  --a2: .32;          /* second order, relative to the first              */
+  --t-v: hsl(282 60% 93%); --t-b: hsl(218 70% 93%); --t-c: hsl(180 60% 92%);
+  --t-g: hsl(100 55% 92%); --t-y: hsl(46 85% 91%);  --t-o: hsl(26 85% 92%);
+  --t-r: hsl(350 70% 93%);
+  --foil-gain: .85;   /* the shine overall                                */
+  --foil-tint: .5;    /* the pastel over white ink                        */
+}
+:root[data-foil="vivid"] {
+  --a-v: hsl(276 90% 44%);  --a-b: hsl(224 100% 54%); --a-c: hsl(188 100% 48%);
+  --a-g: hsl(130 85% 46%);  --a-y: hsl(54 100% 52%);  --a-o: hsl(30 100% 50%);
+  --a-r: hsl(345 95% 48%);
+  --a2: .42;
+  --t-v: hsl(278 100% 88%); --t-b: hsl(222 100% 89%); --t-c: hsl(186 100% 86%);
+  --t-g: hsl(130 70% 90%);  --t-y: hsl(54 100% 84%);  --t-o: hsl(30 100% 87%);
+  --t-r: hsl(352 100% 89%);
+  --foil-gain: 1;
+  --foil-tint: .8;
+}
 
 .hc__fx { position: absolute; inset: 0; pointer-events: none; display: block; }
-
-/* The foil itself: a spectrum band -- the bright rainbow stripe a real
-   foil throws -- that sweeps across the card as it tilts. color-dodge makes
-   it flare where the art is light and stay a tint where it is dark.
-   Resting cards keep a hint of it so foils stand out in a grid; handled
-   cards (--on) light up fully. */
-.hc__foil {
-  background-image: linear-gradient(calc(112deg + var(--tx, 0) * 14deg),
-      transparent 26%,
-      hsl(345 100% 72%) 33%, hsl(35 100% 68%) 38%, hsl(75 95% 66%) 42%,
-      hsl(165 95% 66%) 46%, hsl(205 100% 70%) 50%, hsl(255 100% 76%) 54%,
-      hsl(310 100% 74%) 58%, transparent 66%);
-  background-size: 260% 260%;
-  background-repeat: no-repeat;
-  background-position: calc(50% - var(--tx, 0) * 62%) calc(50% - var(--ty, 0) * 62%);
-  mix-blend-mode: color-dodge;
-  filter: brightness(var(--foil-bright)) saturate(var(--foil-sat)) hue-rotate(var(--foil-hue));
-  opacity: calc(var(--holo) * (.12 + var(--on, 0) * (.5 + var(--pfc, 0) * .35)));
+.hc__face {
+  --mx: calc(var(--px, 50) * 1%);
+  --my: calc(var(--py, 50) * 1%);
+  /* the light the foil mirrors: runs a little ahead of the pointer while the
+     card is handled; at rest it sits up and to the left, like a room light,
+     so a grid of resting cards shows the same faint arc */
+  --lx: calc(50% + (var(--px, 50) - 50) * 1.25% - (1 - var(--on, 0)) * 26%);
+  --ly: calc(50% + (var(--py, 50) - 50) * 1.25% - (1 - var(--on, 0)) * 36%);
+  --on1: var(--on, 0);
+}
+/* the arcs' colours at this finish's strength (first and second order) */
+.hc__shine::before {
+  --k1: calc(var(--arc) * 100%);
+  --k2: calc(var(--arc) * var(--a2) * 100%);
+  --arc-1:
+    color-mix(in srgb, var(--a-v) var(--k1), #000) 22%, color-mix(in srgb, var(--a-b) var(--k1), #000) 27%,
+    color-mix(in srgb, var(--a-c) var(--k1), #000) 31.5%, color-mix(in srgb, var(--a-g) var(--k1), #000) 35%,
+    color-mix(in srgb, var(--a-y) var(--k1), #000) 38.5%, color-mix(in srgb, var(--a-o) var(--k1), #000) 43%,
+    color-mix(in srgb, var(--a-r) var(--k1), #000) 48%;
+  --arc-2:
+    color-mix(in srgb, var(--a-v) var(--k2), #000) 64%, color-mix(in srgb, var(--a-b) var(--k2), #000) 70%,
+    color-mix(in srgb, var(--a-g) var(--k2), #000) 78%, color-mix(in srgb, var(--a-y) var(--k2), #000) 85%,
+    color-mix(in srgb, var(--a-o) var(--k2), #000) 91%, color-mix(in srgb, var(--a-r) var(--k2), #000) 97%;
 }
 
-/* A soft prismatic wash over the whole face, under the band: what makes a
-   rare look foil even where the band is not. */
-.hc__prism {
-  background-image:
-    repeating-linear-gradient(125deg,
-      hsl(340 90% 70%) 0%, hsl(45 95% 68%) 7%, hsl(150 80% 66%) 14%,
-      hsl(210 90% 72%) 21%, hsl(280 85% 74%) 28%, hsl(340 90% 70%) 35%),
-    radial-gradient(farthest-corner circle at calc(var(--px, 50) * 1%) calc(var(--py, 50) * 1%),
-      hsl(0 0% 100%) 0%, hsl(0 0% 55%) 30%, hsl(0 0% 20%) 80%);
-  background-size: 400% 400%, 100% 100%;
-  background-position: calc(var(--bgx, 50) * 1%) calc(var(--bgy, 50) * 1%), center;
-  background-blend-mode: multiply;
-  mix-blend-mode: soft-light;
-  filter: saturate(var(--foil-sat)) contrast(1.2);
-  opacity: calc(var(--prism, 0) * (.2 + var(--on, 0) * .8));
-}
-
-/* Etched lines: the card art run through an edge detector (#rb-etch, see
-   FoilDefs), tinted with a fine rainbow, and only lit inside a narrow band
-   that races across the card as it tilts -- so the linework flashes the
-   way an etched foil does instead of sitting there as an outline. */
-.hc__etch {
-  position: absolute; inset: 0;
-  pointer-events: none;
+/* -- shine: the holo itself ------------------------------------------------ */
+.hc__shine {
   isolation: isolate;
   mix-blend-mode: color-dodge;
-  opacity: calc(var(--etch) * (.15 + var(--on, 0) * .85));
-  -webkit-mask-image: linear-gradient(calc(105deg + var(--tx, 0) * 18deg),
-      transparent 20%, rgba(0, 0, 0, .5) 36%, #000 47%, #000 53%, rgba(0, 0, 0, .5) 64%, transparent 80%);
-          mask-image: linear-gradient(calc(105deg + var(--tx, 0) * 18deg),
-      transparent 20%, rgba(0, 0, 0, .5) 36%, #000 47%, #000 53%, rgba(0, 0, 0, .5) 64%, transparent 80%);
-  -webkit-mask-size: 300% 300%;
-          mask-size: 300% 300%;
-  -webkit-mask-position: calc(50% - var(--tx, 0) * 50%) calc(50% - var(--ty, 0) * 50%);
-          mask-position: calc(50% - var(--tx, 0) * 50%) calc(50% - var(--ty, 0) * 50%);
-  -webkit-mask-repeat: no-repeat;
-          mask-repeat: no-repeat;
+  filter: brightness(calc(var(--s-max) * var(--foil-gain)));
+  opacity: calc(var(--shine) * (var(--rest) + (1 - var(--rest)) * var(--on, 0)));
 }
-.hc__etch .hc__img { filter: url(#rb-etch); transition: none; }
-.hc__etch-tint {
+.hc__shine > * { position: absolute; inset: 0; }
+/* the light: hot spot, rainbow arcs, sheen, on the film's floor */
+.hc__shine::before {
+  content: "";
   position: absolute; inset: 0;
-  mix-blend-mode: multiply;
-  background-image: repeating-linear-gradient(100deg,
-      #ff6b9d 0%, #ffd76b 3%, #6bffb0 6%, #6bd4ff 9%, #b88bff 12%, #ff6b9d 15%);
-  background-size: 200% 200%;
-  background-position: calc(var(--bgx, 50) * 2%) calc(var(--bgy, 50) * 1%);
-  filter: saturate(var(--foil-sat));
-}
-.hc[data-finish="signature"] .hc__etch-tint {
-  background-image: repeating-linear-gradient(100deg,
-      #fff1c1 0%, #ffd36b 4%, #ffb3c7 8%, #c6f2ff 12%, #fff1c1 16%);
-}
-
-/* Glitter grains that light up near the pointer. Gold on signatures. */
-.hc__sparkle {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' seed='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 .34 .34 .34 0 0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='gamma' exponent='4' amplitude='1.5'/%3E%3C/feComponentTransfer%3E%3CfeGaussianBlur stdDeviation='.45'/%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 34% auto;
-  background-position: calc(50% + var(--tx, 0) * 6%) calc(50% + var(--ty, 0) * 6%);
-  mix-blend-mode: color-dodge;
-  opacity: calc(var(--sparkle) * var(--on, 0) * (.25 + var(--pfc, 0) * .5));
-  -webkit-mask-image: radial-gradient(55% 55% at calc(var(--px, 50) * 1%) calc(var(--py, 50) * 1%), #000 0%, rgba(0, 0, 0, .3) 45%, transparent 80%);
-          mask-image: radial-gradient(55% 55% at calc(var(--px, 50) * 1%) calc(var(--py, 50) * 1%), #000 0%, rgba(0, 0, 0, .3) 45%, transparent 80%);
-}
-.hc[data-finish="signature"] .hc__sparkle,
-.hc[data-finish="ultimate"] .hc__sparkle { filter: sepia(1) saturate(4) hue-rotate(-12deg) brightness(1.1); }
-
-/* Cracked-ice field for the Ultimate rare. */
-.hc__cosmos {
   background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='c'%3E%3CfeTurbulence type='turbulence' baseFrequency='0.055' numOctaves='3' seed='9' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 -3.2 -3.2 -3.2 0 2.1'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23c)'/%3E%3C/svg%3E"),
-    repeating-linear-gradient(99deg, #ff4fa8 0px, #ffc24d 16px, #5ff0b4 32px, #4fc4ff 48px, #a86bff 64px, #ff4fa8 80px);
-  background-blend-mode: overlay;
-  background-size: 115% auto, auto;
-  background-position:
-    calc(var(--tx, 0) * -60px) calc(var(--ty, 0) * -60px),
-    calc(var(--tx, 0) * -140px) calc(var(--ty, 0) * -140px);
-  filter: brightness(1.2) contrast(1.6) saturate(1.3);
-  mix-blend-mode: overlay;
-  opacity: calc(.15 + var(--on, 0) * .45);
+    radial-gradient(ellipse 26% calc(26% / var(--ar)) at var(--lx) var(--ly),
+      rgb(255 255 255 / calc(var(--hot) * (.25 + .75 * var(--on1)))) 0%,
+      rgb(255 255 255 / calc(var(--hot) * .35 * (.25 + .75 * var(--on1)))) 38%, transparent 100%),
+    radial-gradient(ellipse 100% calc(100% / var(--ar)) at var(--lx) var(--ly),
+      transparent 17%, var(--arc-1), transparent 54%),
+    radial-gradient(ellipse 100% calc(100% / var(--ar)) at var(--lx) var(--ly),
+      transparent 60%, var(--arc-2), transparent 104%),
+    linear-gradient(118deg, transparent 40%, rgb(255 255 255 / calc(var(--sheen) * .6)) 47%,
+      rgb(255 255 255 / var(--sheen)) 50%, rgb(255 255 255 / calc(var(--sheen) * .6)) 53%, transparent 60%),
+    linear-gradient(var(--floor), var(--floor));
+  background-size: 100% 100%, 100% 100%, 100% 100%, 300% 300%, 100% 100%;
+  background-position: 0 0, 0 0, 0 0,
+    calc(100% - var(--px, 50) * 1%) calc(100% - var(--py, 50) * 1%), 0 0;
+  background-repeat: no-repeat;
+  background-blend-mode: screen, screen, screen, screen, normal;
+  /* the second order is fainter: it is its own layer, dimmed here */
+}
+/* the ink as a filter: a copy of the art, about its value squared; partly
+   desaturated, so saturated ink lets less through (and only its own hue) */
+.hc__key {
+  mix-blend-mode: multiply;
+  filter: saturate(var(--k-s)) contrast(var(--k-c)) brightness(var(--k-b));
+  transition: none;
+  opacity: 1;
 }
 
-/* The bright reflection travelling across the surface. Even plain stock
-   has a little gloss. */
-.hc__band {
+/* glitter: one flake per cell, each flashing at its own tilt (flash map,
+   see above), thicker near the light. Printed on the film: no parallax. */
+.hc__flash {
+  --c-a: calc(127.5 + var(--tx, 0) * 52 + var(--ty, 0) * 16);
+  --c-b: calc(127.5 + var(--ty, 0) * 52 - var(--tx, 0) * 16);
+  background-image: linear-gradient(rgb(var(--c-a) var(--c-b) var(--c-a)), rgb(var(--c-a) var(--c-b) var(--c-a))),
+    url("./tex/glitter-v.png");
+  background-size: 100% 100%, cover;
+  background-position: center;
+  background-blend-mode: difference, normal;
+  /* 1-|v-c|: lit for |v-c| < .025, dark beyond .065; both flake families
+     to white */
+  filter: invert(1) brightness(.5236) contrast(47.75) grayscale(1) brightness(3.5);
+  -webkit-mask-image: url("./tex/glitter-a.png"),
+    radial-gradient(ellipse 75% calc(75% / var(--ar)) at var(--lx) var(--ly), #000 0%, rgb(0 0 0 / .55) 45%, rgb(0 0 0 / .18) 100%);
+  -webkit-mask-size: cover, 100% 100%;
+  -webkit-mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-composite: source-in;
+          mask-image: url("./tex/glitter-a.png"),
+    radial-gradient(ellipse 75% calc(75% / var(--ar)) at var(--lx) var(--ly), #000 0%, rgb(0 0 0 / .55) 45%, rgb(0 0 0 / .18) 100%);
+          mask-size: cover, 100% 100%;
+          mask-position: center;
+          mask-repeat: no-repeat;
+          mask-composite: intersect;
+  mix-blend-mode: screen;
+  opacity: calc(var(--glitter) * var(--on, 0));
+}
+
+/* cracked ice: shards, each a mirror facet with its own normal (flash map,
+   like the glitter), flashing as the light passes; the seams show only
+   where the foil is lit (they are part of the grooves below) */
+.hc__ice {
+  --c-a: calc(127.5 + var(--tx, 0) * 50 + var(--ty, 0) * 12);
+  --c-b: calc(127.5 + var(--ty, 0) * 50 - var(--tx, 0) * 12);
+  background-image: linear-gradient(rgb(var(--c-a) var(--c-b) var(--c-a)), rgb(var(--c-a) var(--c-b) var(--c-a))),
+    url("./tex/ice-v.png");
+  background-size: 100% 100%, cover;
+  background-position: center;
+  background-blend-mode: difference, normal;
+  /* lit for |v-c| < .025, dark beyond .065 */
+  filter: invert(1) brightness(.5236) contrast(47.75) grayscale(1) brightness(3.5);
+  -webkit-mask-image: radial-gradient(ellipse 90% calc(90% / var(--ar)) at var(--lx) var(--ly), #000 0%, rgb(0 0 0 / .5) 50%, rgb(0 0 0 / .15) 100%);
+          mask-image: radial-gradient(ellipse 90% calc(90% / var(--ar)) at var(--lx) var(--ly), #000 0%, rgb(0 0 0 / .5) 50%, rgb(0 0 0 / .15) 100%);
+  mix-blend-mode: screen;
+  opacity: calc(var(--ice) * (.15 + .85 * var(--on, 0)));
+}
+
+/* etched ridges: the same lines, pulled out of the map with a threshold
+   (lines > .7 after invert(), the figure's hold < .45), glinting where the
+   light falls. After the key, so a ridge also catches the light over darker
+   ink, as the embossed film under it does; black stays black (dodge). It is
+   the group's ::after, so it comes after the grooves. */
+.hc[data-finish="etched"] .hc__shine::after,
+.hc[data-finish="signature"] .hc__shine::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: var(--etch-map, url("./tex/etch.png")) center / 100% 100% no-repeat;
+  filter: invert(1) brightness(.833) contrast(4);
+  -webkit-mask-image: radial-gradient(ellipse 55% calc(55% / var(--ar)) at var(--lx) var(--ly), #000 0%, rgb(0 0 0 / .45) 45%, transparent 100%);
+          mask-image: radial-gradient(ellipse 55% calc(55% / var(--ar)) at var(--lx) var(--ly), #000 0%, rgb(0 0 0 / .45) 45%, transparent 100%);
+  mix-blend-mode: screen;
+  opacity: calc(var(--ridge) * var(--on, 0));
+}
+
+/* etched grooves (or the ice's seams), multiplied into the light: dark
+   lines that show where the foil is lit */
+/* a battlefield shown sideways in a portrait frame takes its sideways map */
+.hc__shine:has(> .hc__img--sideways) { --etch-map: var(--etch-map-sideways, url("./tex/etch.png")); }
+.hc__groove {
+  background: var(--etch-map, url("./tex/etch.png")) center / 100% 100% no-repeat;
+  mix-blend-mode: multiply;
+  opacity: var(--etch);
+}
+.hc[data-finish="ultimate"] .hc__groove {
+  background: url("./tex/ice-seams.png") center / cover no-repeat;
+}
+
+/* -- tint: the pastel rainbow on white ink ---------------------------------- */
+.hc:not([data-finish="none"]) .hc__face--front::after {
+  content: "";
+  position: absolute; inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  --arc-t: var(--t-v) 22%, var(--t-b) 27%, var(--t-c) 31.5%, var(--t-g) 35%, var(--t-y) 38.5%, var(--t-o) 43%, var(--t-r) 48%;
+  background-image: radial-gradient(ellipse 100% calc(100% / var(--ar)) at var(--lx) var(--ly),
+    transparent 16%, var(--arc-t), transparent 55%);
+  mix-blend-mode: multiply;
+  opacity: calc(var(--tint) * var(--foil-tint) * (.25 * var(--rest) + var(--on, 0)) * var(--shine));
+}
+.hc__sig, .hc__glare { z-index: 2; }
+
+/* -- glare: the varnish ------------------------------------------------------ */
+.hc__glare {
+  background-image: radial-gradient(ellipse 70% calc(70% / var(--ar)) at var(--mx) var(--my),
+    rgb(255 255 255 / .7) 0%, rgb(255 255 255 / .25) 30%, rgb(0 0 0 / 0) 60%, rgb(0 0 0 / .4) 100%);
+  mix-blend-mode: overlay;
+  opacity: calc(var(--glare) * var(--on, 0) * (.6 + var(--pfc, 0) * .4));
+}
+/* Plain stock: a soft gloss only. */
+.hc[data-finish="none"] .hc__glare {
+  background-image: radial-gradient(ellipse 60% calc(60% / var(--ar)) at var(--mx) var(--my),
+    rgb(255 255 255 / .55) 0%, rgb(255 255 255 / .18) 35%, rgb(0 0 0 / 0) 60%, rgb(0 0 0 / .3) 100%);
+}
+
+/* -- card back: a plain gloss band (the back face keeps .hc__band) -------- */
+.hc__face--back .hc__band {
   background-image: linear-gradient(calc(100deg + var(--tx, 0) * 20deg),
-      transparent 30%, rgba(255, 255, 255, .1) 43%, rgba(255, 255, 255, .45) 50%,
-      rgba(255, 255, 255, .1) 57%, transparent 70%);
+      transparent 30%, rgb(255 255 255 / .1) 43%, rgb(255 255 255 / .4) 50%,
+      rgb(255 255 255 / .1) 57%, transparent 70%);
   background-size: 260% 260%;
   background-repeat: no-repeat;
   background-position: calc(50% - var(--tx, 0) * 45%) calc(50% - var(--ty, 0) * 45%);
   mix-blend-mode: screen;
-  opacity: calc(var(--band) * var(--on, 0));
+  opacity: calc(.2 * var(--on, 0));
 }
-.hc[data-finish="signature"] .hc__band { filter: sepia(.8) saturate(2.5); }
 
-/* Soft specular right under the pointer. */
-.hc__glare {
-  background-image: radial-gradient(farthest-corner circle at calc(var(--px, 50) * 1%) calc(var(--py, 50) * 1%),
-      rgba(255, 255, 255, .55) 4%, rgba(255, 255, 255, .14) 24%, rgba(0, 0, 0, .45) 90%);
-  mix-blend-mode: overlay;
-  opacity: calc(var(--glare) * var(--on, 0) * (.45 + var(--pfc, 0) * .55));
+/* -- signature: the white script becomes gold foil ------------------------
+   Gold metal cut out by the card's signature mask (gen-maps.py finds the
+   long, thin, neutral-white strokes in the art window). It is its own,
+   opaque, mirror-like foil: dark gold at rest, a bright band and a white
+   glint where it mirrors the light, a trace of rainbow on the vivid
+   printing. */
+.hc__sig {
+  background-image:
+    radial-gradient(ellipse 16% calc(16% / var(--ar)) at var(--lx) var(--ly),
+      rgb(255 250 225 / calc(.9 * var(--on, 0))) 0%, rgb(255 236 170 / calc(.35 * var(--on, 0))) 45%, transparent 100%),
+    radial-gradient(ellipse 100% calc(100% / var(--ar)) at var(--lx) var(--ly),
+      transparent 15%, var(--arc-1g), transparent 58%),
+    linear-gradient(calc(112deg + var(--tx, 0) * 16deg),
+      #9c6c14 0%, #d29a2a 12%, #f3c548 22%, #fff0a8 29%, #f6cf55 35%, #c08a22 48%,
+      #dfa936 60%, #ffe58a 69%, #e8b640 78%, #a87416 100%);
+  --arc-1g: rgb(255 120 180 / var(--sig-rb)) 25%, rgb(120 200 255 / var(--sig-rb)) 35%, rgb(160 255 140 / var(--sig-rb)) 42%, rgb(255 230 120 / var(--sig-rb)) 50%;
+  --sig-rb: calc(.12 + .2 * var(--on, 0));
+  background-size: 100% 100%, 100% 100%, 260% 260%;
+  background-position: 0 0, 0 0, calc(50% - var(--tx, 0) * 40%) calc(50% - var(--ty, 0) * 40%);
+  background-repeat: no-repeat;
+  background-blend-mode: screen, overlay, normal;
+  filter: brightness(calc(.84 + .22 * var(--on, 0))) saturate(1.1);
+  -webkit-mask: var(--sig-mask, linear-gradient(transparent, transparent)) center / 100% 100% no-repeat;
+          mask: var(--sig-mask, linear-gradient(transparent, transparent)) center / 100% 100% no-repeat;
+}
+:root[data-foil="vivid"] .hc__sig { --sig-rb: calc(.2 + .35 * var(--on, 0)); }
+
+/* Fallback for a signature card without a mask: a copy of the art
+   thresholded to its bright, unsaturated ink, inside the lower right of the
+   art window where Riftbound prints the signature. Coarser than the mask
+   (it also catches white highlights there); the app should ship masks. */
+.hc__sig--auto {
+  background: none;
+  filter: invert(1);
+  mix-blend-mode: multiply;
+  isolation: isolate;
+  --sig-window: linear-gradient(to bottom, transparent 34%, #000 40%, #000 66%, transparent 69.5%);
+  -webkit-mask: none;
+  -webkit-mask-image: var(--sig-window), linear-gradient(to right, transparent 24%, #000 32%);
+  -webkit-mask-composite: source-in;
+          mask: none;
+          mask-image: var(--sig-window), linear-gradient(to right, transparent 24%, #000 32%);
+          mask-composite: intersect;
+}
+.hc__sig--auto .hc__img { filter: saturate(3) grayscale(1) brightness(.56) contrast(9); transition: none; }
+.hc__sig--auto::after {
+  content: "";
+  position: absolute; inset: 0;
+  mix-blend-mode: multiply;
+  /* = 1 - gold */
+  background-image: linear-gradient(calc(112deg + var(--tx, 0) * 16deg),
+    #94b8ef 0%, #5789e3 14%, #1d4dba 24%, #041f75 30%, #2659c9 37%, #719eea 50%,
+    #4779d5 63%, #0e3293 71%, #3b6dd3 79%, #8bafF0 100%);
+  background-size: 260% 260%;
+  background-position: calc(50% - var(--tx, 0) * 40%) calc(50% - var(--ty, 0) * 40%);
 }
 
 @media (prefers-reduced-motion: reduce) {

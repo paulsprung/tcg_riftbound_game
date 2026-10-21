@@ -69,6 +69,7 @@ export function HoloCard({
   const src = image.src;
   const failed = broken || image.failed;
   const imgClass = `hc__img${sideways ? ' hc__img--sideways' : ''}`;
+  const glitter = (finish === 'holo' && card.rarity === 'epic') || ETCHED.includes(finish);
   const useGl = gl && glOk !== false && !!src && isReadable(src);
   const glShown = useGl && glOk === true;
 
@@ -116,22 +117,23 @@ export function HoloCard({
               <HoloCanvas ref={holo} src={src} finish={finish} rarity={card.rarity} style={foilStyle}
                 className={`${imgClass} hc__gl${glShown ? ' is-loaded' : ''}`} onReady={setGlOk} />
             )}
-            {!glShown && ETCHED.includes(finish) && loaded && (
-              <span className="hc__etch" aria-hidden>
-                <img className={imgClass + ' is-loaded'} src={src} alt="" draggable={false} />
-                <span className="hc__etch-tint" />
+            {/* CSS foil (holo.css): one colour-dodge group whose light is
+                multiplied by a copy of the art, so the shine blooms where the
+                ink is light and black stays black. */}
+            {!glShown && finish !== 'none' && loaded && (
+              <span className="hc__fx hc__shine" aria-hidden>
+                {finish === 'ultimate' && <span className="hc__ice" />}
+                <img className={imgClass + ' is-loaded hc__key'} src={src} alt="" draggable={false} />
+                {ETCHED.includes(finish) && <span className="hc__groove" />}
+                {glitter && <span className="hc__flash" />}
               </span>
             )}
-            {!glShown && (
-              <>
-                {finish === 'ultimate' && <span className="hc__fx hc__cosmos" aria-hidden />}
-                <span className="hc__fx hc__prism" aria-hidden />
-                <span className="hc__fx hc__foil" aria-hidden />
-                <span className="hc__fx hc__sparkle" aria-hidden />
-                <span className="hc__fx hc__band" aria-hidden />
-                <span className="hc__fx hc__glare" aria-hidden />
-              </>
+            {!glShown && finish === 'signature' && loaded && (
+              <span className="hc__fx hc__sig hc__sig--auto" aria-hidden>
+                <img className={imgClass + ' is-loaded'} src={src} alt="" draggable={false} />
+              </span>
             )}
+            {!glShown && <span className="hc__fx hc__glare" aria-hidden />}
           </div>
           <div className="hc__face hc__face--back">
             <CardBack rune={/rune/i.test(card.type)} />
@@ -149,26 +151,5 @@ export function HoloCard({
         </div>
       </div>
     </div>
-  );
-}
-
-/**
- * The SVG filter the etched foil uses: an edge detector over the card art,
- * so the etched lines follow each card's own linework the way Riot's
- * alt-art and overnumbered foils do. Rendered once, near the app root.
- */
-export function FoilDefs() {
-  return (
-    <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden focusable="false">
-      <filter id="rb-etch" colorInterpolationFilters="sRGB" x="0" y="0" width="100%" height="100%">
-        <feColorMatrix type="saturate" values="0" result="grey" />
-        <feConvolveMatrix in="grey" order="3" kernelMatrix="-1 -1 -1 -1 8 -1 -1 -1 -1" preserveAlpha="true" result="edges" />
-        <feComponentTransfer in="edges">
-          <feFuncR type="linear" slope="5" intercept="-0.12" />
-          <feFuncG type="linear" slope="5" intercept="-0.12" />
-          <feFuncB type="linear" slope="5" intercept="-0.12" />
-        </feComponentTransfer>
-      </filter>
-    </svg>
   );
 }

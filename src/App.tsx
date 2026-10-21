@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import { FoilDefs } from './card/HoloCard.tsx';
 import { Inspector, type InspectTarget } from './card/Inspector.tsx';
 import { useCardDb } from './data/useCardDb.ts';
 import { CardsView } from './views/CardsView.tsx';
@@ -48,7 +47,6 @@ export function App() {
 
   return (
     <div className="app">
-      <FoilDefs />
       <header className="top">
         <a className="brand" href="#packs">
           <span className="brand__mark" aria-hidden>◆</span>
