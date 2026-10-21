@@ -127,6 +127,10 @@ export function PackOpening({ set, cards, pack, style, onInspect, onExit }: Prop
 
   const current = pulls[index];
   const currentReady = !!current && ready.has(current.card.id);
+  // A battlefield is printed sideways; once turned over it lies down so it
+  // can be read, as wide as fits.
+  const landscape = current?.card.orientation === 'landscape';
+  const landscapeScale = Math.min(1, (w - 32) / (stageW * (1039 / 744))).toFixed(3);
 
   const flip = useCallback(() => {
     flippedAt.current = performance.now();
@@ -250,7 +254,9 @@ export function PackOpening({ set, cards, pack, style, onInspect, onExit }: Prop
                 <CardBack rune={/rune/i.test(p.card.type)} />
               </div>
             ))}
-            <div key={index} className={`stack__top${flipped ? ' is-flipped' : ''}${index === 0 && !resumed ? ' is-first' : ''}`}>
+            <div key={index}
+              className={`stack__top${flipped ? ' is-flipped' : ''}${index === 0 && !resumed ? ' is-first' : ''}${landscape ? ' is-landscape' : ''}`}
+              style={{ '--ls': landscapeScale } as CSSProperties}>
               <HoloCard card={current.card} finish={current.finish} width={stageW} tilt="idle" gyro
                 faceDown={!flipped} imageWidth={ART_W} gl />
               {wantFlip && !flipped && <span className="stack__wait" aria-label="Loading the card" />}

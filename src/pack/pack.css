@@ -209,6 +209,13 @@
   opacity: calc(1 - var(--i) * .22);
 }
 .stack__top { position: relative; animation: deal .45s cubic-bezier(.2, .8, .3, 1); }
+/* a battlefield lies down after it has turned over */
+.stack__top.is-landscape.is-flipped {
+  z-index: 1;
+  transform: rotate(-90deg) scale(var(--ls, 1));
+  transition: transform .55s cubic-bezier(.3, .9, .25, 1) .75s;
+}
+
 /* the first card is already in place, out of the pack */
 .opening[data-emerge] .stack__top.is-first { animation: none; }
 @keyframes deal { from { transform: translateY(26px) scale(.96); opacity: 0; } }
@@ -273,5 +280,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .stack__top, .pulled__item, .reveal-caption__in { animation: none; }
+  .stack__top.is-landscape.is-flipped { transition: none; }
   .pk.is-torn .pk__piece--top, .pk.is-torn .pk__piece--bottom { animation-duration: .01s; }
 }
