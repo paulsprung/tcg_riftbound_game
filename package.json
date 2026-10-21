@@ -10,7 +10,8 @@
     "typecheck": "tsc -b",
     "test": "vitest run",
     "fetch-cards": "tsx scripts/fetch-cards.ts",
-    "build:preview": "tsx scripts/build-preview.ts"
+    "build:preview": "tsx scripts/build-preview.ts",
+    "build-oracle": "tsx scripts/cards/build-oracle.ts"
   },
   "dependencies": {
     "react": "^19.3.1",

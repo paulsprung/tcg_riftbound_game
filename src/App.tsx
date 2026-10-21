@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { FoilDefs } from './card/HoloCard.tsx';
 import { HoloSwitches } from './card/HoloSwitches.tsx';
 import { Inspector, type InspectTarget } from './card/Inspector.tsx';
@@ -9,10 +9,14 @@ import { PacksView } from './views/PacksView.tsx';
 import { RulesView } from './views/RulesView.tsx';
 import { ShowcaseView } from './views/ShowcaseView.tsx';
 
+// The play table brings the engine with it: loaded only when opened.
+const PlayView = lazy(() => import('./play/PlayView.tsx').then((m) => ({ default: m.PlayView })));
+
 const ROUTES = [
   { id: 'packs', label: 'Open packs', short: 'Packs' },
   { id: 'collection', label: 'Collection', short: 'Collection' },
   { id: 'showcase', label: 'Showcase', short: 'Showcase' },
+  { id: 'play', label: 'Play', short: 'Play' },
   { id: 'cards', label: 'Card database', short: 'Cards' },
   { id: 'rules', label: 'Rules', short: 'Rules' },
 ] as const;
@@ -75,6 +79,11 @@ export function App() {
             {route === 'packs' && <PacksView db={state.db} onInspect={onInspect} />}
             {route === 'collection' && <CollectionView db={state.db} onInspect={onInspect} />}
             {route === 'showcase' && <ShowcaseView db={state.db} onInspect={onInspect} />}
+            {route === 'play' && (
+              <Suspense fallback={<p className="status">Setting up the table…</p>}>
+                <PlayView db={state.db} />
+              </Suspense>
+            )}
             {route === 'cards' && <CardsView db={state.db} onInspect={onInspect} />}
             {route === 'rules' && <RulesView />}
           </>
