@@ -199,43 +199,6 @@
 .stack__top { position: relative; animation: deal .45s cubic-bezier(.2, .8, .3, 1); }
 @keyframes deal { from { transform: translateY(26px) scale(.96); opacity: 0; } }
 
-/* A face-down card that is about to be good hums a little. */
-.stack__top.is-charged { animation: deal .45s cubic-bezier(.2, .8, .3, 1), hum 1.6s ease-in-out .45s infinite; }
-.stack__top.is-charged::before {
-  content: '';
-  position: absolute; inset: -6px;
-  border-radius: 7%;
-  box-shadow: 0 0 24px 4px var(--burst), inset 0 0 12px var(--burst);
-  opacity: .55;
-  animation: glow 1.6s ease-in-out infinite;
-  pointer-events: none;
-}
-.stack__top[data-hype="2"].is-charged::before { opacity: .3; }
-@keyframes hum { 0%, 100% { transform: rotate(0); } 40% { transform: rotate(-.6deg); } 60% { transform: rotate(.6deg); } }
-@keyframes glow { 50% { opacity: .15; } }
-
-/* The burst behind a good card: rays plus a ring, in the rarity's colour. */
-.burst {
-  position: absolute; left: 50%; top: 50%;
-  width: 260%; aspect-ratio: 1;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-  z-index: -1;
-  background:
-    radial-gradient(circle, color-mix(in srgb, var(--burst) 70%, white) 0%, transparent 42%),
-    repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--burst) 55%, transparent) 0deg 4deg, transparent 4deg 15deg);
-  -webkit-mask-image: radial-gradient(circle, #000 18%, transparent 62%);
-          mask-image: radial-gradient(circle, #000 18%, transparent 62%);
-  animation: burst-in .8s cubic-bezier(.2, .8, .3, 1) both, spin 24s linear infinite;
-  opacity: .55;
-}
-.stack__top[data-hype="1"] .burst { opacity: .3; }
-.stack__top[data-hype="3"] .burst,
-.stack__top[data-hype="4"] .burst,
-.stack__top[data-hype="5"] .burst { opacity: .9; width: 340%; }
-@keyframes burst-in { from { transform: translate(-50%, -50%) scale(.2); opacity: 0; } }
-@keyframes spin { to { rotate: 360deg; } }
-
 .reveal-caption { display: grid; justify-items: center; gap: 2px; min-height: 42px; text-align: center; }
 .reveal-caption strong { font: 800 16px/1.2 var(--font-display); letter-spacing: .06em; text-transform: uppercase; }
 .reveal-caption span:not(.muted) { font: 800 18px/1.1 var(--font-card); }
@@ -262,6 +225,6 @@
 .summary__actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 
 @media (prefers-reduced-motion: reduce) {
-  .burst, .stack__top, .stack__top.is-charged, .stack__top.is-charged::before, .pulled__item, .flash.is-on { animation: none; }
+  .stack__top, .pulled__item, .flash.is-on { animation: none; }
   .pk.is-torn .pk__piece--top, .pk.is-torn .pk__piece--bottom { animation-duration: .01s; }
 }

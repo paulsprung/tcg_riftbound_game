@@ -139,13 +139,7 @@ export function PackOpening({ set, cards, pack, style, onInspect, onExit }: Prop
                 <CardBack rune={/rune/i.test(p.card.type)} />
               </div>
             ))}
-            <div
-              key={index}
-              className={`stack__top${flipped ? ' is-flipped' : ''}${!flipped && current.hype >= 2 ? ' is-charged' : ''}`}
-              data-hype={current.hype}
-              style={{ '--burst': hypeColor(current) } as CSSProperties}
-            >
-              {flipped && current.hype > 0 && <div className="burst" aria-hidden />}
+            <div key={index} className={`stack__top${flipped ? ' is-flipped' : ''}`}>
               <HoloCard card={current.card} finish={current.finish} width={stageW} tilt="idle" gyro
                 faceDown={!flipped} onClick={advance} imageWidth={600} gl />
             </div>
