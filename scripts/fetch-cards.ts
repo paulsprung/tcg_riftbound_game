@@ -8,6 +8,8 @@
  *                                   Radiance's types and domains
  *   data/supplement-cards.json    - English printings none of them list
  *   data/image-overrides.json     - where a source shows the wrong art
+ *   data/card-fixes.json          - field corrections, applied last
+ *   data/hidden-cards.json        - duplicate records left out
  *
  * The untouched responses go to data/raw/ (git-ignored), so the normaliser
  * can be re-run without the network:
@@ -107,6 +109,13 @@ async function main() {
     dotgg,
     cards: await local<Card[]>('supplement-cards.json'),
     images: await local<Record<string, string>>('image-overrides.json'),
+    fixes: await local('card-fixes.json'),
+    hidden: await local<Record<string, string>>('hidden-cards.json'),
+    onReport: (r) => {
+      console.log(`riftbound.gg repairs: ${r.matched} cards matched, changed ${JSON.stringify(r.changed)}`);
+      // stats are only overwritten where checked by hand: show the rest
+      for (const d of r.disagreements) console.warn(`  riftbound.gg disagrees, not applied: ${d}`);
+    },
   });
   await mkdir(dirname(outPath), { recursive: true });
   await writeFile(outPath, JSON.stringify(db));

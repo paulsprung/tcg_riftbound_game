@@ -29,8 +29,14 @@ export function imageAt(card: Card, width: number): string {
 export function isReadable(src: string): boolean {
   if (!src) return false;
   if (src.startsWith('blob:') || src.startsWith('data:')) return true;
-  try { return new URL(src, location.href).origin === location.origin; } catch { return false; }
+  try {
+    const origin = new URL(src, location.href).origin;
+    return origin === location.origin || CORS_HOSTS.includes(origin);
+  } catch { return false; }
 }
+
+/** Image hosts that send Access-Control-Allow-Origin: * */
+const CORS_HOSTS = ['https://static.dotgg.gg', 'https://cdn.piltoverarchive.com', 'https://tcgplayer-cdn.tcgplayer.com'];
 
 type Urls = Record<string, string>;
 const bundles = new Map<string, Promise<Urls>>();

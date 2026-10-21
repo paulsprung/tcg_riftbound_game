@@ -1,5 +1,5 @@
 import type { Card, CardDb, Rarity, SetInfo, CardSymbol, Variant } from './types.ts';
-import { enrichFromDotgg, type DotggRow } from './dotgg.ts';
+import { enrichFromDotgg, type DotggRow, type EnrichStats } from './dotgg.ts';
 
 /*
  * Turns raw source records into our Card shape. Two sources are merged
@@ -222,6 +222,25 @@ export function collectSymbols(riotRaw: Raw[]): CardDb['symbols'] {
   return { rarities, domains, glyphs };
 }
 
+/**
+ * A later printing (alt art, overnumbered, a reprint in another set) whose
+ * tags are a strict subset of an earlier printing of the same card gets
+ * the earlier one's: Riot's records of chase printings often drop the
+ * region tag the card prints. Never the other way round.
+ */
+export function inheritTags(cards: Card[]): void {
+  const same = (a: Card, b: Card) => a.name === b.name && a.type === b.type && a.energy === b.energy &&
+    a.might === b.might && a.power === b.power && a.domains.join() === b.domains.join();
+  const byName = new Map<string, Card[]>();
+  for (const c of cards) byName.set(c.name, [...(byName.get(c.name) ?? []), c]);
+  for (const c of cards) {
+    for (const o of byName.get(c.name) ?? []) {
+      if (o === c || !same(c, o) || o.tags.length <= c.tags.length) continue;
+      if (c.tags.every((t) => o.tags.includes(t)) && (o.variant === 'base' || c.variant !== 'base')) c.tags = [...o.tags];
+    }
+  }
+}
+
 /** Set names as the products print them, where the sources disagree. */
 const SET_NAMES: Record<string, string> = { ogs: 'Origins: Proving Grounds' };
 
@@ -233,6 +252,12 @@ export interface Supplements {
   cards?: Card[];
   /** Card id -> image URL, where a source shows another printing's art. */
   images?: Record<string, string>;
+  /** Card id -> fields to set, last (keys starting with _ are notes). */
+  fixes?: Record<string, Partial<Card> & { _why?: string }>;
+  /** Card id -> why it is left out: a duplicate record of another printing. */
+  hidden?: Record<string, string>;
+  /** Told what the dotgg repairs changed, and where dotgg disagrees. */
+  onReport?: (stats: EnrichStats) => void;
 }
 
 export function buildDb(riotRaw: Raw[], riftcodexRaw: Raw[], supplements: Supplements = {}, now = new Date()): CardDb {
@@ -244,7 +269,7 @@ export function buildDb(riotRaw: Raw[], riftcodexRaw: Raw[], supplements: Supple
     if (c && !extra.has(codeKey(c.code))) extra.set(codeKey(c.code), c);
   }
 
-  const cards: Card[] = [];
+  let cards: Card[] = [];
   const seen = new Set<string>();
   for (const r of riotRaw) {
     const c = normalizeRiot(r);
@@ -267,7 +292,13 @@ export function buildDb(riotRaw: Raw[], riftcodexRaw: Raw[], supplements: Supple
     if (!ids.has(c.id)) { cards.push({ ...c, tags: [...c.tags], domains: [...c.domains] }); ids.add(c.id); }
   }
   for (const c of cards) c.image = supplements.images?.[c.id] ?? c.image;
-  if (supplements.dotgg) enrichFromDotgg(cards, supplements.dotgg);
+  if (supplements.dotgg) supplements.onReport?.(enrichFromDotgg(cards, supplements.dotgg));
+  inheritTags(cards);
+  for (const c of cards) {
+    const fix = supplements.fixes?.[c.id];
+    if (fix) for (const [k, v] of Object.entries(fix)) if (!k.startsWith('_')) (c as unknown as Record<string, unknown>)[k] = v;
+  }
+  if (supplements.hidden) cards = cards.filter((c) => !supplements.hidden![c.id]);
 
   for (const c of cards) c.setName = SET_NAMES[c.setId] ?? c.setName;
   cards.sort((a, b) =>

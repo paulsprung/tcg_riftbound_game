@@ -336,7 +336,7 @@
   "rarity": "showcase",
   "variant": "promo",
   "type": "Unit",
-  "supertype": null,
+  "supertype": "Champion",
   "domains": [
    "Order"
   ],
@@ -363,7 +363,7 @@
   "rarity": "showcase",
   "variant": "signature",
   "type": "Unit",
-  "supertype": null,
+  "supertype": "Champion",
   "domains": [
    "Order"
   ],
@@ -390,7 +390,7 @@
   "rarity": "showcase",
   "variant": "promo",
   "type": "Unit",
-  "supertype": null,
+  "supertype": "Champion",
   "domains": [
    "Order"
   ],
@@ -1561,7 +1561,7 @@
   "rarity": "promo",
   "variant": "promo",
   "type": "Rune",
-  "supertype": null,
+  "supertype": "Basic",
   "domains": [
    "Fury"
   ],
@@ -1585,7 +1585,7 @@
   "rarity": "promo",
   "variant": "promo",
   "type": "Rune",
-  "supertype": null,
+  "supertype": "Basic",
   "domains": [
    "Calm"
   ],
@@ -1609,7 +1609,7 @@
   "rarity": "promo",
   "variant": "promo",
   "type": "Rune",
-  "supertype": null,
+  "supertype": "Basic",
   "domains": [
    "Mind"
   ],
@@ -1633,7 +1633,7 @@
   "rarity": "promo",
   "variant": "promo",
   "type": "Rune",
-  "supertype": null,
+  "supertype": "Basic",
   "domains": [
    "Body"
   ],
@@ -1657,7 +1657,7 @@
   "rarity": "promo",
   "variant": "promo",
   "type": "Rune",
-  "supertype": null,
+  "supertype": "Basic",
   "domains": [
    "Chaos"
   ],
@@ -1681,7 +1681,7 @@
   "rarity": "promo",
   "variant": "promo",
   "type": "Rune",
-  "supertype": null,
+  "supertype": "Basic",
   "domains": [
    "Order"
   ],
@@ -1818,10 +1818,10 @@
    "Mech",
    "Recruit"
   ],
-  "text": "\n//\n",
+  "text": "",
   "flavor": "",
   "artist": "Dao Trong Le // Six More Vodka",
-  "image": "https://static.dotgg.gg/riftbound/cards/VEN-T03.webp",
+  "image": "https://static.dotgg.gg/riftbound/cards/VEN-T03.2.webp",
   "orientation": "portrait"
  },
  {
@@ -1899,7 +1899,7 @@
   "text": "\n//\nUse to mark legends, units, and gear that are [Empowered].",
   "flavor": "",
   "artist": "Six More Vodka",
-  "image": "https://static.dotgg.gg/riftbound/cards/VEN-T01r.webp",
+  "image": "https://static.dotgg.gg/riftbound/cards/VEN-T01r.2.webp",
   "orientation": "portrait"
  },
  {
@@ -1925,7 +1925,7 @@
   "text": "Use to mark legends, units, and gear that are [Empowered].\n//\n",
   "flavor": "",
   "artist": "Six More Vodka // Michal Ivan",
-  "image": "https://static.dotgg.gg/riftbound/cards/VEN-T01t.webp",
+  "image": "https://static.dotgg.gg/riftbound/cards/VEN-T01t.2.webp",
   "orientation": "portrait"
  },
  {
@@ -1952,7 +1952,7 @@
   "text": "[Deflect] (Opponents must pay :rb_rune_rainbow: to choose me with a spell or ability.)\n//\n[Deploy] (Play this only to a battlefield. When an opponent holds here, kill this.)\n[Deathknell][>] Deal 2 to an enemy unit here and kill all other Bombs you control here.",
   "flavor": "",
   "artist": "Six More Vodka // Kudos Productions",
-  "image": "https://static.dotgg.gg/riftbound/cards/RAD-T01.webp",
+  "image": "https://static.dotgg.gg/riftbound/cards/RAD-T01.2.webp",
   "orientation": "portrait"
  },
  {
@@ -2030,7 +2030,7 @@
   "text": "A unit may have no more than one buff at a time.\n//\n",
   "flavor": "",
   "artist": "League Splash Team // Six More Vodka",
-  "image": "https://static.dotgg.gg/riftbound/cards/RAD-T03.webp",
+  "image": "https://static.dotgg.gg/riftbound/cards/RAD-T03.2.webp",
   "orientation": "portrait"
  },
  {
@@ -2056,7 +2056,7 @@
   "text": "Use to mark legends, units, and gear that are [Empowered].\n//\n",
   "flavor": "",
   "artist": "Six More Vodka",
-  "image": "https://static.dotgg.gg/riftbound/cards/RAD-T04.webp",
+  "image": "https://static.dotgg.gg/riftbound/cards/RAD-T04.2.webp",
   "orientation": "portrait"
  },
  {
@@ -2082,7 +2082,7 @@
   "text": "[Reaction][>] Kill this, :rb_exhaust:: [Add] :rb_rune_rainbow:. (Abilities that add resources can't be reacted to.)\n//\n",
   "flavor": "",
   "artist": "Kudos Productions // Dao Trong Le",
-  "image": "https://static.dotgg.gg/riftbound/cards/RAD-T05.webp",
+  "image": "https://static.dotgg.gg/riftbound/cards/RAD-T05.2.webp",
   "orientation": "portrait"
  },
  {
@@ -2132,7 +2132,7 @@
    "Mech",
    "Recruit"
   ],
-  "text": "\n//\n",
+  "text": "",
   "flavor": "",
   "artist": "Dao Trong Le // Six More Vodka",
   "image": "https://static.dotgg.gg/riftbound/cards/RAD-T06r.webp",
@@ -2160,32 +2160,6 @@
   "flavor": "",
   "artist": "Fish Art Studio // Kudos Productions",
   "image": "https://static.dotgg.gg/riftbound/cards/UNL-T01g.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "unl-t02-t03",
-  "name": "Bird // Brush",
-  "setId": "unl",
-  "setName": "Unleashed",
-  "code": "UNL-T02//T03",
-  "number": 2,
-  "rarity": "common",
-  "variant": "base",
-  "type": "Token",
-  "supertype": "Token",
-  "domains": [
-   "Colorless"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Bird"
-  ],
-  "text": "[Deflect] (Opponents must pay :rb_rune_rainbow: to choose me with a spell or ability.)\n//\nBird, Cat, Dog, Poro, and Ivern units here have +1 :rb_might:.\nWhen you score here, you may replace this with the battlefield it replaced.",
-  "flavor": "",
-  "artist": "Six More Vodka // Kudos Productions",
-  "image": "https://static.dotgg.gg/riftbound/cards/UNL-T02b.webp",
   "orientation": "portrait"
  },
  {
@@ -2237,7 +2211,7 @@
   "text": "[Temporary] (Kill me at the start of your Beginning Phase, before scoring.)\n//\nA unit may have no more than one buff at a time.",
   "flavor": "",
   "artist": "Envar Studio // League Splash Team",
-  "image": "https://static.dotgg.gg/riftbound/cards/UNL-T04s.webp",
+  "image": "https://static.dotgg.gg/riftbound/cards/UNL-T04s.2.webp",
   "orientation": "portrait"
  },
  {
@@ -2261,7 +2235,7 @@
   "text": "Track gained XP here.\nSome cards get bonuses based on your [Level].\nSome cards can spend XP for powerful effects.\n//\nA unit may have no more than one buff at a time.",
   "flavor": "",
   "artist": "Rafael Zanchetin // League Splash Team",
-  "image": "https://static.dotgg.gg/riftbound/cards/UNL-T04x.webp",
+  "image": "https://static.dotgg.gg/riftbound/cards/UNL-T04x.2.webp",
   "orientation": "portrait"
  },
  {
@@ -2287,7 +2261,7 @@
   "text": "[Temporary] (Kill me at the start of your Beginning Phase, before scoring.)\n//\n[Reaction][>] Kill this, :rb_exhaust:: [Add] :rb_rune_rainbow:. (Abilities that add resources can't be reacted to.)",
   "flavor": "",
   "artist": "Envar Studio // Kudos Productions",
-  "image": "https://static.dotgg.gg/riftbound/cards/UNL-T05s.webp",
+  "image": "https://static.dotgg.gg/riftbound/cards/UNL-T05s.2.webp",
   "orientation": "portrait"
  },
  {
@@ -2311,7 +2285,7 @@
   "text": "Track gained XP here.\nSome cards get bonuses based on your [Level].\nSome cards can spend XP for powerful effects.\n//\n[Reaction][>] Kill this, :rb_exhaust:: [Add] :rb_rune_rainbow:. (Abilities that add resources can't be reacted to.)",
   "flavor": "",
   "artist": "Rafael Zanchetin // Kudos Productions",
-  "image": "https://static.dotgg.gg/riftbound/cards/UNL-T05x.webp",
+  "image": "https://static.dotgg.gg/riftbound/cards/UNL-T05x.2.webp",
   "orientation": "portrait"
  },
  {
@@ -2528,7 +2502,7 @@
   "rarity": "promo",
   "variant": "promo",
   "type": "Legend",
-  "supertype": "Champion",
+  "supertype": null,
   "domains": [
    "Fury",
    "Mind"
@@ -2555,7 +2529,7 @@
   "rarity": "promo",
   "variant": "promo",
   "type": "Legend",
-  "supertype": "Champion",
+  "supertype": null,
   "domains": [
    "Fury",
    "Body"
@@ -2636,7 +2610,7 @@
   "rarity": "promo",
   "variant": "promo",
   "type": "Legend",
-  "supertype": "Champion",
+  "supertype": null,
   "domains": [
    "Calm",
    "Mind"
@@ -2690,7 +2664,7 @@
   "rarity": "promo",
   "variant": "promo",
   "type": "Legend",
-  "supertype": "Champion",
+  "supertype": null,
   "domains": [
    "Calm",
    "Chaos"
@@ -2798,7 +2772,7 @@
   "rarity": "promo",
   "variant": "promo",
   "type": "Legend",
-  "supertype": "Champion",
+  "supertype": null,
   "domains": [
    "Body",
    "Chaos"
@@ -2852,7 +2826,7 @@
   "rarity": "promo",
   "variant": "promo",
   "type": "Legend",
-  "supertype": "Champion",
+  "supertype": null,
   "domains": [
    "Mind",
    "Order"
@@ -2879,7 +2853,7 @@
   "rarity": "promo",
   "variant": "promo",
   "type": "Legend",
-  "supertype": "Champion",
+  "supertype": null,
   "domains": [
    "Body",
    "Order"
@@ -2906,7 +2880,7 @@
   "rarity": "promo",
   "variant": "promo",
   "type": "Legend",
-  "supertype": "Champion",
+  "supertype": null,
   "domains": [
    "Fury",
    "Chaos"
@@ -2933,7 +2907,7 @@
   "rarity": "promo",
   "variant": "promo",
   "type": "Legend",
-  "supertype": "Champion",
+  "supertype": null,
   "domains": [
    "Calm",
    "Body"
@@ -2973,7 +2947,7 @@
   "text": "[Hidden] (Hide now for :rb_rune_rainbow: to react with later for :rb_energy_0:.)\nWhen you play this from face down, attach it to a unit you control here.\n[Equip] :rb_rune_chaos: (:rb_rune_chaos:: Attach this to a unit you control.)",
   "flavor": "Every shadow an ally.",
   "artist": "黯荧岛Dark Glow",
-  "image": "https://static.dotgg.gg/riftbound/cards/SFD-139-P2.webp",
+  "image": "https://tcgplayer-cdn.tcgplayer.com/product/684999_in_1000x1000.jpg",
   "orientation": "portrait"
  },
  {
@@ -2999,7 +2973,7 @@
   "text": "[Hidden] (Hide now for :rb_rune_rainbow: to react with later for :rb_energy_0:.)\nWhen you play this from face down, attach it to a unit you control here.\n[Equip] :rb_rune_chaos: (:rb_rune_chaos:: Attach this to a unit you control.)",
   "flavor": "Every shadow an ally.",
   "artist": "黯荧岛Dark Glow",
-  "image": "https://static.dotgg.gg/riftbound/cards/SFD-139-P.webp",
+  "image": "https://tcgplayer-cdn.tcgplayer.com/product/685001_in_1000x1000.jpg",
   "orientation": "portrait"
  },
  {
@@ -3081,762 +3055,6 @@
   "orientation": "portrait"
  },
  {
-  "id": "opp-247-298-metal-prize-wall",
-  "name": "Daughter of the Void",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-247/298",
-  "number": 247,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": "Champion",
-  "domains": [
-   "Fury",
-   "Mind"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Kai'Sa"
-  ],
-  "text": ":rb_exhaust:: [Reaction] — [Add] :rb_rune_rainbow:. Use only to play spells. (Abilities that add resources can't be reacted to.)",
-  "flavor": "",
-  "artist": "Kudos Productions",
-  "image": "https://static.dotgg.gg/riftbound/cards/OGN-247-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-249-298-metal-prize-wall",
-  "name": "Relentless Storm",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-249/298",
-  "number": 249,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": "Champion",
-  "domains": [
-   "Fury",
-   "Body"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Volibear"
-  ],
-  "text": "When you play a [Mighty] unit, you may exhaust me to channel 1 rune exhausted. (A unit is Mighty while it has 5+ :rb_might:.)",
-  "flavor": "",
-  "artist": "Grafit Studio",
-  "image": "https://static.dotgg.gg/riftbound/cards/OGN-249-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-251-298-metal-prize-wall",
-  "name": "Loose Cannon",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-251/298",
-  "number": 251,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Fury",
-   "Chaos"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Jinx"
-  ],
-  "text": "At start of your Beginning Phase, draw 1 if you have one or fewer cards in your hand.",
-  "flavor": "",
-  "artist": "Sugar Free",
-  "image": "https://static.dotgg.gg/riftbound/cards/OGN-251-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-253-298-metal-prize-wall",
-  "name": "Hand of Noxus",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-253/298",
-  "number": 253,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Fury",
-   "Order"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Darius"
-  ],
-  "text": ":rb_exhaust:: [Reaction], [Legion] — [Add] :rb_energy_1:. (Abilities that add resources can't be reacted to. Get the effect if you've played a card this turn.)",
-  "flavor": "",
-  "artist": "Six More Vodka",
-  "image": "https://static.dotgg.gg/riftbound/cards/OGN-253-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-255-298-metal-prize-wall",
-  "name": "Nine-Tailed Fox",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-255/298",
-  "number": 255,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": "Champion",
-  "domains": [
-   "Calm",
-   "Mind"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Ahri"
-  ],
-  "text": "When an enemy unit attacks a battlefield you control, give it -1 :rb_might: this turn, to a minimum of 1 :rb_might:.",
-  "flavor": "",
-  "artist": "Envar Studio",
-  "image": "https://static.dotgg.gg/riftbound/cards/OGN-255-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-257-298-metal-prize-wall",
-  "name": "Blind Monk",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-257/298",
-  "number": 257,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Calm",
-   "Body"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Lee Sin"
-  ],
-  "text": ":rb_energy_1:, :rb_exhaust:: Buff a friendly unit. (If it doesn't have a buff, it gets a +1 :rb_might: buff.)",
-  "flavor": "",
-  "artist": "Six More Vodka",
-  "image": "https://static.dotgg.gg/riftbound/cards/OGN-257-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-259-298-metal-prize-wall",
-  "name": "Unforgiven",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-259/298",
-  "number": 259,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": "Champion",
-  "domains": [
-   "Calm",
-   "Chaos"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Yasuo"
-  ],
-  "text": ":rb_energy_2:, :rb_exhaust:: Move a friendly unit to or from your base.",
-  "flavor": "",
-  "artist": "TSWCK逍",
-  "image": "https://static.dotgg.gg/riftbound/cards/OGN-259-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-261-298-metal-prize-wall",
-  "name": "Radiant Dawn",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-261/298",
-  "number": 261,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Calm",
-   "Order"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Leona"
-  ],
-  "text": "When you stun one or more enemy units, buff a friendly unit. (If it doesn't have a buff, it gets a +1 :rb_might: buff.)",
-  "flavor": "",
-  "artist": "Six More Vodka",
-  "image": "https://static.dotgg.gg/riftbound/cards/OGN-261-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-263-298-metal-prize-wall",
-  "name": "Swift Scout",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-263/298",
-  "number": 263,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Mind",
-   "Chaos"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Teemo"
-  ],
-  "text": "You may pay :rb_energy_1: to hide a card with [Hidden] instead of :rb_rune_rainbow:.\n:rb_energy_1:, :rb_exhaust:: Put a Teemo unit you own into your hand from your Champion Zone or the board.",
-  "flavor": "",
-  "artist": "Shawn Lee",
-  "image": "https://static.dotgg.gg/riftbound/cards/OGN-263-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-265-298-metal-prize-wall",
-  "name": "Herald of the Arcane",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-265/298",
-  "number": 265,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Mind",
-   "Order"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Viktor"
-  ],
-  "text": ":rb_energy_1:, :rb_exhaust:: Play a 1 :rb_might: Recruit unit token.",
-  "flavor": "",
-  "artist": "Fortiche Production",
-  "image": "https://static.dotgg.gg/riftbound/cards/OGN-265-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-267-298-metal-prize-wall",
-  "name": "Bounty Hunter",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-267/298",
-  "number": 267,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": "Champion",
-  "domains": [
-   "Body",
-   "Chaos"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Miss Fortune"
-  ],
-  "text": ":rb_exhaust:: Give a unit [Ganking] this turn. (It can move from battlefield to battlefield.)",
-  "flavor": "",
-  "artist": "Six More Vodka",
-  "image": "https://static.dotgg.gg/riftbound/cards/OGN-267-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-269-298-metal-prize-wall",
-  "name": "The Boss",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-269/298",
-  "number": 269,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Body",
-   "Order"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Sett"
-  ],
-  "text": "When a buffed unit you control would die, you may pay :rb_rune_rainbow: and exhaust me to spend its buff and recall it exhausted instead. (Send it to base. This isn't a move.)\nWhen you conquer, ready me.",
-  "flavor": "",
-  "artist": "Envar Studio",
-  "image": "https://static.dotgg.gg/riftbound/cards/OGN-269-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-017-024-metal-prize-wall",
-  "name": "Dark Child, Starter",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-017/024",
-  "number": 17,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": "Champion",
-  "domains": [
-   "Fury",
-   "Chaos"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Annie"
-  ],
-  "text": "At the end of your turn, ready 2 runes.",
-  "flavor": "",
-  "artist": "Six More Vodka",
-  "image": "https://static.dotgg.gg/riftbound/cards/OGS-017-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-019-024-metal-prize-wall",
-  "name": "Wuju Bladesman, Starter",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-019/024",
-  "number": 19,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": "Champion",
-  "domains": [
-   "Calm",
-   "Body"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Master Yi"
-  ],
-  "text": "While a friendly unit defends alone, it gets +2 :rb_might:.",
-  "flavor": "",
-  "artist": "Grafit Studio/Quy Ho",
-  "image": "https://static.dotgg.gg/riftbound/cards/OGS-019-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-021-024-metal-prize-wall",
-  "name": "Lady of Luminosity, Starter",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-021/024",
-  "number": 21,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": "Champion",
-  "domains": [
-   "Mind",
-   "Order"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Lux"
-  ],
-  "text": "When you play a spell that costs :rb_energy_5: or more, draw 1.",
-  "flavor": "",
-  "artist": "Grafit Studio/Maki Planas Mata",
-  "image": "https://static.dotgg.gg/riftbound/cards/OGS-021-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-023-024-metal-prize-wall",
-  "name": "Might of Demacia, Starter",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-023/024",
-  "number": 23,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": "Champion",
-  "domains": [
-   "Body",
-   "Order"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Garen"
-  ],
-  "text": "When you conquer, if you have 4+ units at that battlefield, draw 2.",
-  "flavor": "",
-  "artist": "Six More Vodka",
-  "image": "https://static.dotgg.gg/riftbound/cards/OGS-023-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-201-221-metal-prize-wall",
-  "name": "Chem-Baroness",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-201/221",
-  "number": 201,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Mind",
-   "Order"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Renata Glasc"
-  ],
-  "text": "When you or an ally hold, you may exhaust me to play a Gold gear token exhausted.\nWhile your score is within 3 points of the Victory Score, your Gold [Add] an additional :rb_energy_1:.",
-  "flavor": "",
-  "artist": "Pandart Studio",
-  "image": "https://static.dotgg.gg/riftbound/cards/SFD-201-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-197-221-metal-prize-wall",
-  "name": "Emperor of the Sands",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-197/221",
-  "number": 197,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Calm",
-   "Order"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Azir"
-  ],
-  "text": "Your Sand Soldiers have [Weaponmaster].\n:rb_energy_1:, :rb_exhaust:: Play a 2 :rb_might: Sand Soldier unit token to your base. Use only if you've played an Equipment this turn.",
-  "flavor": "",
-  "artist": "蛋费鸡丁",
-  "image": "https://static.dotgg.gg/riftbound/cards/SFD-197-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-185-221-metal-prize-wall",
-  "name": "Glorious Executioner",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-185/221",
-  "number": 185,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Fury",
-   "Chaos"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Draven"
-  ],
-  "text": "When you win a combat, draw 1. (You win if only your units remain after combat.)",
-  "flavor": "",
-  "artist": "Pandart Studio",
-  "image": "https://static.dotgg.gg/riftbound/cards/SFD-185-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-199-221-metal-prize-wall",
-  "name": "Prodigal Explorer",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-199/221",
-  "number": 199,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Mind",
-   "Chaos"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Ezreal"
-  ],
-  "text": ":rb_exhaust:: [Reaction] — Draw 1. Use only if you've chosen enemy units and/or gear twice this turn with spells or unit abilities.",
-  "flavor": "",
-  "artist": "Pandart Studio",
-  "image": "https://static.dotgg.gg/riftbound/cards/SFD-199-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-205-221-metal-prize-wall",
-  "name": "Grand Duelist",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-205/221",
-  "number": 205,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Body",
-   "Order"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Fiora"
-  ],
-  "text": "When one of your units becomes [Mighty], you may exhaust me to channel 1 rune exhausted. (A unit is Mighty while it has 5+ :rb_might:.)",
-  "flavor": "",
-  "artist": "Pandart Studio",
-  "image": "https://static.dotgg.gg/riftbound/cards/SFD-205-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-195-221-metal-prize-wall",
-  "name": "Blade Dancer",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-195/221",
-  "number": 195,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Calm",
-   "Chaos"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Irelia"
-  ],
-  "text": "When you choose a friendly unit, you may exhaust me and pay :rb_rune_rainbow: to ready it.\nWhen you conquer, you may pay :rb_energy_1: to ready me.",
-  "flavor": "",
-  "artist": "Pandart Studio",
-  "image": "https://static.dotgg.gg/riftbound/cards/SFD-195-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-193-221-metal-prize-wall",
-  "name": "Grandmaster at Arms",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-193/221",
-  "number": 193,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Calm",
-   "Body"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Jax"
-  ],
-  "text": ":rb_energy_1:, :rb_exhaust:: Attach a detached Equipment you control to a unit you control.\n:rb_exhaust:: Attach an attached Equipment you control to a unit you control.",
-  "flavor": "",
-  "artist": "Pandart Studio",
-  "image": "https://static.dotgg.gg/riftbound/cards/SFD-193-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-183-221-metal-prize-wall",
-  "name": "Purifier",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-183/221",
-  "number": 183,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Fury",
-   "Body"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Lucian"
-  ],
-  "text": "Your Equipment each give [Assault]. (+1 :rb_might: while equipped unit is an attacker.)",
-  "flavor": "",
-  "artist": "Pandart Studio",
-  "image": "https://static.dotgg.gg/riftbound/cards/SFD-183-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-189-221-metal-prize-wall",
-  "name": "Fire Below the Mountain",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-189/221",
-  "number": 189,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Calm",
-   "Mind"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Ornn"
-  ],
-  "text": ":rb_exhaust:: [Reaction] — [Add] :rb_rune_rainbow:. Use only to play gear or use gear abilities. (Abilities that add resources can't be reacted to.)",
-  "flavor": "",
-  "artist": "Pandart Studio",
-  "image": "https://static.dotgg.gg/riftbound/cards/SFD-189-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-187-221-metal-prize-wall",
-  "name": "Void Burrower",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-187/221",
-  "number": 187,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Fury",
-   "Order"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Rek'Sai"
-  ],
-  "text": "When you conquer, you may exhaust me to reveal the top 2 cards of your Main Deck. You may play one. Then recycle the rest.",
-  "flavor": "",
-  "artist": "Pandart Studio",
-  "image": "https://static.dotgg.gg/riftbound/cards/SFD-187-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-181-221-metal-prize-wall",
-  "name": "Mechanized Menace",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-181/221",
-  "number": 181,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Fury",
-   "Mind"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Rumble"
-  ],
-  "text": "Your Mechs have [Shield]. (+1 :rb_might: while they're defenders.)",
-  "flavor": "",
-  "artist": "Pandart Studio",
-  "image": "https://static.dotgg.gg/riftbound/cards/SFD-181-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-203-221-metal-prize-wall",
-  "name": "Battle Mistress",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-203/221",
-  "number": 203,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Body",
-   "Chaos"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Sivir"
-  ],
-  "text": "When you recycle a rune, you may exhaust me to play a Gold gear token exhausted.\nWhen one or more enemy units die, ready me.",
-  "flavor": "",
-  "artist": "Zhongqi Li",
-  "image": "https://static.dotgg.gg/riftbound/cards/SFD-203-MP-P.webp",
-  "orientation": "portrait"
- },
- {
   "id": "opp-151b-298",
   "name": "Lee Sin, Centered",
   "setId": "opp",
@@ -3861,330 +3079,6 @@
   "flavor": "Today will be a worthy test.",
   "artist": "League Splash Team",
   "image": "https://static.dotgg.gg/riftbound/cards/OGN-151b.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-197-219-metal-prize-wall",
-  "name": "Scorn of the Moon",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-197/219",
-  "number": 197,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Mind",
-   "Chaos"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Diana"
-  ],
-  "text": "[Reaction][>] :rb_exhaust:: [Add] :rb_energy_1:. Spend this Energy only during showdowns. (Abilities that add resources can't be reacted to.)",
-  "flavor": "",
-  "artist": "Envar Studio",
-  "image": "https://static.dotgg.gg/riftbound/cards/UNL-197-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-195-219-metal-prize-wall",
-  "name": "Green Father",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-195/219",
-  "number": 195,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Calm",
-   "Order"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Ivern"
-  ],
-  "text": "When you conquer or hold, you may exhaust me to replace that battlefield with a Brush battlefield token. (Bird, Cat, Dog, Poro, and Ivern units have +1 :rb_might: in Brush. It can be swapped back when scored.)",
-  "flavor": "",
-  "artist": "Envar Studio",
-  "image": "https://static.dotgg.gg/riftbound/cards/UNL-195-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-181-219-metal-prize-wall",
-  "name": "Virtuoso",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-181/219",
-  "number": 181,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Fury",
-   "Mind"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Jhin"
-  ],
-  "text": "When you play a spell, if you spent :rb_energy_4: or more, you may banish it. Then, if there are four spells banished with me, put each in its trash, channel 4 runes, and draw 1.",
-  "flavor": "",
-  "artist": "Pandart Studio",
-  "image": "https://static.dotgg.gg/riftbound/cards/UNL-181-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-201-219-metal-prize-wall",
-  "name": "Voidreaver",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-201/219",
-  "number": 201,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Body",
-   "Chaos"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Kha'Zix"
-  ],
-  "text": "When you win a combat, gain 1 XP.\nSpend 1 XP, :rb_exhaust:: [Buff] a unit.\nSpend 2 XP, :rb_exhaust:: Move an exhausted friendly unit from a battlefield to its base.",
-  "flavor": "",
-  "artist": "Envar Studio",
-  "image": "https://static.dotgg.gg/riftbound/cards/UNL-201-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-199-219-metal-prize-wall",
-  "name": "Deceiver",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-199/219",
-  "number": 199,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Mind",
-   "Order"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "LeBlanc"
-  ],
-  "text": "When you conquer or hold, you may discard 1 and exhaust me to play a ready Reflection unit token there. It becomes a copy of another unit there. Give it [Temporary].",
-  "flavor": "",
-  "artist": "黯荧岛Dark Glow",
-  "image": "https://static.dotgg.gg/riftbound/cards/UNL-199-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-189-219-metal-prize-wall",
-  "name": "Bashful Bloom",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-189/219",
-  "number": 189,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Calm",
-   "Mind"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Lillia"
-  ],
-  "text": ":rb_energy_4:, :rb_exhaust:: Play a ready 3 :rb_might: Sprite unit token with [Temporary]. This ability costs :rb_energy_1: less for each friendly unit with [Temporary].",
-  "flavor": "",
-  "artist": "Pandart Studio",
-  "image": "https://static.dotgg.gg/riftbound/cards/UNL-189-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-191-219-metal-prize-wall",
-  "name": "Wuju Master",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-191/219",
-  "number": 191,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Calm",
-   "Body"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Master Yi"
-  ],
-  "text": "[Level 6][>] Your units have +1 :rb_might:. (While you have 6+ XP, get the effect.)\n[Level 11][>] Your units enter ready.",
-  "flavor": "",
-  "artist": "Envar Studio",
-  "image": "https://static.dotgg.gg/riftbound/cards/UNL-191-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-203-219-metal-prize-wall",
-  "name": "Keeper of the Hammer",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-203/219",
-  "number": 203,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Body",
-   "Order"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Poppy"
-  ],
-  "text": "When you hold, gain 1 XP.\nSpend 3 XP, :rb_exhaust:: Draw 1.",
-  "flavor": "",
-  "artist": "Pandart Studio",
-  "image": "https://static.dotgg.gg/riftbound/cards/UNL-203-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-185-219-metal-prize-wall",
-  "name": "Bloodharbor Ripper",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-185/219",
-  "number": 185,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Fury",
-   "Chaos"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Pyke"
-  ],
-  "text": ":rb_energy_1:, :rb_exhaust:: Return a friendly unit at a battlefield to its owner's hand. Play a Gold gear token exhausted. (It has \"[Reaction][>] Kill this, :rb_exhaust:: [Add] :rb_rune_rainbow:.\")",
-  "flavor": "",
-  "artist": "TSWCK逍",
-  "image": "https://static.dotgg.gg/riftbound/cards/UNL-185-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-183-219-metal-prize-wall",
-  "name": "Pridestalker",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-183/219",
-  "number": 183,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Fury",
-   "Body"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Rengar"
-  ],
-  "text": "When you play a unit, give a unit +1 :rb_might: this turn.",
-  "flavor": "",
-  "artist": "Envar Studio",
-  "image": "https://static.dotgg.gg/riftbound/cards/UNL-183-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-193-219-metal-prize-wall",
-  "name": "Gloomist",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-193/219",
-  "number": 193,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Calm",
-   "Chaos"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Vex"
-  ],
-  "text": "When you or an ally hold, you may exhaust me to draw 1.",
-  "flavor": "",
-  "artist": "Pandart Studio",
-  "image": "https://static.dotgg.gg/riftbound/cards/UNL-193-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-187-219-metal-prize-wall",
-  "name": "Piltover Enforcer",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-187/219",
-  "number": 187,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Fury",
-   "Order"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Vi"
-  ],
-  "text": "When you conquer, if you assigned 3 or more excess damage, you may exhaust me to ready a unit.",
-  "flavor": "",
-  "artist": "Pandart Studio",
-  "image": "https://static.dotgg.gg/riftbound/cards/UNL-187-MP-P.webp",
   "orientation": "portrait"
  },
  {
@@ -5130,33 +4024,6 @@
   "orientation": "portrait"
  },
  {
-  "id": "opp-139-166-metal-prize-wall",
-  "name": "Rogue Assassin",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-139/166",
-  "number": 139,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Fury",
-   "Calm"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Akali"
-  ],
-  "text": "[Empower] :rb_energy_3::rb_rune_rainbow: (:rb_energy_3::rb_rune_rainbow:: Empower this. Use only if not Empowered.)\n[Action][>] :rb_exhaust:: If it's your turn, move a friendly unit in a showdown to base and if I'm [Empowered], ready it.",
-  "flavor": "",
-  "artist": "Envar Studio",
-  "image": "https://static.dotgg.gg/riftbound/cards/VEN-139-MP-P.webp",
-  "orientation": "portrait"
- },
- {
   "id": "opp-153-166-metal-best-of",
   "name": "Matriarch of War",
   "setId": "opp",
@@ -5184,33 +4051,6 @@
   "orientation": "portrait"
  },
  {
-  "id": "opp-153-166-metal-prize-wall",
-  "name": "Matriarch of War",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-153/166",
-  "number": 153,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Body",
-   "Order"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Ambessa"
-  ],
-  "text": "When you empower something else, empower me. (I become Empowered if I'm not already.)\nDisempower me, :rb_rune_rainbow:, :rb_exhaust:: Ready a unit.",
-  "flavor": "",
-  "artist": "Envar Studio",
-  "image": "https://static.dotgg.gg/riftbound/cards/VEN-153-MP-P.webp",
-  "orientation": "portrait"
- },
- {
   "id": "opp-149-166-metal-best-of",
   "name": "Defender of Tomorrow",
   "setId": "opp",
@@ -5235,33 +4075,6 @@
   "flavor": "",
   "artist": "Envar Studio",
   "image": "https://static.dotgg.gg/riftbound/cards/VEN-149-MB-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-149-166-metal-prize-wall",
-  "name": "Defender of Tomorrow",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-149/166",
-  "number": 149,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Mind",
-   "Body"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Jayce"
-  ],
-  "text": "[Empower] :rb_energy_2::rb_rune_rainbow::rb_rune_rainbow: (:rb_energy_2::rb_rune_rainbow::rb_rune_rainbow:: Empower me. Use only if not Empowered.)\n:rb_energy_1:, :rb_exhaust:: Ready a gear.\n[Empowered][>] :rb_energy_1:, :rb_exhaust:: Ready 2 gear.",
-  "flavor": "",
-  "artist": "Envar Studio",
-  "image": "https://static.dotgg.gg/riftbound/cards/VEN-149-MP-P.webp",
   "orientation": "portrait"
  },
  {
@@ -5293,34 +4106,6 @@
   "orientation": "portrait"
  },
  {
-  "id": "opp-155-166-metal-prize-wall",
-  "name": "Heart of the Tempest",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-155/166",
-  "number": 155,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Order",
-   "Chaos"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Yordle",
-   "Kennen"
-  ],
-  "text": "When you play a card from anywhere other than your hand, empower me.\n[Action][>] Disempower me, :rb_exhaust:: Give a unit [Assault 2] this turn. (+2 :rb_might: while it's an attacker.)",
-  "flavor": "",
-  "artist": "Envar Studio",
-  "image": "https://static.dotgg.gg/riftbound/cards/VEN-155-MP-P.webp",
-  "orientation": "portrait"
- },
- {
   "id": "opp-151-166-metal-best-of",
   "name": "Soul's Reflection",
   "setId": "opp",
@@ -5345,33 +4130,6 @@
   "flavor": "",
   "artist": "Envar Studio",
   "image": "https://static.dotgg.gg/riftbound/cards/VEN-151-MB-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-151-166-metal-prize-wall",
-  "name": "Soul's Reflection",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-151/166",
-  "number": 151,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Mind",
-   "Chaos"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Mel"
-  ],
-  "text": "When you empower something else, empower me. (I become Empowered if I'm not already.)\nDisempower me, :rb_exhaust:: Give a unit at a battlefield -2 :rb_might: this turn.",
-  "flavor": "",
-  "artist": "Envar Studio",
-  "image": "https://static.dotgg.gg/riftbound/cards/VEN-151-MP-P.webp",
   "orientation": "portrait"
  },
  {
@@ -5402,33 +4160,6 @@
   "orientation": "portrait"
  },
  {
-  "id": "opp-145-166-metal-prize-wall",
-  "name": "Curator of the Sands",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-145/166",
-  "number": 145,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Calm",
-   "Mind"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Nasus"
-  ],
-  "text": "When you play a unit, gear, or activated ability with Energy cost :rb_energy_7: or more, you may exhaust me to ready up to 2 runes.",
-  "flavor": "",
-  "artist": "Envar Studio",
-  "image": "https://static.dotgg.gg/riftbound/cards/VEN-145-MP-P.webp",
-  "orientation": "portrait"
- },
- {
   "id": "opp-141-166-metal-best-of",
   "name": "Butcher of the Sands",
   "setId": "opp",
@@ -5456,33 +4187,6 @@
   "orientation": "portrait"
  },
  {
-  "id": "opp-141-166-metal-prize-wall",
-  "name": "Butcher of the Sands",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-141/166",
-  "number": 141,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Fury",
-   "Body"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Renekton"
-  ],
-  "text": "[Reaction][>] :rb_rune_rainbow::rb_rune_rainbow:, :rb_exhaust:: [Add] :rb_energy_2:. Spend this Energy only to play units or activated abilities of units.",
-  "flavor": "",
-  "artist": "Envar Studio",
-  "image": "https://static.dotgg.gg/riftbound/cards/VEN-141-MP-P.webp",
-  "orientation": "portrait"
- },
- {
   "id": "opp-147-166-metal-best-of",
   "name": "Eye of Twilight",
   "setId": "opp",
@@ -5507,60 +4211,6 @@
   "flavor": "",
   "artist": "Envar Studio",
   "image": "https://static.dotgg.gg/riftbound/cards/VEN-147-MB-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-147-166-metal-prize-wall",
-  "name": "Eye of Twilight",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-147/166",
-  "number": 147,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Calm",
-   "Order"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Shen"
-  ],
-  "text": "[Action][>] :rb_exhaust:: Give a friendly unit [Tank] this turn. (It must be assigned combat damage first.)",
-  "flavor": "",
-  "artist": "Envar Studio",
-  "image": "https://static.dotgg.gg/riftbound/cards/VEN-147-MP-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-143-166-metal-prize-wall",
-  "name": "Master of Shadows",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-143/166",
-  "number": 143,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Legend",
-  "supertype": null,
-  "domains": [
-   "Fury",
-   "Chaos"
-  ],
-  "energy": null,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Zed"
-  ],
-  "text": "When you banish a card you own, empower me. (I become Empowered if I'm not already.)\n[Action][>] Disempower me, :rb_exhaust:: Discard 1, then draw 1.",
-  "flavor": "",
-  "artist": "Envar Studio",
-  "image": "https://static.dotgg.gg/riftbound/cards/VEN-143-MP-P.webp",
   "orientation": "portrait"
  },
  {
@@ -5643,584 +4293,6 @@
   "flavor": "",
   "artist": "Polar Engine Studio",
   "image": "https://static.dotgg.gg/riftbound/cards/RAD-132-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-002-167",
-  "name": "Banner of Conquest",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-002/167",
-  "number": 2,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Gear",
-  "supertype": null,
-  "domains": [
-   "Fury"
-  ],
-  "energy": 1,
-  "might": null,
-  "power": 1,
-  "tags": [
-   "Device"
-  ],
-  "text": "[Deploy] (Play this only to a battlefield. When an opponent holds here, kill this.)\nFriendly units here have [Assault]. (+1 :rb_might: while they're attackers.)",
-  "flavor": "",
-  "artist": "Fish Art Studio",
-  "image": "https://static.dotgg.gg/riftbound/cards/RAD-002-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-008-167",
-  "name": "War Scout",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-008/167",
-  "number": 8,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Unit",
-  "supertype": null,
-  "domains": [
-   "Fury"
-  ],
-  "energy": 3,
-  "might": 2,
-  "power": null,
-  "tags": [],
-  "text": "[Accelerate] (You may pay :rb_energy_1::rb_rune_fury: as an additional cost to have me enter ready.)\nWhen you play me, give a unit +2 :rb_might: this turn.",
-  "flavor": "",
-  "artist": "Six More Vodka",
-  "image": "https://static.dotgg.gg/riftbound/cards/RAD-008-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-014-167",
-  "name": "Shimmering Swimmer",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-014/167",
-  "number": 14,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Unit",
-  "supertype": null,
-  "domains": [
-   "Fury"
-  ],
-  "energy": 3,
-  "might": 3,
-  "power": null,
-  "tags": [],
-  "text": "You may kill a friendly unit or gear as an additional cost to play me.\nWhen you play me, if you paid the additional cost, deal 2 to a unit.",
-  "flavor": "",
-  "artist": "Kudos Productions",
-  "image": "https://static.dotgg.gg/riftbound/cards/RAD-014-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-019-167",
-  "name": "Firebrand Raider",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-019/167",
-  "number": 19,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Unit",
-  "supertype": null,
-  "domains": [
-   "Fury"
-  ],
-  "energy": 6,
-  "might": 6,
-  "power": 1,
-  "tags": [],
-  "text": "I enter ready.\nWhen you play me, ready all enemy units.\nOther units enter ready.\nUnits don't ready during the Awaken Phase.",
-  "flavor": "",
-  "artist": "Six More Vodka",
-  "image": "https://static.dotgg.gg/riftbound/cards/RAD-019-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-027-167",
-  "name": "Iridescent Avian",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-027/167",
-  "number": 27,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Unit",
-  "supertype": null,
-  "domains": [
-   "Calm"
-  ],
-  "energy": 3,
-  "might": 3,
-  "power": null,
-  "tags": [],
-  "text": ":rb_exhaust:: [Buff] a unit. If it's already buffed, give it +2 :rb_might: this turn instead. (To buff a unit, give it a +1 :rb_might: buff if it doesn't have one.)",
-  "flavor": "",
-  "artist": "Envar Studio",
-  "image": "https://static.dotgg.gg/riftbound/cards/RAD-027-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-029-167",
-  "name": "Life from Stone",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-029/167",
-  "number": 29,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Spell",
-  "supertype": null,
-  "domains": [
-   "Calm"
-  ],
-  "energy": 1,
-  "might": null,
-  "power": null,
-  "tags": [],
-  "text": "[Reaction] (Play any time, even before spells and abilities resolve.)\nAs an additional cost to play this, exhaust a friendly unit.\nDraw 1 and channel 1 rune exhausted.",
-  "flavor": "",
-  "artist": "Kudos Productions",
-  "image": "https://static.dotgg.gg/riftbound/cards/RAD-029-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-037-167",
-  "name": "Watchful Curator",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-037/167",
-  "number": 37,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Unit",
-  "supertype": null,
-  "domains": [
-   "Calm"
-  ],
-  "energy": 3,
-  "might": 4,
-  "power": 1,
-  "tags": [],
-  "text": "Your gear have [Deflect]. (Opponents must pay :rb_rune_rainbow: to choose each with a spell or ability.)",
-  "flavor": "",
-  "artist": "Envar Studio",
-  "image": "https://static.dotgg.gg/riftbound/cards/RAD-037-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-041-167",
-  "name": "Hush",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-041/167",
-  "number": 41,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Spell",
-  "supertype": null,
-  "domains": [],
-  "energy": 1,
-  "might": null,
-  "power": 2,
-  "tags": [],
-  "text": "[Reaction] (Play any time, even before spells and abilities resolve.)\nCounter a spell with Power cost :rb_rune_rainbow::rb_rune_rainbow: or more.",
-  "flavor": "",
-  "artist": "Kudos Productions",
-  "image": "https://static.dotgg.gg/riftbound/cards/RAD-041-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-048-167",
-  "name": "High Note",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-048/167",
-  "number": 48,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Spell",
-  "supertype": null,
-  "domains": [
-   "Mind"
-  ],
-  "energy": 3,
-  "might": null,
-  "power": null,
-  "tags": [],
-  "text": "[Reaction] (Play any time, even before spells and abilities resolve.)\nGive a unit –:rb_might: this turn equal to the number of exhausted units you control.",
-  "flavor": "",
-  "artist": "Kudos Productions",
-  "image": "https://static.dotgg.gg/riftbound/cards/RAD-048-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-054-167",
-  "name": "Trinket Peddler",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-054/167",
-  "number": 54,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Unit",
-  "supertype": null,
-  "domains": [
-   "Mind"
-  ],
-  "energy": 3,
-  "might": 3,
-  "power": null,
-  "tags": [],
-  "text": "[Disarm] (When I attack, give an enemy unit here -1 :rb_might: this turn.)",
-  "flavor": "",
-  "artist": "Alessandro Poli",
-  "image": "https://static.dotgg.gg/riftbound/cards/RAD-054-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-055-167",
-  "name": "Clanging Sentry",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-055/167",
-  "number": 55,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Unit",
-  "supertype": null,
-  "domains": [
-   "Mind"
-  ],
-  "energy": 3,
-  "might": 2,
-  "power": null,
-  "tags": [],
-  "text": "Your Mechs have [Disarm]. (When each of us attacks, give an enemy unit there -1 :rb_might: this turn.)",
-  "flavor": "",
-  "artist": "Kudos Productions",
-  "image": "https://static.dotgg.gg/riftbound/cards/RAD-055-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-066-167",
-  "name": "Spirit of the Forge",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-066/167",
-  "number": 66,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Unit",
-  "supertype": null,
-  "domains": [
-   "Mind"
-  ],
-  "energy": 6,
-  "might": 4,
-  "power": 1,
-  "tags": [],
-  "text": "You may return a friendly gear to its owner's hand as an additional cost to play me.\nWhen you play me, if you paid the additional cost, ready me and give me +:rb_might: this turn equal to the Energy cost of the gear you returned.",
-  "flavor": "",
-  "artist": "Kudos Productions",
-  "image": "https://static.dotgg.gg/riftbound/cards/RAD-066-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-070-167",
-  "name": "Hold 'Em",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-070/167",
-  "number": 70,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Spell",
-  "supertype": null,
-  "domains": [
-   "Body"
-  ],
-  "energy": 3,
-  "might": null,
-  "power": null,
-  "tags": [],
-  "text": "[Action] (Play on your turn or in showdowns.)\nThis costs :rb_energy_2: less if you've played a unit or gear to a battlefield this turn.\nGive a unit +3 :rb_might: this turn.",
-  "flavor": "",
-  "artist": "Kudos Productions",
-  "image": "https://static.dotgg.gg/riftbound/cards/RAD-070-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-076-167",
-  "name": "Sneaky Zeebles",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-076/167",
-  "number": 76,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Unit",
-  "supertype": null,
-  "domains": [
-   "Body"
-  ],
-  "energy": 2,
-  "might": 1,
-  "power": null,
-  "tags": [],
-  "text": "When I conquer, [Add] :rb_rune_rainbow:. (Abilities that add resources can't be reacted to.)",
-  "flavor": "",
-  "artist": "Dao Trong Le",
-  "image": "https://static.dotgg.gg/riftbound/cards/RAD-076-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-083-167",
-  "name": "Stalwart Goatherd",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-083/167",
-  "number": 83,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Unit",
-  "supertype": null,
-  "domains": [
-   "Body"
-  ],
-  "energy": 4,
-  "might": 2,
-  "power": null,
-  "tags": [],
-  "text": "[Shield 2] (+2 :rb_might: while I'm a defender.)\nWhen you play me, you may kill a gear with Energy cost :rb_energy_4: or less.",
-  "flavor": "",
-  "artist": "Six More Vodka",
-  "image": "https://static.dotgg.gg/riftbound/cards/RAD-083-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-087-167",
-  "name": "Portable Portal",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-087/167",
-  "number": 87,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Gear",
-  "supertype": null,
-  "domains": [
-   "Body"
-  ],
-  "energy": 2,
-  "might": null,
-  "power": null,
-  "tags": [
-   "Device"
-  ],
-  "text": "[Deploy] (Play this only to a battlefield. When an opponent holds here, kill this.)\nWhen you play this, you may pay :rb_rune_body: to ready a unit here.\nFriendly units here have [Ganking]. (They can move from battlefield to battlefield.)",
-  "flavor": "",
-  "artist": "Yeon Art Studio",
-  "image": "https://static.dotgg.gg/riftbound/cards/RAD-087-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-094-167",
-  "name": "Explosimian",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-094/167",
-  "number": 94,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Unit",
-  "supertype": null,
-  "domains": [
-   "Chaos"
-  ],
-  "energy": 6,
-  "might": 6,
-  "power": null,
-  "tags": [],
-  "text": "When I hold, play three Bomb gear tokens to a single battlefield. (They have [Deploy]. When each dies, deal 2 to an enemy there and kill your other Bombs there.)",
-  "flavor": "",
-  "artist": "Kudos Productions",
-  "image": "https://static.dotgg.gg/riftbound/cards/RAD-094-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-096-167",
-  "name": "Satchel Charge",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-096/167",
-  "number": 96,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Spell",
-  "supertype": null,
-  "domains": [
-   "Chaos"
-  ],
-  "energy": 3,
-  "might": null,
-  "power": 1,
-  "tags": [],
-  "text": "[Action] (Play on your turn or in showdowns.)\nMove a friendly unit, then play a Bomb gear token to a battlefield. (It has [Deploy]. When it dies, deal 2 to an enemy there and kill your other Bombs there.)",
-  "flavor": "",
-  "artist": "Polar Engine Studio",
-  "image": "https://static.dotgg.gg/riftbound/cards/RAD-096-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-105-167",
-  "name": "Reckless Innovator",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-105/167",
-  "number": 105,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Unit",
-  "supertype": null,
-  "domains": [
-   "Chaos"
-  ],
-  "energy": 3,
-  "might": 3,
-  "power": null,
-  "tags": [],
-  "text": "[Accelerate] (You may pay :rb_energy_1::rb_rune_chaos: as an additional cost to have me enter ready.)\nWhen I become exhausted, choose one —Play a Gold gear token exhausted. (It has \"[Reaction][>] Kill this, :rb_exhaust:: [Add] :rb_rune_rainbow:.\")Pay :rb_rune_chaos: to draw 1.",
-  "flavor": "",
-  "artist": "Six More Vodka",
-  "image": "https://static.dotgg.gg/riftbound/cards/RAD-105-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-107-167",
-  "name": "Bedeviling Stranger",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-107/167",
-  "number": 107,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Unit",
-  "supertype": null,
-  "domains": [
-   "Chaos"
-  ],
-  "energy": 2,
-  "might": 2,
-  "power": null,
-  "tags": [],
-  "text": "[Hidden] (Hide now for :rb_rune_rainbow: to react with later for :rb_energy_0:.)\nWhen you play me, choose a battlefield. If there are 4 or more units there, you may return an enemy unit there to its owner's hand.",
-  "flavor": "",
-  "artist": "Kudos Productions",
-  "image": "https://static.dotgg.gg/riftbound/cards/RAD-107-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-119-167",
-  "name": "Hunting Dog",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-119/167",
-  "number": 119,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Unit",
-  "supertype": null,
-  "domains": [
-   "Order"
-  ],
-  "energy": 3,
-  "might": 3,
-  "power": null,
-  "tags": [],
-  "text": "[Deathknell][>] Play a 1 :rb_might: Bird unit token with [Deflect] to your base. (When I die, get the effect. Opponents must pay :rb_rune_rainbow: to choose a [Deflect] unit with a spell or ability.)",
-  "flavor": "",
-  "artist": "Kudos Productions",
-  "image": "https://static.dotgg.gg/riftbound/cards/RAD-119-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-122-167",
-  "name": "Party Crasher",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-122/167",
-  "number": 122,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Unit",
-  "supertype": null,
-  "domains": [
-   "Order"
-  ],
-  "energy": 9,
-  "might": 6,
-  "power": 1,
-  "tags": [],
-  "text": "I cost :rb_energy_1: less for each exhausted unit you control.\n[Tank] (I must be assigned combat damage first.)",
-  "flavor": "",
-  "artist": "Kudos Productions",
-  "image": "https://static.dotgg.gg/riftbound/cards/RAD-122-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-127-167",
-  "name": "Rousing Display",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-127/167",
-  "number": 127,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Spell",
-  "supertype": null,
-  "domains": [
-   "Order"
-  ],
-  "energy": 5,
-  "might": null,
-  "power": null,
-  "tags": [],
-  "text": "[Show Off] a card with Energy cost :rb_energy_7: or more. (As you play this, you may reveal such a card from your hand or pick a friendly one.)\nPlay two 1 :rb_might: Recruit unit tokens to your base. If you showed off, play four to your base instead.",
-  "flavor": "",
-  "artist": "Kudos Productions",
-  "image": "https://static.dotgg.gg/riftbound/cards/RAD-127-P.webp",
-  "orientation": "portrait"
- },
- {
-  "id": "opp-130-167",
-  "name": "Battlefield Armorer",
-  "setId": "opp",
-  "setName": "Riftbound Organized Play Promotional Cards",
-  "code": "OPP-130/167",
-  "number": 130,
-  "rarity": "promo",
-  "variant": "promo",
-  "type": "Unit",
-  "supertype": null,
-  "domains": [
-   "Order"
-  ],
-  "energy": 3,
-  "might": 3,
-  "power": null,
-  "tags": [],
-  "text": "When a friendly gear at a battlefield dies, you may pay :rb_energy_1: to return it to its owner's hand.",
-  "flavor": "",
-  "artist": "Six More Vodka",
-  "image": "https://static.dotgg.gg/riftbound/cards/RAD-130-P.webp",
   "orientation": "portrait"
  },
  {
@@ -6571,7 +4643,7 @@
   "text": "(I become a copy of something when played. I don't get that card's play effects.)\n//\nA unit may have no more than one buff at a time.",
   "flavor": "",
   "artist": "Kudos Productions & 黯荧岛Dark Glow // League Splash Team",
-  "image": "https://static.dotgg.gg/riftbound/cards/UNL-T04.webp",
+  "image": "https://static.dotgg.gg/riftbound/cards/UNL-T04.2.webp",
   "orientation": "portrait"
  },
  {
@@ -6595,7 +4667,7 @@
   "text": "(I become a copy of something when played. I don't get that card's play effects.)\n//\n[Reaction][>] Kill this, :rb_exhaust:: [Add] :rb_rune_rainbow:. (Abilities that add resources can't be reacted to.)",
   "flavor": "",
   "artist": "Kudos Productions & 黯荧岛Dark Glow // Kudos Productions",
-  "image": "https://static.dotgg.gg/riftbound/cards/UNL-T05.webp",
+  "image": "https://static.dotgg.gg/riftbound/cards/UNL-T05.2.webp",
   "orientation": "portrait"
  },
  {

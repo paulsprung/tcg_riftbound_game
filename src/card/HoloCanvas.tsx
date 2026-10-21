@@ -63,6 +63,8 @@ export const HoloCanvas = forwardRef<HoloCanvasHandle, Props>(function HoloCanva
 
     const img = new Image();
     img.decoding = 'async';
+    // hosts that allow it (isReadable) give pixels the shader may read
+    img.crossOrigin = 'anonymous';
     img.src = src;
     img.decode().then(() => {
       if (!alive) return;

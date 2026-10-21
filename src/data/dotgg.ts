@@ -51,7 +51,7 @@ export function zipDotgg(raw: { names: string[]; data: unknown[][] }): DotggRow[
 }
 
 const PREFIX_SET: Record<string, string> = {
-  OGN: 'ogn', SFD: 'sfd', UNL: 'unl', VEN: 'ven', RAD: 'rad', OGS: 'ogs', SGN: 'sgn', T1A: 't1', T1S: 't1',
+  OGN: 'ogn', SFD: 'sfd', UNL: 'unl', VEN: 'ven', RAD: 'rad', OGS: 'ogs', SGN: 'sgn', T1A: 't1a', T1S: 't1s',
 };
 /** Printed collector total -> the retail set a promo reprints. */
 const DENOM_SET: Record<string, string> = { 298: 'ogn', 221: 'sfd', 219: 'unl', 166: 'ven', 167: 'rad', '024': 'ogs' };
@@ -120,7 +120,9 @@ function rowKeys(r: DotggRow): Row | null {
 function cardKeys(c: Card) {
   const m = /^([A-Z0-9]+)-([A-Z]*)(\d+)([a-z]*)(\*?)(?:\/(\d+))?$/i.exec(c.code.replace(/\s+/g, ''));
   if (!m) return null;
-  const set = PROMO_SETS.has(c.setId) ? DENOM_SET[m[6] ?? ''] : c.setId;
+  // a promo is keyed into the set it reprints: by its printed total, or
+  // (promo runes, "RAD-R01b") by its code's set prefix
+  const set = PROMO_SETS.has(c.setId) ? DENOM_SET[m[6] ?? ''] ?? PREFIX_SET[m[1].toUpperCase()] : c.setId;
   if (!set) return null;
   const base = `${set.toUpperCase()}-${m[2].toUpperCase()}${pad3(m[3])}`;
   return { set, base, print: base + m[4].toLowerCase() + m[5] };
@@ -232,13 +234,16 @@ const sameSet = (a: string[], b: string[]) => a.length === b.length && a.every((
 const subset = (a: string[], b: string[]) => a.length < b.length && a.every((x) => b.includes(x));
 const champion = (c: Card) => stripParen(c.name.split(/,\s| - /)[0]).trim();
 
-export interface EnrichStats { matched: number; changed: Record<string, number> }
+export interface EnrichStats { matched: number; changed: Record<string, number>; disagreements: string[] }
+
+/** Stats where dotgg was checked against the printed card and ours is wrong. */
+const VERIFIED_STATS = new Set(['OGN-187/298|energy', 'RAD-SP4/005|might']);
 
 /** Repairs `cards` in place from dotgg rows (see the top of this file). */
 export function enrichFromDotgg(cards: Card[], raw: DotggRow[]): EnrichStats {
   const rows = raw.filter(isEnglish).map(rowKeys).filter((r): r is Row => !!r);
   const look = index(rows);
-  const stats: EnrichStats = { matched: 0, changed: {} };
+  const stats: EnrichStats = { matched: 0, changed: {}, disagreements: [] };
   const changed = (field: string) => { stats.changed[field] = (stats.changed[field] ?? 0) + 1; };
 
   for (const c of cards) {
@@ -246,7 +251,10 @@ export function enrichFromDotgg(cards: Card[], raw: DotggRow[]): EnrichStats {
     if (!cands.length) continue;
     stats.matched++;
     const best = cands[0];
-    const rad = c.setId === 'rad' || cardKeys(c)?.set === 'rad';
+    // Radiance's gallery data is wrong in places; double-sided tokens keep
+    // both faces' data, which dotgg's front-face rows don't have
+    const twoFaced = c.supertype === 'Token' || c.name.includes('//');
+    const rad = (c.setId === 'rad' || cardKeys(c)?.set === 'rad') && !twoFaced;
     const dType = firstOf(cands, (r) => types(r)[0]);
     const dSuper = firstOf(cands, (r) => r.supertype || null);
     // alt-art rows often drop the region tag: take the fullest list
@@ -266,7 +274,9 @@ export function enrichFromDotgg(cards: Card[], raw: DotggRow[]): EnrichStats {
     }
     if (dTags.length && (
       !c.tags.length || subset(c.tags, dTags) || (rad && !sameSet(c.tags, dTags)) ||
-      (c.supertype === 'Champion' && !c.tags.includes(champion(c)) && dTags.includes(champion(c)))
+      (c.supertype === 'Champion' && !c.tags.includes(champion(c)) && dTags.includes(champion(c))) ||
+      // a legend prints only its champion's tag; Riot adds others
+      (c.type === 'Legend' && subset(dTags, c.tags))
     )) { c.tags = dTags; changed('tags'); }
     // Riot tags Radiance gear "Device", which the cards do not print
     if (rad && !dTags.length && c.type === 'Gear' && sameSet(c.tags, ['Device'])) { c.tags = []; changed('tags'); }
@@ -277,10 +287,14 @@ export function enrichFromDotgg(cards: Card[], raw: DotggRow[]): EnrichStats {
     // stats of what is played from hand (legends, battlefields, runes and
     // tokens have none to repair)
     if (['Unit', 'Spell', 'Gear'].includes(c.type) && c.supertype !== 'Token') {
+      // fill what is missing; overwrite only where checked on the printed card
       const dEnergy = firstOf(cands, cost), dMight = firstOf(cands, might), dPower = firstOf(cands, power);
-      if (dEnergy != null && c.energy !== dEnergy) { c.energy = dEnergy; changed('energy'); }
-      if (dMight != null && c.might !== dMight) { c.might = dMight; changed('might'); }
-      if (dPower != null && c.power !== dPower) { c.power = dPower; changed('power'); }
+      const fix = (field: 'energy' | 'might' | 'power', v: number | null) => {
+        if (v == null || c[field] === v) return;
+        if (c[field] != null && !VERIFIED_STATS.has(`${c.code}|${field}`)) { stats.disagreements.push(`${c.code} ${field}: ${c[field]} vs ${v}`); return; }
+        c[field] = v; changed(field);
+      };
+      fix('energy', dEnergy); fix('might', dMight); fix('power', dPower);
     }
 
     const gear = c.type === 'Gear';
@@ -302,7 +316,9 @@ export function enrichFromDotgg(cards: Card[], raw: DotggRow[]): EnrichStats {
       && (dRarity === 'common' || dRarity === 'uncommon') && dRarity !== c.rarity) {
       c.rarity = dRarity; changed('rarity');
     }
-    if (best.banned === '1' && best.image && best.print === cardKeys(c)?.print && /rgpub\.io/.test(c.image)) {
+    // (dotgg's battlefield scans are portrait files with the card turned in them)
+    if (best.banned === '1' && best.image && best.print === cardKeys(c)?.print && /rgpub\.io/.test(c.image)
+      && c.orientation !== 'landscape') {
       c.image = best.image; changed('banned-image');
     }
     if (best.errata) {
