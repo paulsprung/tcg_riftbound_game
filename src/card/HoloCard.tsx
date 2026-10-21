@@ -5,7 +5,7 @@ import type { Finish } from '../pack/generate.ts';
 import { CardBack } from './CardBack.tsx';
 import { HoloCanvas, type HoloCanvasHandle } from './HoloCanvas.tsx';
 import { useFoilStyle } from './foilStyle.ts';
-import { useHoloVersion } from './holoVersion.ts';
+import { lookFor, useHoloVersion } from './holoVersion.ts';
 import { createTilt } from './tilt.ts';
 import './holo.css';
 import './holo-classic.css';
@@ -49,8 +49,8 @@ export function HoloCard({
   // null: not tried yet; true: the shader draws the card; false: CSS foil
   const [glOk, setGlOk] = useState<boolean | null>(null);
   const foilStyle = useFoilStyle();
-  const version = useHoloVersion();
-  const classic = version === 'a';
+  const look = lookFor(useHoloVersion(), finish);
+  const classic = look === 'a';
 
   useEffect(() => {
     if (tilt === 'off' || !scene.current) return;
@@ -81,6 +81,7 @@ export function HoloCard({
       ref={scene}
       className={`hc ${className}`}
       data-finish={finish}
+      data-holo={look}
       data-rarity={card.rarity}
       data-tilt={tilt}
       data-upright={landscape && upright ? '' : undefined}
@@ -117,7 +118,7 @@ export function HoloCard({
               <div className="hc__loading" aria-hidden />
             )}
             {useGl && (
-              <HoloCanvas ref={holo} src={src} finish={finish} rarity={card.rarity} style={foilStyle} version={version}
+              <HoloCanvas ref={holo} src={src} finish={finish} rarity={card.rarity} style={foilStyle} version={look}
                 className={`${imgClass} hc__gl${glShown ? ' is-loaded' : ''}`} onReady={setGlOk} />
             )}
             {/* CSS foil (holo.css). cut: the ink in the etched lines darkens

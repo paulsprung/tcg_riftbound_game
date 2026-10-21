@@ -1,6 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import type { Finish } from '../pack/generate.ts';
-import type { HoloVersion } from './holoVersion.ts';
+import type { HoloLook } from './holoVersion.ts';
 import type { TiltState } from './tilt.ts';
 import { createHolo, type HoloRenderer } from './holoGl.ts';
 
@@ -13,7 +13,7 @@ interface Props {
   finish: Finish;
   rarity: string;
   style: 'subtle' | 'vivid';
-  version: HoloVersion;
+  version: HoloLook;
   className?: string;
   /** Called once the first frame is on screen, or with false if WebGL is
       unavailable (the caller then shows the CSS foil instead). */

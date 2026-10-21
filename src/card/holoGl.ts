@@ -16,7 +16,7 @@
  * Each is plain JS with no dependencies.
  */
 import type { Finish } from '../pack/generate.ts';
-import type { HoloVersion } from './holoVersion.ts';
+import type { HoloLook } from './holoVersion.ts';
 import type { TiltState } from './tilt.ts';
 import { createHolo as physical } from './shaders/physical.js';
 import { createHolo as polished } from './shaders/polished.js';
@@ -27,7 +27,7 @@ export interface HoloOptions {
   finish: Finish;
   rarity: string;
   style: 'subtle' | 'vivid';
-  version: HoloVersion;
+  version: HoloLook;
 }
 
 export interface HoloRenderer {

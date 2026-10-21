@@ -1,12 +1,12 @@
-/* Version A of the foil ("classic", the first CSS foil), kept selectable
-   next to the current one: the header's Holo switch puts data-holo="a" on
-   <html>, and HoloCard then renders these .hcc-* layers instead of the new
+/* Look A of the foil ("classic", the first CSS foil), kept next to the
+   current one: a card whose resolved look is A (holoVersion.ts) carries
+   data-holo="a" and HoloCard renders these .hcc-* layers instead of the new
    ones. Class and custom-property names are prefixed so the two foils never
    meet. The etched layer uses the #rb-etch SVG filter from <FoilDefs/>. */
 
-:root[data-holo="a"] .hc__face--front:has(> .hc__img.is-loaded) { background: #0d0b16; }
-:root[data-holo="a"] .hc__face--front::before,
-:root[data-holo="a"] .hc__face--front::after { content: none; }
+.hc[data-holo="a"] .hc__face--front:has(> .hc__img.is-loaded) { background: #0d0b16; }
+.hc[data-holo="a"] .hc__face--front::before,
+.hc[data-holo="a"] .hc__face--front::after { content: none; }
 
 .hc { --c-holo: 0; --c-glare: .35; --c-sparkle: 0; --c-etch: 0; --c-band: .12; --c-prism: 0; }
 

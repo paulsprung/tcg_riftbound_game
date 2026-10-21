@@ -674,10 +674,10 @@
 .hc__sig, .hc__glare { z-index: 2; }
 /* the WebGL canvas draws its own foil: no CSS body or tint over it */
 .hc__face--front:has(> .hc__gl.is-loaded)::before { content: none; }
-:root:not([data-holo="b"]) .hc__face--front:has(> .hc__gl.is-loaded)::after { content: none; }
+.hc:not([data-holo="b"]) .hc__face--front:has(> .hc__gl.is-loaded)::after { content: none; }
 /* Version B as first published kept the pastel tint over the WebGL card,
    with the stronger vivid tint of that time. */
-:root[data-holo="b"][data-foil="vivid"] .hc__face--front:has(> .hc__gl.is-loaded) {
+:root[data-foil="vivid"] .hc[data-holo="b"] .hc__face--front:has(> .hc__gl.is-loaded) {
   --t-b: hsl(222 100% 89%); --t-c: hsl(186 100% 86%); --t-g: hsl(130 70% 90%); --foil-tint: .8;
 }
 
