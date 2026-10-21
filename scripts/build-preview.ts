@@ -73,9 +73,11 @@ async function cardArt(card: Card): Promise<Buffer | null> {
     const sep = card.image.includes('?') ? '&' : '?';
     bytes = await fetchBytes(`${card.image}${sep}w=${WIDTH}&fm=webp&q=${QUALITY}`);
   } else {
-    // other hosts serve one size: resize and encode it here (Pillow)
+    // other hosts serve one size, and our own cleaned scans (public/cards/)
+    // are full size: resize and encode it here (Pillow)
     const src = `${file}.src`;
-    await writeFile(src, await fetchBytes(card.image));
+    const local = !/^https?:/.test(card.image);
+    await writeFile(src, local ? await readFile(resolve(root, 'public', card.image)) : await fetchBytes(card.image));
     execFileSync('python3', ['-I', '-c', RESIZE, src, file, String(WIDTH), String(QUALITY)]);
     await rm(src);
     bytes = await readFile(file);
