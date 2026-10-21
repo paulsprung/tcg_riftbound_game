@@ -1,0 +1,244 @@
+/* -- graded slab ---------------------------------------------------------
+
+   A clear acrylic case, 3.25" x 5.375" like the usual graders' cases, with
+   the label in its top fifth and the card sealed in a moulded well under
+   it. The tilt engine (tilt.ts) writes its variables on .slab; the card's
+   own pointer position is re-measured over the well (Slab.tsx). Sizes in
+   the label are in cqw, so it reads the same at any slab width.
+   -------------------------------------------------------------------- */
+
+.slab {
+  --tilt: 12deg;
+  --thick: 0px;
+  --r: 4.4% / 2.66%;
+  --l-bg: #f3f1ec;
+  --l-ink: #17151f;
+  --l-soft: #5d5a66;
+  --l-accent: #3446c9;
+  --l-line: rgba(23, 21, 31, .14);
+  --l-num: var(--l-ink);
+  position: relative;
+  flex: none;
+  aspect-ratio: 3.25 / 5.375;
+  perspective: 1200px;
+  container-type: inline-size;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: pan-y;
+}
+.slab[role="button"] { cursor: pointer; }
+.slab:focus-visible { outline: 2px solid var(--accent, #e9c46a); outline-offset: 6px; border-radius: 4%; }
+.slab[data-thick] { --thick: 9px; }
+
+.slab[data-label="midnight"] {
+  --l-bg: #0f1630;
+  --l-ink: #f1e6c8;
+  --l-soft: #a99f86;
+  --l-accent: #e2c171;
+  --l-line: rgba(226, 193, 113, .3);
+}
+.slab[data-label="onyx"] {
+  --l-bg: #0d0d10;
+  --l-ink: #ededf2;
+  --l-soft: #8d8d98;
+  --l-accent: #c9ccd6;
+  --l-line: rgba(255, 255, 255, .16);
+}
+/* every subgrade a 10: gold, whatever the label */
+.slab[data-pristine] {
+  --l-accent: #d7ad4f;
+  --l-num: #b8862c;
+  --l-line: rgba(215, 173, 79, .55);
+}
+.slab[data-pristine][data-label="midnight"],
+.slab[data-pristine][data-label="onyx"] { --l-num: #f0cd78; }
+
+.slab__shadow {
+  position: absolute;
+  inset: 5% 5% -2.5%;
+  border-radius: 6%;
+  pointer-events: none;
+  background: radial-gradient(closest-side, rgba(0, 0, 0, .6), rgba(0, 0, 0, .25) 60%, transparent);
+  transform: translate3d(calc(var(--tx, 0) * -12px), calc(var(--ty, 0) * -12px + 10px), 0);
+}
+
+.slab__body {
+  position: absolute; inset: 0;
+  transform-style: preserve-3d;
+  transform:
+    rotateX(calc(var(--ty, 0) * var(--tilt) * -1))
+    rotateY(calc(var(--tx, 0) * var(--tilt)))
+    scale(var(--sc, 1));
+}
+.slab[data-tilt="off"] .slab__body { transform: none; }
+
+/* the acrylic: faintly frosted, bright along its bevel */
+.slab__case {
+  position: absolute; inset: 0;
+  overflow: hidden;
+  border-radius: var(--r);
+  transform: translateZ(calc(var(--thick) / 2));
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, .17), rgba(255, 255, 255, .06) 38%, rgba(255, 255, 255, .1)),
+    rgba(18, 16, 28, .55);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, .42),
+    inset 0 0 0 2.5px rgba(255, 255, 255, .06),
+    inset 0 0 0 4px rgba(255, 255, 255, .14),
+    inset 0 1.5px 0 4px rgba(255, 255, 255, .1);
+}
+
+.slab__label {
+  position: absolute;
+  left: 5%; right: 5%; top: 3.2%;
+  height: 19%;
+  display: grid;
+  grid-template-columns: 15cqw 1fr auto;
+  grid-template-rows: 1fr auto;
+  column-gap: 3cqw;
+  padding: 2.6cqw 3.4cqw 2.2cqw 2.8cqw;
+  border-radius: 1.6cqw;
+  background: var(--l-bg);
+  color: var(--l-ink);
+  box-shadow: inset 0 0 0 .5cqw var(--l-line), 0 .4cqw 1.2cqw rgba(0, 0, 0, .25);
+  font-family: var(--font-condensed, 'Arial Narrow', sans-serif);
+  line-height: 1.1;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+.slab[data-label="pearl"] .slab__label {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .7), transparent 40%),
+    var(--l-bg);
+}
+
+/* the hologram seal: a little foil square that shifts with the tilt */
+.slab__holo {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  align-self: center;
+  aspect-ratio: 1;
+  border-radius: 1.4cqw;
+  background:
+    radial-gradient(circle at calc(30% + var(--tx, 0) * 40%) calc(30% + var(--ty, 0) * 40%), rgba(255, 255, 255, .9), transparent 38%),
+    conic-gradient(from calc(var(--tx, 0) * 140deg + var(--ty, 0) * 60deg),
+      #ff7ab6, #ffd36b, #8affc1, #6bd3ff, #b48cff, #ff7ab6);
+  box-shadow: inset 0 0 0 .5cqw rgba(255, 255, 255, .5), 0 0 0 .4cqw var(--l-line);
+  position: relative;
+}
+.slab__holo::after {
+  content: attr(data-mark);
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  font: 800 5cqw/1 var(--font-display, serif);
+  letter-spacing: -.04em;
+  color: rgba(255, 255, 255, .92);
+  text-shadow: 0 .3cqw .8cqw rgba(0, 0, 0, .35);
+  mix-blend-mode: overlay;
+}
+
+.slab__lines {
+  grid-column: 2;
+  grid-row: 1;
+  display: grid;
+  align-content: start;
+  gap: .9cqw;
+  min-width: 0;
+}
+.slab__brand { font-size: 2.7cqw; font-weight: 700; color: var(--l-accent); letter-spacing: .14em; }
+.slab__name {
+  font: 800 4.9cqw/1.05 var(--font-card, sans-serif);
+  text-transform: none;
+  letter-spacing: 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.slab__set, .slab__code { font-size: 3cqw; color: var(--l-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.slab__grade {
+  grid-column: 3;
+  grid-row: 1 / 3;
+  display: grid;
+  justify-items: end;
+  align-content: center;
+  gap: .6cqw;
+  padding-left: 3cqw;
+  border-left: .4cqw solid var(--l-line);
+}
+.slab__desc { font-size: 3.3cqw; font-weight: 700; color: var(--l-accent); letter-spacing: .1em; white-space: nowrap; }
+.slab__num { font: 800 15cqw/.85 var(--font-display, serif); color: var(--l-num); letter-spacing: -.03em; }
+.slab[data-pristine] .slab__num {
+  background: linear-gradient(calc(120deg + var(--tx, 0) * 40deg), #8a5a14, #f6dc8c 40%, #b8862c 60%, #fbe7a4);
+  -webkit-background-clip: text;
+          background-clip: text;
+  color: transparent;
+}
+
+.slab__cert {
+  grid-column: 2;
+  grid-row: 2;
+  display: flex;
+  align-items: center;
+  gap: 2cqw;
+  font-size: 2.6cqw;
+  color: var(--l-soft);
+  letter-spacing: .12em;
+}
+.slab__barcode { width: 22cqw; height: 3.4cqw; fill: currentColor; opacity: .8; }
+
+/* the moulded lip around the card */
+.slab__ridge {
+  position: absolute;
+  left: 8.2%; right: 8.2%; top: 26.6%; bottom: 3.1%;
+  border-radius: 3.6% / 2.4%;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, .26),
+    0 0 0 1px rgba(0, 0, 0, .28),
+    inset 0 .8cqw 2cqw rgba(0, 0, 0, .35),
+    0 0 0 2.4cqw rgba(255, 255, 255, .03);
+  pointer-events: none;
+}
+
+.slab__well {
+  position: absolute;
+  left: 11.5%; top: 29.5%;
+  width: 77%;
+}
+
+/* light on the front of the case: a broad reflection that slides with the
+   tilt, over everything including the label */
+.slab__gloss {
+  position: absolute; inset: 0;
+  border-radius: var(--r);
+  pointer-events: none;
+  background:
+    linear-gradient(calc(115deg + var(--tx, 0) * 12deg),
+      transparent 32%, rgba(255, 255, 255, .2) 44%, rgba(255, 255, 255, .05) 50%, transparent 58%);
+  background-size: 260% 260%;
+  background-position: calc(var(--px, 50) * 1%) calc(var(--py, 50) * 1%);
+  mix-blend-mode: screen;
+  opacity: calc(.35 + var(--on, 0) * .65);
+}
+
+.slab__edge { position: absolute; pointer-events: none; }
+.slab__edge--top, .slab__edge--bottom { left: 4.4%; right: 4.4%; height: var(--thick); }
+.slab__edge--left, .slab__edge--right { top: 2.66%; bottom: 2.66%; width: var(--thick); }
+.slab__edge--top    { top: 0;    transform-origin: top;    transform: translateZ(calc(var(--thick) / 2)) rotateX(-90deg); background: linear-gradient(180deg, rgba(235, 238, 248, .55), rgba(150, 156, 176, .35)); }
+.slab__edge--bottom { bottom: 0; transform-origin: bottom; transform: translateZ(calc(var(--thick) / 2)) rotateX(90deg);  background: linear-gradient(180deg, rgba(90, 94, 110, .45), rgba(40, 42, 54, .5)); }
+.slab__edge--left   { left: 0;   transform-origin: left;   transform: translateZ(calc(var(--thick) / 2)) rotateY(90deg);  background: linear-gradient(90deg, rgba(210, 214, 228, .5), rgba(110, 114, 130, .35)); }
+.slab__edge--right  { right: 0;  transform-origin: right;  transform: translateZ(calc(var(--thick) / 2)) rotateY(-90deg); background: linear-gradient(90deg, rgba(90, 94, 110, .35), rgba(170, 174, 190, .45)); }
+
+/* open: only the card, before the case is closed around it (grading) */
+.slab__case { transition: background .6s ease, box-shadow .6s ease; }
+.slab__label, .slab__ridge, .slab__gloss { transition: opacity .5s ease .15s, transform .7s cubic-bezier(.2, .8, .3, 1) .15s; }
+.slab[data-open] .slab__case { background: transparent; box-shadow: none; }
+.slab[data-open] .slab__label { opacity: 0; transform: translateY(-14%); }
+.slab[data-open] .slab__ridge,
+.slab[data-open] .slab__gloss { opacity: 0; transform: scale(1.04); }
+.slab[data-open] .slab__edge { opacity: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .slab__body { transform: none; }
+  .slab__case, .slab__label, .slab__ridge, .slab__gloss { transition: none; }
+}

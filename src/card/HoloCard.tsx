@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useContext, useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { Card } from '../data/types.ts';
 import { isReadable, useCardImage } from '../data/images.ts';
 import type { Finish } from '../pack/generate.ts';
@@ -6,7 +6,8 @@ import { CardBack } from './CardBack.tsx';
 import { HoloCanvas, type HoloCanvasHandle } from './HoloCanvas.tsx';
 import { useFoilStyle } from './foilStyle.ts';
 import { lookFor, useHoloVersion } from './holoVersion.ts';
-import { createTilt } from './tilt.ts';
+import { createTilt, type TiltState } from './tilt.ts';
+import { TiltFeed } from './tiltFeed.ts';
 import './holo.css';
 import './holo-classic.css';
 
@@ -17,8 +18,9 @@ export interface HoloCardProps {
   width: number | string;
   /** Show the back. Toggling it flips the card over in 3D. */
   faceDown?: boolean;
-  /** hover: reacts to the pointer; idle: also sways on its own; off: static. */
-  tilt?: 'hover' | 'idle' | 'off';
+  /** hover: reacts to the pointer; idle: also sways on its own; off: static;
+      parent: held flat in something that tilts (see tiltFeed.ts). */
+  tilt?: 'hover' | 'idle' | 'off' | 'parent';
   gyro?: boolean;
   /** Give the card visible thickness (for the big inspect view). */
   thick?: boolean;
@@ -52,11 +54,19 @@ export function HoloCard({
   const look = lookFor(useHoloVersion(), finish);
   const classic = look === 'a';
 
+  const feed = useContext(TiltFeed);
+
   useEffect(() => {
+    if (tilt === 'parent') {
+      if (!feed) return;
+      const listener = (s: TiltState) => holo.current?.update(s);
+      feed.add(listener);
+      return () => { feed.delete(listener); };
+    }
     if (tilt === 'off' || !scene.current) return;
     const t = createTilt(scene.current, { idle: tilt === 'idle', gyro, onFrame: (s) => holo.current?.update(s) });
     return () => t.destroy();
-  }, [tilt, gyro]);
+  }, [tilt, gyro, feed]);
 
   useEffect(() => { setLoaded(false); setBroken(false); setGlOk(null); }, [card.id]);
 

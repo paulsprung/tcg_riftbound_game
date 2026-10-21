@@ -7,12 +7,14 @@ import { CardsView } from './views/CardsView.tsx';
 import { CollectionView } from './views/CollectionView.tsx';
 import { PacksView } from './views/PacksView.tsx';
 import { RulesView } from './views/RulesView.tsx';
+import { ShowcaseView } from './views/ShowcaseView.tsx';
 
 const ROUTES = [
-  { id: 'packs', label: 'Open packs' },
-  { id: 'collection', label: 'Collection' },
-  { id: 'cards', label: 'Card database' },
-  { id: 'rules', label: 'Rules' },
+  { id: 'packs', label: 'Open packs', short: 'Packs' },
+  { id: 'collection', label: 'Collection', short: 'Collection' },
+  { id: 'showcase', label: 'Showcase', short: 'Showcase' },
+  { id: 'cards', label: 'Card database', short: 'Cards' },
+  { id: 'rules', label: 'Rules', short: 'Rules' },
 ] as const;
 type Route = (typeof ROUTES)[number]['id'];
 
@@ -33,6 +35,11 @@ export function App() {
     return () => window.removeEventListener('hashchange', on);
   }, []);
 
+  // on a phone the tabs scroll sideways: keep the current one in view
+  useEffect(() => {
+    document.querySelector('.nav__link[aria-current="page"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, [route]);
+
 
   const onInspect = useCallback((t: InspectTarget) => setInspect(t), []);
 
@@ -46,8 +53,8 @@ export function App() {
         </a>
         <nav className="nav" aria-label="Sections">
           {ROUTES.map((r) => (
-            <a key={r.id} href={`#${r.id}`} className="nav__link" aria-current={route === r.id ? 'page' : undefined}>
-              {r.label}
+            <a key={r.id} href={`#${r.id}`} className="nav__link" aria-label={r.label} aria-current={route === r.id ? 'page' : undefined}>
+              <span className="nav__long">{r.label}</span><span className="nav__short">{r.short}</span>
             </a>
           ))}
         </nav>
@@ -67,6 +74,7 @@ export function App() {
           <>
             {route === 'packs' && <PacksView db={state.db} onInspect={onInspect} />}
             {route === 'collection' && <CollectionView db={state.db} onInspect={onInspect} />}
+            {route === 'showcase' && <ShowcaseView db={state.db} onInspect={onInspect} />}
             {route === 'cards' && <CardsView db={state.db} onInspect={onInspect} />}
             {route === 'rules' && <RulesView />}
           </>

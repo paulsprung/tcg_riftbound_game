@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { InspectTarget } from '../card/Inspector.tsx';
-import { collection, useCollection } from '../collection/store.ts';
+import { collection, gradedCounts, useCollection } from '../collection/store.ts';
 import type { CardDb } from '../data/types.ts';
 import { BOOSTER_SETS } from '../pack/packConfig.ts';
 import { CardGrid } from './CardGrid.tsx';
@@ -17,10 +17,9 @@ export function CollectionView({ db, onInspect }: { db: CardDb; onInspect: (t: I
   const [confirming, setConfirming] = useState(false);
 
   const setCards = useMemo(() => db.cards.filter((c) => c.setId === setId), [db, setId]);
-  const has = (id: string) => {
-    const o = owned.cards[id];
-    return !!o && o.normal + o.foil > 0;
-  };
+  const graded = useMemo(() => gradedCounts(owned), [owned]);
+  const rawCount = (id: string) => (owned.cards[id]?.normal ?? 0) + (owned.cards[id]?.foil ?? 0);
+  const has = (id: string) => rawCount(id) + (graded[id] ?? 0) > 0;
 
   const stats = useMemo(() => {
     const unique = setCards.filter((c) => has(c.id)).length;
@@ -28,10 +27,11 @@ export function CollectionView({ db, onInspect }: { db: CardDb; onInspect: (t: I
     let foils = 0;
     for (const c of setCards) {
       const o = owned.cards[c.id];
-      if (o) { copies += o.normal + o.foil; foils += o.foil; }
+      copies += rawCount(c.id) + (graded[c.id] ?? 0);
+      if (o) foils += o.foil;
     }
     return { unique, copies, foils, total: setCards.length };
-  }, [setCards, owned]);
+  }, [setCards, owned, graded]);
 
   const cards = setCards.filter((c) => show === 'all' || (show === 'owned') === has(c.id));
   const pct = stats.total ? Math.round((stats.unique / stats.total) * 100) : 0;
@@ -95,10 +95,13 @@ export function CollectionView({ db, onInspect }: { db: CardDb; onInspect: (t: I
           foil={(c) => (owned.cards[c.id]?.foil ?? 0) > 0}
           badge={(c) => {
             const o = owned.cards[c.id];
-            if (!o || o.normal + o.foil === 0) return null;
+            const g = graded[c.id] ?? 0;
+            if (!has(c.id)) return null;
             return (
               <span className="count-badge">
-                ×{o.normal + o.foil}{o.foil > 0 && <span className="count-badge__foil" title={`${o.foil} foil`}>✦{o.foil}</span>}
+                ×{rawCount(c.id) + g}
+                {(o?.foil ?? 0) > 0 && <span className="count-badge__foil" title={`${o!.foil} foil`}>✦{o!.foil}</span>}
+                {g > 0 && <span className="count-badge__foil" title={`${g} graded`}>▣{g}</span>}
               </span>
             );
           }}

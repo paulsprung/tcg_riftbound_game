@@ -44,7 +44,9 @@
     rotateY(calc(var(--tx, 0) * var(--tilt)))
     scale(var(--sc, 1));
 }
-.hc[data-tilt="off"] .hc__card { transform: none; }
+.hc[data-tilt="off"] .hc__card,
+.hc[data-tilt="parent"] .hc__card { transform: none; }
+.hc[data-tilt="parent"] .hc__shadow { display: none; }
 
 .hc__inner {
   position: absolute; inset: 0;

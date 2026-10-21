@@ -81,6 +81,11 @@ body::before {
   font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em;
 }
 .nav__link:hover { color: var(--text); background: rgba(255, 255, 255, .05); }
+.nav__short { display: none; }
+@media (max-width: 760px) {
+  .nav__long { display: none; }
+  .nav__short { display: inline; }
+}
 .nav__link[aria-current="page"] { color: var(--text); background: rgba(233, 196, 106, .12); box-shadow: inset 0 -2px 0 var(--accent); }
 
 .foil-toggle { display: flex; align-items: center; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 9px; }
