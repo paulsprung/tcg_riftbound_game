@@ -54,5 +54,31 @@
  "pr-293a-298": {
   "artist": "TUTU",
   "_why": "artist printed on the corrected image (data/image-overrides.json)"
+ },
+ "sfd-t03": {
+  "name": "Gold // Buff",
+  "type": "Token",
+  "text": "Kill this, :rb_exhaust:: [Reaction] — [Add] :rb_rune_rainbow:. (Abilities that add resources can't be reacted to.)\n//\nA unit may have no more than one buff at a time.",
+  "_why": "SFD-T03 is printed double-sided, Gold // Buff (TCGplayer); Riot lists the front face only"
+ },
+ "ogn-271-298": {
+  "name": "Recruit (DE) // Buff",
+  "text": "\n//\nA unit may have no more than one buff at a time.",
+  "_why": "printed double-sided with Buff on the back (TCGplayer); Riot lists the front face only"
+ },
+ "ogn-272-298": {
+  "name": "Recruit (NX) // Buff",
+  "text": "\n//\nA unit may have no more than one buff at a time.",
+  "_why": "printed double-sided with Buff on the back (TCGplayer); Riot lists the front face only"
+ },
+ "ogn-273-298": {
+  "name": "Recruit (ZN) // Buff",
+  "text": "\n//\nA unit may have no more than one buff at a time.",
+  "_why": "printed double-sided with Buff on the back (TCGplayer); Riot lists the front face only"
+ },
+ "ogn-274-298": {
+  "name": "Sprite // Buff",
+  "text": "[Temporary] (Kill me at the start of your Beginning Phase, before scoring.)\n//\nA unit may have no more than one buff at a time.",
+  "_why": "printed double-sided with Buff on the back (TCGplayer); Riot lists the front face only"
  }
 }

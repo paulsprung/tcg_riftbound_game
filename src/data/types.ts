@@ -57,6 +57,10 @@ export interface CardDb {
   source: string;
   sets: SetInfo[];
   cards: Card[];
+  /** Single faces of double-sided tokens, which Riot's gallery lists as
+      cards of their own. Not printings (so not in `cards`); the game needs
+      them to make tokens. */
+  tokenFaces?: Card[];
   /** Official rarity and domain icons/colours, keyed by lower-case label. */
   symbols: {
     rarities: Record<string, CardSymbol>;

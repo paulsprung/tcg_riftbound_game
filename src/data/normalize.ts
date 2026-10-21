@@ -241,6 +241,25 @@ export function inheritTags(cards: Card[]): void {
   }
 }
 
+/**
+ * The single-face token records: a token face listed on its own while the
+ * set has a double-sided printing with that face. A double-sided printing
+ * takes its front face's clean Riot render when its own image is not one.
+ */
+export function splitTokenFaces(cards: Card[]): Card[] {
+  const twoFaced = cards.filter((c) => c.name.includes(' // '));
+  const faces = cards.filter((c) => c.supertype === 'Token' && !c.name.includes('//') &&
+    twoFaced.some((d) => d.setId === c.setId && d.name.split(' // ').includes(c.name)));
+  for (const d of twoFaced) {
+    const front = faces.find((f) => f.setId === d.setId && f.name === d.name.split(' // ')[0]);
+    if (front && /rgpub\.io/.test(front.image) && !/rgpub\.io/.test(d.image)) {
+      d.image = front.image;
+      d.orientation = front.orientation;
+    }
+  }
+  return faces;
+}
+
 /** Set names as the products print them, where the sources disagree. */
 const SET_NAMES: Record<string, string> = { ogs: 'Origins: Proving Grounds' };
 
@@ -299,6 +318,8 @@ export function buildDb(riotRaw: Raw[], riftcodexRaw: Raw[], supplements: Supple
     if (fix) for (const [k, v] of Object.entries(fix)) if (!k.startsWith('_')) (c as unknown as Record<string, unknown>)[k] = v;
   }
   if (supplements.hidden) cards = cards.filter((c) => !supplements.hidden![c.id]);
+  const tokenFaces = splitTokenFaces(cards);
+  cards = cards.filter((c) => !tokenFaces.includes(c));
 
   for (const c of cards) c.setName = SET_NAMES[c.setId] ?? c.setName;
   cards.sort((a, b) =>
@@ -318,6 +339,7 @@ export function buildDb(riotRaw: Raw[], riftcodexRaw: Raw[], supplements: Supple
     source: 'Riot Games card gallery + Riftcodex, repaired from riftbound.gg, plus curated printings',
     sets: [...sets.values()],
     cards,
+    tokenFaces,
     symbols: collectSymbols(riotRaw),
   };
 }
