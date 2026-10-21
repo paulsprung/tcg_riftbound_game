@@ -169,12 +169,16 @@
   .opening__back-label { display: none; }
 }
 .opening__title { margin: 0; font-size: 20px; text-align: center; }
+.opening__bar .btn { min-height: 44px; }
 
 .opening__stage {
   position: relative;
   display: grid; justify-items: center; align-content: center; gap: 16px;
   min-height: min(68vh, 560px);
+  overflow: clip;   /* the torn strip flying off never pans the page */
 }
+/* the whole stage advances the reveal, not just the card */
+.opening__stage--reveal { cursor: pointer; -webkit-tap-highlight-color: transparent; user-select: none; }
 
 .flash {
   position: fixed; inset: 0;
@@ -200,6 +204,37 @@
 @keyframes deal { from { transform: translateY(26px) scale(.96); opacity: 0; } }
 
 .reveal-caption { display: grid; justify-items: center; gap: 2px; min-height: 42px; text-align: center; }
+/* the name comes up as the face turns, not before */
+.reveal-caption__in { display: grid; justify-items: center; gap: 2px; animation: caption-in .35s ease .3s both; }
+@keyframes caption-in { from { opacity: 0; transform: translateY(4px); } }
+
+/* waiting for the card's art before it turns */
+.stack__wait {
+  position: absolute; left: 50%; top: 50%;
+  width: 34px; height: 34px; margin: -17px 0 0 -17px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, .18);
+  border-top-color: var(--accent);
+  animation: wait-spin .8s linear infinite;
+  pointer-events: none;
+}
+@keyframes wait-spin { to { transform: rotate(360deg); } }
+
+.pull-tag {
+  display: inline-flex; align-items: center;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font: 700 11px/1.5 var(--font-ui);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid var(--line);
+}
+.pull-tag--new { color: #0b0914; background: var(--accent); border-color: transparent; }
+.pull-tag--hit { color: var(--tag); border-color: color-mix(in srgb, var(--tag) 50%, transparent); background: color-mix(in srgb, var(--tag) 12%, transparent); }
+.pull-tag--foil { color: var(--accent-2); }
+.reveal-caption .pull-tag { margin-top: 4px; }
 .reveal-caption strong { font: 800 16px/1.2 var(--font-display); letter-spacing: .06em; text-transform: uppercase; }
 .reveal-caption span:not(.muted) { font: 800 18px/1.1 var(--font-card); }
 
@@ -213,6 +248,7 @@
 }
 .pulled--grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 18px 14px; }
 .pulled__item { position: relative; animation: pop .4s cubic-bezier(.2, .8, .3, 1) var(--d, 0ms) both; }
+.pulled__meta { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin-top: 8px; }
 .pulled__dot {
   position: absolute; top: -4px; right: -4px;
   width: 10px; height: 10px; border-radius: 50%;
@@ -222,9 +258,10 @@
 
 .summary { display: grid; justify-items: center; gap: 12px; text-align: center; }
 .summary__lead { margin: 0; font-size: 17px; }
+.summary__sub { margin: -6px 0 0; font-size: 14px; }
 .summary__actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 
 @media (prefers-reduced-motion: reduce) {
-  .stack__top, .pulled__item, .flash.is-on { animation: none; }
+  .stack__top, .pulled__item, .flash.is-on, .reveal-caption__in { animation: none; }
   .pk.is-torn .pk__piece--top, .pk.is-torn .pk__piece--bottom { animation-duration: .01s; }
 }

@@ -28,7 +28,10 @@ export interface Card {
   might: number | null;
   power: number | null;
   tags: string[];
+  /** Rules text as printed. */
   text: string;
+  /** Riot's errata, when the official wording now differs from the print. */
+  errata?: string;
   flavor: string;
   artist: string;
   image: string;

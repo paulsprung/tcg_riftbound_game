@@ -1,7 +1,9 @@
 import type { Card, CardDb, Rarity, SetInfo, CardSymbol, Variant } from './types.ts';
+import { enrichFromDotgg, type DotggRow } from './dotgg.ts';
 
 /*
- * Turns raw source records into our Card shape. Two sources are merged:
+ * Turns raw source records into our Card shape. Two sources are merged
+ * (and a third repairs them, see dotgg.ts):
  *
  *  - Riot's official card gallery (content.publishing.riotgames.com), the
  *    primary source: every retail set, including preview cards of a set
@@ -223,7 +225,17 @@ export function collectSymbols(riotRaw: Raw[]): CardDb['symbols'] {
 /** Set names as the products print them, where the sources disagree. */
 const SET_NAMES: Record<string, string> = { ogs: 'Origins: Proving Grounds' };
 
-export function buildDb(riotRaw: Raw[], riftcodexRaw: Raw[], now = new Date()): CardDb {
+/** What the two main sources miss, kept in data/ (see the README). */
+export interface Supplements {
+  /** riftbound.gg rows, to repair our cards (dotgg.ts). */
+  dotgg?: DotggRow[];
+  /** English printings neither source lists (T1 collection, promos, runes...). */
+  cards?: Card[];
+  /** Card id -> image URL, where a source shows another printing's art. */
+  images?: Record<string, string>;
+}
+
+export function buildDb(riotRaw: Raw[], riftcodexRaw: Raw[], supplements: Supplements = {}, now = new Date()): CardDb {
   const extra = new Map<string, Card>();
   for (const r of riftcodexRaw) {
     const c = normalizeRiftcodex(r);
@@ -250,6 +262,13 @@ export function buildDb(riotRaw: Raw[], riftcodexRaw: Raw[], now = new Date()): 
   }
   for (const [key, c] of extra) if (!seen.has(key)) cards.push(c);
 
+  const ids = new Set(cards.map((c) => c.id));
+  for (const c of supplements.cards ?? []) {
+    if (!ids.has(c.id)) { cards.push({ ...c, tags: [...c.tags], domains: [...c.domains] }); ids.add(c.id); }
+  }
+  for (const c of cards) c.image = supplements.images?.[c.id] ?? c.image;
+  if (supplements.dotgg) enrichFromDotgg(cards, supplements.dotgg);
+
   for (const c of cards) c.setName = SET_NAMES[c.setId] ?? c.setName;
   cards.sort((a, b) =>
     a.setId.localeCompare(b.setId) ||
@@ -265,7 +284,7 @@ export function buildDb(riotRaw: Raw[], riftcodexRaw: Raw[], now = new Date()): 
 
   return {
     generatedAt: now.toISOString(),
-    source: 'Riot Games card gallery + Riftcodex',
+    source: 'Riot Games card gallery + Riftcodex, repaired from riftbound.gg, plus curated printings',
     sets: [...sets.values()],
     cards,
     symbols: collectSymbols(riotRaw),

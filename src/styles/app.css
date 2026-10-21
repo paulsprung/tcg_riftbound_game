@@ -280,6 +280,8 @@ body::before {
 .sym-img { width: 1.3em; height: 1.3em; vertical-align: -.25em; object-fit: contain; }
 .sym-img--glyph { filter: invert(1); opacity: .9; }
 .kw-arrow { color: var(--accent); margin: 0 .2em; }
+.printed summary { cursor: pointer; }
+.printed .rules-text { margin-top: 6px; opacity: .7; font-size: 15px; }
 .flavor { margin: 0; font-family: var(--font-condensed); font-stretch: 75%; font-style: italic; font-size: 16px; color: var(--muted); }
 .owned { margin: 0; padding-top: 10px; border-top: 1px solid var(--line); font-size: 14px; }
 

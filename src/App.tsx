@@ -19,7 +19,7 @@ const ROUTES = [
 type Route = (typeof ROUTES)[number]['id'];
 
 function routeFromHash(): Route {
-  const id = location.hash.replace(/^#\/?/, '');
+  const id = location.hash.replace(/^#\/?/, '').split('/')[0];
   return (ROUTES.find((r) => r.id === id)?.id ?? 'packs') as Route;
 }
 

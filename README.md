@@ -14,9 +14,10 @@ npm run dev            # http://localhost:5173
 
 | | |
 |---|---|
-| **Open packs** | Every booster set, Origins to Radiance. Packs follow each set's real slot layout. Swipe or tap to tear, then flip the cards one at a time; good pulls hum before you flip them and burst when you do. |
+| **Open packs** | Every booster set, Origins to Radiance. Packs follow each set's real slot layout. Swipe or tap to tear, then flip the cards one at a time; new cards are marked, and the summary leads with the best pulls. A pack left mid-reveal can be continued. |
 | **Collection** | Everything you pull, per set, with completion, copy and foil counts. Saved in your browser (localStorage). |
-| **Card database** | All 1,541 cards with search and filters for set, rarity, type, domain and printing. |
+| **Showcase** | A display case for your best cards, and grading: a card comes back with subgrades and a grade from 1 to 10, sealed in a slab (a fictional grader, not PSA). |
+| **Card database** | All 1,793 English printings, including the T1 Worlds Champion Collection and promos, with search and filters for set, rarity, type, domain and printing. |
 | **Inspect** | Click any card: a 3D card with thickness, a moving shadow, foil and glare, gyroscope tilt on phones, and a tap to flip it over. |
 | **Rules** | Links to Riot's official Rules Hub. The interactive guide comes with the play table. |
 
@@ -29,7 +30,7 @@ npm run fetch-cards               # behind a proxy: NODE_USE_ENV_PROXY=1 npm run
 npm run fetch-cards -- --raw      # re-normalise data/raw/ without the network
 ```
 
-It merges two sources (see `src/data/normalize.ts`):
+It merges these sources (see `src/data/normalize.ts` and `src/data/dotgg.ts`):
 
 - **Riot's official card gallery** (`content.publishing.riotgames.com`) is the
   primary source: every retail set, including a new set's preview cards before
@@ -37,9 +38,24 @@ It merges two sources (see `src/data/normalize.ts`):
 - **[Riftcodex](https://riftcodex.com)**, a free community API, adds the
   promo sets, flavour text, supertypes and explicit alt-art, overnumbered and
   signature flags.
+- **[riftbound.gg](https://riftbound.gg)**'s card API repairs what the two
+  lose: supertypes (Champion, Signature), tags, Radiance's types and domains
+  (the gallery's are wrong on many cards, checked against the printed cards),
+  Equipment might, cut-off promo texts, and Riot's errata, which the inspector
+  shows as the current wording. It also gives clean scans of banned cards,
+  whose gallery images carry a "BANNED" stamp. It never adds printings.
+- **`data/supplement-cards.json`**: English printings none of the APIs list
+  (the T1 collection, Organized Play and other promos, Spiritforged and
+  Unleashed runes, Radiance signatures, double-sided tokens), curated from
+  Riot's articles, TCGplayer, riftbound.gg and Piltover Archive. Each one's
+  sources are in `data/supplement-sources.json`. Chinese and Korean printings
+  are left out on purpose.
+- **`data/image-overrides.json`**: printings whose source shows another
+  printing's art, with the right image.
 
 Card art is never copied into the repo. The app loads it from Riot's image
-server, which resizes on request, so grids load small thumbnails.
+server, which resizes on request, so grids load small thumbnails; the few
+cards that come from elsewhere use riftbound.gg's or TCGplayer's images.
 
 Re-run `fetch-cards` when a set's previews update or a new set arrives. Then
 add the set to `BOOSTER_SETS` in `src/pack/packConfig.ts` (wrapper colours,
@@ -127,7 +143,7 @@ WebGL, which is listed below as a possible upgrade.
 |---|---|
 | `npm run dev` | Dev server |
 | `npm run build` | Typecheck and build to `dist/`, deployable to any static host (Cloudflare Pages, GitHub Pages) |
-| `npm test` | Unit tests (normaliser, pack generator) |
+| `npm test` | Unit tests (normaliser, data repairs, pack generator, grading) |
 | `npm run typecheck` | TypeScript only |
 | `npm run fetch-cards` | Refresh the card snapshot |
 

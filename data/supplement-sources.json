@@ -1,0 +1,2845 @@
+{
+ "t1s-001-005": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-riftbound-x-t1-2025-worlds-champion-collection/",
+   "https://playriftbound.com/en-us/news/announcements/products-and-sets-into-2027/",
+   "https://www.tcgplayer.com/product/716012/riftbound-league-of-legends-trading-card-game-t1-2025-worlds-champion-bundles-ambessa-the-wolf-t1-worlds-champion-signature-edition-bundle",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/T1S-001-P.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/716012_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "T1 2025 Worlds Champion Signature Edition",
+  "notes": "Rules data copied from our ven-084-166 (VEN-084/166). Signature Edition: new art by Pandart Studio, unique foiling, selected by Doran. Printed code read off Riot's render and the card image: \"T1S • 001/005 • EN\". Released in EN, CN and KR; 10,125 Signature Edition boxes per language."
+ },
+ "t1s-001-star-005": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-riftbound-x-t1-2025-worlds-champion-collection/",
+   "https://www.tcgplayer.com/product/716013/riftbound-league-of-legends-trading-card-game-t1-2025-worlds-champion-bundles-ambessa-the-wolf-t1-worlds-champion-signature-edition-bundle-serial-numbered",
+   "https://static.dotgg.gg/riftbound/cards/T1S-001-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "T1 2025 Worlds Champion Signature Edition",
+  "notes": "Rules data copied from our ven-084-166 (VEN-084/166). Signature Edition serial-numbered x/2025 with gold-stamped Doran signature (one per box) Printed code read off Riot's render and the card image: \"T1S • 001/005 • EN\". Released in EN, CN and KR; 10,125 Signature Edition boxes per language. Serial-numbered x/2025 copy with gold-stamped player signature; Riot's render prints the star code (e.g. \"T1S • 003*/005\"), TCGplayer drops the star. No image of the serial copy exists: the image is the regular Signature Edition card (same art and frame, without serial number and gold signature). Riot does not say whether it is a 6th card in the box or replaces one of the five."
+ },
+ "t1a-001-005": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-riftbound-x-t1-2025-worlds-champion-collection/",
+   "https://playriftbound.com/en-us/news/announcements/products-and-sets-into-2027/",
+   "https://www.tcgplayer.com/product/716010/riftbound-league-of-legends-trading-card-game-t1-2025-worlds-champion-bundles-ambessa-the-wolf-t1-worlds-champion-player-bundle",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/T1A-001-P.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/716010_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "T1 2025 Worlds Champion Player Bundle",
+  "notes": "Rules data copied from our ven-084-166 (VEN-084/166). Player Bundle: different art by League Splash Team, selected by Doran. Printed code read off Riot's render and the card image: \"T1A • 001/005 • EN\". Released in EN, CN and KR; 10,125 Signature Edition boxes per language."
+ },
+ "t1s-002-005": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-riftbound-x-t1-2025-worlds-champion-collection/",
+   "https://playriftbound.com/en-us/news/announcements/products-and-sets-into-2027/",
+   "https://www.tcgplayer.com/product/716016/riftbound-league-of-legends-trading-card-game-t1-2025-worlds-champion-bundles-xin-zhao-vigilant-t1-worlds-champion-signature-edition-bundle",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/T1S-002-P.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/716016_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "T1 2025 Worlds Champion Signature Edition",
+  "notes": "Rules data copied from our sfd-176-221 (SFD-176/221). Signature Edition: new art by Pandart Studio, unique foiling, selected by Oner. Printed code read off Riot's render and the card image: \"T1S • 002/005 • EN\". Released in EN, CN and KR; 10,125 Signature Edition boxes per language."
+ },
+ "t1s-002-star-005": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-riftbound-x-t1-2025-worlds-champion-collection/",
+   "https://www.tcgplayer.com/product/716018/riftbound-league-of-legends-trading-card-game-t1-2025-worlds-champion-bundles-xin-zhao-vigilant-t1-worlds-champion-signature-edition-bundle-serial-numbered",
+   "https://static.dotgg.gg/riftbound/cards/T1S-002-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "T1 2025 Worlds Champion Signature Edition",
+  "notes": "Rules data copied from our sfd-176-221 (SFD-176/221). Signature Edition serial-numbered x/2025 with gold-stamped Oner signature (one per box) Printed code read off Riot's render and the card image: \"T1S • 002/005 • EN\". Released in EN, CN and KR; 10,125 Signature Edition boxes per language. Serial-numbered x/2025 copy with gold-stamped player signature; Riot's render prints the star code (e.g. \"T1S • 003*/005\"), TCGplayer drops the star. No image of the serial copy exists: the image is the regular Signature Edition card (same art and frame, without serial number and gold signature). Riot does not say whether it is a 6th card in the box or replaces one of the five."
+ },
+ "t1a-002-005": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-riftbound-x-t1-2025-worlds-champion-collection/",
+   "https://playriftbound.com/en-us/news/announcements/products-and-sets-into-2027/",
+   "https://www.tcgplayer.com/product/716015/riftbound-league-of-legends-trading-card-game-t1-2025-worlds-champion-bundles-xin-zhao-vigilant-t1-worlds-champion-player-bundle",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/T1A-002-P.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/716015_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "T1 2025 Worlds Champion Player Bundle",
+  "notes": "Rules data copied from our sfd-176-221 (SFD-176/221). Player Bundle: different art by League Splash Team, selected by Oner. Printed code read off Riot's render and the card image: \"T1A • 002/005 • EN\". Released in EN, CN and KR; 10,125 Signature Edition boxes per language."
+ },
+ "t1s-003-005": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-riftbound-x-t1-2025-worlds-champion-collection/",
+   "https://playriftbound.com/en-us/news/announcements/products-and-sets-into-2027/",
+   "https://www.tcgplayer.com/product/716021/riftbound-league-of-legends-trading-card-game-t1-2025-worlds-champion-bundles-galio-indefatigable-t1-worlds-champion-signature-edition-bundle",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/T1S-003-P.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/716021_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "T1 2025 Worlds Champion Signature Edition",
+  "notes": "Rules data copied from our unl-171-219 (UNL-171/219). Signature Edition: new art by Pandart Studio, unique foiling, selected by Faker. Printed code read off Riot's render and the card image: \"T1S • 003/005 • EN\". Released in EN, CN and KR; 10,125 Signature Edition boxes per language."
+ },
+ "t1s-003-star-005": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-riftbound-x-t1-2025-worlds-champion-collection/",
+   "https://www.tcgplayer.com/product/716022/riftbound-league-of-legends-trading-card-game-t1-2025-worlds-champion-bundles-galio-indefatigable-t1-worlds-champion-signature-edition-bundle-serial-numbered",
+   "https://static.dotgg.gg/riftbound/cards/T1S-003-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "T1 2025 Worlds Champion Signature Edition",
+  "notes": "Rules data copied from our unl-171-219 (UNL-171/219). Signature Edition serial-numbered x/2025 with gold-stamped Faker signature (one per box) Printed code read off Riot's render and the card image: \"T1S • 003/005 • EN\". Released in EN, CN and KR; 10,125 Signature Edition boxes per language. Serial-numbered x/2025 copy with gold-stamped player signature; Riot's render prints the star code (e.g. \"T1S • 003*/005\"), TCGplayer drops the star. No image of the serial copy exists: the image is the regular Signature Edition card (same art and frame, without serial number and gold signature). Riot does not say whether it is a 6th card in the box or replaces one of the five."
+ },
+ "t1a-003-005": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-riftbound-x-t1-2025-worlds-champion-collection/",
+   "https://playriftbound.com/en-us/news/announcements/products-and-sets-into-2027/",
+   "https://www.tcgplayer.com/product/716020/riftbound-league-of-legends-trading-card-game-t1-2025-worlds-champion-bundles-galio-indefatigable-t1-worlds-champion-player-bundle",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/T1A-003-P.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/716020_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "T1 2025 Worlds Champion Player Bundle",
+  "notes": "Rules data copied from our unl-171-219 (UNL-171/219). Player Bundle: different art by League Splash Team, selected by Faker. Printed code read off Riot's render and the card image: \"T1A • 003/005 • EN\". Released in EN, CN and KR; 10,125 Signature Edition boxes per language."
+ },
+ "t1s-004-005": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-riftbound-x-t1-2025-worlds-champion-collection/",
+   "https://playriftbound.com/en-us/news/announcements/products-and-sets-into-2027/",
+   "https://www.tcgplayer.com/product/716026/riftbound-league-of-legends-trading-card-game-t1-2025-worlds-champion-bundles-miss-fortune-buccaneer-t1-worlds-champion-signature-edition-bundle",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/T1S-004-P.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/716026_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "T1 2025 Worlds Champion Signature Edition",
+  "notes": "Rules data copied from our ogn-193-298 (OGN-193/298). Signature Edition: new art by Pandart Studio, unique foiling, selected by Gumayusi. Printed code read off Riot's render and the card image: \"T1S • 004/005 • EN\". Released in EN, CN and KR; 10,125 Signature Edition boxes per language."
+ },
+ "t1s-004-star-005": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-riftbound-x-t1-2025-worlds-champion-collection/",
+   "https://www.tcgplayer.com/product/716028/riftbound-league-of-legends-trading-card-game-t1-2025-worlds-champion-bundles-miss-fortune-buccaneer-t1-worlds-champion-signature-edition-bundle-serial-numbered",
+   "https://static.dotgg.gg/riftbound/cards/T1S-004-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "T1 2025 Worlds Champion Signature Edition",
+  "notes": "Rules data copied from our ogn-193-298 (OGN-193/298). Signature Edition serial-numbered x/2025 with gold-stamped Gumayusi signature (one per box) Printed code read off Riot's render and the card image: \"T1S • 004/005 • EN\". Released in EN, CN and KR; 10,125 Signature Edition boxes per language. Serial-numbered x/2025 copy with gold-stamped player signature; Riot's render prints the star code (e.g. \"T1S • 003*/005\"), TCGplayer drops the star. No image of the serial copy exists: the image is the regular Signature Edition card (same art and frame, without serial number and gold signature). Riot does not say whether it is a 6th card in the box or replaces one of the five."
+ },
+ "t1a-004-005": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-riftbound-x-t1-2025-worlds-champion-collection/",
+   "https://playriftbound.com/en-us/news/announcements/products-and-sets-into-2027/",
+   "https://www.tcgplayer.com/product/716024/riftbound-league-of-legends-trading-card-game-t1-2025-worlds-champion-bundles-miss-fortune-buccaneer-t1-worlds-champion-player-bundle",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/T1A-004-P.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/716024_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "T1 2025 Worlds Champion Player Bundle",
+  "notes": "Rules data copied from our ogn-193-298 (OGN-193/298). Player Bundle: different art by League Splash Team, selected by Gumayusi. Printed code read off Riot's render and the card image: \"T1A • 004/005 • EN\". Released in EN, CN and KR; 10,125 Signature Edition boxes per language."
+ },
+ "t1s-005-005": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-riftbound-x-t1-2025-worlds-champion-collection/",
+   "https://playriftbound.com/en-us/news/announcements/products-and-sets-into-2027/",
+   "https://www.tcgplayer.com/product/716035/riftbound-league-of-legends-trading-card-game-t1-2025-worlds-champion-bundles-seraphine-not-alone-t1-worlds-champion-signature-edition-bundle",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/T1S-005-P.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/716035_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "T1 2025 Worlds Champion Signature Edition",
+  "notes": "Rules data copied from our rad-138-167 (RAD-138/167). Signature Edition: new art by Pandart Studio, unique foiling, selected by Keria. Printed code read off Riot's render and the card image: \"T1S • 005/005 • EN\". Released in EN, CN and KR; 10,125 Signature Edition boxes per language."
+ },
+ "t1s-005-star-005": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-riftbound-x-t1-2025-worlds-champion-collection/",
+   "https://www.tcgplayer.com/product/716036/riftbound-league-of-legends-trading-card-game-t1-2025-worlds-champion-bundles-seraphine-not-alone-t1-worlds-champion-signature-edition-bundle-serial-numbered",
+   "https://static.dotgg.gg/riftbound/cards/T1S-005-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "T1 2025 Worlds Champion Signature Edition",
+  "notes": "Rules data copied from our rad-138-167 (RAD-138/167). Signature Edition serial-numbered x/2025 with gold-stamped Keria signature (one per box) Printed code read off Riot's render and the card image: \"T1S • 005/005 • EN\". Released in EN, CN and KR; 10,125 Signature Edition boxes per language. Serial-numbered x/2025 copy with gold-stamped player signature; Riot's render prints the star code (e.g. \"T1S • 003*/005\"), TCGplayer drops the star. No image of the serial copy exists: the image is the regular Signature Edition card (same art and frame, without serial number and gold signature). Riot does not say whether it is a 6th card in the box or replaces one of the five."
+ },
+ "t1a-005-005": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-riftbound-x-t1-2025-worlds-champion-collection/",
+   "https://playriftbound.com/en-us/news/announcements/products-and-sets-into-2027/",
+   "https://www.tcgplayer.com/product/716034/riftbound-league-of-legends-trading-card-game-t1-2025-worlds-champion-bundles-seraphine-not-alone-t1-worlds-champion-player-bundle",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/T1A-005-P.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/716034_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "T1 2025 Worlds Champion Player Bundle",
+  "notes": "Rules data copied from our rad-138-167 (RAD-138/167). Player Bundle: different art by League Splash Team, selected by Keria. Printed code read off Riot's render and the card image: \"T1A • 005/005 • EN\". Released in EN, CN and KR; 10,125 Signature Edition boxes per language."
+ },
+ "rad-168-star-167": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://www.tcgplayer.com/product/724638/riftbound-league-of-legends-trading-card-game-radiance-ekko-boy-who-shattered-time-signature",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://piltoverarchive.com/cards",
+   "https://static.dotgg.gg/riftbound/cards/RAD-168-STAR.webp",
+   "https://cdn.piltoverarchive.com/temporary/1790780819472-em758t7h7v.png"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance booster packs (release Oct 23, 2026)",
+  "notes": "Rules data copied from our rad-168-167 (RAD-168/167). Overnumber legend signature. Riot gallery lists the unsigned RAD-168/167 only."
+ },
+ "rad-169-star-167": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://www.tcgplayer.com/product/724656/riftbound-league-of-legends-trading-card-game-radiance-ziggs-hexplosives-expert-signature",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://piltoverarchive.com/cards",
+   "https://static.dotgg.gg/riftbound/cards/RAD-169-STAR.webp",
+   "https://cdn.piltoverarchive.com/temporary/1790464787974-zurkq8ijt1.png"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance booster packs (release Oct 23, 2026)",
+  "notes": "Rules data copied from our rad-169-167 (RAD-169/167). Overnumber legend signature. Riot gallery lists the unsigned RAD-169/167 only."
+ },
+ "rad-170-star-167": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://www.tcgplayer.com/product/724651/riftbound-league-of-legends-trading-card-game-radiance-mordekaiser-iron-revenant-signature",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://piltoverarchive.com/cards",
+   "https://static.dotgg.gg/riftbound/cards/RAD-170-STAR.webp",
+   "https://cdn.piltoverarchive.com/temporary/1790878027612-3kd4kppd5il.png"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance booster packs (release Oct 23, 2026)",
+  "notes": "Rules data copied from our rad-170-167 (RAD-170/167). Overnumber legend signature. Riot gallery lists the unsigned RAD-170/167 only. Corrected from the printed card: rad-170-167 text lacks \"only\" (\"Spend this Power only to play units or gear.\" is printed). The base record needs the same fix."
+ },
+ "rad-171-star-167": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://www.tcgplayer.com/product/724653/riftbound-league-of-legends-trading-card-game-radiance-orianna-lady-of-clockwork-signature",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://piltoverarchive.com/cards",
+   "https://static.dotgg.gg/riftbound/cards/RAD-171-STAR.webp",
+   "https://cdn.piltoverarchive.com/temporary/1790464754504-lhu47k7gb7c.png"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance booster packs (release Oct 23, 2026)",
+  "notes": "Rules data copied from our rad-171-167 (RAD-171/167). Overnumber legend signature. Riot gallery lists the unsigned RAD-171/167 only."
+ },
+ "rad-174-star-167": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://www.tcgplayer.com/product/724655/riftbound-league-of-legends-trading-card-game-radiance-seraphine-starry-eyed-songstress-signature",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://piltoverarchive.com/cards",
+   "https://static.dotgg.gg/riftbound/cards/RAD-174-STAR.webp",
+   "https://cdn.piltoverarchive.com/temporary/1790468073459-px7vnw6c15.png"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance booster packs (release Oct 23, 2026)",
+  "notes": "Rules data copied from our rad-174-167 (RAD-174/167). Overnumber legend signature. Riot gallery lists the unsigned RAD-174/167 only."
+ },
+ "sfd-r01": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://piltoverarchive.com/cards",
+   "https://static.dotgg.gg/riftbound/cards/SFD-R01.webp",
+   "https://cdn.piltoverarchive.com/cards/OGN-007.webp",
+   "https://www.tcgplayer.com/product/678183/riftbound-league-of-legends-trading-card-game-spiritforged-fury-rune"
+  ],
+  "confidence": "confirmed",
+  "product": "Spiritforged booster packs (rune/token slot) and Rune products",
+  "notes": "Riot gallery has no rune entries for SFD/UNL; piltoverarchive reuses the Origins rune image. No image of this printing exists; the image is the identical Origins card (printed OGN code, same art)."
+ },
+ "sfd-r01a": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://piltoverarchive.com/cards",
+   "https://static.dotgg.gg/riftbound/cards/SFD-R01a.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/678224_in_1000x1000.jpg",
+   "https://cdn.piltoverarchive.com/cards/OGN-007a.webp",
+   "https://www.tcgplayer.com/product/678224/riftbound-league-of-legends-trading-card-game-spiritforged-fury-rune-r01a"
+  ],
+  "confidence": "confirmed",
+  "product": "Spiritforged booster packs (alt-art rune, rune slot)",
+  "notes": "piltoverarchive maps SFD alt runes to the OGN-0xxa image; check visually before using. Image is the TCGplayer photo, printed \"SFD - R01a\" (dotgg's SFD-R01a image is actually the OGN-0xxa card)."
+ },
+ "sfd-r02": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://piltoverarchive.com/cards",
+   "https://static.dotgg.gg/riftbound/cards/SFD-R02.webp",
+   "https://cdn.piltoverarchive.com/cards/OGN-042.webp",
+   "https://www.tcgplayer.com/product/678181/riftbound-league-of-legends-trading-card-game-spiritforged-calm-rune"
+  ],
+  "confidence": "confirmed",
+  "product": "Spiritforged booster packs (rune/token slot) and Rune products",
+  "notes": "Riot gallery has no rune entries for SFD/UNL; piltoverarchive reuses the Origins rune image. No image of this printing exists; the image is the identical Origins card (printed OGN code, same art)."
+ },
+ "sfd-r02a": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://piltoverarchive.com/cards",
+   "https://static.dotgg.gg/riftbound/cards/SFD-R02a.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/678227_in_1000x1000.jpg",
+   "https://cdn.piltoverarchive.com/cards/OGN-042a.webp",
+   "https://www.tcgplayer.com/product/678227/riftbound-league-of-legends-trading-card-game-spiritforged-calm-rune-r02a"
+  ],
+  "confidence": "confirmed",
+  "product": "Spiritforged booster packs (alt-art rune, rune slot)",
+  "notes": "piltoverarchive maps SFD alt runes to the OGN-0xxa image; check visually before using. Image is the TCGplayer photo, printed \"SFD - R02a\" (dotgg's SFD-R02a image is actually the OGN-0xxa card)."
+ },
+ "sfd-r03": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://piltoverarchive.com/cards",
+   "https://static.dotgg.gg/riftbound/cards/SFD-R03.webp",
+   "https://cdn.piltoverarchive.com/cards/OGN-089.webp",
+   "https://www.tcgplayer.com/product/678185/riftbound-league-of-legends-trading-card-game-spiritforged-mind-rune"
+  ],
+  "confidence": "confirmed",
+  "product": "Spiritforged booster packs (rune/token slot) and Rune products",
+  "notes": "Riot gallery has no rune entries for SFD/UNL; piltoverarchive reuses the Origins rune image. No image of this printing exists; the image is the identical Origins card (printed OGN code, same art)."
+ },
+ "sfd-r03a": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://piltoverarchive.com/cards",
+   "https://static.dotgg.gg/riftbound/cards/SFD-R03a.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/678229_in_1000x1000.jpg",
+   "https://cdn.piltoverarchive.com/cards/OGN-089a.webp",
+   "https://www.tcgplayer.com/product/678229/riftbound-league-of-legends-trading-card-game-spiritforged-mind-rune-r03a"
+  ],
+  "confidence": "confirmed",
+  "product": "Spiritforged booster packs (alt-art rune, rune slot)",
+  "notes": "piltoverarchive maps SFD alt runes to the OGN-0xxa image; check visually before using. Image is the TCGplayer photo, printed \"SFD - R03a\" (dotgg's SFD-R03a image is actually the OGN-0xxa card)."
+ },
+ "sfd-r04": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://piltoverarchive.com/cards",
+   "https://static.dotgg.gg/riftbound/cards/SFD-R04.webp",
+   "https://cdn.piltoverarchive.com/cards/OGN-126.webp",
+   "https://www.tcgplayer.com/product/678180/riftbound-league-of-legends-trading-card-game-spiritforged-body-rune"
+  ],
+  "confidence": "confirmed",
+  "product": "Spiritforged booster packs (rune/token slot) and Rune products",
+  "notes": "Riot gallery has no rune entries for SFD/UNL; piltoverarchive reuses the Origins rune image. No image of this printing exists; the image is the identical Origins card (printed OGN code, same art)."
+ },
+ "sfd-r04a": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://piltoverarchive.com/cards",
+   "https://static.dotgg.gg/riftbound/cards/SFD-R04a.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/678231_in_1000x1000.jpg",
+   "https://cdn.piltoverarchive.com/cards/OGN-126a.webp",
+   "https://www.tcgplayer.com/product/678231/riftbound-league-of-legends-trading-card-game-spiritforged-body-rune-r04a"
+  ],
+  "confidence": "confirmed",
+  "product": "Spiritforged booster packs (alt-art rune, rune slot)",
+  "notes": "piltoverarchive maps SFD alt runes to the OGN-0xxa image; check visually before using. Image is the TCGplayer photo, printed \"SFD - R04a\" (dotgg's SFD-R04a image is actually the OGN-0xxa card)."
+ },
+ "sfd-r05": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://piltoverarchive.com/cards",
+   "https://static.dotgg.gg/riftbound/cards/SFD-R05.webp",
+   "https://cdn.piltoverarchive.com/cards/OGN-166.webp",
+   "https://www.tcgplayer.com/product/678182/riftbound-league-of-legends-trading-card-game-spiritforged-chaos-rune"
+  ],
+  "confidence": "confirmed",
+  "product": "Spiritforged booster packs (rune/token slot) and Rune products",
+  "notes": "Riot gallery has no rune entries for SFD/UNL; piltoverarchive reuses the Origins rune image. No image of this printing exists; the image is the identical Origins card (printed OGN code, same art)."
+ },
+ "sfd-r05a": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://piltoverarchive.com/cards",
+   "https://static.dotgg.gg/riftbound/cards/SFD-R05a.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/678232_in_1000x1000.jpg",
+   "https://cdn.piltoverarchive.com/cards/OGN-166a.webp",
+   "https://www.tcgplayer.com/product/678232/riftbound-league-of-legends-trading-card-game-spiritforged-chaos-rune-r05a"
+  ],
+  "confidence": "confirmed",
+  "product": "Spiritforged booster packs (alt-art rune, rune slot)",
+  "notes": "piltoverarchive maps SFD alt runes to the OGN-0xxa image; check visually before using. Image is the TCGplayer photo, printed \"SFD - R05a\" (dotgg's SFD-R05a image is actually the OGN-0xxa card)."
+ },
+ "sfd-r06": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://piltoverarchive.com/cards",
+   "https://static.dotgg.gg/riftbound/cards/SFD-R06.webp",
+   "https://cdn.piltoverarchive.com/cards/OGN-214.webp",
+   "https://www.tcgplayer.com/product/678184/riftbound-league-of-legends-trading-card-game-spiritforged-order-rune"
+  ],
+  "confidence": "confirmed",
+  "product": "Spiritforged booster packs (rune/token slot) and Rune products",
+  "notes": "Riot gallery has no rune entries for SFD/UNL; piltoverarchive reuses the Origins rune image. No image of this printing exists; the image is the identical Origins card (printed OGN code, same art)."
+ },
+ "sfd-r06a": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://piltoverarchive.com/cards",
+   "https://static.dotgg.gg/riftbound/cards/SFD-R06a.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/678233_in_1000x1000.jpg",
+   "https://cdn.piltoverarchive.com/cards/OGN-214a.webp",
+   "https://www.tcgplayer.com/product/678233/riftbound-league-of-legends-trading-card-game-spiritforged-order-rune-r06a"
+  ],
+  "confidence": "confirmed",
+  "product": "Spiritforged booster packs (alt-art rune, rune slot)",
+  "notes": "piltoverarchive maps SFD alt runes to the OGN-0xxa image; check visually before using. Image is the TCGplayer photo, printed \"SFD - R06a\" (dotgg's SFD-R06a image is actually the OGN-0xxa card)."
+ },
+ "unl-r01": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://piltoverarchive.com/cards",
+   "https://static.dotgg.gg/riftbound/cards/UNL-R01.webp",
+   "https://cdn.piltoverarchive.com/cards/OGN-007.webp",
+   "https://www.tcgplayer.com/product/696614/riftbound-league-of-legends-trading-card-game-unleashed-fury-rune"
+  ],
+  "confidence": "confirmed",
+  "product": "Unleashed booster packs (rune/token slot) and Rune products",
+  "notes": "Riot gallery has no rune entries for SFD/UNL; piltoverarchive reuses the Origins rune image. No image of this printing exists; the image is the identical Origins card (printed OGN code, same art)."
+ },
+ "unl-r01a": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://piltoverarchive.com/cards",
+   "https://static.dotgg.gg/riftbound/cards/UNL-R01a.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/692932_in_1000x1000.jpg",
+   "https://piltoverarchive.b-cdn.net/temporary/1772489366582-j850d8b51vc.png",
+   "https://www.tcgplayer.com/product/692932/riftbound-league-of-legends-trading-card-game-unleashed-fury-rune-r01a"
+  ],
+  "confidence": "confirmed",
+  "product": "Unleashed booster packs (alt-art rune, rune slot)",
+  "notes": ""
+ },
+ "unl-r02": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://piltoverarchive.com/cards",
+   "https://static.dotgg.gg/riftbound/cards/UNL-R02.webp",
+   "https://cdn.piltoverarchive.com/cards/OGN-042.webp",
+   "https://www.tcgplayer.com/product/696616/riftbound-league-of-legends-trading-card-game-unleashed-calm-rune"
+  ],
+  "confidence": "confirmed",
+  "product": "Unleashed booster packs (rune/token slot) and Rune products",
+  "notes": "Riot gallery has no rune entries for SFD/UNL; piltoverarchive reuses the Origins rune image. No image of this printing exists; the image is the identical Origins card (printed OGN code, same art)."
+ },
+ "unl-r02a": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://piltoverarchive.com/cards",
+   "https://static.dotgg.gg/riftbound/cards/UNL-R02a.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/692933_in_1000x1000.jpg",
+   "https://piltoverarchive.b-cdn.net/temporary/1772489327958-x4rjerafcx.png",
+   "https://www.tcgplayer.com/product/692933/riftbound-league-of-legends-trading-card-game-unleashed-calm-rune-r02a"
+  ],
+  "confidence": "confirmed",
+  "product": "Unleashed booster packs (alt-art rune, rune slot)",
+  "notes": ""
+ },
+ "unl-r03": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://piltoverarchive.com/cards",
+   "https://static.dotgg.gg/riftbound/cards/UNL-R03.webp",
+   "https://cdn.piltoverarchive.com/cards/OGN-089.webp",
+   "https://www.tcgplayer.com/product/696618/riftbound-league-of-legends-trading-card-game-unleashed-mind-rune"
+  ],
+  "confidence": "confirmed",
+  "product": "Unleashed booster packs (rune/token slot) and Rune products",
+  "notes": "Riot gallery has no rune entries for SFD/UNL; piltoverarchive reuses the Origins rune image. No image of this printing exists; the image is the identical Origins card (printed OGN code, same art)."
+ },
+ "unl-r03a": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://piltoverarchive.com/cards",
+   "https://static.dotgg.gg/riftbound/cards/UNL-R03a.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/692934_in_1000x1000.jpg",
+   "https://piltoverarchive.b-cdn.net/temporary/1772489382491-gffpct65jgb.png",
+   "https://www.tcgplayer.com/product/692934/riftbound-league-of-legends-trading-card-game-unleashed-mind-rune-r03a"
+  ],
+  "confidence": "confirmed",
+  "product": "Unleashed booster packs (alt-art rune, rune slot)",
+  "notes": ""
+ },
+ "unl-r04": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://piltoverarchive.com/cards",
+   "https://static.dotgg.gg/riftbound/cards/UNL-R04.webp",
+   "https://cdn.piltoverarchive.com/cards/OGN-126.webp",
+   "https://www.tcgplayer.com/product/696615/riftbound-league-of-legends-trading-card-game-unleashed-body-rune"
+  ],
+  "confidence": "confirmed",
+  "product": "Unleashed booster packs (rune/token slot) and Rune products",
+  "notes": "Riot gallery has no rune entries for SFD/UNL; piltoverarchive reuses the Origins rune image. No image of this printing exists; the image is the identical Origins card (printed OGN code, same art)."
+ },
+ "unl-r04a": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://piltoverarchive.com/cards",
+   "https://static.dotgg.gg/riftbound/cards/UNL-R04a.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/692935_in_1000x1000.jpg",
+   "https://piltoverarchive.b-cdn.net/temporary/1772489304316-2thnys211eo.png",
+   "https://www.tcgplayer.com/product/692935/riftbound-league-of-legends-trading-card-game-unleashed-body-rune-r04a"
+  ],
+  "confidence": "confirmed",
+  "product": "Unleashed booster packs (alt-art rune, rune slot)",
+  "notes": ""
+ },
+ "unl-r05": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://piltoverarchive.com/cards",
+   "https://static.dotgg.gg/riftbound/cards/UNL-R05.webp",
+   "https://cdn.piltoverarchive.com/cards/OGN-166.webp",
+   "https://www.tcgplayer.com/product/696617/riftbound-league-of-legends-trading-card-game-unleashed-chaos-rune"
+  ],
+  "confidence": "confirmed",
+  "product": "Unleashed booster packs (rune/token slot) and Rune products",
+  "notes": "Riot gallery has no rune entries for SFD/UNL; piltoverarchive reuses the Origins rune image. No image of this printing exists; the image is the identical Origins card (printed OGN code, same art)."
+ },
+ "unl-r05a": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://piltoverarchive.com/cards",
+   "https://static.dotgg.gg/riftbound/cards/UNL-R05a.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/692936_in_1000x1000.jpg",
+   "https://piltoverarchive.b-cdn.net/temporary/1772489349570-60fm8rfv2nl.png",
+   "https://www.tcgplayer.com/product/692936/riftbound-league-of-legends-trading-card-game-unleashed-chaos-rune-r05a"
+  ],
+  "confidence": "confirmed",
+  "product": "Unleashed booster packs (alt-art rune, rune slot)",
+  "notes": ""
+ },
+ "unl-r06": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://piltoverarchive.com/cards",
+   "https://static.dotgg.gg/riftbound/cards/UNL-R06.webp",
+   "https://cdn.piltoverarchive.com/cards/OGN-214.webp",
+   "https://www.tcgplayer.com/product/696619/riftbound-league-of-legends-trading-card-game-unleashed-order-rune"
+  ],
+  "confidence": "confirmed",
+  "product": "Unleashed booster packs (rune/token slot) and Rune products",
+  "notes": "Riot gallery has no rune entries for SFD/UNL; piltoverarchive reuses the Origins rune image. No image of this printing exists; the image is the identical Origins card (printed OGN code, same art)."
+ },
+ "unl-r06a": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://piltoverarchive.com/cards",
+   "https://static.dotgg.gg/riftbound/cards/UNL-R06a.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/692937_in_1000x1000.jpg",
+   "https://piltoverarchive.b-cdn.net/temporary/1772489400276-1xifka38ob4.png",
+   "https://www.tcgplayer.com/product/692937/riftbound-league-of-legends-trading-card-game-unleashed-order-rune-r06a"
+  ],
+  "confidence": "confirmed",
+  "product": "Unleashed booster packs (alt-art rune, rune slot)",
+  "notes": ""
+ },
+ "ven-r01a": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-R01a.webp",
+   "https://www.tcgplayer.com/product/709312/riftbound-league-of-legends-trading-card-game-vendetta-fury-rune-r01a"
+  ],
+  "confidence": "confirmed",
+  "product": "Vendetta booster packs (alt-art rune, rune slot)",
+  "notes": "We have VEN-R01..R06 but not the alt-art VEN-R0xa."
+ },
+ "ven-r02a": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-R02a.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/709310_in_1000x1000.jpg",
+   "https://www.tcgplayer.com/product/709310/riftbound-league-of-legends-trading-card-game-vendetta-calm-rune-r02a"
+  ],
+  "confidence": "confirmed",
+  "product": "Vendetta booster packs (alt-art rune, rune slot)",
+  "notes": "We have VEN-R01..R06 but not the alt-art VEN-R0xa."
+ },
+ "ven-r03a": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-R03a.webp",
+   "https://www.tcgplayer.com/product/709313/riftbound-league-of-legends-trading-card-game-vendetta-mind-rune-r03a"
+  ],
+  "confidence": "confirmed",
+  "product": "Vendetta booster packs (alt-art rune, rune slot)",
+  "notes": "We have VEN-R01..R06 but not the alt-art VEN-R0xa."
+ },
+ "ven-r04a": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-R04a.webp",
+   "https://www.tcgplayer.com/product/709309/riftbound-league-of-legends-trading-card-game-vendetta-body-rune-r04a"
+  ],
+  "confidence": "confirmed",
+  "product": "Vendetta booster packs (alt-art rune, rune slot)",
+  "notes": "We have VEN-R01..R06 but not the alt-art VEN-R0xa."
+ },
+ "ven-r05a": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-R05a.webp",
+   "https://www.tcgplayer.com/product/709311/riftbound-league-of-legends-trading-card-game-vendetta-chaos-rune-r05a"
+  ],
+  "confidence": "confirmed",
+  "product": "Vendetta booster packs (alt-art rune, rune slot)",
+  "notes": "We have VEN-R01..R06 but not the alt-art VEN-R0xa."
+ },
+ "ven-r06a": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-R06a.webp",
+   "https://www.tcgplayer.com/product/709314/riftbound-league-of-legends-trading-card-game-vendetta-order-rune-r06a"
+  ],
+  "confidence": "confirmed",
+  "product": "Vendetta booster packs (alt-art rune, rune slot)",
+  "notes": "We have VEN-R01..R06 but not the alt-art VEN-R0xa."
+ },
+ "opp-sfd-r01b": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/SFD-R01b.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/680274_in_1000x1000.jpg",
+   "https://www.tcgplayer.com/product/680274/riftbound-league-of-legends-trading-card-game-spiritforged-fury-rune-r01b"
+  ],
+  "confidence": "confirmed",
+  "product": "Spiritforged Nexus Night promo pack",
+  "notes": "Nexus Night promo rune; filed under opp with the other Nexus Night promos. Code kept as printed (an OPP- prefix would collide between sets). Artist credit is too small to read reliably on the available image (appears to be 华锐), left blank."
+ },
+ "opp-sfd-r02b": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/SFD-R02b.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/680304_in_1000x1000.jpg",
+   "https://www.tcgplayer.com/product/680304/riftbound-league-of-legends-trading-card-game-spiritforged-calm-rune-r02b"
+  ],
+  "confidence": "confirmed",
+  "product": "Spiritforged Nexus Night promo pack",
+  "notes": "Nexus Night promo rune; filed under opp with the other Nexus Night promos. Code kept as printed (an OPP- prefix would collide between sets). Artist credit is too small to read reliably on the available image (appears to be 华锐), left blank."
+ },
+ "opp-sfd-r03b": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/SFD-R03b.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/680331_in_1000x1000.jpg",
+   "https://www.tcgplayer.com/product/680331/riftbound-league-of-legends-trading-card-game-spiritforged-mind-rune-r03b"
+  ],
+  "confidence": "confirmed",
+  "product": "Spiritforged Nexus Night promo pack",
+  "notes": "Nexus Night promo rune; filed under opp with the other Nexus Night promos. Code kept as printed (an OPP- prefix would collide between sets). Artist credit is too small to read reliably on the available image (appears to be 华锐), left blank."
+ },
+ "opp-sfd-r04b": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/SFD-R04b.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/680347_in_1000x1000.jpg",
+   "https://www.tcgplayer.com/product/680347/riftbound-league-of-legends-trading-card-game-spiritforged-body-rune-r04b"
+  ],
+  "confidence": "confirmed",
+  "product": "Spiritforged Nexus Night promo pack",
+  "notes": "Nexus Night promo rune; filed under opp with the other Nexus Night promos. Code kept as printed (an OPP- prefix would collide between sets). Artist credit is too small to read reliably on the available image (appears to be 华锐), left blank."
+ },
+ "opp-sfd-r05b": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/SFD-R05b.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/680392_in_1000x1000.jpg",
+   "https://www.tcgplayer.com/product/680392/riftbound-league-of-legends-trading-card-game-spiritforged-chaos-rune-r05b"
+  ],
+  "confidence": "confirmed",
+  "product": "Spiritforged Nexus Night promo pack",
+  "notes": "Nexus Night promo rune; filed under opp with the other Nexus Night promos. Code kept as printed (an OPP- prefix would collide between sets). Artist credit is too small to read reliably on the available image (appears to be 华锐), left blank."
+ },
+ "opp-sfd-r06b": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/SFD-R06b.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/680432_in_1000x1000.jpg",
+   "https://www.tcgplayer.com/product/680432/riftbound-league-of-legends-trading-card-game-spiritforged-order-rune-r06b"
+  ],
+  "confidence": "confirmed",
+  "product": "Spiritforged Nexus Night promo pack",
+  "notes": "Nexus Night promo rune; filed under opp with the other Nexus Night promos. Code kept as printed (an OPP- prefix would collide between sets). Artist credit is too small to read reliably on the available image (appears to be 华锐), left blank."
+ },
+ "opp-ven-r01b": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://playriftbound.com/en-us/news/announcements/the-vendetta-overview/",
+   "https://static.dotgg.gg/riftbound/cards/VEN-R01B-P.webp",
+   "https://www.tcgplayer.com/product/709748/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-fury-rune-vendetta"
+  ],
+  "confidence": "confirmed",
+  "product": "Vendetta Nexus Night promo pack",
+  "notes": "TCGplayer names these \"(Vendetta)\" with numbers R0xb. Nexus Night promo rune; filed under opp with the other Nexus Night promos. Code kept as printed (an OPP- prefix would collide between sets)."
+ },
+ "opp-ven-r02b": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://playriftbound.com/en-us/news/announcements/the-vendetta-overview/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-R02b-P.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/709746_in_1000x1000.jpg",
+   "https://www.tcgplayer.com/product/709746/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-calm-rune-vendetta"
+  ],
+  "confidence": "confirmed",
+  "product": "Vendetta Nexus Night promo pack",
+  "notes": "TCGplayer names these \"(Vendetta)\" with numbers R0xb. Nexus Night promo rune; filed under opp with the other Nexus Night promos. Code kept as printed (an OPP- prefix would collide between sets)."
+ },
+ "opp-ven-r03b": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://playriftbound.com/en-us/news/announcements/the-vendetta-overview/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-R03b-P.webp",
+   "https://www.tcgplayer.com/product/709749/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-mind-rune-vendetta"
+  ],
+  "confidence": "confirmed",
+  "product": "Vendetta Nexus Night promo pack",
+  "notes": "TCGplayer names these \"(Vendetta)\" with numbers R0xb. Nexus Night promo rune; filed under opp with the other Nexus Night promos. Code kept as printed (an OPP- prefix would collide between sets)."
+ },
+ "opp-ven-r04b": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://playriftbound.com/en-us/news/announcements/the-vendetta-overview/",
+   "https://static.dotgg.gg/riftbound/cards/VEN-R04B-P.webp",
+   "https://www.tcgplayer.com/product/709745/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-body-rune-vendetta"
+  ],
+  "confidence": "confirmed",
+  "product": "Vendetta Nexus Night promo pack",
+  "notes": "TCGplayer names these \"(Vendetta)\" with numbers R0xb. Nexus Night promo rune; filed under opp with the other Nexus Night promos. Code kept as printed (an OPP- prefix would collide between sets)."
+ },
+ "opp-ven-r05b": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://playriftbound.com/en-us/news/announcements/the-vendetta-overview/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-R05b-P.webp",
+   "https://www.tcgplayer.com/product/709747/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-chaos-rune-vendetta"
+  ],
+  "confidence": "confirmed",
+  "product": "Vendetta Nexus Night promo pack",
+  "notes": "TCGplayer names these \"(Vendetta)\" with numbers R0xb. Nexus Night promo rune; filed under opp with the other Nexus Night promos. Code kept as printed (an OPP- prefix would collide between sets)."
+ },
+ "opp-ven-r06b": {
+  "sources": [
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://playriftbound.com/en-us/news/announcements/the-vendetta-overview/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-R06b-P.webp",
+   "https://www.tcgplayer.com/product/709750/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-order-rune-vendetta"
+  ],
+  "confidence": "confirmed",
+  "product": "Vendetta Nexus Night promo pack",
+  "notes": "TCGplayer names these \"(Vendetta)\" with numbers R0xb. Nexus Night promo rune; filed under opp with the other Nexus Night promos. Code kept as printed (an OPP- prefix would collide between sets)."
+ },
+ "opp-rad-r01b": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://static.dotgg.gg/riftbound/cards/RAD-R01b-P.webp"
+  ],
+  "confidence": "partial",
+  "product": "Radiance Nexus Night promo pack",
+  "notes": "Riot: Radiance Nexus Night packs include new runes. Not on TCGplayer yet. Nexus Night promo rune; filed under opp with the other Nexus Night promos. Code kept as printed (an OPP- prefix would collide between sets). Partial: not on TCGplayer yet; dotgg only."
+ },
+ "opp-rad-r02b": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://static.dotgg.gg/riftbound/cards/RAD-R02b-P.webp"
+  ],
+  "confidence": "partial",
+  "product": "Radiance Nexus Night promo pack",
+  "notes": "Riot: Radiance Nexus Night packs include new runes. Not on TCGplayer yet. Nexus Night promo rune; filed under opp with the other Nexus Night promos. Code kept as printed (an OPP- prefix would collide between sets). Partial: not on TCGplayer yet; dotgg only."
+ },
+ "opp-rad-r03b": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://static.dotgg.gg/riftbound/cards/RAD-R03b-P.webp"
+  ],
+  "confidence": "partial",
+  "product": "Radiance Nexus Night promo pack",
+  "notes": "Riot: Radiance Nexus Night packs include new runes. Not on TCGplayer yet. Nexus Night promo rune; filed under opp with the other Nexus Night promos. Code kept as printed (an OPP- prefix would collide between sets). Partial: not on TCGplayer yet; dotgg only."
+ },
+ "opp-rad-r04b": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://static.dotgg.gg/riftbound/cards/RAD-R04b-P.webp"
+  ],
+  "confidence": "partial",
+  "product": "Radiance Nexus Night promo pack",
+  "notes": "Riot: Radiance Nexus Night packs include new runes. Not on TCGplayer yet. Nexus Night promo rune; filed under opp with the other Nexus Night promos. Code kept as printed (an OPP- prefix would collide between sets). Partial: not on TCGplayer yet; dotgg only."
+ },
+ "opp-rad-r05b": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://static.dotgg.gg/riftbound/cards/RAD-R05b-P.webp"
+  ],
+  "confidence": "partial",
+  "product": "Radiance Nexus Night promo pack",
+  "notes": "Riot: Radiance Nexus Night packs include new runes. Not on TCGplayer yet. Nexus Night promo rune; filed under opp with the other Nexus Night promos. Code kept as printed (an OPP- prefix would collide between sets). Partial: not on TCGplayer yet; dotgg only."
+ },
+ "opp-rad-r06b": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://static.dotgg.gg/riftbound/cards/RAD-R06b-P.webp"
+  ],
+  "confidence": "partial",
+  "product": "Radiance Nexus Night promo pack",
+  "notes": "Riot: Radiance Nexus Night packs include new runes. Not on TCGplayer yet. Nexus Night promo rune; filed under opp with the other Nexus Night promos. Code kept as printed (an OPP- prefix would collide between sets). Partial: not on TCGplayer yet; dotgg only."
+ },
+ "sfd-t01": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://www.tcgplayer.com/product/678186/riftbound-league-of-legends-trading-card-game-spiritforged-mech-buff",
+   "https://static.dotgg.gg/riftbound/cards/SFD-T01.webp",
+   "https://cdn.piltoverarchive.com/cards/SFD-T01.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Spiritforged packs / Rumble champion deck",
+  "notes": "Double-sided token. We only have SFD-T03 Gold."
+ },
+ "sfd-t02": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://www.tcgplayer.com/product/678187/riftbound-league-of-legends-trading-card-game-spiritforged-sand-soldier-buff",
+   "https://static.dotgg.gg/riftbound/cards/SFD-T02.webp",
+   "https://cdn.piltoverarchive.com/cards/SFD-T02.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Spiritforged packs / Azir decks",
+  "notes": "Double-sided token."
+ },
+ "sfd-t01-t03": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://www.tcgplayer.com/product/721767/riftbound-league-of-legends-trading-card-game-spiritforged-mech-gold",
+   "https://static.dotgg.gg/riftbound/cards/SFD-T01g.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/721767_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "Spiritforged double-sided token",
+  "notes": ""
+ },
+ "ven-t01-t02": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://www.tcgplayer.com/product/709918/riftbound-league-of-legends-trading-card-game-vendetta-empowered-gold",
+   "https://playriftbound.com/en-us/news/announcements/the-vendetta-overview/",
+   "https://static.dotgg.gg/riftbound/cards/VEN-T01.webp",
+   "https://cdn.piltoverarchive.com/cards/VEN-T01.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Vendetta packs",
+  "notes": "New Empowered marker token (Riot Vendetta overview). dotgg back face shows the Unleashed Gold (UNL-T05) printing."
+ },
+ "ven-t03-t04": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://www.tcgplayer.com/product/709917/riftbound-league-of-legends-trading-card-game-vendetta-mech-recruit",
+   "https://playriftbound.com/en-us/news/announcements/the-vendetta-overview/",
+   "https://static.dotgg.gg/riftbound/cards/VEN-T03.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Vendetta packs",
+  "notes": "dotgg front face image is printed SFD-T01 (Spiritforged Mech)."
+ },
+ "ven-t05-t06": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://www.tcgplayer.com/product/709916/riftbound-league-of-legends-trading-card-game-vendetta-shadow-clone-tentacle",
+   "https://playriftbound.com/en-us/news/announcements/the-vendetta-overview/",
+   "https://static.dotgg.gg/riftbound/cards/VEN-T05.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/709916_in_1000x1000.jpg",
+   "https://cdn.piltoverarchive.com/cards/VEN-T05.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Vendetta packs",
+  "notes": "New tokens in Vendetta (Riot overview has single-face images)."
+ },
+ "ven-t05-t06-vault": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://www.tcgplayer.com/product/713239/riftbound-league-of-legends-trading-card-game-vendetta-shadow-clone-tentacle-full-art",
+   "https://playriftbound.com/en-us/news/announcements/the-vendetta-overview/",
+   "https://static.dotgg.gg/riftbound/cards/VEN-T05-P.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/713239_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "Vendetta Vault bundle (full-art foil token)",
+  "notes": "Full-art version; TCGplayer \"(Full Art)\". Vendetta Vault bundle full-art foil token (printed VEN T05/T06 P EN); TCGplayer \"(Full Art)\"."
+ },
+ "ven-t04-t01": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://www.tcgplayer.com/product/723243/riftbound-league-of-legends-trading-card-game-vendetta-recruit-empowered",
+   "https://playriftbound.com/en-us/news/announcements/the-vendetta-overview/",
+   "https://static.dotgg.gg/riftbound/cards/VEN-T01r.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Shen Showdown deck (5x Recruit // Empowered)",
+  "notes": ""
+ },
+ "ven-t01-t06": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://playriftbound.com/en-us/news/announcements/the-vendetta-overview/",
+   "https://static.dotgg.gg/riftbound/cards/VEN-T01t.webp"
+  ],
+  "confidence": "partial",
+  "product": "Vendetta double-sided token",
+  "notes": "dotgg only. Partial: dotgg is the only source."
+ },
+ "rad-t01-t02": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://static.dotgg.gg/riftbound/cards/RAD-T01.webp"
+  ],
+  "confidence": "partial",
+  "product": "Radiance packs",
+  "notes": "Bomb is a new Radiance token (Riot overview). Codes from dotgg. Partial: dotgg only. dotgg front image is the Unleashed Bird (printed UNL T02)."
+ },
+ "rad-t02": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://static.dotgg.gg/riftbound/cards/RAD-T02.webp",
+   "https://cdn.piltoverarchive.com/temporary/1790379094995-j8jntogrzbo.png"
+  ],
+  "confidence": "partial",
+  "product": "Radiance packs",
+  "notes": "Partial: single-face record on dotgg and Piltover Archive (printed RAD T02 EN); stored as a single face like our UNL-T0n tokens."
+ },
+ "rad-t02-t05": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://static.dotgg.gg/riftbound/cards/RAD-T02g.webp"
+  ],
+  "confidence": "partial",
+  "product": "Radiance packs / Evelynn Showdown deck (5x Gold // Bomb)",
+  "notes": "Partial: dotgg only. Back face image is the Unleashed Gold (UNL T05)."
+ },
+ "rad-t03-t07": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://static.dotgg.gg/riftbound/cards/RAD-T03.webp"
+  ],
+  "confidence": "partial",
+  "product": "Radiance packs",
+  "notes": "Partial: dotgg only. Front image is the Unleashed Buff (UNL T04)."
+ },
+ "rad-t04-t07": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://static.dotgg.gg/riftbound/cards/RAD-T04.webp"
+  ],
+  "confidence": "partial",
+  "product": "Radiance packs",
+  "notes": "Partial: dotgg only. Front image is the Vendetta Empowered (VEN T01)."
+ },
+ "rad-t05-t06": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://static.dotgg.gg/riftbound/cards/RAD-T05.webp"
+  ],
+  "confidence": "partial",
+  "product": "Radiance packs",
+  "notes": "Partial: dotgg only. Front image is the Unleashed Gold (UNL T05)."
+ },
+ "rad-t06": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://static.dotgg.gg/riftbound/cards/RAD-T06.webp"
+  ],
+  "confidence": "partial",
+  "product": "Radiance packs",
+  "notes": "Partial: single-face record on dotgg (printed RAD T06 EN); stored as a single face like our UNL-T0n tokens."
+ },
+ "rad-t06-t07": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://static.dotgg.gg/riftbound/cards/RAD-T06r.webp"
+  ],
+  "confidence": "partial",
+  "product": "Radiance packs / Seraphine Showdown deck (3x Mech // Recruit)",
+  "notes": "Partial: dotgg only."
+ },
+ "unl-t01-t05": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://www.tcgplayer.com/product/695879/riftbound-league-of-legends-trading-card-game-unleashed-baron-pit-gold",
+   "https://static.dotgg.gg/riftbound/cards/UNL-T01g.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Unleashed packs",
+  "notes": "Faces exist in our data as single records; the double-sided printing does not. Image shows the battlefield face sideways on a portrait card."
+ },
+ "unl-t02-t03": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/UNL-T02b.webp"
+  ],
+  "confidence": "partial",
+  "product": "Unleashed packs",
+  "notes": "Faces exist in our data. Partial: only dotgg (UNL-T02b, no TCGplayer listing) has the non-Vault Bird // Brush; image is the regular UNL T02 / T03 faces."
+ },
+ "unl-t02-t05": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://www.tcgplayer.com/product/695876/riftbound-league-of-legends-trading-card-game-unleashed-bird-gold",
+   "https://static.dotgg.gg/riftbound/cards/UNL-T02g.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Unleashed packs / Vex champion deck (4x Bird/Gold)",
+  "notes": "Faces exist in our data."
+ },
+ "unl-t07-t04": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://www.tcgplayer.com/product/696622/riftbound-league-of-legends-trading-card-game-unleashed-sprite-buff",
+   "https://static.dotgg.gg/riftbound/cards/UNL-T04s.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Vi champion deck (3x Sprite/Buff)",
+  "notes": "Faces exist in our data. Face order follows TCGplayer (T07 // T04); the dotgg image shows the Buff face first."
+ },
+ "unl-t08-t04": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://www.tcgplayer.com/product/696621/riftbound-league-of-legends-trading-card-game-unleashed-xp-tracker-buff",
+   "https://static.dotgg.gg/riftbound/cards/UNL-T04x.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Vi champion deck (1x XP/Buff)",
+  "notes": "Faces exist in our data. Face order follows TCGplayer (T08 // T04); the dotgg image shows the Buff face first."
+ },
+ "unl-t07-t05": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://www.tcgplayer.com/product/695877/riftbound-league-of-legends-trading-card-game-unleashed-sprite-gold",
+   "https://static.dotgg.gg/riftbound/cards/UNL-T05s.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Unleashed packs",
+  "notes": "Faces exist in our data. Face order follows TCGplayer (T07 // T05); the dotgg image shows the Gold face first."
+ },
+ "unl-t08-t05": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://www.tcgplayer.com/product/696620/riftbound-league-of-legends-trading-card-game-unleashed-xp-tracker-gold",
+   "https://static.dotgg.gg/riftbound/cards/UNL-T05x.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Unleashed packs",
+  "notes": "Faces exist in our data. Face order follows TCGplayer (T08 // T05); the dotgg image shows the Gold face first."
+ },
+ "sgn-t01-t03": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://playriftbound.com/en-us/news/announcements/secret-garden-bundle-events/",
+   "https://static.dotgg.gg/riftbound/cards/SGN-T01-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Secret Garden bundle (alt-art double-sided token)",
+  "notes": "Riot: Secret Garden has 5 alt-art double-sided tokens. Codes read off the image: SGN T01 P EN / SGN T03 P EN."
+ },
+ "sgn-t02-t08": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://playriftbound.com/en-us/news/announcements/secret-garden-bundle-events/",
+   "https://static.dotgg.gg/riftbound/cards/SGN-T02-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Secret Garden bundle (alt-art double-sided token)",
+  "notes": "Codes read off the image: SGN T02 P EN / SGN T08 P EN."
+ },
+ "sgn-t04-t06": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://playriftbound.com/en-us/news/announcements/secret-garden-bundle-events/",
+   "https://static.dotgg.gg/riftbound/cards/SGN-T04-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Secret Garden bundle (alt-art double-sided token)",
+  "notes": "Codes read off the image: SGN T04 P EN / SGN T06 P EN."
+ },
+ "sgn-t05-t01": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://playriftbound.com/en-us/news/announcements/secret-garden-bundle-events/",
+   "https://static.dotgg.gg/riftbound/cards/SGN-T05-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Secret Garden bundle (alt-art double-sided token)",
+  "notes": "Codes read off the image: SGN T05 P EN / SGN T01 P EN."
+ },
+ "sgn-t07-t02": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://playriftbound.com/en-us/news/announcements/secret-garden-bundle-events/",
+   "https://static.dotgg.gg/riftbound/cards/SGN-T07-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Secret Garden bundle (alt-art double-sided token)",
+  "notes": "Codes read off the image: SGN T07 P EN / SGN T02 P EN."
+ },
+ "pr-buff-buff": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://www.tcgplayer.com/product/663004/riftbound-league-of-legends-trading-card-game-riftbound-promotional-cards-buff-buff-fist-bump-promo",
+   "https://static.dotgg.gg/riftbound/cards/OGN-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "\"Riot Fist Bump\" promo Buff // Buff",
+  "notes": "How the Fist Bump promo was distributed is unknown (riftbound.gg). TCGplayer lists it in the PR group. Unnumbered, so the code is a placeholder. The image shows one Buff face with a promo stamp."
+ },
+ "ogn-buff": {
+  "sources": [
+   "https://www.tcgplayer.com/product/653117/riftbound-league-of-legends-trading-card-game-origins-buff",
+   "https://piltoverarchive.com/cards",
+   "https://tcgplayer-cdn.tcgplayer.com/product/653117_in_1000x1000.jpg",
+   "https://cdn.piltoverarchive.com/cards/OGN-XXX.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Origins booster packs (token slot)",
+  "notes": "Unnumbered Origins Buff token (TCGplayer 653117 lists no number; Piltover Archive files it as OGN-999), so the code is a placeholder."
+ },
+ "opp-171-298": {
+  "sources": [
+   "https://www.tcgplayer.com/product/662920/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-mystic-poro",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/OGN-171-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards",
+  "notes": "Rules data copied from our ogn-171-298 (OGN-171/298)."
+ },
+ "opp-247-298-metal-best-of": {
+  "sources": [
+   "https://www.tcgplayer.com/product/669250/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-kaisa-daughter-of-the-void-metal-best-of",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/OGN-247-MB-P.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/669250_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Best Of",
+  "notes": "Rules data copied from our ogn-247-298 (OGN-247/298). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-249-298-metal-best-of": {
+  "sources": [
+   "https://www.tcgplayer.com/product/669251/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-volibear-relentless-storm-metal-best-of",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/OGN-249-MB-P.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/669251_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Best Of",
+  "notes": "Rules data copied from our ogn-249-298 (OGN-249/298). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-251-298-metal-best-of": {
+  "sources": [
+   "https://www.tcgplayer.com/product/669252/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-jinx-loose-cannon-metal-best-of",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/OGN-251-MB-P.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/669252_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Best Of",
+  "notes": "Rules data copied from our ogn-251-298 (OGN-251/298). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-253-298-metal-best-of": {
+  "sources": [
+   "https://www.tcgplayer.com/product/669253/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-darius-hand-of-noxus-metal-best-of",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/OGN-253-MB-P.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/669253_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Best Of",
+  "notes": "Rules data copied from our ogn-253-298 (OGN-253/298). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-255-298-metal-best-of": {
+  "sources": [
+   "https://www.tcgplayer.com/product/669254/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-ahri-nine-tailed-fox-metal-best-of",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/OGN-255-MB-P.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/669254_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Best Of",
+  "notes": "Rules data copied from our ogn-255-298 (OGN-255/298). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-257-298-metal-best-of": {
+  "sources": [
+   "https://www.tcgplayer.com/product/669256/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-lee-sin-blind-monk-metal-best-of",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/OGN-257-MB-P.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/669256_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Best Of",
+  "notes": "Rules data copied from our ogn-257-298 (OGN-257/298). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-259-298-metal-best-of": {
+  "sources": [
+   "https://www.tcgplayer.com/product/669257/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-yasuo-unforgiven-metal-best-of",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/OGN-259-MB-P.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/669257_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Best Of",
+  "notes": "Rules data copied from our ogn-259-298 (OGN-259/298). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-261-298-metal-best-of": {
+  "sources": [
+   "https://www.tcgplayer.com/product/669258/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-leona-radiant-dawn-metal-best-of",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/OGN-261-MB-P.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/669258_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Best Of",
+  "notes": "Rules data copied from our ogn-261-298 (OGN-261/298). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-263-298-metal-best-of": {
+  "sources": [
+   "https://www.tcgplayer.com/product/669259/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-teemo-swift-scout-metal-best-of",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/OGN-263-MB-P.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/669259_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Best Of",
+  "notes": "Rules data copied from our ogn-263-298 (OGN-263/298). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-265-298-metal-best-of": {
+  "sources": [
+   "https://www.tcgplayer.com/product/669260/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-viktor-herald-of-the-arcane-metal-best-of",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/OGN-265-MB-P.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/669260_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Best Of",
+  "notes": "Rules data copied from our ogn-265-298 (OGN-265/298). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-267-298-metal-best-of": {
+  "sources": [
+   "https://www.tcgplayer.com/product/669261/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-miss-fortune-bounty-hunter-metal-best-of",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/OGN-267-MB-P.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/669261_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Best Of",
+  "notes": "Rules data copied from our ogn-267-298 (OGN-267/298). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-269-298-metal-best-of": {
+  "sources": [
+   "https://www.tcgplayer.com/product/669263/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-sett-the-boss-metal-best-of",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/OGN-269-MB-P.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/669263_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Best Of",
+  "notes": "Rules data copied from our ogn-269-298 (OGN-269/298). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-021-024-metal-best-of": {
+  "sources": [
+   "https://www.tcgplayer.com/product/669267/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-lux-lady-of-luminosity-metal-best-of",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/OGS-021-MB-P.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/669267_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Best Of",
+  "notes": "Rules data copied from our ogs-021-024 (OGS-021/024). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-023-024-metal-best-of": {
+  "sources": [
+   "https://www.tcgplayer.com/product/669268/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-garen-might-of-demacia-metal-best-of",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/OGS-023-MB-P.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/669268_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Best Of",
+  "notes": "Rules data copied from our ogs-023-024 (OGS-023/024). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-017-024-nexus-night": {
+  "sources": [
+   "https://www.tcgplayer.com/product/680247/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-annie-dark-child",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/OGS-017-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards",
+  "notes": "Rules data copied from our ogs-017-024 (OGS-017/024). Our snapshot already has a record with this code (different physical printing: Annie - Dark Child (Metal))."
+ },
+ "opp-019-024-nexus-night": {
+  "sources": [
+   "https://www.tcgplayer.com/product/680257/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-master-yi-wuju-bladesman",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/OGS-019-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards",
+  "notes": "Rules data copied from our ogs-019-024 (OGS-019/024). Our snapshot already has a record with this code (different physical printing: Master Yi - Wuju Bladesman (Metal))."
+ },
+ "opp-139-221-champion": {
+  "sources": [
+   "https://www.tcgplayer.com/product/684999/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-edge-of-night-champion",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/SFD-139-P2.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/684999_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Champion",
+  "notes": "Rules data copied from our sfd-139-221 (SFD-139/221)."
+ },
+ "opp-139-221-top-8": {
+  "sources": [
+   "https://www.tcgplayer.com/product/685001/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-edge-of-night-top-8",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/SFD-139-P.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/685001_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Top 8",
+  "notes": "Rules data copied from our sfd-139-221 (SFD-139/221)."
+ },
+ "opp-051-221-top-8": {
+  "sources": [
+   "https://www.tcgplayer.com/product/685261/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-guardian-angel-top-8",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/SFD-051-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Top 8",
+  "notes": "Rules data copied from our sfd-051-221 (SFD-051/221)."
+ },
+ "opp-051-221-champion": {
+  "sources": [
+   "https://www.tcgplayer.com/product/685263/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-guardian-angel-champion",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/SFD-051-P2.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Champion",
+  "notes": "Rules data copied from our sfd-051-221 (SFD-051/221)."
+ },
+ "opp-022-221": {
+  "sources": [
+   "https://www.tcgplayer.com/product/685264/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-long-sword-top-8",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://riftbound.gg/riftbound-promo-cards-list-how-get/",
+   "https://static.dotgg.gg/riftbound/cards/SFD-022-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Spiritforged Summoner Skirmish promo (TCGplayer: Top 8; dotgg/riftbound.gg: April 2026 participation)",
+  "notes": "Rules data copied from our sfd-022-221 (SFD-022/221). Sources conflict on the stamp: TCGplayer 685264 says \"Long Sword (Top 8)\", dotgg/riftbound.gg call SFD-022-P the Spiritforged April 2026 Summoner Skirmish participation promo. Unresolved, so the id carries no stamp suffix."
+ },
+ "opp-247-298-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/689166/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-kaisa-daughter-of-the-void-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/OGN-247-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our ogn-247-298 (OGN-247/298). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-249-298-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/689167/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-volibear-relentless-storm-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/OGN-249-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our ogn-249-298 (OGN-249/298). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-251-298-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/689168/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-jinx-loose-cannon-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/OGN-251-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our ogn-251-298 (OGN-251/298). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-253-298-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/689169/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-darius-hand-of-noxus-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/OGN-253-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our ogn-253-298 (OGN-253/298). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-255-298-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/689170/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-ahri-nine-tailed-fox-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/OGN-255-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our ogn-255-298 (OGN-255/298). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-257-298-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/689171/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-lee-sin-blind-monk-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/OGN-257-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our ogn-257-298 (OGN-257/298). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-259-298-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/689172/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-yasuo-unforgiven-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/OGN-259-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our ogn-259-298 (OGN-259/298). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-261-298-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/689173/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-leona-radiant-dawn-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/OGN-261-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our ogn-261-298 (OGN-261/298). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-263-298-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/689174/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-teemo-swift-scout-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/OGN-263-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our ogn-263-298 (OGN-263/298). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-265-298-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/689175/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-viktor-herald-of-the-arcane-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/OGN-265-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our ogn-265-298 (OGN-265/298). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-267-298-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/689176/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-miss-fortune-bounty-hunter-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/OGN-267-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our ogn-267-298 (OGN-267/298). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-269-298-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/689177/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-sett-the-boss-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/OGN-269-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our ogn-269-298 (OGN-269/298). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-017-024-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/689178/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-annie-dark-child-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/OGS-017-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our ogs-017-024 (OGS-017/024). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-019-024-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/689179/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-master-yi-wuju-bladesman-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/OGS-019-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our ogs-019-024 (OGS-019/024). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-021-024-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/689180/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-lux-lady-of-luminosity-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/OGS-021-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our ogs-021-024 (OGS-021/024). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-023-024-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/689181/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-garen-might-of-demacia-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/OGS-023-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our ogs-023-024 (OGS-023/024). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-201-221-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/689182/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-renata-glasc-chem-baroness-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/SFD-201-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our sfd-201-221 (SFD-201/221). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-197-221-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/689183/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-azir-emperor-of-the-sands-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/SFD-197-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our sfd-197-221 (SFD-197/221). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-185-221-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/689184/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-draven-glorious-executioner-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/SFD-185-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our sfd-185-221 (SFD-185/221). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-199-221-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/689185/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-ezreal-prodigal-explorer-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/SFD-199-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our sfd-199-221 (SFD-199/221). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-205-221-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/689186/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-fiora-grand-duelist-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/SFD-205-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our sfd-205-221 (SFD-205/221). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-195-221-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/689187/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-irelia-blade-dancer-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/SFD-195-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our sfd-195-221 (SFD-195/221). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-193-221-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/689188/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-jax-grandmaster-at-arms-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/SFD-193-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our sfd-193-221 (SFD-193/221). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-183-221-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/689189/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-lucian-purifier-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/SFD-183-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our sfd-183-221 (SFD-183/221). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-189-221-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/689190/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-ornn-fire-below-the-mountain-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/SFD-189-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our sfd-189-221 (SFD-189/221). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-187-221-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/689191/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-reksai-void-burrower-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/SFD-187-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our sfd-187-221 (SFD-187/221). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-181-221-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/689192/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-rumble-mechanized-menace-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/SFD-181-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our sfd-181-221 (SFD-181/221). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-203-221-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/689193/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-sivir-battle-mistress-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/SFD-203-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our sfd-203-221 (SFD-203/221). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-151b-298": {
+  "sources": [
+   "https://www.tcgplayer.com/product/693156/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-lee-sin-centered",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/OGN-151b.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/693156_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards",
+  "notes": "Rules data copied from our ogn-151-298 (OGN-151/298)."
+ },
+ "opp-197-219-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/696689/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-diana-scorn-of-the-moon-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/UNL-197-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our unl-197-219 (UNL-197/219). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-195-219-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/696690/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-ivern-green-father-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/UNL-195-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our unl-195-219 (UNL-195/219). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-181-219-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/696691/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-jhin-virtuoso-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/UNL-181-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our unl-181-219 (UNL-181/219). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-201-219-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/696692/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-khazix-voidreaver-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/UNL-201-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our unl-201-219 (UNL-201/219). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-199-219-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/696693/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-leblanc-deceiver-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/UNL-199-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our unl-199-219 (UNL-199/219). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-189-219-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/696694/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-lillia-bashful-bloom-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/UNL-189-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our unl-189-219 (UNL-189/219). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-191-219-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/696695/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-master-yi-wuju-master-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/UNL-191-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our unl-191-219 (UNL-191/219). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-203-219-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/696696/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-poppy-keeper-of-the-hammer-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/UNL-203-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our unl-203-219 (UNL-203/219). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-185-219-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/696697/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-pyke-bloodharbor-ripper-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/UNL-185-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our unl-185-219 (UNL-185/219). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-183-219-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/696698/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-rengar-pridestalker-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/UNL-183-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our unl-183-219 (UNL-183/219). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-193-219-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/696700/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-vex-gloomist-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/UNL-193-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our unl-193-219 (UNL-193/219). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-187-219-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/696701/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-vi-piltover-enforcer-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/UNL-187-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our unl-187-219 (UNL-187/219). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-120-219-champion": {
+  "sources": [
+   "https://www.tcgplayer.com/product/696824/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-rengar-trophy-hunter-champion",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://playriftbound.com/en-us/news/announcements/the-unleashed-overview/",
+   "https://static.dotgg.gg/riftbound/cards/UNL-120-P-Champion.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Champion",
+  "notes": "Rules data copied from our unl-120-219 (UNL-120/219). Our snapshot already has a record with this code (different physical printing: Rengar - Trophy Hunter)."
+ },
+ "opp-058-219-champion": {
+  "sources": [
+   "https://www.tcgplayer.com/product/705531/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-lillia-protector-of-dreams-champion",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://playriftbound.com/en-us/news/announcements/the-unleashed-overview/",
+   "https://static.dotgg.gg/riftbound/cards/UNL-058-P-Champion.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/705531_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Champion",
+  "notes": "Rules data copied from our unl-058-219 (UNL-058/219). Our snapshot already has a record with this code (different physical printing: Lillia - Protector of Dreams)."
+ },
+ "opp-041-166": {
+  "sources": [
+   "https://www.tcgplayer.com/product/708201/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-riven-shattered",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://playriftbound.com/en-us/news/announcements/the-vendetta-overview/",
+   "https://static.dotgg.gg/riftbound/cards/VEN-041-P.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/708201_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards",
+  "notes": "Rules data copied from our ven-041-166 (VEN-041/166)."
+ },
+ "opp-178a-219": {
+  "sources": [
+   "https://www.tcgplayer.com/product/709101/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-poppy-defender-of-the-meek-alternate-art",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/UNL-178a-P.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/709101_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Alternate Art",
+  "notes": "Rules data copied from our unl-178-219 (UNL-178/219)."
+ },
+ "opp-002-166": {
+  "sources": [
+   "https://www.tcgplayer.com/product/709727/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-blade-twirler",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-002-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards",
+  "notes": "Rules data copied from our ven-002-166 (VEN-002/166)."
+ },
+ "opp-004-166": {
+  "sources": [
+   "https://www.tcgplayer.com/product/709728/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-dune-surfer",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-004-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards",
+  "notes": "Rules data copied from our ven-004-166 (VEN-004/166)."
+ },
+ "opp-013-166": {
+  "sources": [
+   "https://www.tcgplayer.com/product/709729/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-shadow-assassin",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-013-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards",
+  "notes": "Rules data copied from our ven-013-166 (VEN-013/166)."
+ },
+ "opp-026-166": {
+  "sources": [
+   "https://www.tcgplayer.com/product/709730/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-field-musicians",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-026-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards",
+  "notes": "Rules data copied from our ven-026-166 (VEN-026/166)."
+ },
+ "opp-029-166": {
+  "sources": [
+   "https://www.tcgplayer.com/product/709731/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-ol-poro",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-029-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards",
+  "notes": "Rules data copied from our ven-029-166 (VEN-029/166)."
+ },
+ "opp-037-166": {
+  "sources": [
+   "https://www.tcgplayer.com/product/709732/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-tomb-raider-barbara",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-037-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards",
+  "notes": "Rules data copied from our ven-037-166 (VEN-037/166)."
+ },
+ "opp-048-166": {
+  "sources": [
+   "https://www.tcgplayer.com/product/709733/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-cloud-drake",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-048-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards",
+  "notes": "Rules data copied from our ven-048-166 (VEN-048/166)."
+ },
+ "opp-050-166": {
+  "sources": [
+   "https://www.tcgplayer.com/product/709734/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-grumpy-rockbear",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-050-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards",
+  "notes": "Rules data copied from our ven-050-166 (VEN-050/166)."
+ },
+ "opp-058-166": {
+  "sources": [
+   "https://www.tcgplayer.com/product/709735/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-patched-porobot",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-058-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards",
+  "notes": "Rules data copied from our ven-058-166 (VEN-058/166)."
+ },
+ "opp-071-166": {
+  "sources": [
+   "https://www.tcgplayer.com/product/709736/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-fretful-feline",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-071-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards",
+  "notes": "Rules data copied from our ven-071-166 (VEN-071/166)."
+ },
+ "opp-076-166": {
+  "sources": [
+   "https://www.tcgplayer.com/product/709737/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-repair-specialist",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-076-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards",
+  "notes": "Rules data copied from our ven-076-166 (VEN-076/166)."
+ },
+ "opp-082-166": {
+  "sources": [
+   "https://www.tcgplayer.com/product/709738/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-profiteer",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-082-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards",
+  "notes": "Rules data copied from our ven-082-166 (VEN-082/166)."
+ },
+ "opp-097-166": {
+  "sources": [
+   "https://www.tcgplayer.com/product/709739/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-spiderling",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-097-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards",
+  "notes": "Rules data copied from our ven-097-166 (VEN-097/166)."
+ },
+ "opp-099-166": {
+  "sources": [
+   "https://www.tcgplayer.com/product/709740/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-tornado-warrior",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-099-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards",
+  "notes": "Rules data copied from our ven-099-166 (VEN-099/166)."
+ },
+ "opp-101-166": {
+  "sources": [
+   "https://www.tcgplayer.com/product/709741/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-gust-monk",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-101-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards",
+  "notes": "Rules data copied from our ven-101-166 (VEN-101/166)."
+ },
+ "opp-118-166": {
+  "sources": [
+   "https://www.tcgplayer.com/product/709742/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-horns-of-the-dragon",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-118-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards",
+  "notes": "Rules data copied from our ven-118-166 (VEN-118/166)."
+ },
+ "opp-123-166": {
+  "sources": [
+   "https://www.tcgplayer.com/product/709743/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-soulspinner",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-123-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards",
+  "notes": "Rules data copied from our ven-123-166 (VEN-123/166)."
+ },
+ "opp-125-166": {
+  "sources": [
+   "https://www.tcgplayer.com/product/709744/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-hungry-wolf",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-125-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards",
+  "notes": "Rules data copied from our ven-125-166 (VEN-125/166)."
+ },
+ "opp-069b-166": {
+  "sources": [
+   "https://www.tcgplayer.com/product/709987/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-mel-newly-awakened",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-069B-P.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/709987_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards",
+  "notes": "Rules data copied from our ven-069-166 (VEN-069/166)."
+ },
+ "pr-041a-166": {
+  "sources": [
+   "https://www.tcgplayer.com/product/710699/riftbound-league-of-legends-trading-card-game-riftbound-promotional-cards-riven-shattered",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-041a-P.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/710699_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Promotional Cards",
+  "notes": "Rules data copied from our ven-041-166 (VEN-041/166)."
+ },
+ "sgn-003-003": {
+  "sources": [
+   "https://www.tcgplayer.com/product/710873/riftbound-league-of-legends-trading-card-game-secret-garden-ultrasoft-poro",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/SGN-003/003-P.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/710873_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "Secret Garden",
+  "notes": "Rules data copied from our unl-160-219 (UNL-160/219)."
+ },
+ "sgn-001-003": {
+  "sources": [
+   "https://www.tcgplayer.com/product/710874/riftbound-league-of-legends-trading-card-game-secret-garden-lillia-bashful-bloom",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/SGN-001/003-P.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/710874_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "Secret Garden",
+  "notes": "Rules data copied from our unl-189-219 (UNL-189/219)."
+ },
+ "sgn-002-003": {
+  "sources": [
+   "https://www.tcgplayer.com/product/710875/riftbound-league-of-legends-trading-card-game-secret-garden-ivern-green-father",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/SGN-002/003-P.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/710875_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "Secret Garden",
+  "notes": "Rules data copied from our unl-195-219 (UNL-195/219)."
+ },
+ "opp-134-166-top-8": {
+  "sources": [
+   "https://www.tcgplayer.com/product/713479/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-kayle-justified-top-8",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-134-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Top 8",
+  "notes": "Rules data copied from our ven-134-166 (VEN-134/166)."
+ },
+ "opp-134-166-champion": {
+  "sources": [
+   "https://www.tcgplayer.com/product/713480/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-kayle-justified-champion",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-134-P2.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Champion",
+  "notes": "Rules data copied from our ven-134-166 (VEN-134/166)."
+ },
+ "opp-065-166": {
+  "sources": [
+   "https://www.tcgplayer.com/product/713481/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-swain-visionary",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-065-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards",
+  "notes": "Rules data copied from our ven-065-166 (VEN-065/166)."
+ },
+ "opp-017-166": {
+  "sources": [
+   "https://www.tcgplayer.com/product/713482/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-morgana-vindictive",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-017-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards",
+  "notes": "Rules data copied from our ven-017-166 (VEN-017/166)."
+ },
+ "opp-109-166-top-8": {
+  "sources": [
+   "https://www.tcgplayer.com/product/713483/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-illaoi-prophet-of-the-great-kraken-top-8",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-109-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Top 8",
+  "notes": "Rules data copied from our ven-109-166 (VEN-109/166)."
+ },
+ "opp-109-166-champion": {
+  "sources": [
+   "https://www.tcgplayer.com/product/713484/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-illaoi-prophet-of-the-great-kraken-champion",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-109-P2.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Champion",
+  "notes": "Rules data copied from our ven-109-166 (VEN-109/166)."
+ },
+ "jdg-086-166": {
+  "sources": [
+   "https://www.tcgplayer.com/product/721871/riftbound-league-of-legends-trading-card-game-riftbound-judge-promotional-cards-gangplank-naval",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-086-P.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/721871_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Judge Promotional Cards",
+  "notes": "Rules data copied from our ven-086-166 (VEN-086/166)."
+ },
+ "opp-139-166-metal-best-of": {
+  "sources": [
+   "https://www.tcgplayer.com/product/722790/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-akali-rogue-assassin-metal-best-of",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-139-MB-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Best Of",
+  "notes": "Rules data copied from our ven-139-166 (VEN-139/166). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-139-166-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/722791/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-akali-rogue-assassin-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-139-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our ven-139-166 (VEN-139/166). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-153-166-metal-best-of": {
+  "sources": [
+   "https://www.tcgplayer.com/product/722792/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-ambessa-matriarch-of-war-metal-best-of",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-153-MB-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Best Of",
+  "notes": "Rules data copied from our ven-153-166 (VEN-153/166). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-153-166-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/722793/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-ambessa-matriarch-of-war-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-153-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our ven-153-166 (VEN-153/166). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-149-166-metal-best-of": {
+  "sources": [
+   "https://www.tcgplayer.com/product/722794/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-jayce-defender-of-tomorrow-metal-best-of",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-149-MB-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Best Of",
+  "notes": "Rules data copied from our ven-149-166 (VEN-149/166). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-149-166-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/722795/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-jayce-defender-of-tomorrow-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-149-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our ven-149-166 (VEN-149/166). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-155-166-metal-best-of": {
+  "sources": [
+   "https://www.tcgplayer.com/product/722809/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-kennen-heart-of-the-tempest-metal-best-of",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-155-MB-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Best Of",
+  "notes": "Rules data copied from our ven-155-166 (VEN-155/166). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-155-166-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/722810/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-kennen-heart-of-the-tempest-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-155-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our ven-155-166 (VEN-155/166). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-151-166-metal-best-of": {
+  "sources": [
+   "https://www.tcgplayer.com/product/722813/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-mel-souls-reflection-metal-best-of",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-151-MB-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Best Of",
+  "notes": "Rules data copied from our ven-151-166 (VEN-151/166). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-151-166-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/722814/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-mel-souls-reflection-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-151-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our ven-151-166 (VEN-151/166). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-145-166-metal-best-of": {
+  "sources": [
+   "https://www.tcgplayer.com/product/722815/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-nasus-curator-of-the-sands-metal-best-of",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-145-MB-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Best Of",
+  "notes": "Rules data copied from our ven-145-166 (VEN-145/166). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-145-166-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/722816/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-nasus-curator-of-the-sands-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-145-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our ven-145-166 (VEN-145/166). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-141-166-metal-best-of": {
+  "sources": [
+   "https://www.tcgplayer.com/product/722817/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-renekton-butcher-of-the-sands-metal-best-of",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-141-MB-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Best Of",
+  "notes": "Rules data copied from our ven-141-166 (VEN-141/166). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-141-166-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/722820/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-renekton-butcher-of-the-sands-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-141-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our ven-141-166 (VEN-141/166). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-147-166-metal-best-of": {
+  "sources": [
+   "https://www.tcgplayer.com/product/722823/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-shen-eye-of-twilight-metal-best-of",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-147-MB-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Best Of",
+  "notes": "Rules data copied from our ven-147-166 (VEN-147/166). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-147-166-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/722829/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-shen-eye-of-twilight-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-147-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our ven-147-166 (VEN-147/166). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-143-166-metal-prize-wall": {
+  "sources": [
+   "https://www.tcgplayer.com/product/722830/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-zed-master-of-shadows-metal-prize-wall",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-143-MP-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Prize Wall",
+  "notes": "Rules data copied from our ven-143-166 (VEN-143/166). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-143-166-metal-best-of": {
+  "sources": [
+   "https://www.tcgplayer.com/product/722831/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-zed-master-of-shadows-metal-best-of",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/VEN-143-MB-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Organized Play Promotional Cards - Metal Best Of",
+  "notes": "Rules data copied from our ven-143-166 (VEN-143/166). Metal (foil-plated) printing; the image shows the printed art, the metal finish is not visible. dotgg uses the same image for the Best Of and Prize Wall printings."
+ },
+ "opp-068-166": {
+  "sources": [
+   "https://www.tcgplayer.com/product/723239/riftbound-league-of-legends-trading-card-game-riftbound-organized-play-promotional-cards-jayce-brilliant-inventor",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://playriftbound.com/en-us/news/organizedplay/all-eyes-on-los-angeles/",
+   "https://tcgplayer-cdn.tcgplayer.com/product/723239_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "Vendetta-season Regional Qualifiers (Singapore, Barcelona, Los Angeles)",
+  "notes": "Rules data copied from our ven-068-166 (VEN-068/166)."
+ },
+ "pr-132-167": {
+  "sources": [
+   "https://www.tcgplayer.com/product/724468/riftbound-league-of-legends-trading-card-game-riftbound-promotional-cards-heimerdinger-academy-instructor",
+   "https://tcgcsv.com/tcgplayer/89/groups",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://playriftbound.com/en-us/news/announcements/preparing-for-the-radiance-pre-rift/",
+   "https://static.dotgg.gg/riftbound/cards/RAD-132-P.webp",
+   "https://tcgplayer-cdn.tcgplayer.com/product/724468_in_1000x1000.jpg"
+  ],
+  "confidence": "confirmed",
+  "product": "Riftbound Promotional Cards",
+  "notes": "Rules data copied from our rad-132-167 (RAD-132/167)."
+ },
+ "opp-002-167": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-002-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance Nexus Night promo pack",
+  "notes": "Rules data copied from our rad-002-167 (RAD-002/167). dotgg points its TCGplayer id at the base card, so no separate TCGplayer listing was found."
+ },
+ "opp-008-167": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-008-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance Nexus Night promo pack",
+  "notes": "Rules data copied from our rad-008-167 (RAD-008/167). dotgg points its TCGplayer id at the base card, so no separate TCGplayer listing was found."
+ },
+ "opp-014-167": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-014-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance Nexus Night promo pack",
+  "notes": "Rules data copied from our rad-014-167 (RAD-014/167). dotgg points its TCGplayer id at the base card, so no separate TCGplayer listing was found."
+ },
+ "opp-019-167": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-019-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance Nexus Night promo pack",
+  "notes": "Rules data copied from our rad-019-167 (RAD-019/167). dotgg points its TCGplayer id at the base card, so no separate TCGplayer listing was found."
+ },
+ "opp-027-167": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-027-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance Nexus Night promo pack",
+  "notes": "Rules data copied from our rad-027-167 (RAD-027/167). dotgg points its TCGplayer id at the base card, so no separate TCGplayer listing was found."
+ },
+ "opp-029-167": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-029-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance Nexus Night promo pack",
+  "notes": "Rules data copied from our rad-029-167 (RAD-029/167). dotgg points its TCGplayer id at the base card, so no separate TCGplayer listing was found."
+ },
+ "opp-037-167": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-037-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance Nexus Night promo pack",
+  "notes": "Rules data copied from our rad-037-167 (RAD-037/167). dotgg points its TCGplayer id at the base card, so no separate TCGplayer listing was found."
+ },
+ "opp-041-167": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-041-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance Nexus Night promo pack",
+  "notes": "Rules data copied from our rad-041-167 (RAD-041/167). dotgg points its TCGplayer id at the base card, so no separate TCGplayer listing was found. Corrected from the printed card: rad-041-167 has an empty type; the card is printed SPELL. The base record needs the same fix."
+ },
+ "opp-048-167": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-048-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance Nexus Night promo pack",
+  "notes": "Rules data copied from our rad-048-167 (RAD-048/167). dotgg points its TCGplayer id at the base card, so no separate TCGplayer listing was found."
+ },
+ "opp-054-167": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-054-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance Nexus Night promo pack",
+  "notes": "Rules data copied from our rad-054-167 (RAD-054/167). dotgg points its TCGplayer id at the base card, so no separate TCGplayer listing was found."
+ },
+ "opp-055-167": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-055-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance Nexus Night promo pack",
+  "notes": "Rules data copied from our rad-055-167 (RAD-055/167). dotgg points its TCGplayer id at the base card, so no separate TCGplayer listing was found."
+ },
+ "opp-066-167": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-066-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance Nexus Night promo pack",
+  "notes": "Rules data copied from our rad-066-167 (RAD-066/167). dotgg points its TCGplayer id at the base card, so no separate TCGplayer listing was found."
+ },
+ "opp-070-167": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-070-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance Nexus Night promo pack",
+  "notes": "Rules data copied from our rad-070-167 (RAD-070/167). dotgg points its TCGplayer id at the base card, so no separate TCGplayer listing was found."
+ },
+ "opp-076-167": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-076-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance Nexus Night promo pack",
+  "notes": "Rules data copied from our rad-076-167 (RAD-076/167). dotgg points its TCGplayer id at the base card, so no separate TCGplayer listing was found."
+ },
+ "opp-083-167": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-083-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance Nexus Night promo pack",
+  "notes": "Rules data copied from our rad-083-167 (RAD-083/167). dotgg points its TCGplayer id at the base card, so no separate TCGplayer listing was found."
+ },
+ "opp-087-167": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-087-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance Nexus Night promo pack",
+  "notes": "Rules data copied from our rad-087-167 (RAD-087/167). dotgg points its TCGplayer id at the base card, so no separate TCGplayer listing was found. Corrected from the printed card: rad-087-167 has type \"Unit\"; the card is printed GEAR. The base record needs the same fix."
+ },
+ "opp-094-167": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-094-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance Nexus Night promo pack",
+  "notes": "Rules data copied from our rad-094-167 (RAD-094/167). dotgg points its TCGplayer id at the base card, so no separate TCGplayer listing was found."
+ },
+ "opp-096-167": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-096-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance Nexus Night promo pack",
+  "notes": "Rules data copied from our rad-096-167 (RAD-096/167). dotgg points its TCGplayer id at the base card, so no separate TCGplayer listing was found."
+ },
+ "opp-105-167": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-105-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance Nexus Night promo pack",
+  "notes": "Rules data copied from our rad-105-167 (RAD-105/167). dotgg points its TCGplayer id at the base card, so no separate TCGplayer listing was found."
+ },
+ "opp-107-167": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-107-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance Nexus Night promo pack",
+  "notes": "Rules data copied from our rad-107-167 (RAD-107/167). dotgg points its TCGplayer id at the base card, so no separate TCGplayer listing was found."
+ },
+ "opp-119-167": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-119-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance Nexus Night promo pack",
+  "notes": "Rules data copied from our rad-119-167 (RAD-119/167). dotgg points its TCGplayer id at the base card, so no separate TCGplayer listing was found."
+ },
+ "opp-122-167": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-122-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance Nexus Night promo pack",
+  "notes": "Rules data copied from our rad-122-167 (RAD-122/167). dotgg points its TCGplayer id at the base card, so no separate TCGplayer listing was found."
+ },
+ "opp-127-167": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-127-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance Nexus Night promo pack",
+  "notes": "Rules data copied from our rad-127-167 (RAD-127/167). dotgg points its TCGplayer id at the base card, so no separate TCGplayer listing was found. Corrected from the printed card: rad-127-167 has an empty type (printed SPELL) and its text ends in a stray \"disa\" and reads \"from hand\" where the card says \"from your hand\". The base record needs the same fix."
+ },
+ "opp-130-167": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-130-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance Nexus Night promo pack",
+  "notes": "Rules data copied from our rad-130-167 (RAD-130/167). dotgg points its TCGplayer id at the base card, so no separate TCGplayer listing was found. Corrected from the printed card: rad-130-167 has type \"Spell\"; the card is printed UNIT. The base record needs the same fix."
+ },
+ "opp-110a-167": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-110A-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance Nexus Night chase card (Lulu, Whimsical alt art)",
+  "notes": "Rules data copied from our rad-110-167 (RAD-110/167)."
+ },
+ "opp-015-167-top-8": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-015-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance Summoner Skirmish 1 (Nov 2026) Top 8",
+  "notes": "Rules data copied from our rad-015-167 (RAD-015/167)."
+ },
+ "opp-015-167-champion": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-015-P2.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance Summoner Skirmish 1 (Nov 2026) Champion",
+  "notes": "Rules data copied from our rad-015-167 (RAD-015/167)."
+ },
+ "opp-085-167": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-085-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance Summoner Skirmish 1 (Nov 2026) Participation",
+  "notes": "Rules data copied from our rad-085-167 (RAD-085/167)."
+ },
+ "opp-038-167-top-8": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-038-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance Summoner Skirmish 2 (Dec 2026) Top 8",
+  "notes": "Rules data copied from our rad-038-167 (RAD-038/167)."
+ },
+ "opp-038-167-champion": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-038-P2.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance Summoner Skirmish 2 (Dec 2026) Champion",
+  "notes": "Rules data copied from our rad-038-167 (RAD-038/167)."
+ },
+ "opp-110-167": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/the-radiance-overview/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-110-P.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance Summoner Skirmish 2 (Dec 2026) Participation",
+  "notes": "Rules data copied from our rad-110-167 (RAD-110/167)."
+ },
+ "opp-178-221-top-8": {
+  "sources": [
+   "https://riftbound.gg/riftbound-promo-cards-list-how-get/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/SFD-178-P.webp"
+  ],
+  "confidence": "partial",
+  "product": "Regional Qualifier Bologna Top 8",
+  "notes": "Rules data copied from our sfd-178-221 (SFD-178/221). dotgg points its TCGplayer id at the base card, so no separate TCGplayer listing was found. Partial: not on TCGplayer (dotgg points its marketId at the base card)."
+ },
+ "opp-178a-221": {
+  "sources": [
+   "https://riftbound.gg/riftbound-promo-cards-list-how-get/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/SFD-178a-P.webp"
+  ],
+  "confidence": "partial",
+  "product": "Regional Qualifier Bologna Champion",
+  "notes": "Rules data copied from our sfd-178-221 (SFD-178/221). dotgg points its TCGplayer id at the base card, so no separate TCGplayer listing was found. Partial: not on TCGplayer (dotgg points its marketId at the base card). New art by Andres Blanco."
+ },
+ "opp-193a-298": {
+  "sources": [
+   "https://riftbound.gg/riftbound-promo-cards-list-how-get/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/OGN-193a-P.webp"
+  ],
+  "confidence": "partial",
+  "product": "Regional Qualifier Houston Top 8",
+  "notes": "Rules data copied from our ogn-193-298 (OGN-193/298). Partial: not on TCGplayer. dotgg image is the OGN-193a alt art with the event mark in place of the set symbol (checked against our ogn-193a-298 image)."
+ },
+ "opp-193b-298": {
+  "sources": [
+   "https://riftbound.gg/riftbound-promo-cards-list-how-get/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/OGN-193b.webp"
+  ],
+  "confidence": "partial",
+  "product": "Regional Qualifier Houston Champion",
+  "notes": "Rules data copied from our ogn-193-298 (OGN-193/298). Partial: not on TCGplayer; dotgg and Piltover Archive only."
+ },
+ "opp-178b-219": {
+  "sources": [
+   "https://riftbound.gg/riftbound-promo-cards-list-how-get/",
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/UNL-178b-P.webp"
+  ],
+  "confidence": "partial",
+  "product": "Unleashed-season Regional Qualifier promo",
+  "notes": "Rules data copied from our unl-178-219 (UNL-178/219). dotgg points its TCGplayer id at the base card, so no separate TCGplayer listing was found. Partial: not on TCGplayer. Image shows the CHAMPION stamp."
+ }
+}

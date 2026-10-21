@@ -1,9 +1,13 @@
 /**
  * Downloads every Riftbound card and writes the snapshot the app loads,
- * public/data/cards.json. Two sources (see src/data/normalize.ts):
+ * public/data/cards.json. Sources (see src/data/normalize.ts and dotgg.ts):
  *
  *   Riot's official card gallery  - primary, includes preview sets
  *   Riftcodex community API       - promos, flavour text, variant flags
+ *   riftbound.gg (dotgg) API      - repairs: supertypes, tags, errata, and
+ *                                   Radiance's types and domains
+ *   data/supplement-cards.json    - English printings none of them list
+ *   data/image-overrides.json     - where a source shows the wrong art
  *
  * The untouched responses go to data/raw/ (git-ignored), so the normaliser
  * can be re-run without the network:
@@ -16,10 +20,13 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { zipDotgg, type DotggRow } from '../src/data/dotgg.ts';
 import { buildDb } from '../src/data/normalize.ts';
+import type { Card } from '../src/data/types.ts';
 
 const RIOT = 'https://content.publishing.riotgames.com/publishing-content/v2.0/public/channel/riftbound_website/list/riftbound_gallery_cards';
 const RIFTCODEX = process.env.RIFTCODEX_API ?? 'https://api.riftcodex.com';
+const DOTGG = 'https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const raw = (name: string) => resolve(root, 'data/raw', name);
@@ -73,6 +80,14 @@ async function fetchRiftcodex(): Promise<Rec[]> {
   return all;
 }
 
+async function fetchDotgg(): Promise<Rec[]> {
+  const data = await getJson(DOTGG);
+  if (!Array.isArray(data.names) || !Array.isArray(data.data)) throw new Error('dotgg: unexpected response');
+  const rows = zipDotgg(data as { names: string[]; data: unknown[][] });
+  console.log(`riftbound.gg: ${rows.length} cards`);
+  return rows as unknown as Rec[];
+}
+
 async function cached(name: string, offline: boolean, fetcher: () => Promise<Rec[]>): Promise<Rec[]> {
   if (offline) return JSON.parse(await readFile(raw(name), 'utf8'));
   const data = await fetcher();
@@ -85,8 +100,14 @@ async function main() {
   const offline = process.argv.includes('--raw');
   const riot = await cached('riot-gallery.json', offline, fetchRiot);
   const riftcodex = await cached('riftcodex-cards.json', offline, fetchRiftcodex);
+  const dotgg = await cached('dotgg-cards.json', offline, fetchDotgg) as unknown as DotggRow[];
+  const local = async <T>(name: string): Promise<T> => JSON.parse(await readFile(resolve(root, 'data', name), 'utf8'));
 
-  const db = buildDb(riot, riftcodex);
+  const db = buildDb(riot, riftcodex, {
+    dotgg,
+    cards: await local<Card[]>('supplement-cards.json'),
+    images: await local<Record<string, string>>('image-overrides.json'),
+  });
   await mkdir(dirname(outPath), { recursive: true });
   await writeFile(outPath, JSON.stringify(db));
 

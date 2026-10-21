@@ -142,7 +142,15 @@ export function Inspector({ target, db, onClose }: { target: InspectTarget; db: 
           )}
 
           {slab && <GradeReport slab={slab} />}
-          {card.text && <RulesText text={card.text} db={db} />}
+          {card.errata ? (
+            <>
+              <RulesText text={card.errata} db={db} />
+              <details className="printed">
+                <summary className="muted small">Errata: Riot has updated this card's wording. As printed</summary>
+                <RulesText text={card.text} db={db} />
+              </details>
+            </>
+          ) : card.text && <RulesText text={card.text} db={db} />}
           {card.flavor && <p className="flavor">{card.flavor}</p>}
           {card.tags.length > 0 && <p className="muted small">Tags: {card.tags.join(', ')}</p>}
           {card.artist && <p className="muted small">Illustrated by {card.artist}</p>}

@@ -74,6 +74,29 @@ export function preloadCards(cards: Card[]): void {
   names.reduce<Promise<unknown>>((p, n) => p.then(() => loadBundle(n).catch(() => undefined)), Promise.resolve());
 }
 
+const decoded = new Map<string, Promise<boolean>>();
+
+/** Resolves true once the card's art at about `width` px is downloaded and
+    decoded, false if it can't be had (tried again on the next call). */
+export function cardImageReady(card: Card, width: number): Promise<boolean> {
+  const key = `${card.id}@${width}`;
+  let p = decoded.get(key);
+  if (!p) {
+    const bundle = bundleOf(card);
+    const src = bundle ? loadBundle(bundle).then((urls) => urls[card.id] ?? '') : Promise.resolve(imageAt(card, width));
+    p = src.then((s) => {
+      if (!s) return false;
+      const img = new Image();
+      img.decoding = 'async';
+      img.src = s;
+      return img.decode().then(() => true, () => false);
+    }, () => false);
+    decoded.set(key, p);
+    p.then((ok) => { if (!ok) decoded.delete(key); });
+  }
+  return p;
+}
+
 const RETRIES = 4;
 
 /** The card's image URL at roughly `width` px; '' while it loads or if it fails. */

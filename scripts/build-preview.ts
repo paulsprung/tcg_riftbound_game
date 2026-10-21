@@ -19,6 +19,7 @@
  *
  * Downloaded art is cached in data/raw/preview-img/ (git-ignored).
  */
+import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { cp, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
@@ -66,11 +67,32 @@ async function cardArt(card: Card): Promise<Buffer | null> {
   const key = createHash('sha1').update(`${card.image}|${WIDTH}|${QUALITY}`).digest('hex').slice(0, 10);
   const file = resolve(cache, `${safe(card.id)}-${key}.webp`);
   if (existsSync(file)) return readFile(file);
-  const sep = card.image.includes('?') ? '&' : '?';
-  const bytes = await fetchBytes(`${card.image}${sep}w=${WIDTH}&fm=webp&q=${QUALITY}`);
+  let bytes: Buffer;
+  if (/rgpub\.io/.test(card.image)) {
+    // Riot's image server resizes and re-encodes on request
+    const sep = card.image.includes('?') ? '&' : '?';
+    bytes = await fetchBytes(`${card.image}${sep}w=${WIDTH}&fm=webp&q=${QUALITY}`);
+  } else {
+    // other hosts serve one size: resize and encode it here (Pillow)
+    const src = `${file}.src`;
+    await writeFile(src, await fetchBytes(card.image));
+    execFileSync('python3', ['-I', '-c', RESIZE, src, file, String(WIDTH), String(QUALITY)]);
+    await rm(src);
+    bytes = await readFile(file);
+  }
   await writeFile(file, bytes);
   return bytes;
 }
+
+const RESIZE = `
+import sys
+from PIL import Image
+src, dst, w, q = sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4])
+im = Image.open(src).convert('RGBA')
+if im.width > w:
+    im = im.resize((w, round(im.height * w / im.width)), Image.LANCZOS)
+im.save(dst, 'WEBP', quality=q, method=6)
+`;
 
 async function dataUri(url: string): Promise<string> {
   const bytes = await fetchBytes(url);
