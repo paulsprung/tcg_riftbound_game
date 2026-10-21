@@ -93,6 +93,7 @@ body::before {
 
 @media (max-width: 760px) {
   .top { flex-wrap: wrap; gap: 8px 12px; }
+  .foil-toggle + .foil-toggle { margin-left: 0; }
   .nav { order: 3; flex-basis: 100%; }
   /* The tabs scroll sideways; fade the edge so a cut-off tab reads as more. */
   .nav {

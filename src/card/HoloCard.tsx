@@ -4,8 +4,10 @@ import { isReadable, useCardImage } from '../data/images.ts';
 import type { Finish } from '../pack/generate.ts';
 import { CardBack } from './CardBack.tsx';
 import { HoloCanvas, type HoloCanvasHandle } from './HoloCanvas.tsx';
+import { useHoloVersion } from './holoVersion.ts';
 import { createTilt } from './tilt.ts';
 import './holo.css';
+import './holo-classic.css';
 
 export interface HoloCardProps {
   card: Card;
@@ -53,6 +55,8 @@ export function HoloCard({
   // null: not tried yet; true: the shader draws the card; false: CSS foil
   const [glOk, setGlOk] = useState<boolean | null>(null);
   const foilStyle = useSyncExternalStore(subscribeFoil, readFoil, readFoil);
+  const version = useHoloVersion();
+  const classic = version === 'a';
 
   useEffect(() => {
     if (tilt === 'off' || !scene.current) return;
@@ -119,7 +123,7 @@ export function HoloCard({
               <div className="hc__loading" aria-hidden />
             )}
             {useGl && (
-              <HoloCanvas ref={holo} src={src} finish={finish} rarity={card.rarity} style={foilStyle}
+              <HoloCanvas ref={holo} src={src} finish={finish} rarity={card.rarity} style={foilStyle} version={version}
                 className={`${imgClass} hc__gl${glShown ? ' is-loaded' : ''}`} onReady={setGlOk} />
             )}
             {/* CSS foil (holo.css). cut: the ink in the etched lines darkens
@@ -130,31 +134,48 @@ export function HoloCard({
                 ridge lights each line's flank. ice: the ultimate's cracked-ice
                 flashes. glit: glitter flakes, added on top. The .hc__hold
                 copies keep the marbling off the figure. */}
-            {!glShown && loaded && marbled && (
+            {/* Version A: the original CSS foil (holo-classic.css). */}
+            {classic && !glShown && ETCHED.includes(finish) && loaded && (
+              <span className="hcc-etch" aria-hidden>
+                <img className={imgClass + ' is-loaded'} src={src} alt="" draggable={false} />
+                <span className="hcc-etch-tint" />
+              </span>
+            )}
+            {classic && !glShown && (
+              <>
+                {finish === 'ultimate' && <span className="hc__fx hcc-cosmos" aria-hidden />}
+                <span className="hc__fx hcc-prism" aria-hidden />
+                <span className="hc__fx hcc-foil" aria-hidden />
+                <span className="hc__fx hcc-sparkle" aria-hidden />
+                <span className="hc__fx hcc-band" aria-hidden />
+                <span className="hc__fx hcc-glare" aria-hidden />
+              </>
+            )}
+            {!classic && !glShown && loaded && marbled && (
               <span className="hc__fx hc__cut" aria-hidden>{copy('hc__hold')}</span>
             )}
-            {!glShown && loaded && finish !== 'none' && (
+            {!classic && !glShown && loaded && finish !== 'none' && (
               <span className="hc__fx hc__shine" aria-hidden>
                 {copy('hc__key')}
                 {ETCHED.includes(finish) && <span className="hc__groove">{marbled && copy('hc__hold')}</span>}
                 {marbled && <span className="hc__ridge">{copy('hc__hold')}</span>}
               </span>
             )}
-            {!glShown && loaded && finish === 'ultimate' && (
+            {!classic && !glShown && loaded && finish === 'ultimate' && (
               <span className="hc__fx hc__ice" aria-hidden>
                 <span className="hc__ice-f" />
                 {copy('hc__key')}
               </span>
             )}
-            {!glShown && loaded && finish !== 'none' && glitter && (
+            {!classic && !glShown && loaded && finish !== 'none' && glitter && (
               <span className="hc__fx hc__glit" aria-hidden><span className="hc__flash" /></span>
             )}
-            {!glShown && loaded && finish === 'signature' && (
+            {!classic && !glShown && loaded && finish === 'signature' && (
               <span className="hc__fx hc__sig hc__sig--auto" aria-hidden>
                 <img className={`${imgClass} is-loaded`} src={src} alt="" draggable={false} />
               </span>
             )}
-            {!glShown && <span className="hc__fx hc__glare" aria-hidden />}
+            {!classic && !glShown && <span className="hc__fx hc__glare" aria-hidden />}
           </div>
           <div className="hc__face hc__face--back">
             <CardBack rune={/rune/i.test(card.type)} />
@@ -172,5 +193,25 @@ export function HoloCard({
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * The SVG filter version A's etched foil uses: an edge detector over the
+ * card art. Rendered once, near the app root.
+ */
+export function FoilDefs() {
+  return (
+    <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden focusable="false">
+      <filter id="rb-etch" colorInterpolationFilters="sRGB" x="0" y="0" width="100%" height="100%">
+        <feColorMatrix type="saturate" values="0" result="grey" />
+        <feConvolveMatrix in="grey" order="3" kernelMatrix="-1 -1 -1 -1 8 -1 -1 -1 -1" preserveAlpha="true" result="edges" />
+        <feComponentTransfer in="edges">
+          <feFuncR type="linear" slope="5" intercept="-0.12" />
+          <feFuncG type="linear" slope="5" intercept="-0.12" />
+          <feFuncB type="linear" slope="5" intercept="-0.12" />
+        </feComponentTransfer>
+      </filter>
+    </svg>
   );
 }

@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
+import { FoilDefs } from './card/HoloCard.tsx';
+import { HOLO_VERSIONS, setHoloVersion, useHoloVersion } from './card/holoVersion.ts';
 import { Inspector, type InspectTarget } from './card/Inspector.tsx';
 import { useCardDb } from './data/useCardDb.ts';
 import { CardsView } from './views/CardsView.tsx';
@@ -31,6 +33,7 @@ export function App() {
   const [route, setRoute] = useState<Route>(routeFromHash);
   const [inspect, setInspect] = useState<InspectTarget | null>(null);
   const [foil, setFoil] = useState<FoilStyle>(readFoil);
+  const holoVersion = useHoloVersion();
 
   useEffect(() => {
     const on = () => setRoute(routeFromHash());
@@ -47,6 +50,7 @@ export function App() {
 
   return (
     <div className="app">
+      <FoilDefs />
       <header className="top">
         <a className="brand" href="#packs">
           <span className="brand__mark" aria-hidden>◆</span>
@@ -59,6 +63,14 @@ export function App() {
             </a>
           ))}
         </nav>
+        <div className="foil-toggle" role="group" aria-label="Holo version">
+          <span className="foil-toggle__label">Holo</span>
+          {HOLO_VERSIONS.map((v) => (
+            <button key={v.id} type="button" aria-pressed={holoVersion === v.id} onClick={() => setHoloVersion(v.id)} title={v.title}>
+              {v.label}
+            </button>
+          ))}
+        </div>
         <div className="foil-toggle" role="group" aria-label="Foil style">
           <span className="foil-toggle__label">Foil</span>
           {(['subtle', 'vivid'] as const).map((f) => (

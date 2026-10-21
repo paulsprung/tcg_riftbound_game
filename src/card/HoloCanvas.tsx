@@ -1,5 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import type { Finish } from '../pack/generate.ts';
+import type { HoloVersion } from './holoVersion.ts';
 import type { TiltState } from './tilt.ts';
 import { createHolo, type HoloRenderer } from './holoGl.ts';
 
@@ -12,6 +13,7 @@ interface Props {
   finish: Finish;
   rarity: string;
   style: 'subtle' | 'vivid';
+  version: HoloVersion;
   className?: string;
   /** Called once the first frame is on screen, or with false if WebGL is
       unavailable (the caller then shows the CSS foil instead). */
@@ -30,7 +32,7 @@ const REST: TiltState = { tx: 0, ty: 0, px: 50, py: 50, pfc: 0, on: 0 };
  * mount draws into a canvas of its own, created here.
  */
 export const HoloCanvas = forwardRef<HoloCanvasHandle, Props>(function HoloCanvas(
-  { src, finish, rarity, style, className = '', onReady },
+  { src, finish, rarity, style, version, className = '', onReady },
   ref,
 ) {
   const host = useRef<HTMLDivElement>(null);
@@ -65,7 +67,7 @@ export const HoloCanvas = forwardRef<HoloCanvasHandle, Props>(function HoloCanva
     img.decode().then(() => {
       if (!alive) return;
       try {
-        renderer.current = createHolo(canvas, { image: img, finish, rarity, style });
+        renderer.current = createHolo(canvas, { image: img, finish, rarity, style, version });
       } catch {
         fail();
         return;
@@ -91,7 +93,7 @@ export const HoloCanvas = forwardRef<HoloCanvasHandle, Props>(function HoloCanva
       renderer.current = null;
       canvas.remove();
     };
-  }, [src, finish, rarity, style]);
+  }, [src, finish, rarity, style, version]);
 
   return <div ref={host} className={className} aria-hidden />;
 });
