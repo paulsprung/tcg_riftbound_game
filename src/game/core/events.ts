@@ -35,7 +35,7 @@ export type EventBody =
   | { k: 'shuffle'; p: PlayerId; zone: 'deck' | 'runeDeck'; count: number } | { k: 'forget'; p: PlayerId; zone: 'hand' }
   | { k: 'tokenGone'; obj: ObjId }
   | { k: 'chainPush'; item: ItemId; kind: ChainItem['kind']; source?: ObjId } | { k: 'finalize' | 'chainPop' | 'counter'; item: ItemId }
-  | { k: 'playFailed'; item: ItemId; reason: string } | { k: 'played'; item: ItemId; def: DefId }
+  | { k: 'playFailed'; item: ItemId; reason: string } | { k: 'played'; item: ItemId; def: DefId; p?: PlayerId }
   | { k: 'enter'; obj: ObjId; at: Loc; exhausted: boolean } | { k: 'exhaust' | 'ready'; objs: ObjId[] }
   | { k: 'deal'; to: ObjId; n: number; sources: ObjId[]; combat: boolean } | { k: 'heal'; objs: ObjId[] }
   | { k: 'kill'; objs: ObjId[] } | { k: 'buff' | 'spendBuff' | 'stun' | 'unstun' | 'empower' | 'disempower'; objs: ObjId[] }

@@ -20,7 +20,7 @@
  *
  * Assigning is not dealing [467.2.c.1]: the frame hands its assignment back
  * to the damage step, which deals both sides' at once. Replacement effects
- * would fold into `applied` here [467.2.c.5]; there are none in M1.1, and
+ * would fold into `applied` here [467.2.c.5]; there are none before M1.3, and
  * no unit is exempt, so applied = raw.
  */
 import { K, parseKey, type Option } from '../core/decisions.ts';

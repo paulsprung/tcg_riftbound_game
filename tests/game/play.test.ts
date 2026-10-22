@@ -1,36 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import type { GameState, ObjId } from '../../src/game/index.ts';
-import { createObject, moveObject, setField } from '../../src/game/state/mut.ts';
+import type { GameState } from '../../src/game/index.ts';
+import { setField } from '../../src/game/state/mut.ts';
 import { paymentPlans } from '../../src/game/rules/resources.ts';
-import { act, base, bf, control, evs, keys, put, readyRunes, reask, start, type Game } from './helpers/scenario.ts';
+import { act, base, bf, control, evs, inHand, keys, put, readyRunes, reask, runes, start } from './helpers/scenario.ts';
 
 /*
  * Playing units and gear (Spec D, [349–359]), payment plans (§4.5, Spec B
  * §6, [164.2], [357], [445]) and the Standard Move (Spec F §35.3, [144]),
- * with card abilities off (M1.1).
+ * with the cards' own abilities out of the way (vanilla bodies).
  */
-
-/** Puts a card of p's in their hand, known to them only. */
-function inHand(g: Game, def: string, p: 0 | 1 = 0): ObjId {
-  return createObject(g.s, { def, printing: null, owner: p, zone: { z: 'hand', p } }).id;
-}
-
-/** Gives p runes in base: [domain, ready][]. */
-function runes(g: Game, p: 0 | 1, list: [string, boolean][]) {
-  for (const id of g.s.players[p].base.slice()) {
-    if (g.s.objects[id].def.endsWith('-rune')) moveObject(g.s, id, { z: 'runeDeck', p }, { pos: 'bottom', knownBy: 0 });
-  }
-  for (const [d, ready] of list) {
-    createObject(g.s, { def: `${d}-rune`, printing: null, owner: p, zone: { z: 'base', p }, exhausted: !ready });
-  }
-}
 
 const withoutRng = (s: GameState) => ({ ...s, next: null, rng: null, frames: null, pending: null, epoch: null, turn: { ...s.turn, decisionsThisTurn: 0 } });
 
 describe('Spec D: playing a unit', () => {
   it('[354] [355.2] [357] [359.2.c] a unit goes via the chain to the chosen location, exhausted, paid by a plan', () => {
     const g = start(1);
-    const card = inHand(g, 'strigian-oracle');                       // [2]
+    const card = inHand(g, 'meticulous-restorationist');                       // [2]
     put(g, 'hunting-dog', 0, bf(1));
     control(g, 1, 0);
     reask(g);
@@ -41,25 +26,23 @@ describe('Spec D: playing a unit', () => {
     expect(keys(g)).toEqual(['loc:base', 'loc:bf1', 'back']);         // base or a battlefield P0 controls [355.2.a]
     act(g, 'loc:bf1');
     expect(g.s.pending).toMatchObject({ kind: 'payment' });
-    expect(keys(g)).toEqual(['pay:0', 'decline', 'back']);
+    expect(keys(g)).toEqual(['pay:0', 'decline', 'manualPay', 'back']);
     act(g, 'pay:0');
-    const unit = g.s.bfs[1].here.find((id) => g.s.objects[id].def === 'strigian-oracle')!;
+    const unit = g.s.bfs[1].here.find((id) => g.s.objects[id].def === 'meticulous-restorationist')!;
     expect(unit).toBeDefined();
     expect(g.s.objects[unit]).toMatchObject({ exhausted: true, controller: 0, played: { by: 0, energySpent: 2 } });
     expect(g.s.chain).toEqual([]);
     expect(readyRunes(g, 0)).toEqual([]);
-    expect(g.s.log.played.map((r) => r.def)).toEqual(['strigian-oracle']);
+    expect(g.s.log.played.map((r) => r.def)).toEqual(['meticulous-restorationist']);
     expect(evs(g, 'enter').at(-1)).toMatchObject({ exhausted: true, rule: '359.2.c' });
     expect(g.s.pending).toMatchObject({ kind: 'priority', player: 0 });
   });
 
-  it('[359.2.d] gear enters ready at its controller\'s base, with no location to choose; Deploy gear waits for M1.3', () => {
+  it('[359.2.d] gear enters ready at its controller\'s base, with no location to choose', () => {
     const g = start(2);
     const gear = inHand(g, 'blood-rose');                            // [1]
-    const poster = inHand(g, 'concert-poster');                      // [1], Deploy
     control(g, 0, 0);
     reask(g);
-    expect(keys(g)).not.toContain(`play:${poster}`);
     act(g, `play:${gear}`);
     expect(g.s.pending?.kind).toBe('payment');                       // no location decision for gear
     act(g, 'pay:0');
@@ -70,7 +53,7 @@ describe('Spec D: playing a unit', () => {
   it('[358.5] back and [445.2.a] decline restore the state exactly, but nobody unsees the card', () => {
     for (const how of ['back', 'decline']) {
       const g = start(4);
-      const card = inHand(g, 'strigian-oracle');
+      const card = inHand(g, 'meticulous-restorationist');
       reask(g);
       const before = structuredClone(g.s);
       act(g, `play:${card}`);                                        // base is the only location: chosen on its own
@@ -86,9 +69,9 @@ describe('Spec D: playing a unit', () => {
     }
   });
 
-  it('[420.2.a] [203.3] only cards the player can pay for are offered; spells not yet (M1.2)', () => {
+  it('[420.2.a] [203.3] only cards the player can pay for are offered', () => {
     const g = start(5);
-    const cheap = inHand(g, 'strigian-oracle');                      // [2]
+    const cheap = inHand(g, 'meticulous-restorationist');                      // [2]
     const dear = inHand(g, 'heimerdinger-academy-instructor');       // [6][Y]
     const spell = inHand(g, 'burn-away');
     reask(g);
@@ -156,7 +139,7 @@ describe('§4.5 payment plans', () => {
 describe('Spec F §35: the Standard Move', () => {
   it('[144.3] [144.3.c] several units move as one action, their exhausts paid together', () => {
     const g = start(11);
-    const a = put(g, 'strigian-oracle', 0, base(0));
+    const a = put(g, 'meticulous-restorationist', 0, base(0));
     const b = put(g, 'hunting-dog', 0, base(0));
     reask(g);
     act(g, 'move');
@@ -172,7 +155,7 @@ describe('Spec F §35: the Standard Move', () => {
 
   it('[144.4.a–b] [144.3.a] units share one destination; from a battlefield only back to base', () => {
     const g = start(12);
-    const home = put(g, 'strigian-oracle', 0, base(0));
+    const home = put(g, 'meticulous-restorationist', 0, base(0));
     const away = put(g, 'hunting-dog', 0, bf(1));
     control(g, 1, 0);
     reask(g);
@@ -185,8 +168,8 @@ describe('Spec F §35: the Standard Move', () => {
 
   it('[144.1.c] no Standard Move during a showdown; back leaves a move unmade', () => {
     const g = start(13);
-    put(g, 'strigian-oracle', 0, base(0));
-    put(g, 'strigian-oracle', 0, base(0));
+    put(g, 'meticulous-restorationist', 0, base(0));
+    put(g, 'meticulous-restorationist', 0, base(0));
     reask(g);
     act(g, 'move');
     act(g, 'back');

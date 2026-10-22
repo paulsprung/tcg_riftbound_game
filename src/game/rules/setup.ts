@@ -30,7 +30,7 @@ import { K, parseKey, type Option } from '../core/decisions.ts';
 import { EngineError, NotImplementedError } from '../core/errors.ts';
 import { emit, emitZone, knowers, newGroup } from '../core/events.ts';
 import { answer, ask, defineStart, defineSteps, next, type FrameOf, type RunCtx, type StepTable } from '../core/frames.ts';
-import { hashString, stableJson } from '../state/clone.ts';
+import { defsHash } from '../cards/registry.ts';
 import {
   createBattlefield, createObject, moveObject, pushFrame, setField,
 } from '../state/mut.ts';
@@ -118,15 +118,9 @@ function printingOf(d: DeckList, def: DefId, i: number): string | null {
   return ids[i] ?? ids[0] ?? null;
 }
 
-/**
- * The hash of the card definitions in effect, which records carry so a
- * replay runs against the same cards (§4.9). M0 has no card definitions
- * yet, so every game hashes the empty set; M1 hashes the definitions in the
- * card registry (cards/registry.ts) here.
- */
-function definitionsHash(): string {
-  return hashString(stableJson({ definitions: [] }));
-}
+/** The hash of the card definitions in effect, which records carry so a
+    replay runs against the same cards (§4.9): the registry's. */
+const definitionsHash = defsHash;
 
 // ---- turn order ----
 

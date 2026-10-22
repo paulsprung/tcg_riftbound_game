@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { CardDb } from '../data/types.ts';
+import { explainUnavailable } from '../game/index.ts';
 import type { GameHost } from './host/GameHost.ts';
 import { useHost } from './host/useHost.ts';
 import { boardOf, type CardSlot } from './model/board.ts';
@@ -44,8 +45,22 @@ export function GameScreen({ host, cards, db, onNewGame, onChangeDecks }: {
   const preview = useCallback((keys: string[]) => host.preview(keys), [host]);
   const commit = useCallback((keys: string[]) => { host.commit(keys); }, [host]);
   const mine = stage.k === 'deciding' && stage.mine && view.pending !== null;
-  const a = useMemo(() => (mine ? affordances(view, view.pending) : null), [mine, view]);
-  const acts = useMemo(() => ({ a, send: (key: string) => { host.commit([key]); } }), [a, host]);
+  const names = useCallback((d: string) => nameOf(cards, d), [cards]);
+  const a = useMemo(() => (mine ? affordances(view, view.pending, [], view.pending, names) : null), [mine, view, names]);
+  // Why a card in hand can't be played now (§12.7), for its tooltip: only
+  // while the human holds priority, from their own view.
+  const why = useMemo(() => {
+    const out: Record<number, string> = {};
+    if (!mine || view.pending?.kind !== 'priority') return out;
+    const me = view.players[view.me];
+    for (const id of [...me.hand, ...(me.champion === null ? [] : [me.champion])]) {
+      if (a?.objects[id]) continue;
+      const reasons = explainUnavailable(view, id);
+      if (reasons.length > 0) out[id] = reasons.map((r) => r.text).join(' ');
+    }
+    return out;
+  }, [mine, view, a]);
+  const acts = useMemo(() => ({ a, why, send: (key: string) => { host.commit([key]); } }), [a, why, host]);
   const playing = view.turn.n > 0;
   const [dismissed, setDismissed] = useState(false);
 

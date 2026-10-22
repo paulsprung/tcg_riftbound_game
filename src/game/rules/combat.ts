@@ -4,7 +4,7 @@
  * non-combat showdown becomes one [323.12–323.13], [466.1]); every step
  * after that is an Outstanding Task, so the master loop never waits
  * between them except for the assigners' choices and the chains their
- * triggers would make (none in M1.1, where card abilities are off).
+ * triggers make.
  *
  *   Step 1  [466]  startOfCombat, designations, placeCombatTriggers; then
  *                  the showdown is played as any other (rules/showdown.ts)
@@ -22,6 +22,7 @@
  */
 import { emit } from '../core/events.ts';
 import { call, takeRet } from '../core/frames.ts';
+import { collect, placeAll } from '../abilities/triggers.ts';
 import { EngineError } from '../core/errors.ts';
 import { append, setField } from '../state/mut.ts';
 import type { CombatState, GameState, ObjId, PlayerId } from '../state/types.ts';
@@ -72,19 +73,21 @@ export function designationFor(c: CombatState, controller: PlayerId | null): 'at
   return controller === c.attacker ? 'attacker' : controller === c.defender ? 'defender' : null;
 }
 
-/** Gives a unit its designation; the first time it gains one this combat
-    would make its attack or defend triggers pending [383.4.e–f]. */
-export function designate(s: GameState, id: ObjId, d: 'attacker' | 'defender' | null) {
+/** Gives a unit its designation. Returns whether it is the first time it
+    gains that one this combat: its attack or defend triggers then trigger
+    [383.4.e.2.a], [383.4.f.2.a]. */
+export function designate(s: GameState, id: ObjId, d: 'attacker' | 'defender' | null): boolean {
   const c = s.combat!;
   setField(s, s.objects[id], 'designation', d);
-  if (d === 'attacker' && !c.everAttacker.includes(id)) append(s, c.everAttacker, id);
-  if (d === 'defender' && !c.everDefender.includes(id)) append(s, c.everDefender, id);
+  if (d === 'attacker' && !c.everAttacker.includes(id)) { append(s, c.everAttacker, id); return true; }
+  if (d === 'defender' && !c.everDefender.includes(id)) { append(s, c.everDefender, id); return true; }
+  return false;
 }
 
 // ---- Step 1: the Combat Showdown [466] ----
 
 /** [466.2.b]: start-of-combat effects, and start-of-showdown effects with a
-    new showdown. No card abilities in M1.1. */
+    new showdown. No card defined so far has a start-of-combat ability. */
 defineTask('combat.startOfCombat', [(s, _f, x) => {
   const c = s.combat!;
   if (c.openedNewShowdown) emit(s, x, { k: 'showdownStart', bf: c.bf, rule: '466.2.b' });
@@ -101,17 +104,26 @@ defineTask('combat.designations', [(s, _f, x) => {
     setField(s, s.turn, 'focusPasses', 0);
     emit(s, x, { k: 'focus', p: c.attacker, rule: '466.2.c.1.a' });
   }
+  const first: ObjId[][] = [];
   for (const d of ['attacker', 'defender'] as const) {
     const units = unitsAt(s, { z: 'bf', bf: c.bf }).filter((id) => designationFor(c, s.objects[id].controller) === d);
-    for (const id of units) designate(s, id, d);
+    first.push(units.filter((id) => designate(s, id, d)));
     if (units.length > 0) emit(s, x, { k: 'designate', objs: units, d, rule: '466.2.c.3' });
   }
+  // [466.2.d]: the attack and defend triggers of the units designated for
+  // the first time this combat go on the chain, the Attacker's first
+  // [466.2.d.1] (a cleanup in between may have designated some already, and
+  // triggered them then [323.2]).
+  const batch = [...collect(s, { e: 'designated', objs: first[0], d: 'attacker' }),
+    ...collect(s, { e: 'designated', objs: first[1], d: 'defender' })];
+  if (batch.length > 0) placeAll(s, x, batch, 'combat');
   requestCleanup(s);                                                 // designations are a status [319.7]
   return 'done';
 }]);
 
-/** [466.2.d]: the attack and defend triggers go on the combat chain, the
-    Attacker's first [466.2.d.1]. None trigger in M1.1. */
+/** [466.2.d]: the combat triggers were placed as their units were
+    designated (the designations task, or cleanup step 2 when a cleanup came
+    first); nothing is left to do here. */
 defineTask('combat.placeCombatTriggers', [() => 'done']);
 
 // ---- Step 2: Combat Damage [467] ----

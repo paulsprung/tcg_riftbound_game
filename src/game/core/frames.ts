@@ -46,8 +46,22 @@ export interface RunCtx {
   limit: number;                 // EngineOptions.stepLimit
   present: boolean;              // build presentation events (StepOptions.present)
   check: boolean;                // assertInvariants after the step
-  feasibility: 'private' | 'direct' | 'cheap';   // §4.6 (M1)
-  budget: number;                // feasibility nodes per decision (M1)
+  feasibility: 'private' | 'direct' | 'cheap';   // §4.6
+  budget: number;                // feasibility nodes per decision
+  /** Plays and activations undone so far in this run (the feasibility
+      probe reads it: an option whose greedy completion rolled back can't
+      finish). */
+  rollbacks?: number;
+  /** Stop once fewer frames than this are left (the probe stops when the
+      play it tries is over). */
+  stopDepth?: number;
+}
+
+/** The feasibility filter of §4.6 (core/feasible.ts registers it). */
+export type FeasibilityFilter = (s: GameState, f: Frame, x: RunCtx, spec: AskSpec, options: Option[]) => Option[];
+let feasibility: FeasibilityFilter | null = null;
+export function defineFeasibility(fn: FeasibilityFilter) {
+  feasibility = fn;
 }
 
 export type FrameOf<K extends FrameTag> = Extract<Frame, { f: K }>;
@@ -176,14 +190,17 @@ export function ask(s: GameState, f: Frame, x: RunCtx, spec: AskSpec): StepOut {
   const extra: Option[] = spec.back && !spec.options.some((o) => o.key === 'back') ? [{ key: 'back', ui: true }] : [];
   const options = canonical([...spec.options, ...extra]);
   checkOptions(options, `${spec.kind} [${spec.ctx.rule}]`);
-  // M1: the feasibility filter of §4.6 (core/feasible.ts) narrows the options here, before the auto-apply check.
-  const auto = autoKey(spec, options);
+  // §4.6: only options that can finish are offered; the filter runs before
+  // the auto-apply check, and never inside its own probes.
+  const offered = feasibility && spec.kind === 'priority' && x.feasibility !== 'cheap'
+    ? feasibility(s, f, x, spec, options) : options;
+  const auto = autoKey(spec, offered);
   if (auto !== null) {
     f.answer = auto;
     return 'continue';
   }
   const d: Decision = {
-    id: mint(s, 'decision'), player: spec.player, kind: spec.kind, prompt: spec.prompt, options, ctx: spec.ctx,
+    id: mint(s, 'decision'), player: spec.player, kind: spec.kind, prompt: spec.prompt, options: offered, ctx: spec.ctx,
     privateOptions: spec.privateOptions,
   };
   if (spec.batch !== undefined) d.batch = spec.batch;

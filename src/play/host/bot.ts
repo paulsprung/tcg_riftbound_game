@@ -1,13 +1,18 @@
 import { parseKey, type DecisionKind, type Option, type PlayerView } from '../../game/index.ts';
 
 /*
- * The computer opponent of M1.1: a simple heuristic over the options the
+ * The computer opponent of M1.1–M1.2: a simple heuristic over the options the
  * engine lists, until the real AI arrives (§11, M1.4). Like the real AI it
  * is given only its own view, and it never answers with a UI-only option.
  *
- *   priority   play the dearest card it can pay for; otherwise usually move
- *              ready units out (to a battlefield it doesn't control, or home);
- *              otherwise end the turn, or pass
+ *   priority   in its Main Phase: play the dearest card it can pay for;
+ *              otherwise usually move ready units out (to a battlefield it
+ *              doesn't control, or home); otherwise end the turn. On a chain
+ *              it passes; holding Focus in a showdown it sometimes plays a
+ *              Reaction (half the time), else passes
+ *   targets    an enemy unit for a harmful slot, a friendly one otherwise
+ *   may        yes; trigger costs: pay when it can; the rest of a trigger's
+ *              choices: the first option
  *   moves      take every unit it can, then a battlefield it doesn't hold
  *   payment    plan 0, the engine's best; never decline
  *   setup      play first; keep the opening hand
@@ -30,6 +35,8 @@ export function botAnswer(v: PlayerView, random: () => number): string {
     case 'mulligan': return has('done') ? 'done' : real[0].key;
     case 'priority': {
       const plays = heads('play');
+      if (d.prompt.window === 'chain') return 'pass';
+      if (d.prompt.window === 'showdown') return plays.length > 0 && random() < 0.5 ? pick(plays, random).key : 'pass';
       if (plays.length > 0) {
         const cost = (o: Option) => o.meta?.cost?.energy ?? 0;
         return plays.reduce((a, b) => (cost(b) > cost(a) ? b : a)).key;
@@ -49,6 +56,20 @@ export function botAnswer(v: PlayerView, random: () => number): string {
       return (away.length > 0 ? pick(away, random) : pick(real, random)).key;
     }
     case 'payment': return heads('pay')[0]?.key ?? real[0].key;
+    case 'target': {
+      const ts = heads('t');
+      const mine = (o: Option) => {
+        const ob = v.objects[parseKey(o.key)!.obj!];
+        return ob !== undefined && ob.controller === v.me;
+      };
+      const want = ts.filter((o) => (d.prompt.harm ? !mine(o) : mine(o)));
+      if (want.length > 0) return pick(want, random).key;
+      return has('done') ? 'done' : pick(ts.length > 0 ? ts : real, random).key;
+    }
+    case 'may': return 'yes';
+    case 'orderTriggers': case 'pickCard': return real[0].key;
+    case 'predict': return pick(real, random).key;
+    case 'addAbility': return has('done') ? 'done' : 'decline';
     default: return pick(real, random).key;
   }
 }

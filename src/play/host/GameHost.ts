@@ -13,7 +13,7 @@ import { botAnswer, botPace } from './bot.ts';
  * depends only on the kind of decision (§4.8), and its answers are
  * recorded the same way, so the record replays the game.
  *
- * M1.1 seats one human against a simple bot (host/bot.ts). One stop of
+ * M1.1–M1.2 seat one human against a simple bot (host/bot.ts). One stop of
  * §4.8 is built in: a priority decision of the human's whose only real
  * option is to pass is passed for them after a short pause (the record
  * marks it `auto`), so a showdown in which they can do nothing doesn't wait

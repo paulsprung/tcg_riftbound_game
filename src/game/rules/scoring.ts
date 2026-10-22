@@ -8,8 +8,8 @@
  *               a player who has now scored every battlefield this turn
  *               (the one being scored included, Spec G Q3); otherwise they
  *               draw 1 instead [473.1.b.1]. Hold points are never held back
- *               [473.1.a.1]. Conquer and hold abilities would trigger here
- *               [473.2]; with card abilities switched off (M1.1) none do.
+ *               [473.1.a.1]. Conquer and hold abilities trigger here
+ *               [473.2], [383.4.c–d].
  *   checkWin    cleanup step 1: at or above the Victory Score and more
  *               points than every opponent [323.1], [194.2]; a tie plays on
  *               [194.2.b].
@@ -25,6 +25,7 @@ import type { GameState, PlayerId } from '../state/types.ts';
 import { clearContested, drawCards, gainPoints, setController } from './actions.ts';
 import { opponentsOf } from './board.ts';
 import { victoryScore } from './defaults.ts';
+import { fire } from '../abilities/triggers.ts';
 
 type X = { present: boolean };
 
@@ -39,6 +40,9 @@ export function score(s: GameState, x: X, p: PlayerId, bf: number, how: 'conquer
   emit(s, x, { k: 'score', p, bf, how, point, drewInstead: !point, rule });
   if (point) gainPoints(s, x, p, 1, how, finalPoint ? '473.1.b' : '473.1');
   else drawCards(s, x, p, 1, '473.1.b.1');
+  // Conquer and hold effects trigger even when the point was replaced by a
+  // draw [383.4.c.2.c], [383.4.d.2.c], [473.2].
+  fire(s, x, { e: 'scored', p, bf, how });
 }
 
 /** Cleanup step 1 [323.1]: ends the game if a player has won. */

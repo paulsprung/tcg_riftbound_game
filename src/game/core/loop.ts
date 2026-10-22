@@ -3,13 +3,14 @@
  * is active, the first row that applies is done, then the driver runs on:
  *
  *   H   an Outstanding Task: run it, oldest first [334], [333]
- *   F   a pending chain item: finalize it [337.1] (only limited plays and
- *       triggers leave one outside its play frame: M1.2)
+ *   F   a pending chain item: the oldest one finishes its steps [337.1],
+ *       [337.1.b]: a limited play or a token from its step 2, a trigger
+ *       from its step 2 (play/playCard.ts, play/playAbility.ts)
  *   E/P the chain is not empty and not everyone has passed: priority to
  *       the controller of the newest item if nobody holds it [312.2.c],
  *       [337.4]; ask it [338]
- *   R   everyone passed in sequence: resolve the newest item [339.1], [340]
- *       (spells and abilities, M1.2)
+ *   R   everyone passed in sequence: the newest finalized item resolves
+ *       [339.1], [340] (dsl/interp.ts)
  *   S   a showdown, not everyone passed Focus: the Focus holder gets
  *       priority [335.1], [313.2]; S′ once everyone has, it closes [348]
  *   C   a combat whose showdown has closed: its next step [467], [468]
@@ -18,17 +19,21 @@
  *   N   otherwise nobody has priority; the next step, phase or turn [305]
  *
  * A priority decision is asked from a 'priority' frame (answers go to the
- * top frame). Its answers: pass ([338.1.b], [339]; in a showdown with an
- * empty chain, Focus moves on [347.2]); play a card; Standard Move; end
- * the turn [316.9]. M1.1 offers what a vanilla duel has: units and gear at
- * default timing, the move, the end of the turn, and passing.
+ * top frame). What it offers depends on its window (rules/timing.ts):
+ * in the own Main Phase, Neutral Open, any card or activated ability, the
+ * Standard Move and ending the turn; on a chain, [Reaction] cards and
+ * abilities, or pass ([338.1.b], [339]); holding Focus in a showdown,
+ * [Action] or [Reaction] ones, or pass (Focus moves on [347.2]).
  */
 import { K, parseKey, type Option } from './decisions.ts';
 import { answer, ask, call, defineLoop, defineSteps, taskFrame, type FrameOf } from './frames.ts';
-import { NotImplementedError } from './errors.ts';
+import { EngineError } from './errors.ts';
 import { pushFrame, setField, takeTask } from '../state/mut.ts';
 import type { GameState } from '../state/types.ts';
-import { costOf, playableCards, playFrame } from '../play/playCard.ts';
+import { startResolve } from '../dsl/interp.ts';
+import { activatable, activateFrame, triggerFrame } from '../play/playAbility.ts';
+import { costOf, limitedPlayFrame, playableCards, playFrame } from '../play/playCard.ts';
+import { cardTiming } from '../rules/timing.ts';
 import { nextPlayer } from '../rules/board.ts';
 import { nextCombatStep } from '../rules/combat.ts';
 import { canStandardMove, moveFrame } from '../rules/move.ts';
@@ -41,12 +46,16 @@ defineLoop((s, x) => {
   const t = s.turn;
   const task = t.tasks.length > 0 ? takeTask(s) : null;
   if (task) { pushFrame(s, taskFrame(s, task)); return; }                         // H
-  if (s.chain.some((i) => i.status === 'pending')) {                              // F
-    throw new NotImplementedError('finalizing a pending item outside its play', 'limited plays and triggers (M1.2)');
+  const pending = s.chain.find((i) => i.status === 'pending');                  // F [337.1.b]: oldest first
+  if (pending) {
+    if (pending.kind === 'triggered') pushFrame(s, triggerFrame(pending));
+    else if (pending.kind === 'card' || pending.kind === 'token') pushFrame(s, limitedPlayFrame(pending));
+    else throw new EngineError(`item ${pending.id} (${pending.kind}) is pending outside its activation`);
+    return;
   }
   const players = s.players.length;
   if (s.chain.length > 0) {
-    if (t.passes >= players) throw new NotImplementedError('resolving a chain item', 'spells and abilities (M1.2)');   // R
+    if (t.passes >= players) { startResolve(s); return; }                         // R
     if (t.priority === null) setField(s, t, 'priority', s.chain[s.chain.length - 1].controller);                       // E/P
     pushFrame(s, { f: 'priority', pc: 0, window: 'chain' });
     return;
@@ -70,12 +79,20 @@ defineLoop((s, x) => {
 /** What the priority holder may do now (§5.5). */
 export function priorityOptions(s: GameState, window: PriorityFrame['window']): Option[] {
   const p = s.turn.priority!;
-  if (window !== 'main') return [{ key: K.pass }];          // Action / Reaction cards and abilities: M1.2
-  const out: Option[] = playableCards(s, p).map((id) => {
+  const out: Option[] = playableCards(s, p, window).map((id) => {
     const c = costOf(s, id);
+    const t = cardTiming(s.objects[id].def);
     return { key: K.play(id), refs: [{ obj: id }], meta: { cost: { energy: c.energy, power: c.power, other: [] },
-      timing: 'default' as const } };
+      timing: window === 'main' ? 'default' as const : t.reaction && window === 'chain' ? 'reaction' as const
+        : t.action ? 'action' as const : 'reaction' as const } };
   });
+  for (const a of activatable(s, p, window)) {
+    out.push({ key: K.act(a.obj, a.ability.slice(a.ability.indexOf('#') + 1)), refs: [{ obj: a.obj }] });
+  }
+  if (window !== 'main') {
+    out.push({ key: K.pass });
+    return out;
+  }
   if (canStandardMove(s, p)) out.push({ key: K.move });
   out.push({ key: K.end });
   return out;
@@ -102,7 +119,11 @@ defineSteps('priority', [
       }
       return 'done';
     }
-    return call(s, f, playFrame(parseKey(key)!.obj!));                            // [420.2]
+    const k = parseKey(key)!;
+    if (k.head === 'act') {                                                       // [377], [402]
+      return call(s, f, activateFrame(k.obj!, `${s.objects[k.obj!].def}#${k.sub}`));
+    }
+    return call(s, f, playFrame(k.obj!));                                         // [420.2]
   },
   () => 'done',
 ]);

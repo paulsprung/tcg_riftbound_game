@@ -50,13 +50,15 @@ function Strip({ side, cards, onZoom, acts }: SideProps) {
         {side.legend.map((c) => <TableCard key={c.id} slot={c} cards={cards} size="m" onTap={onZoom} />)}
       </Zone>
       <Zone label="Champion">
-        {side.champion ? <TableCard slot={side.champion} cards={cards} size="m" onTap={onZoom} onAct={actOn(acts, side.champion)} />
+        {side.champion ? <TableCard slot={side.champion} cards={cards} size="m" onTap={onZoom} onAct={actOn(acts, side.champion)}
+          label={actOn(acts, side.champion) ? 'play it' : acts?.why?.[side.champion.id]} />
           : <div className="tcard tcard--m is-empty" />}
       </Zone>
       <div className={`hand${side.me ? ' hand--mine' : ''}`} aria-label={side.me ? 'Your hand' : "Opponent's hand"}>
         {side.hand.map((c) => (
           <TableCard key={c.id} slot={c} cards={cards} size={side.me ? 'l' : 's'} tilt={side.me}
-            onTap={c.def !== null ? onZoom : undefined} onAct={actOn(acts, c)} label={actOn(acts, c) ? 'play it' : undefined} />
+            onTap={c.def !== null ? onZoom : undefined} onAct={actOn(acts, c)}
+            label={actOn(acts, c) ? 'play it' : acts?.why?.[c.id]} />
         ))}
         <span className="zone__label">Hand · {side.hand.length}</span>
       </div>

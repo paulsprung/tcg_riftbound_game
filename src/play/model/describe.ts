@@ -10,9 +10,12 @@ import type { SetupSummary } from './stage.ts';
  * from the events' own `def` fields, which observe() left only where the
  * viewer may see them.
  *
- * Setup (M0) and the vanilla duel of M1.1: turns, channels, draws, plays,
- * moves, showdowns, combats, damage, deaths, scoring and points. Every
- * later event kind gets its line with the procedure that emits it.
+ * Setup (M0), the duel of M1.1 (turns, channels, draws, plays, moves,
+ * showdowns, combats, damage, deaths, scoring, points) and the chain of
+ * M1.2: spells and tokens played, abilities triggering and activated,
+ * instructions that did nothing, banish, burn, discard, buff, stun, Might
+ * changes, looks. Every later event kind gets its line with the procedure
+ * that emits it.
  */
 
 export interface LogLine {
@@ -41,6 +44,8 @@ export function listOf(items: readonly string[]): string {
 }
 
 const cards = (n: number) => `${n} card${n === 1 ? '' : 's'}`;
+const TOKEN_DEFS: readonly string[] = ['recruit', 'mech', 'bird', 'gold', 'sprite', 'sandSoldier', 'reflection', 'tentacle',
+  'shadowClone', 'bomb'];
 const ZONE_NAME = { deck: 'Main Deck', runeDeck: 'Rune Deck' } as const;
 
 export function resultText(r: GameResult, me: PlayerId): string {
@@ -137,11 +142,43 @@ export function describeAll(events: readonly ObservedEvent[], c: DescribeCtx): L
       case 'played': {
         const o = events.find((z) => z.k === 'zone' && z.why === 'play' && z.group !== undefined && z.to.z === 'chain'
           && 'item' in z.to && z.to.item === e.item);
-        const p = o && o.k === 'zone' && 'p' in o.from ? o.from.p : null;
+        const p = e.p ?? (o && o.k === 'zone' && 'p' in o.from ? o.from.p : null);
         const by = p === null ? 'A card is' : p === c.me ? 'You' : 'The opponent';
-        add(e, `${by}${p === null ? '' : ' plays'} ${c.nameOf(e.def)}${p === null ? ' played' : ''}.`, p === null ? 'game' : who(p));
+        const what = TOKEN_DEFS.includes(e.def) ? `a ${c.nameOf(e.def)} token` : c.nameOf(e.def);
+        add(e, `${by}${p === null ? '' : p === c.me ? ' play' : ' plays'} ${what}${p === null ? ' played' : ''}.`,
+          p === null ? 'game' : who(p));
         break;
       }
+      case 'chainPush': {
+        if (e.kind !== 'triggered' && e.kind !== 'activated') break;
+        const src = e.source === undefined ? null : c.objOf(e.source)?.def ?? known[e.source] ?? null;
+        if (!src || src.endsWith('-rune')) break;                     // rune Add abilities: told by the payment
+        add(e, e.kind === 'triggered' ? `${c.nameOf(src)}'s ability triggers.` : `${c.nameOf(src)}'s ability is activated.`,
+          'game');
+        break;
+      }
+      case 'outcome':
+        if (e.outcome.o === 'ignored') {
+          add(e, e.outcome.why === 'targets' ? 'Its target is no longer legal: that part does nothing.'
+            : 'What it refers to is gone: that part does nothing.', 'game');
+        }
+        break;
+      case 'playFailed':
+        if (e.reason === 'declined' || e.reason === 'unpaid') add(e, 'A cost was not paid: it doesn\'t happen.', 'game');
+        else if (e.reason === 'noTargets') add(e, 'An ability has no legal target and is removed.', 'game');
+        break;
+      case 'banish': add(e, `${listOf(e.objs.map(unitName))} ${e.objs.length === 1 ? 'is' : 'are'} banished.`, 'game'); break;
+      case 'burn': add(e, `${subject(e.p)} burn${e.p === c.me ? '' : 's'} ${cards(e.objs.length)}.`, who(e.p)); break;
+      case 'discard': add(e, `${subject(e.p)} discard${e.p === c.me ? '' : 's'} ${cards(e.objs.length)}.`, who(e.p)); break;
+      case 'buff': add(e, `${listOf(e.objs.map(unitName))} ${e.objs.length === 1 ? 'is' : 'are'} buffed (+1 Might).`, 'game'); break;
+      case 'stun': add(e, `${listOf(e.objs.map(unitName))} ${e.objs.length === 1 ? 'is' : 'are'} stunned.`, 'game'); break;
+      case 'mightChanged': {
+        const last = out[out.length - 1];
+        if (last?.rule === e.rule && last.seq === e.seq - 1 && last.text.includes('Might')) break;
+        add(e, `${unitName(e.obj)}'s Might changes this turn.`, 'game');
+        break;
+      }
+      case 'look': if (e.objs.every((x) => x !== null)) add(e, `You look at ${cards(e.objs.length)}.`, 'me'); break;
       case 'payment': add(e, `${subject(e.p)} pay${e.p === c.me ? '' : 's'}: ${e.summary}.`, who(e.p)); break;
       case 'move': {
         const first = e.objs[0];

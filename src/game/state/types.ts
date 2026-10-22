@@ -429,7 +429,8 @@ export type FrameBody =
   | { f: 'cleanup'; v: 'normal' | 'combat' | 'ending'; pc: number; epoch0: number }   // [322] via epoch (§5.9)
   | { f: 'play'; item: ItemId | null; obj: ObjId; pc: number; snap: GameState | null; revealed: boolean;
       rngUsed: boolean }                                              // [354–359]; snap = S0 (§4.4)
-  | { f: 'ability'; item: ItemId; pc: number; snap: GameState | null }   // [402–407]
+  | { f: 'ability'; item: ItemId; pc: number; snap: GameState | null;     // [402–407]
+      src: ObjId | null; ability: AbilityId | null }                  // an activation's source and ability (additions)
   | { f: 'resolve'; item: ItemId; ip: number[]; env: Env }            // interpreter: instruction path + bindings
   | { f: 'instr'; op: string; pc: number; locals: Json }               // an instruction waiting for an answer
   | { f: 'perform'; spec: GameAction; ctx: ActionCtx; pc: number; ev: ProposedEvent[]; used: string[] }   // §6.3

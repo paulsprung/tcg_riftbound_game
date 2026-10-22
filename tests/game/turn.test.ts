@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { concede } from '../../src/game/index.ts';
 import { setField } from '../../src/game/state/mut.ts';
-import { act, base, bf, control, endTurn, evs, keys, put, reask, start } from './helpers/scenario.ts';
+import { act, base, bf, control, endTurn, evs, keys, put, reask, settle, start } from './helpers/scenario.ts';
 
 /*
  * The turn, phases, priority, cleanups and scoring of a Seraphine mirror
@@ -39,8 +39,8 @@ describe('Spec C §14: the turn', () => {
 
   it('[315.1.b] Awaken readies only the Turn Player\'s objects', () => {
     const g = start(3);
-    const mine = put(g, 'strigian-oracle', 0, base(0), { exhausted: true });
-    const theirs = put(g, 'strigian-oracle', 1, base(1), { exhausted: true });
+    const mine = put(g, 'meticulous-restorationist', 0, base(0), { exhausted: true });
+    const theirs = put(g, 'meticulous-restorationist', 1, base(1), { exhausted: true });
     reask(g);
     endTurn(g);
     expect(g.s.objects[theirs].exhausted).toBe(false);
@@ -111,19 +111,19 @@ describe('Spec C §14: the turn', () => {
 describe('Spec C §14: cleanups, showdowns, control', () => {
   it('[323.4] [321] lethal damage kills in the next cleanup; [317.2.b] the ending cleanup heals the rest', () => {
     const g = start(8);
-    const dead = put(g, 'strigian-oracle', 1, base(1), { damage: 2 });
+    const dead = put(g, 'meticulous-restorationist', 1, base(1), { damage: 2 });
     const hurt = put(g, 'heimerdinger-academy-instructor', 1, base(1), { damage: 2 });
     reask(g);
     act(g, 'end');                                                   // the next cleanup runs on the way
     expect(g.s.objects[dead]).toBeUndefined();
-    expect(g.s.players[1].trash.map((id) => g.s.objects[id].def)).toContain('strigian-oracle');
+    expect(g.s.players[1].trash.map((id) => g.s.objects[id].def)).toContain('meticulous-restorationist');
     expect(g.s.log.deaths.length + evs(g, 'kill').length).toBeGreaterThan(0);
     expect(g.s.objects[hurt].damage).toEqual([]);
   });
 
   it('[344.2] [345] [348.2.a] moving to an empty battlefield: a showdown, Focus to the mover, then control and a Conquer', () => {
     const g = start(9);
-    const u = put(g, 'strigian-oracle', 0, base(0));
+    const u = put(g, 'meticulous-restorationist', 0, base(0));
     reask(g);
     act(g, 'move');                                                  // one unit: picked and confirmed on its own
     act(g, 'loc:bf1');
@@ -144,9 +144,9 @@ describe('Spec C §14: cleanups, showdowns, control', () => {
 
   it('[472] a battlefield scores once per turn: lost and re-conquered, no second point', () => {
     const g = start(10);
-    put(g, 'strigian-oracle', 0, base(0));
+    put(g, 'meticulous-restorationist', 0, base(0));
     reask(g);
-    act(g, 'move'); act(g, 'loc:bf0'); act(g, 'pass'); act(g, 'pass');
+    act(g, 'move'); act(g, 'loc:bf0'); act(g, 'pass'); act(g, 'pass'); settle(g);
     expect(g.s.players[0].points).toBe(1);
     // Taken away and won back the same turn.
     for (const id of g.s.bfs[0].here.slice()) setField(g.s, g.s.objects[id], 'exhausted', false);
@@ -155,10 +155,10 @@ describe('Spec C §14: cleanups, showdowns, control', () => {
     expect(g.s.bfs[0].controller).toBeNull();                       // [323.5] empty, Open: control lost
     for (const id of g.s.players[0].base) setField(g.s, g.s.objects[id], 'exhausted', false);
     reask(g);
-    const u = g.s.players[0].base.find((id) => g.s.objects[id].def === 'strigian-oracle')!;
+    const u = g.s.players[0].base.find((id) => g.s.objects[id].def === 'meticulous-restorationist')!;
     act(g, 'move');
     if (keys(g).includes(`u:${u}`)) { act(g, `u:${u}`); act(g, 'done'); }
-    act(g, 'loc:bf0'); act(g, 'pass'); act(g, 'pass');
+    act(g, 'loc:bf0'); act(g, 'pass'); act(g, 'pass'); settle(g);
     expect(g.s.bfs[0].controller).toBe(0);
     expect(g.s.players[0].points).toBe(1);
     expect(evs(g, 'score')).toHaveLength(1);
@@ -166,8 +166,8 @@ describe('Spec C §14: cleanups, showdowns, control', () => {
 
   it('[315.2.b] [471.2] the Scoring Step Holds each controlled battlefield, in the order the Turn Player picks', () => {
     const g = start(11);
-    put(g, 'strigian-oracle', 1, bf(0));
-    put(g, 'strigian-oracle', 1, bf(1));
+    put(g, 'meticulous-restorationist', 1, bf(0));
+    put(g, 'meticulous-restorationist', 1, bf(1));
     control(g, 0, 1);
     control(g, 1, 1);
     reask(g);
@@ -180,7 +180,7 @@ describe('Spec C §14: cleanups, showdowns, control', () => {
 
   it('[473.1.a.1] a Hold gives the 8th point; [323.1] [194.2] the cleanup after it declares the winner', () => {
     const g = start(12);
-    put(g, 'strigian-oracle', 1, bf(0));
+    put(g, 'meticulous-restorationist', 1, bf(0));
     control(g, 0, 1);
     setField(g.s, g.s.players[1], 'points', 7);
     reask(g);
@@ -201,24 +201,24 @@ describe('Spec C §14: cleanups, showdowns, control', () => {
   it('[473.1.b.1] at 7, a Conquer without every battlefield scored draws a card instead; with both, the 8th point', () => {
     const g = start(14);
     setField(g.s, g.s.players[0], 'points', 7);
-    put(g, 'strigian-oracle', 0, base(0));
-    put(g, 'strigian-oracle', 0, base(0));
+    put(g, 'meticulous-restorationist', 0, base(0));
+    put(g, 'meticulous-restorationist', 0, base(0));
     reask(g);
     const hand = g.s.players[0].hand.length;
     act(g, 'move');
     const [a] = keys(g).filter((k) => k.startsWith('u:'));
-    act(g, a); act(g, 'done'); act(g, 'loc:bf0'); act(g, 'pass'); act(g, 'pass');
+    act(g, a); act(g, 'done'); act(g, 'loc:bf0'); act(g, 'pass'); act(g, 'pass'); settle(g);
     expect(g.s.players[0].points).toBe(7);
     expect(g.s.players[0].hand).toHaveLength(hand + 1);
     expect(evs(g, 'score').at(-1)).toMatchObject({ how: 'conquer', point: false, drewInstead: true });
-    act(g, 'move'); act(g, 'loc:bf1'); act(g, 'pass'); act(g, 'pass');
+    act(g, 'move'); act(g, 'loc:bf1'); act(g, 'pass'); act(g, 'pass'); settle(g);
     expect(evs(g, 'score').at(-1)).toMatchObject({ bf: 1, point: true });
     expect(g.s.result).toMatchObject({ winner: 0, reason: 'score' });
   });
 
   it('[650] [651.1] a player may concede at any time, even during the other player\'s showdown', () => {
     const g = start(15);
-    put(g, 'strigian-oracle', 0, base(0));
+    put(g, 'meticulous-restorationist', 0, base(0));
     reask(g);
     act(g, 'move'); act(g, 'loc:bf0');
     act(g, 'pass');

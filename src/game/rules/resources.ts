@@ -26,7 +26,11 @@
  */
 import { BASIC_RUNES } from '../cards/runes.ts';
 import { emit } from '../core/events.ts';
-import type { Domain, GameState, ObjId, PaymentPlan, PlayerId, PoolSpend, PowerReq, RunePool } from '../state/types.ts';
+import { mint } from '../state/mut.ts';
+import type {
+  ChainItem, Domain, GameState, ObjId, PaymentPlan, PlayerId, PoolSpend, PowerReq, RunePool,
+} from '../state/types.ts';
+import { addItem, finalizeItem, itemById, playContext, removeItem } from './chain.ts';
 import { addToPool, byWidth, exhaust, payFromPool, recycleRune } from './actions.ts';
 
 const DOMAINS: Domain[] = ['fury', 'calm', 'mind', 'body', 'chaos', 'order'];
@@ -196,14 +200,58 @@ function concrete(s: GameState, p: PlayerId, c: { recycleTired: Record<Domain, n
 
 /** A plan in words for the log: "exhaust 3 runes, recycle a Mind rune". */
 export function planSummary(s: GameState, plan: PaymentPlan): string {
-  const ex = plan.steps.filter((st) => st.ability === 'exhaust').length;
-  const rec = plan.steps.filter((st) => st.ability === 'recycle').map((st) => BASIC_RUNES[s.objects[st.obj].def]);
+  const count = (ability: string) => {
+    const by: Partial<Record<Domain, number>> = {};
+    for (const st of plan.steps) if (st.ability === ability) { const d = BASIC_RUNES[s.objects[st.obj].def]; by[d] = (by[d] ?? 0) + 1; }
+    return DOMAINS.filter((d) => by[d]).map((d) => `${by[d]} ${d}`);
+  };
+  const ex = count('exhaust'), rec = count('recycle');
   const parts: string[] = [];
-  if (ex > 0) parts.push(`exhaust ${ex} rune${ex === 1 ? '' : 's'}`);
-  for (const d of rec) parts.push(`recycle a ${d} rune`);
+  const runes = (xs: string[]) => `${xs.join(' and ')} rune${xs.length === 1 && xs[0].startsWith('1 ') ? '' : 's'}`;
+  if (ex.length > 0) parts.push(`exhaust ${runes(ex)}`);
+  if (rec.length > 0) parts.push(`recycle ${runes(rec)}`);
   const pooled = plan.fromPool.energy + plan.fromPool.universal + Object.values(plan.fromPool.power).reduce((a, b) => a + b, 0);
   if (pooled > 0) parts.push(`${pooled} from the pool`);
   return parts.length > 0 ? parts.join(', ') : 'nothing';
+}
+
+/**
+ * Activates one of a basic rune's Add abilities [164.2]: "[E]: Add [1]" or
+ * "Recycle this: Add [C]". An Add ability is a chain item that finalizes
+ * and resolves at once, never waits for priority and moves no counter
+ * [430.2], [430.2.a], Spec C Q4: its cost is paid, the resources are added,
+ * and it is gone.
+ */
+export function activateAdd(s: GameState, x: { present: boolean }, p: PlayerId, rune: ObjId, ability: 'exhaust' | 'recycle') {
+  const d = BASIC_RUNES[s.objects[rune].def];
+  const item = mint(s, 'item');
+  const it: ChainItem = {
+    id: item, seq: item, kind: 'activated', sub: 'normal', status: 'pending', controller: p, owner: p, source: rune,
+    ability: `${s.objects[rune].def}#${ability}`, isAdd: true, outcomes: {},
+    play: playContext(s, { mode: 'discretionary', origin: s.objects[rune].zone, item, by: p }),
+  };
+  addItem(s, x, it, { played: false });
+  if (ability === 'exhaust') exhaust(s, x, p, [rune], '164.2.a', true);   // the cost [415.4]
+  else recycleRune(s, x, rune, '164.2.b');
+  finalizeItem(s, x, itemById(s, item)!);                            // [430.2]
+  if (ability === 'exhaust') addToPool(s, x, p, 1, [], '164.2.a');
+  else addToPool(s, x, p, 0, [d], '164.2.b.1');
+  removeItem(s, x, item);
+}
+
+/** The rune abilities p could activate now to pay (manual payment, the
+    addAbility decision [430.3]). */
+export function runeAbilities(s: GameState, p: PlayerId): { obj: ObjId; ability: 'exhaust' | 'recycle' }[] {
+  return runesOf(s, p).flatMap((r) => [
+    ...(r.ready ? [{ obj: r.id, ability: 'exhaust' as const }] : []),
+    { obj: r.id, ability: 'recycle' as const },
+  ]);
+}
+
+/** Whether the pool alone covers a cost now. */
+export function poolCovers(s: GameState, p: PlayerId, cost: ResourceCost): boolean {
+  const base = fromPool(s.players[p].pool, cost);
+  return base.energy === 0 && base.power.length === 0;
 }
 
 /**
@@ -214,16 +262,12 @@ export function planSummary(s: GameState, plan: PaymentPlan): string {
 export function executePlan(s: GameState, x: { present: boolean }, p: PlayerId, plan: PaymentPlan, cost: ResourceCost):
   { energy: number; power: number } {
   const summary = planSummary(s, plan);
-  for (const st of plan.steps) {
-    const d = BASIC_RUNES[s.objects[st.obj].def];
-    if (st.ability === 'exhaust') {
-      exhaust(s, x, p, [st.obj], '164.2.a', true);
-      addToPool(s, x, p, 1, [], '164.2.a');
-    } else {
-      recycleRune(s, x, st.obj, '164.2.b');
-      addToPool(s, x, p, 0, [d], '164.2.b.1');
-    }
-  }
+  for (const st of plan.steps) activateAdd(s, x, p, st.obj, st.ability === 'exhaust' ? 'exhaust' : 'recycle');
+  return payCost(s, x, p, cost, summary);
+}
+
+/** Pays a cost out of the pool, which covers it [357.1], [445.1]. */
+export function payCost(s: GameState, x: { present: boolean }, p: PlayerId, cost: ResourceCost, summary: string) {
   payFromPool(s, x, p, cost.energy, cost.power, '357.1');
   emit(s, x, { k: 'payment', p, summary, rule: '357' });
   return { energy: cost.energy, power: cost.power.length };

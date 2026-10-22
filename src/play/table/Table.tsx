@@ -33,7 +33,7 @@ export function Table({ board, cards, log, onZoom, prompt, acts, kind }: {
       </div>
       <aside className="table__rail">
         <ScoreTrack board={board} />
-        <ChainBox board={board} />
+        <ChainBox board={board} cards={cards} />
         <GameLog lines={log} rules />
       </aside>
     </div>

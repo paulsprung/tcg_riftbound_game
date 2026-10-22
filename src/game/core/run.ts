@@ -35,6 +35,7 @@ export function runCtx(o: StepOptions = {}, e: EngineOptions = DEFAULT_ENGINE): 
     nothing is left to run. */
 export function run(s: GameState, x: RunCtx): void {
   while (!s.result && !s.pending) {
+    if (x.stopDepth !== undefined && s.frames.length < x.stopDepth) return;
     if (++x.steps > x.limit) throw new EngineLoopError(`run() took more than ${x.limit} steps`);
     const f = top(s);
     if (!f) {

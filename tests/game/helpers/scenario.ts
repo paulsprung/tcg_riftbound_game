@@ -3,7 +3,7 @@ import {
   choose, createGame, type DefId, type GameEvent, type GameState, type Loc, type ObjId, type PlayerId,
 } from '../../../src/game/index.ts';
 import { checkInvariants } from '../../../src/game/state/invariants.ts';
-import { createObject, popFrame, setField, setPending } from '../../../src/game/state/mut.ts';
+import { createObject, moveObject, popFrame, setField, setPending } from '../../../src/game/state/mut.ts';
 import { requestCleanup } from '../../../src/game/rules/tasks.ts';
 import { SERAPHINE } from './decks.ts';
 
@@ -38,6 +38,26 @@ export function act(g: Game, key: string): Game {
   const r = choose(g.s, { decision: d.id, key }, { check: true });
   g.s = r.state;
   g.events.push(...r.events);
+  return g;
+}
+
+/**
+ * Lets the battlefields' and cards' triggers go by (M1.2): declines every
+ * "may" and every trigger cost, orders triggers as listed, takes the first
+ * card of a resolution-time choice, and passes priority on chains, until a
+ * decision of another kind is pending. `may` answers the "may" decisions
+ * instead.
+ */
+export function settle(g: Game, o: { may?: 'yes' | 'no' } = {}): Game {
+  for (let i = 0; i < 200 && g.s.pending; i++) {
+    const d = g.s.pending;
+    const it = d.ctx.item === undefined ? undefined : g.s.chain.find((c) => c.id === d.ctx.item);
+    if (d.kind === 'may') act(g, o.may ?? 'no');
+    else if (d.kind === 'payment' && it?.kind === 'triggered') act(g, 'decline');
+    else if (d.kind === 'orderTriggers' || d.kind === 'pickCard' || d.kind === 'predict') act(g, d.options[0].key);
+    else if (d.kind === 'priority' && d.prompt.window === 'chain') act(g, 'pass');
+    else break;
+  }
   return g;
 }
 
@@ -99,3 +119,26 @@ type EventOf<K extends GameEvent['k']> = GameEvent extends infer E ? E extends {
 /** P's ready runes in base. */
 export const readyRunes = (g: Game, p: PlayerId) =>
   g.s.players[p].base.filter((id) => g.s.objects[id].def.endsWith('-rune') && !g.s.objects[id].exhausted);
+
+/** Puts a card of p's in their hand, known to them only. */
+export function inHand(g: Game, def: string, p: PlayerId = 0): ObjId {
+  return createObject(g.s, { def, printing: null, owner: p, zone: { z: 'hand', p } }).id;
+}
+
+/** Puts a card of p's in their trash. */
+export function inTrash(g: Game, def: string, p: PlayerId = 0): ObjId {
+  return createObject(g.s, { def, printing: null, owner: p, zone: { z: 'trash', p } }).id;
+}
+
+/** Replaces p's runes in base: [domain, ready][]. */
+export function runes(g: Game, p: PlayerId, list: [string, boolean][]) {
+  for (const id of g.s.players[p].base.slice()) {
+    if (g.s.objects[id].def.endsWith('-rune')) moveObject(g.s, id, { z: 'runeDeck', p }, { pos: 'bottom', knownBy: 0 });
+  }
+  for (const [d, ready] of list) {
+    createObject(g.s, { def: `${d}-rune`, printing: null, owner: p, zone: { z: 'base', p }, exhausted: !ready });
+  }
+}
+
+/** n ready runes of a domain. */
+export const ready = (d: string, n: number): [string, boolean][] => Array.from({ length: n }, () => [d, true]);

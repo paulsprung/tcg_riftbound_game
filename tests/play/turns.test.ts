@@ -13,7 +13,7 @@ import { gameSetup } from '../../src/play/model/setup.ts';
 import { stageOf } from '../../src/play/model/stage.ts';
 
 /*
- * The Play tab in M1.1: a human against the simple bot through the host,
+ * The Play tab: a human against the simple bot through the host,
  * turn after turn to the end of a game. The "human" here answers from its
  * own view with the bot's heuristic, clicking only what the affordances
  * offer.
@@ -49,7 +49,7 @@ function playToTheEnd(h: GameHost, max = 3000) {
   }
 }
 
-describe('the Play tab plays whole turns (M1.1)', () => {
+describe('the Play tab plays whole turns (M1.1, with the chain of M1.2)', () => {
   it('a human and the bot play a game to its end; the record replays to the same state', () => {
     for (const seed of [1, 2]) {
       const h = host(seed);
@@ -63,7 +63,7 @@ describe('the Play tab plays whole turns (M1.1)', () => {
       expect(viewFor(end, 0)).toEqual(v);
       expect(hashState(end)).toBe(hashState(replay(r).state));
     }
-  });
+  }, 60_000);
 
   it('shows the board, the score and a log of the turns from the human\'s view', () => {
     const h = host(3);

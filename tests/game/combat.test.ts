@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { setField } from '../../src/game/state/mut.ts';
-import { act, base, bf, control, evs, keys, put, reask, start, type Game } from './helpers/scenario.ts';
+import { act, base, bf, control, evs, keys, put, reask, settle, start, type Game } from './helpers/scenario.ts';
 
 /*
- * Combat with vanilla units (M1.1): Spec G §13 items 1, 6 (D1, D2, D7,
+ * Combat with vanilla units (M1.1; the battlefields' triggers let go by): Spec G §13 items 1, 6 (D1, D2, D7,
  * D13), 7, 8, 13, 19, 20 and the damage assignment of §5.10.4, by rule.
  *
  * Every scenario: P0's turn 1, P0 attacks battlefield 0, which P1 controls.
@@ -28,11 +28,12 @@ const passShowdown = (g: Game) => {
   expect(g.s.pending).toMatchObject({ kind: 'priority', player: 0 });   // the Attacker has Focus [466.2.c.1.a]
   act(g, 'pass');
   act(g, 'pass');
+  settle(g);                                                         // the battlefields' triggers go by
 };
 
 describe('Spec G §13: combat', () => {
   it('[323.12] [466.2.c] moving into enemy units opens a combat: the mover attacks, holds Focus, units designated', () => {
-    const { g, a, d } = attack(1, ['heimerdinger-academy-instructor'], ['strigian-oracle']);
+    const { g, a, d } = attack(1, ['heimerdinger-academy-instructor'], ['meticulous-restorationist']);
     expect(g.s.combat).toMatchObject({ bf: 0, attacker: 0, defender: 1, openedNewShowdown: true, step: 'showdown' });
     expect(g.s.showdown).toEqual({ bf: 0, kind: 'combat' });
     expect(g.s.turn.focus).toBe(0);
@@ -42,7 +43,7 @@ describe('Spec G §13: combat', () => {
   });
 
   it('[467.2.c] [468.5.d] attackers left alone win, establish control and Conquer', () => {
-    const { g, d } = attack(2, ['heimerdinger-academy-instructor'], ['strigian-oracle']);
+    const { g, d } = attack(2, ['heimerdinger-academy-instructor'], ['meticulous-restorationist']);
     passShowdown(g);
     expect(g.s.objects[d[0]]).toBeUndefined();
     expect(evs(g, 'combatResult').at(-1)?.result).toEqual(['won', 'lost']);
@@ -54,7 +55,7 @@ describe('Spec G §13: combat', () => {
   });
 
   it('[468.1.a.1–2] [468.3.d] defenders left: every unit heals, attackers are recalled, no result, control stays', () => {
-    const { g, a, d } = attack(3, ['heimerdinger-academy-instructor'], ['strigian-oracle']);
+    const { g, a, d } = attack(3, ['heimerdinger-academy-instructor'], ['meticulous-restorationist']);
     setField(g.s, g.s.objects[a[0]], 'stunned', true);              // adds nothing: both sides survive
     const elsewhere = put(g, 'heimerdinger-academy-instructor', 0, base(0), { damage: 1 });
     passShowdown(g);
@@ -105,11 +106,11 @@ describe('Spec G §13: combat', () => {
   });
 
   it('[467.2.c.4] [467.2.c.10] excess once every unit has lethal: one unit takes it all; several, the player places it', () => {
-    const one = attack(8, ['the-empyrean'], ['strigian-oracle']);
+    const one = attack(8, ['the-empyrean'], ['meticulous-restorationist']);
     passShowdown(one.g);
     expect(one.g.s.combat).toBeNull();
     expect(evs(one.g, 'deal').find((e) => e.to === one.d[0])?.n).toBe(8);
-    const two = attack(9, ['the-empyrean'], ['strigian-oracle', 'meticulous-restorationist']);
+    const two = attack(9, ['the-empyrean'], ['meticulous-restorationist', 'meticulous-restorationist']);
     passShowdown(two.g);
     act(two.g, `a:${two.d[0]}`);
     expect(two.g.s.pending).toMatchObject({ kind: 'assignExcess' });
@@ -120,7 +121,7 @@ describe('Spec G §13: combat', () => {
   });
 
   it('[424.1.b] [467.2.a–b] a stunned unit adds 0 to its side\'s total', () => {
-    const { g, a, d } = attack(10, ['heimerdinger-academy-instructor'], ['strigian-oracle']);
+    const { g, a, d } = attack(10, ['heimerdinger-academy-instructor'], ['meticulous-restorationist']);
     setField(g.s, g.s.objects[a[0]], 'stunned', true);
     passShowdown(g);
     expect(evs(g, 'deal').some((e) => e.to === d[0])).toBe(false);

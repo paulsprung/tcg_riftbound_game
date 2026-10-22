@@ -1,6 +1,6 @@
 import {
-  findCard, TOKENS, type DefId, type GameObject, type ObjId, type Phase, type PlayerId, type PlayerView, type RunePool,
-  type Step, type Stub, type TokenId,
+  effectMight, findCard, TOKENS, type ChainItem, type DefId, type GameObject, type ObjId, type Phase, type PlayerId,
+  type PlayerView, type RunePool, type Step, type Stub, type TokenId,
 } from '../../game/index.ts';
 
 /*
@@ -25,8 +25,10 @@ export interface CardSlot {
   rune: boolean;
   /** Damage marked [142]; 0 off the board. */
   damage: number;
-  /** A unit's printed Might (abilities are off in M1.1); null for others. */
+  /** A unit's Might: printed, buffs, "+N this turn" effects; null for others. */
   might: number | null;
+  /** Stunned this turn [424]. */
+  stunned?: boolean;
   /** In a combat [466.2.c.3]. */
   designation: 'attacker' | 'defender' | null;
 }
@@ -71,6 +73,22 @@ export interface LaneModel {
   combat: boolean;
 }
 
+/** One item on the chain, oldest first (§12.2 chain stack). */
+export interface ChainEntry {
+  item: number;
+  /** The card on the chain, or the source of the ability. */
+  def: DefId | null;
+  kind: ChainItem['kind'];
+  /** What it is, in words: 'unit', 'spell', 'gear', 'token', 'trigger', 'ability'. */
+  what: string;
+  /** An ability's id ('strigian-oracle#0'); null for a card. */
+  ability: string | null;
+  controller: PlayerId;
+  status: ChainItem['status'];
+  /** Resolving now. */
+  resolving: boolean;
+}
+
 export interface BoardModel {
   me: SideModel;
   opponent: SideModel;
@@ -85,7 +103,7 @@ export interface BoardModel {
   /** Null before the first turn. */
   turnPlayer: PlayerId | null;
   victoryScore: number;
-  chain: number;
+  chain: ChainEntry[];
 }
 
 const isKnown = (o: GameObject | Stub): o is GameObject => 'def' in o;
@@ -103,8 +121,9 @@ export function slotOf(v: PlayerView, id: ObjId, isRune: (def: DefId) => boolean
   const unit = token ? token.type === 'unit' : c?.types.includes('unit') ?? false;
   return {
     id, def: o.def, printing: o.printing, owner: o.owner, exhausted: o.exhausted, rune: isRune(o.def),
-    damage: o.damage.reduce((n, d) => n + d.amount, 0), might: unit ? (token?.might ?? c?.might ?? 0) + o.buffs : null,
-    designation: o.designation,
+    damage: o.damage.reduce((n, d) => n + d.amount, 0),
+    might: unit ? (token?.might ?? c?.might ?? 0) + o.buffs + effectMight(v.effects, id) : null,
+    designation: o.designation, ...(o.stunned ? { stunned: true } : {}),
   };
 }
 
@@ -153,6 +172,14 @@ export function boardOf(v: PlayerView, isRune: (def: DefId) => boolean = () => f
     focus: v.turn.focus,
     turnPlayer: v.turn.n > 0 ? v.turn.player : null,
     victoryScore: v.mode.victoryScore,
-    chain: v.chain.length,
+    chain: v.chain.filter((it) => !it.isAdd).map((it): ChainEntry => {
+      const id = it.obj ?? it.source;
+      const o = id === undefined ? undefined : v.objects[id];
+      const def = o && 'def' in o ? o.def : it.ability ? it.ability.slice(0, it.ability.indexOf('#')) : null;
+      const what = it.kind === 'triggered' ? 'trigger' : it.kind === 'activated' ? 'ability' : it.kind === 'token' ? 'token'
+        : (def && findCard(def)?.types[0]) ?? 'card';
+      return { item: it.id, def, kind: it.kind, what, ability: it.ability ?? null, controller: it.controller, status: it.status,
+        resolving: v.turn.resolving === it.id };
+    }),
   };
 }

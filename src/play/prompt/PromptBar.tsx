@@ -55,8 +55,9 @@ export function SetupDone({ board, summary, onClose }: { board: BoardModel; summ
       </p>
       <p className="muted small">
         On your turn, click a glowing card in your hand to play it, use Move units to send units to a battlefield,
-        and End turn when done. Card abilities are not in yet: units fight with their printed Might. Right-click a
-        card to read it.
+        and End turn when done. Spells wait on the chain (right) until both players pass; when you hold priority on
+        a chain or Focus in a showdown, glowing Reactions can answer. Some cards' abilities are not in yet (they play
+        as vanilla units, or can't be played: hover a card to see why). Right-click a card to read it.
       </p>
       <div className="sheet__buttons">
         <button type="button" className="btn btn--primary" onClick={onClose} autoFocus>To the table</button>

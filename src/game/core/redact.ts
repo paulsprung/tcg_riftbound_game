@@ -22,14 +22,15 @@
  * moving, a shuffle, a decision, an event), so they tell nothing hidden. The
  * invariance test (§14.5 #2) fails the day one of them does.
  *
- * The walker knows the paths of the state M0 and M1.1 fill: zones,
- * objects, battlefields, the decision, the chain, the combat, and the
- * setup, priority, cleanup, task, play, move and assign frames (a play's S0
- * snapshot is dropped). Continuous effects, delayed abilities, pending
- * triggers and the other frames hold ObjIds and snapshots too; the walker
- * refuses a state that has any of them until their paths are added here,
- * alongside the procedure that first writes them, rather than let an id
- * slip through.
+ * The walker knows the paths of the state M0 to M1.2 fill: zones,
+ * objects, battlefields, the decision, the chain, the combat, continuous
+ * effects, pending triggers, and the setup, priority, cleanup, task, play,
+ * move, assign, ability, resolve, instr, triggers and pay frames (S0 and S2
+ * snapshots are dropped; names an instruction bound, `{ objs }`, are
+ * aliased). Delayed abilities and the other frames hold ObjIds and
+ * snapshots too; the walker refuses a state that has any of them until
+ * their paths are added here, alongside the procedure that first writes
+ * them, rather than let an id slip through.
  *
  * This module and core/view.ts write into the copy they make, never into the
  * live state (the purity test allows them that).
@@ -37,7 +38,7 @@
 import { cloneState } from '../state/clone.ts';
 import { bit } from '../state/ids.ts';
 import { visibility } from '../state/zones.ts';
-import type { Frame, GameObject, GameState, ObjId, PlayerId, Zone } from '../state/types.ts';
+import type { Frame, GameObject, GameState, Json, ObjId, PlayerId, Zone } from '../state/types.ts';
 import { stubOf, type Decision, type DecisionStub, type Ref } from './decisions.ts';
 import { NotImplementedError } from './errors.ts';
 import type { Alias, PlayerView, Stub } from './view.ts';
@@ -95,15 +96,14 @@ function stubFor(o: GameObject, alias: Alias): Stub {
 
 /** What the walker can't redact yet, or null. */
 function unsupported(s: GameState): string | null {
-  if (s.effects.length > 0) return 'continuous effects';
   if (s.delayed.length > 0) return 'delayed abilities';
-  if (s.turn.tasks.some((t) => t.t === 'placeTriggers')) return 'pending triggers';
   const f = s.frames.find((fr) => !FRAMES.includes(fr.f));
   return f ? `'${f.f}' frames` : null;
 }
 
 /** Frames whose fields the walker knows. */
-const FRAMES: readonly Frame['f'][] = ['setup', 'priority', 'cleanup', 'task', 'play', 'move', 'assign'];
+const FRAMES: readonly Frame['f'][] = ['setup', 'priority', 'cleanup', 'task', 'play', 'move', 'assign', 'ability',
+  'resolve', 'instr', 'triggers', 'pay'];
 
 /**
  * Builds p's view of s (§7.3): a copy in which unknown objects are stubs,
@@ -154,9 +154,12 @@ export function redact(s: GameState, p: PlayerId, known: (o: GameObject) => bool
   // board are public zones); rollback snapshots never leave the engine.
   for (const it of v.chain) {
     if (it.obj !== undefined) it.obj = a(it.obj);
+    if (it.source !== undefined) it.source = a(it.source);
     it.play.snap2 = null;
     it.play.lookBack = {};
   }
+  for (const e of v.effects) if ('objs' in e.affects) e.affects.objs = as(e.affects.objs);
+  for (const t of v.turn.tasks) if (t.t === 'placeTriggers') for (const pt of t.batch) pt.source = a(pt.source);
 
   const d = s.pending;
   const mine = d !== null && d.player === p;
@@ -176,6 +179,28 @@ function redactFrame(f: Frame, p: PlayerId, a: (id: ObjId) => ObjId) {
     f.obj = a(f.obj);
   }
   if (f.f === 'move') f.snap = null;
+  if (f.f === 'ability') {
+    f.snap = null;
+    if (f.src !== null) f.src = a(f.src);
+  }
+  if (f.f === 'resolve') {
+    if (f.env.self !== null) f.env.self = a(f.env.self);
+    if (f.env.thisObj !== null) f.env.thisObj = a(f.env.thisObj);
+    redactObjs(f.env.bound, a);
+  }
+  if (f.f === 'instr') redactObjs(f.locals, a);
+  if (f.f === 'triggers') for (const t of f.batch) t.source = a(t.source);
+}
+
+/** Rewrites the object lists a frame keeps in JSON (`objs`, `chosen`,
+    `kept`: cards an instruction looked at or picked). */
+function redactObjs(j: Json, a: (id: ObjId) => ObjId) {
+  if (!j || typeof j !== 'object') return;
+  if (Array.isArray(j)) { for (const v of j) redactObjs(v, a); return; }
+  for (const [k, v] of Object.entries(j)) {
+    if ((k === 'objs' || k === 'chosen' || k === 'kept') && Array.isArray(v)) j[k] = v.map((n) => a(n as number));
+    else redactObjs(v, a);
+  }
 }
 
 function redactRefs(refs: Ref[], a: (id: ObjId) => ObjId) {

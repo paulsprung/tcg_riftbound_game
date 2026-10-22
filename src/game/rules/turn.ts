@@ -139,7 +139,8 @@ defineTask('awaken.readyAll', [(s, _f, x) => {
 }]);
 
 /** [315.2.a]: "at the start of your Beginning Phase" effects. Card
-    abilities are switched off in M1.1, so none trigger; the count of
+    abilities of this kind arrive with the cards that have them (none of the
+    cards defined so far does), so none trigger; the count of
     Beginning Phases begun ("first Beginning Phase", [190.6.b]) is kept. */
 defineTask('beginning.startEffects', [(s) => {
   const p = s.turn.player;
@@ -195,7 +196,7 @@ defineTask('main.emptyPools', [(s, _f, x) => {
 }]);
 
 /** [316.4] and [317.1.a]: "at the start of the Main Phase" and "at the end of
-    the turn" effects; with card abilities switched off none trigger. */
+    the turn" effects; none of the cards defined so far has one. */
 defineTask('main.startEffects', [() => 'done']);
 defineTask('ending.endOfTurnEffects', [() => 'done']);
 

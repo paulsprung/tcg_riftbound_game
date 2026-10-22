@@ -1,12 +1,13 @@
 import { useEffect, useRef } from 'react';
 import type { Phase } from '../../game/index.ts';
 import type { BoardModel } from '../model/board.ts';
+import { nameOf, type CardIndex } from '../model/cards.ts';
 import type { LogLine } from '../model/describe.ts';
 
 /*
  * The right rail (§12.2): the score track, the chain, the log; and the
- * phase bar under the board. M0 rests before the first turn, so the chain
- * is always empty and the phase is Setup.
+ * phase bar under the board. The chain is drawn as a stack, the newest
+ * item (the next to resolve [340.1]) on top.
  */
 
 export function ScoreTrack({ board }: { board: BoardModel }) {
@@ -28,11 +29,25 @@ export function ScoreTrack({ board }: { board: BoardModel }) {
   );
 }
 
-export function ChainBox({ board }: { board: BoardModel }) {
+export function ChainBox({ board, cards }: { board: BoardModel; cards: CardIndex }) {
+  const items = board.chain.slice().reverse();
   return (
     <section className="rail__box" aria-label="Chain">
-      <h2 className="rail__title">Chain</h2>
-      <p className="muted small">{board.chain === 0 ? 'Empty: nothing waits to resolve.' : `${board.chain} items`}</p>
+      <h2 className="rail__title">Chain {items.length > 0 && <span className="muted">· {items.length}, newest on top</span>}</h2>
+      {items.length === 0 ? <p className="muted small">Empty: nothing waits to resolve.</p> : (
+        <ol className="chain">
+          {items.map((it) => (
+            <li key={it.item} className={`chain__item chain__item--${it.controller === board.me.p ? 'me' : 'opp'}`}
+              data-status={it.resolving ? 'resolving' : it.status}>
+              <span className="chain__name">{it.def ? nameOf(cards, it.def) : 'An ability'}</span>
+              <span className="chain__meta">
+                {it.what} · {it.controller === board.me.p ? 'yours' : "opponent's"}
+                {it.resolving ? ' · resolving' : it.status === 'pending' ? ' · being played' : ''}
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
     </section>
   );
 }

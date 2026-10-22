@@ -8,6 +8,8 @@ import type { CardSlot } from '../model/board.ts';
  */
 export interface Acts {
   a: Affordances | null;
+  /** Why a card can't be used now (§12.7), by object. */
+  why?: Record<number, string>;
   send: (key: string) => void;
 }
 

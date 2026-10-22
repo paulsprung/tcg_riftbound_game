@@ -76,6 +76,7 @@ export const TableCard = memo(function TableCard({
           {slot.damage > 0 ? `${slot.might - slot.damage}/${slot.might}` : slot.might}
         </span>
       )}
+      {slot.stunned && <span className="tcard__stun">Stunned</span>}
       {slot.designation && <span className={`tcard__role tcard__role--${slot.designation}`}>{slot.designation}</span>}
     </div>
   );

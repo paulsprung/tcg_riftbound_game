@@ -9,8 +9,8 @@
  *            differ [144.3.b]
  *   routes   base → a battlefield [144.4.a]; battlefield → own base
  *            [144.4.b]; battlefield → battlefield only with Ganking
- *            [144.4.c] (keywords other than Tank and Backline are off in
- *            M1.1, so no unit has it)
+ *            [144.4.c] (Ganking is not implemented yet (M2), so no unit
+ *            has it)
  *   cost     the exhausts are paid at once, as one exhaust action [144.3.c]
  *   effect   one Move action [448]; Contested at the destination [452]; a
  *            cleanup [455], which stages and begins showdowns and combats

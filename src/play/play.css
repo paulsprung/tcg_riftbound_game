@@ -247,3 +247,17 @@ ul.play__error { padding-left: 30px; }
 .act-bar .prompt { flex: 1 1 100%; }
 .pool-chip { font-size: 11px; color: var(--muted); }
 .side__row--choose { outline: 2px dashed #7fd1ff; outline-offset: 2px; }
+
+/* The chain stack (M1.2): newest item on top. */
+.chain { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.chain__item { display: flex; flex-direction: column; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--line);
+  border-left-width: 4px; background: rgba(255, 255, 255, 0.03); }
+.chain__item--me { border-left-color: #4f8cff; }
+.chain__item--opp { border-left-color: #e0645a; }
+.chain__item[data-status='pending'] { opacity: 0.75; border-style: dashed; }
+.chain__item[data-status='resolving'] { box-shadow: 0 0 0 2px rgba(255, 204, 0, 0.6); }
+.chain__name { font-weight: 600; font-size: 13px; }
+.chain__meta { font-size: 11px; opacity: 0.75; }
+.tcard__stun { position: absolute; left: 4px; top: 4px; font-size: 10px; padding: 1px 4px; border-radius: 4px;
+  background: rgba(130, 80, 200, 0.9); color: #fff; }
+.act-bar__choices { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; flex: 1 1 100%; }

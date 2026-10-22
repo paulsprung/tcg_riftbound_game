@@ -13,7 +13,7 @@
  *        effects expire, every Rune Pool empties) [317.2.b–d]
  *   4    lose control of an empty battlefield, if Open and nothing is
  *        ongoing there [323.5], [190.4.c]
- *   5    recall stray gear, runes, and permanents in a base not their
+ *   5    recall stray gear (not Deploy gear [830.1.b.3]), runes, and permanents in a base not their
  *        controller's [323.6]; 5a trash foreign facedown cards [323.6.a]
  *   6–8a stage showdowns and combats, unstage, remove and re-apply
  *        Contested [323.7–323.10.a]
@@ -37,7 +37,8 @@ import { Z } from '../state/zones.ts';
 import type { GameState, PlayerId } from '../state/types.ts';
 import { emptyPools, heal, kill, recall, setController, clearContested, applyContested } from './actions.ts';
 import { playersWithUnitsAt, turnOrderFromTurnPlayer, turnState, unitsAt, unitsOfAt, unitsOnBoard } from './board.ts';
-import { isLethal, isType } from './chars.ts';
+import { hasKeyword, isLethal, isType } from './chars.ts';
+import { fire } from '../abilities/triggers.ts';
 import { designate, designationFor, openCombat } from './combat.ts';
 import { checkWin } from './scoring.ts';
 import { beginShowdown } from './showdown.ts';
@@ -73,13 +74,19 @@ const STEPS: StepTable<CleanupFrame> = [
   },
 
   // 2: designations while a combat is in progress [323.2.a–c].
-  (s, f) => {
+  (s, f, x) => {
     const c = s.combat;
     if (c) {
+      const first: Record<'attacker' | 'defender', number[]> = { attacker: [], defender: [] };
       for (const id of unitsOnBoard(s)) {
         const o = s.objects[id];
         const want = o.zone.z === 'bf' && o.zone.bf === c.bf ? designationFor(c, o.controller) : null;
-        if (o.designation !== want) designate(s, id, want);
+        if (o.designation !== want && designate(s, id, want) && want) first[want].push(id);
+      }
+      // A unit designated for the first time this combat: its attack or
+      // defend triggers [383.4.e.2.a], [466.2.c.3.a].
+      for (const d of ['attacker', 'defender'] as const) {
+        if (first[d].length > 0) fire(s, x, { e: 'designated', objs: first[d], d }, 'combat');
       }
     }
     return next(f);
@@ -110,6 +117,10 @@ const STEPS: StepTable<CleanupFrame> = [
       heal(s, x, unitsOnBoard(s), '317.2.b');
       // [317.2.c]: "this turn" effects expire together, Stun included [424.1.a.2].
       for (const id of unitsOnBoard(s)) if (s.objects[id].stunned) setField(s, s.objects[id], 'stunned', false);
+      // [317.2.c]: "this turn" effects too.
+      if (s.effects.some((e) => e.until === 'thisTurn')) {
+        setField(s, s, 'effects', s.effects.filter((e) => e.until !== 'thisTurn'));
+      }
       emptyPools(s, x, '317.2.d');
     }
     return next(f);
@@ -135,7 +146,8 @@ const STEPS: StepTable<CleanupFrame> = [
     s.bfs.forEach((b) => {
       for (const id of b.here) {
         const o = s.objects[id];
-        const gear = isType(o, 'gear') && !isType(o, 'unit') && o.attachedTo === null;   // Deploy gear stays (M1.3)
+        const gear = isType(o, 'gear') && !isType(o, 'unit') && o.attachedTo === null
+          && !hasKeyword(s, id, 'deploy');                           // Deploy gear stays [830.1.b.3]
         if (gear || isType(o, 'rune')) stray.push(id);
       }
     });

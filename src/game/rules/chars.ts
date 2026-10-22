@@ -1,17 +1,19 @@
 /*
- * Characteristics as M1.1 plays them: printed values, read off the oracle
- * (or a token's template [187]).
+ * Characteristics as M1.2 plays them: printed values, read off the oracle
+ * (or a token's template [187]), plus the one kind of continuous effect the
+ * chain's spells and abilities make so far: "+N / -N [M] this turn" on a
+ * locked set of units (layer 4 [479.4], a stand-in for layers/derive.ts).
  *
- * The layers (layers/derive.ts, §6.7) arrive with M1.3. Until then card
- * abilities are switched off: units are vanilla bodies with their printed
- * Might and cost, and the only keywords read are the two that combat
- * damage assignment orders by, Tank [815] and Backline [826]. Everything
- * else asks here, so the layers replace one module.
+ * The full layers (§6.7) arrive with M1.3, and so do the keywords whose
+ * rules aren't in yet: hasKeyword() answers only for the ones the engine
+ * implements (Tank and Backline for damage assignment, Deploy, Disarm, and
+ * the timing keywords Action and Reaction). Everything else asks here, so
+ * the layers replace one module.
  */
 import { findCard, printedKeywords } from '../cards/oracle.ts';
 import { TOKENS } from '../cards/tokens.ts';
 import { locOf } from '../state/zones.ts';
-import type { CardType, GameObject, GameState, KeywordId, ObjId, Snapshot, TokenId } from '../state/types.ts';
+import type { CardType, ContinuousEffect, GameObject, GameState, KeywordId, ObjId, Snapshot, TokenId } from '../state/types.ts';
 import { buffValue } from './defaults.ts';
 
 const token = (def: string) => (Object.hasOwn(TOKENS, def) ? TOKENS[def as TokenId] : undefined);
@@ -38,7 +40,18 @@ export function isUnitOnBoard(o: GameObject): boolean {
 export function mightOf(s: GameState, id: ObjId): number {
   const o = s.objects[id];
   const printed = token(o.def)?.might ?? findCard(o.def)?.might ?? 0;
-  return printed + o.buffs * buffValue(s, id);
+  return printed + o.buffs * buffValue(s, id) + effectMight(s.effects, id);
+}
+
+/** The sum of the "+N [M]" effects on an object [479.4]: each holds its
+    delta, fixed as it was created [479.4.b]. */
+export function effectMight(effects: readonly ContinuousEffect[], id: ObjId): number {
+  let n = 0;
+  for (const e of effects) {
+    const spec = e.spec as { s?: string; n?: number } | null;
+    if (spec?.s === 'might' && 'objs' in e.affects && e.affects.objs.includes(id)) n += spec.n ?? 0;
+  }
+  return n;
 }
 
 /** Might as spells, abilities and the combat sum read it: below 0 counts 0 [143.2.c]. */
@@ -47,15 +60,24 @@ export const mightRef = (s: GameState, id: ObjId) => Math.max(0, mightOf(s, id))
 /** What a unit adds to its side's combat total: a stunned unit adds 0 [424.1.b], [467.2.a–b]. */
 export const combatMight = (s: GameState, id: ObjId) => (s.objects[id].stunned ? 0 : mightRef(s, id));
 
-/** Whether a unit has a keyword. M1.1 reads printed Tank and Backline only. */
+/** The keywords whose rules the engine implements so far. */
+const IMPLEMENTED: readonly KeywordId[] = ['tank', 'backline', 'deploy', 'disarm', 'action', 'reaction'];
+
+/** Whether an object has a keyword: printed, for the implemented ones. */
 export function hasKeyword(s: GameState, id: ObjId, kw: KeywordId): boolean {
-  if (kw !== 'tank' && kw !== 'backline') return false;           // the other keywords come with the layers (M1.3)
-  const o = s.objects[id];
-  const t = token(o.def);
+  return defHasKeyword(s.objects[id].def, kw);
+}
+
+export function defHasKeyword(def: string, kw: KeywordId): boolean {
+  if (!IMPLEMENTED.includes(kw)) return false;                     // the other keywords come with the layers (M1.3)
+  const t = token(def);
   if (t) return t.keywords.includes(kw);
-  const c = findCard(o.def);
+  const c = findCard(def);
   return c !== undefined && printedKeywords(c).some((k) => k.kw === kw);
 }
+
+/** A card's printed Energy cost [131]; tokens and cards without one: 0 [185.3.a.1]. */
+export const energyCostOf = (o: Pick<GameObject, 'def'>) => findCard(o.def)?.cost?.energy ?? 0;
 
 /** Damage marked on a unit [142.2]. */
 export const damageOf = (o: GameObject) => o.damage.reduce((n, d) => n + d.amount, 0);

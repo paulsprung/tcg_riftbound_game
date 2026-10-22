@@ -27,7 +27,7 @@ import { allMask, bit } from './ids.ts';
 import { isBoard, isPublic, visibility, zoneLabel } from './zones.ts';
 import type {
   BattlefieldState, CardRef, DefId, Frame, GameObject, GameResult, GameState, IdCounters, Mask, ObjId,
-  PlayerId, Zone,
+  PlayContext, PlayerId, Zone,
 } from './types.ts';
 
 // ---- procedural writes: never bump the epoch ----
@@ -244,6 +244,10 @@ export interface MoveOptions {
   /** Memory a new object keeps from the move that made it [391.5.c.1],
       [135.2.b.7]. */
   carry?: Partial<Pick<GameObject, 'played' | 'links' | 'named' | 'copiedFrom'>>;
+  /** Gives the new object this id instead of a fresh one: a failed limited
+      play returns its card to where it came from with the identity it had
+      there (Spec D §8.5). The id must be free (the object it named left). */
+  reuseId?: ObjId;
 }
 
 /** Who knows a card after it moved from `from` to `to` (§7.2). */
@@ -280,8 +284,9 @@ export function moveObject(s: GameState, id: ObjId, to: Zone, o: MoveOptions = {
     obj.knownBy = o.knownBy ?? (isPublic(to.z) ? allMask(s.players.length) : obj.knownBy);
   } else {
     const controller = o.controller !== undefined ? o.controller : old.owner;
+    if (o.reuseId !== undefined && s.objects[o.reuseId]) throw new EngineError(`moveObject: id ${o.reuseId} is taken`);
     obj = {
-      id: mint(s, 'obj'), card: old.card, def: old.def, printing: old.printing, token: old.token, owner: old.owner,
+      id: o.reuseId ?? mint(s, 'obj'), card: old.card, def: old.def, printing: old.printing, token: old.token, owner: old.owner,
       controller, zone: structuredClone(to), knownBy: o.knownBy ?? knownAfter(s, old, from, to, controller),
       ts: mint(s, 'ts'), enteredTurn: s.turn.n, ...freshStatus(), ...structuredClone(o.carry ?? {}),
     };
@@ -292,6 +297,16 @@ export function moveObject(s: GameState, id: ObjId, to: Zone, o: MoveOptions = {
   insert(s, obj.zone, obj.id, o.pos);
   touch(s);
   return obj.id;
+}
+
+/** A token that leaves the board for anywhere but the chain ceases to
+    exist [186.1]: it is taken out of its zone and out of the game. */
+export function deleteObject(s: GameState, id: ObjId) {
+  const o = s.objects[id];
+  if (!o) throw new EngineError(`deleteObject: no object ${id}`);
+  extract(s, o.zone, id);
+  delete s.objects[id];
+  touch(s);
 }
 
 /**
@@ -384,6 +399,14 @@ export function restoreSnapshot(s: GameState, snap: GameState) {
   Object.assign(s, structuredClone(snap), keep);
   s.turn.decisionsThisTurn = decisions;
   for (const o of Object.values(s.objects)) o.knownBy |= known[o.card] ?? 0;
+  touch(s);
+}
+
+/** Keeps a limited play's S2 snapshot on its item (Spec D §8.5). The
+    snapshot is a fresh copy already: it is stored as it is, not copied
+    again (setField would). */
+export function setSnap2(s: GameState, play: PlayContext, snap: GameState | null) {
+  play.snap2 = snap;
   touch(s);
 }
 

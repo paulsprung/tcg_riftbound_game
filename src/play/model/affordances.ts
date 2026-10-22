@@ -1,4 +1,4 @@
-import { parseKey, type Decision, type ObjId, type PlayerId, type PlayerView } from '../../game/index.ts';
+import { parseKey, type Decision, type DefId, type ObjId, type PlayerId, type PlayerView } from '../../game/index.ts';
 
 /*
  * What the human may click, derived from their pending decision alone
@@ -50,8 +50,15 @@ const META_LABEL: Record<string, string> = {
   backline: 'As Backline',
 };
 
+/** A card's name for prompts; the UI passes the card index's. */
+export type Names = (def: DefId) => string;
+const plainName: Names = (def) => def;
+/** The card an ability id names ('strigian-oracle#0' → 'strigian-oracle'). */
+const defOf = (id: unknown) => (typeof id === 'string' ? (id.includes('#') ? id.slice(0, id.indexOf('#')) : id) : '');
+
 /** The decision's prompt in words. */
-export function promptText(d: Pick<Decision, 'kind' | 'prompt'>): string {
+export function promptText(d: Pick<Decision, 'kind' | 'prompt'>, names: Names = plainName): string {
+  const card = defOf(d.prompt.card);
   switch (d.kind) {
     case 'playOrder': return 'You were picked at random to choose: play first or second?';
     case 'mulligan': {
@@ -60,14 +67,31 @@ export function promptText(d: Pick<Decision, 'kind' | 'prompt'>): string {
     }
     case 'priority':
       if (d.prompt.window === 'main') return 'Your turn: play a card from your hand, move units, or end the turn.';
-      if (d.prompt.window === 'showdown') return 'Showdown: you have Focus. Play an Action, or pass.';
-      return 'You have priority on the chain: respond, or pass.';
-    case 'location': return 'Where should the unit enter? Your base, or a battlefield you control.';
+      if (d.prompt.window === 'showdown') return 'Showdown: you have Focus. Play an Action or a Reaction, or pass.';
+      return 'You have priority on the chain: play a Reaction, or pass to let the newest item resolve.';
+    case 'location': return card ? `Where should ${names(card)} enter?` : 'Where should it enter?';
     case 'payment': {
       const e = typeof d.prompt.energy === 'number' ? d.prompt.energy : 0;
       const power = Array.isArray(d.prompt.power) ? d.prompt.power.length : 0;
-      return `Pay ${e} Energy${power > 0 ? ` and ${power} Power` : ''}: choose how.`;
+      return `${card ? `${names(card)}: pay` : 'Pay'} ${e} Energy${power > 0 ? ` and ${power} Power` : ''}: choose how.`;
     }
+    case 'target': {
+      const max = typeof d.prompt.max === 'number' ? d.prompt.max : 1;
+      const chosen = typeof d.prompt.chosen === 'number' ? d.prompt.chosen : 0;
+      const what = d.prompt.harm ? 'a target' : 'a unit';
+      return `${names(card)}: choose ${max > 1 ? `up to ${max} units (${chosen} chosen)` : what}.`;
+    }
+    case 'mode': {
+      const pick = typeof d.prompt.pick === 'number' ? d.prompt.pick : 1;
+      const chosen = Array.isArray(d.prompt.chosen) ? d.prompt.chosen.length : 0;
+      return `${names(card)}: choose ${pick - chosen} more mode${pick - chosen === 1 ? '' : 's'}.`;
+    }
+    case 'may': return `Use ${names(defOf(d.prompt.ability))}'s ability?`;
+    case 'orderTriggers':
+      return 'Several of your abilities trigger at once: choose the one to put on the chain first (it resolves last).';
+    case 'predict': return 'Predict: keep the top card of your Main Deck, or recycle it to the bottom.';
+    case 'pickCard': return d.prompt.t === 'discard' ? 'Choose a card to discard.' : 'Choose the card to draw.';
+    case 'addAbility': return 'Pay rune by rune: tap runes to add Energy or Power, then Done.';
     case 'moveUnits': return 'Choose the units to move (all go to the same place), then Done.';
     case 'moveDest': return 'Choose where they move: a battlefield, or back to base.';
     case 'chooseBattlefield':
@@ -80,7 +104,7 @@ export function promptText(d: Pick<Decision, 'kind' | 'prompt'>): string {
   }
 }
 
-function buttonLabel(d: Decision, key: string, draft: readonly string[]): string {
+function buttonLabel(d: Decision, key: string, draft: readonly string[], names: Names, view: PlayerView): string {
   if (d.kind === 'mulligan' && key === 'done') {
     return draft.length === 0 ? 'Keep my hand' : `Set aside ${draft.length}`;
   }
@@ -90,17 +114,31 @@ function buttonLabel(d: Decision, key: string, draft: readonly string[]): string
     return `Pay: ${String(plans[k.n] ?? `plan ${k.n + 1}`)}`;
   }
   if (d.kind === 'assignExcess' && key === 'done') return 'Rest on the last one';
+  if (k?.head === 'mode' && k.n !== undefined && Array.isArray(d.prompt.labels)) {
+    return String(d.prompt.labels[k.n] ?? key).replace(/\[M\]/g, 'Might');
+  }
+  const ref = d.options.find((o) => o.key === key)?.refs?.find((r) => 'obj' in r) as { obj: ObjId } | undefined;
+  const o = ref ? view.objects[ref.obj] : undefined;
+  const name = o && 'def' in o ? names(o.def) : 'a card';
+  if (k?.head === 'next') return `${name} first`;
+  if (k?.head === 'keep') return `Keep ${name} on top`;
+  if (k?.head === 'recycle') return `Recycle ${name}`;
+  if (k?.head === 'pick') return d.prompt.t === 'discard' ? `Discard ${name}` : `Draw ${name}`;
+  if (k?.head === 't') return name;
   return META_LABEL[key] ?? key;
 }
+
+/** Zones whose cards the table doesn't show: their options are buttons. */
+const OFF_TABLE = ['deck', 'runeDeck', 'trash', 'banish', 'chain'];
 
 const PRIMARY = ['done', 'first', 'pass', 'yes', 'pay:0'];
 
 export function affordances(
-  view: PlayerView, d: Decision | null, draft: readonly string[] = [], first: Decision | null = d,
+  view: PlayerView, d: Decision | null, draft: readonly string[] = [], first: Decision | null = d, names: Names = plainName,
 ): Affordances {
   const shown = d ?? first;
   const out: Affordances = {
-    prompt: shown ? promptText(shown) : '', rule: shown?.ctx.rule ?? '', objects: {}, lanes: {}, players: {}, buttons: [],
+    prompt: shown ? promptText(shown, names) : '', rule: shown?.ctx.rule ?? '', objects: {}, lanes: {}, players: {}, buttons: [],
   };
   for (const key of draft) {
     const obj = parseKey(key)?.obj;
@@ -117,7 +155,10 @@ export function affordances(
   for (const o of d.options) {
     const k = parseKey(o.key);
     if (!k) continue;
-    if (k.obj !== undefined) {
+    const obj = k.obj === undefined ? undefined : view.objects[k.obj];
+    if (k.obj !== undefined && (!obj || OFF_TABLE.includes(obj.zone.z))) {
+      out.buttons.push({ key: o.key, label: buttonLabel(d, o.key, draft, names, view), commit: [...draft, o.key] });
+    } else if (k.obj !== undefined) {
       const prev = out.objects[k.obj];
       out.objects[k.obj] = { keys: [...(prev?.keys ?? []), o.key], style: d.batch ? 'toggle' : 'select' };
     } else if (k.loc !== undefined) {
@@ -130,7 +171,7 @@ export function affordances(
     } else {
       const primary = PRIMARY.includes(o.key);
       out.buttons.push({
-        key: o.key, label: buttonLabel(d, o.key, draft), primary: primary || undefined,
+        key: o.key, label: buttonLabel(d, o.key, draft, names, view), primary: primary || undefined,
         hotkey: primary ? 'Enter' : o.key === 'back' ? 'Escape' : undefined, commit: [...draft, o.key],
       });
     }
