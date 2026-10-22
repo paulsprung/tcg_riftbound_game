@@ -144,6 +144,19 @@ WebGL, which is listed below as a possible upgrade.
 6. Computer opponent
 7. Optional: depth-map parallax for the inspect view
 
+### Polish later
+
+- **Overnumbered foil:** not every overnumbered card may have the etched swirl
+  lines. Riot only says "foiling, UV treatments and texturing"; the swirls are
+  confirmed on Origins legends (e.g. OGN-303 Ahri). Spiritforged and later
+  sets added overnumbered champion units, gear and Vendetta's 22 "Rival"
+  cards, whose foil is unverified. Check real cards per set and give
+  `finishFor()` a per-set or per-card finish if they differ.
+- Overnumbered swirls still read a little brown on light backdrops.
+- 11 card images held back with small defects (stamp fringes, edge residue,
+  one with heavy glare); see the image audit notes.
+- Ultimate rares: our cracked-ice shards are not confirmed by any photo.
+
 ## Scripts
 
 | | |
