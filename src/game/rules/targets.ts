@@ -13,7 +13,11 @@ import { locOf } from '../state/zones.ts';
 import type { GameState, Loc, ObjId, PlayerId, TargetRef } from '../state/types.ts';
 import { energyCostOf, isType, mightOf } from './chars.ts';
 
-export interface SelCtx { controller: PlayerId; source: ObjId | null }
+export interface SelCtx {
+  controller: PlayerId; source: ObjId | null;
+  /** Where the battlefields some slots chose are ("friendly units there"). */
+  slotLoc?: Record<string, Loc | null>;
+}
 
 /** Every permanent on the board: in the bases and at the battlefields. */
 export function permanents(s: GameState): ObjId[] {
@@ -33,6 +37,10 @@ export function hereOf(s: GameState, source: ObjId | null): Loc | null {
 }
 
 function locOk(s: GameState, at: LocSelAst | undefined, loc: Loc, c: SelCtx): boolean {
+  if (typeof at === 'object') {
+    const l = c.slotLoc?.[at.slot];
+    return !!l && sameLoc(l, loc);
+  }
   switch (at ?? 'board') {
     case 'board': return true;
     case 'battlefield': return loc.z === 'bf';
@@ -64,30 +72,43 @@ function predOk(s: GameState, p: PredAst, id: ObjId): boolean {
 export function matches(s: GameState, sel: SelAst, id: ObjId, c: SelCtx): boolean {
   const o = s.objects[id];
   if (!o) return false;
+  const isBf = s.bfs.some((b) => b.obj === id);
+  if (sel.k === 'battlefield' || isBf) {                           // battlefields only where a selector asks for one
+    if (sel.k !== 'battlefield' || !isBf) return false;
+    if (sel.rel === 'friendly' && o.controller !== c.controller) return false;
+    if (sel.rel === 'enemy' && (o.controller === c.controller || o.controller === null)) return false;
+    return true;
+  }
   const loc = locOf(o);
-  if (!loc || s.bfs.some((b) => b.obj === id)) return false;     // permanents only, never a battlefield itself
+  if (!loc) return false;
+  if (sel.other && id === c.source) return false;                   // "other" [355.9.c]
   if (sel.k === 'unit' && !isType(o, 'unit')) return false;
   if (sel.k === 'gear' && !isType(o, 'gear')) return false;
   if (sel.k === 'permanent' && !isType(o, 'unit') && !isType(o, 'gear')) return false;
-  if (sel.k !== 'unit' && sel.k !== 'gear' && sel.k !== 'permanent') return false;
+  if (sel.k === 'rune' && !isType(o, 'rune')) return false;
   if (sel.rel === 'friendly' && o.controller !== c.controller) return false;
   if (sel.rel === 'enemy' && (o.controller === c.controller || o.controller === null)) return false;
   if (!locOk(s, sel.at, loc, c)) return false;
   return (sel.where ?? []).every((p) => predOk(s, p, id));
 }
 
+const pool = (s: GameState, sel: SelAst) => (sel.k === 'battlefield' ? s.bfs.map((b) => b.obj) : permanents(s));
+
 /** Every board object a selector picks now, in board order. */
 export const selectAll = (s: GameState, sel: SelAst, c: SelCtx): ObjId[] =>
-  permanents(s).filter((id) => matches(s, sel, id, c));
+  pool(s, sel).filter((id) => matches(s, sel, id, c));
 
 /** The legal choices for a target slot [355.8]. */
 export function slotCandidates(s: GameState, slot: SlotAst, c: SelCtx): ObjId[] {
-  return permanents(s).filter((id) => slot.sel.some((sel) => matches(s, sel, id, c)));
+  const ids = slot.sel.some((sel) => sel.k === 'battlefield') ? [...permanents(s), ...s.bfs.map((b) => b.obj)] : permanents(s);
+  return ids.filter((id) => slot.sel.some((sel) => matches(s, sel, id, c)));
 }
 
 /** A choice as the item records it: what, and where it was [359.3.e.2]. */
 export function targetRef(s: GameState, id: ObjId): TargetRef {
   const o = s.objects[id];
+  const bf = s.bfs.findIndex((b) => b.obj === id);
+  if (bf >= 0) return { k: 'obj', id, zone: 'bf', loc: { z: 'bf', bf } };
   const loc = locOf(o);
   return loc ? { k: 'obj', id, zone: o.zone.z, loc } : { k: 'obj', id, zone: o.zone.z };
 }

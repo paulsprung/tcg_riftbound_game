@@ -22,15 +22,15 @@
  * moving, a shuffle, a decision, an event), so they tell nothing hidden. The
  * invariance test (§14.5 #2) fails the day one of them does.
  *
- * The walker knows the paths of the state M0 to M1.2 fill: zones,
+ * The walker knows the paths of the state M0 to M1.3 fill: zones,
  * objects, battlefields, the decision, the chain, the combat, continuous
- * effects, pending triggers, and the setup, priority, cleanup, task, play,
- * move, assign, ability, resolve, instr, triggers and pay frames (S0 and S2
- * snapshots are dropped; names an instruction bound, `{ objs }`, are
- * aliased). Delayed abilities and the other frames hold ObjIds and
- * snapshots too; the walker refuses a state that has any of them until
- * their paths are added here, alongside the procedure that first writes
- * them, rather than let an id slip through.
+ * effects, delayed abilities, pending triggers, and the setup, priority,
+ * cleanup, task, play, move, assign, ability, resolve, instr, triggers and
+ * pay frames (S0 and S2 snapshots are dropped; names an instruction bound,
+ * `{ objs }`, are aliased). The other frames hold ObjIds and snapshots
+ * too; the walker refuses a state that has any of them until their paths
+ * are added here, alongside the procedure that first writes them, rather
+ * than let an id slip through.
  *
  * This module and core/view.ts write into the copy they make, never into the
  * live state (the purity test allows them that).
@@ -96,7 +96,6 @@ function stubFor(o: GameObject, alias: Alias): Stub {
 
 /** What the walker can't redact yet, or null. */
 function unsupported(s: GameState): string | null {
-  if (s.delayed.length > 0) return 'delayed abilities';
   const f = s.frames.find((fr) => !FRAMES.includes(fr.f));
   return f ? `'${f.f}' frames` : null;
 }
@@ -159,7 +158,10 @@ export function redact(s: GameState, p: PlayerId, known: (o: GameObject) => bool
     it.play.lookBack = {};
   }
   for (const e of v.effects) if ('objs' in e.affects) e.affects.objs = as(e.affects.objs);
-  for (const t of v.turn.tasks) if (t.t === 'placeTriggers') for (const pt of t.batch) pt.source = a(pt.source);
+  for (const t of v.turn.tasks) if (t.t === 'placeTriggers') for (const pt of t.batch) if (pt.source !== null) pt.source = a(pt.source);
+  // Delayed abilities name no hidden object: their abilities are card text,
+  // their info only public referents (none in the cards defined so far).
+  for (const d of v.delayed) redactObjs(d.info, a);
 
   const d = s.pending;
   const mine = d !== null && d.player === p;
@@ -189,7 +191,7 @@ function redactFrame(f: Frame, p: PlayerId, a: (id: ObjId) => ObjId) {
     redactObjs(f.env.bound, a);
   }
   if (f.f === 'instr') redactObjs(f.locals, a);
-  if (f.f === 'triggers') for (const t of f.batch) t.source = a(t.source);
+  if (f.f === 'triggers') for (const t of f.batch) if (t.source !== null) t.source = a(t.source);
 }
 
 /** Rewrites the object lists a frame keeps in JSON (`objs`, `chosen`,

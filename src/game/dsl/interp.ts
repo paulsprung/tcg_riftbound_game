@@ -22,7 +22,7 @@
  * trash and counts as played [359.3.d], [420.4.a] (even if every
  * instruction was ignored [359.3.e.10]); the item leaves the chain [319.5].
  */
-import { abilityById, cardDef } from '../cards/registry.ts';
+import { abilityIn, cardDef } from '../cards/registry.ts';
 import { K, parseKey, type Option } from '../core/decisions.ts';
 import { emit } from '../core/events.ts';
 import { answer, ask, defineSteps, ret, takeRet, type FrameOf, type StepOut } from '../core/frames.ts';
@@ -35,11 +35,13 @@ import type {
 import type { InstrAst, ProgAst, RefAst, SelAst, SlotAst, ValueAst } from './ast.ts';
 import { fire } from '../abilities/triggers.ts';
 import {
-  addMight, banish, buffUnits, burn, channelRunes, deal, discard, drawCard, drawCards, kill, look, ready, recycleCards,
-  stunUnits, toZone,
+  addEffect, addMight, banish, buffUnits, burn, channelRunes, deal, discard, drawCard, drawCards, kill, look, ready,
+  recycleCards, stunUnits, toZone,
 } from '../rules/actions.ts';
 import { itemById, markFepr, removeItem } from '../rules/chain.ts';
-import { energyCostOf, typesOf } from '../rules/chars.ts';
+import { energyCostOf, mightOf, snapshotOf, typesOf } from '../rules/chars.ts';
+import { evalCond, type CondCtx } from '../rules/conditions.ts';
+import { mint } from '../state/mut.ts';
 import { hereOf, selectAll, stillLegal, type SelCtx } from '../rules/targets.ts';
 import { requestCleanup } from '../rules/tasks.ts';
 import { putOnChain, resourceCost } from '../play/playCard.ts';
@@ -48,18 +50,33 @@ import { findCard } from '../cards/oracle.ts';
 type ResolveFrame = FrameOf<'resolve'>;
 type X = { present: boolean };
 
-/** One instruction of an item, with the key its outcome is recorded under. */
-interface Step { key: string; instr: InstrAst; slots: SlotAst[] }
+/** One instruction of an item, with the key its outcome is recorded under.
+    `guard`: a branch of an `if`, executed only when the `if` took it. */
+interface Step { key: string; instr: InstrAst; slots: SlotAst[]; guard?: { key: string; branch: 'then' | 'else' } }
 
 /** The program an item executes as it resolves: a spell's text, an
     ability's effect. */
 export function programOf(s: GameState, it: ChainItem): ProgAst | undefined {
   if (it.kind === 'card') return cardDef(s.objects[it.obj!].def)?.spell;
   if (it.ability) {
-    const a = abilityById(it.ability);
-    return a?.effect;
+    const a = abilityIn(s, it.ability);
+    return a && (a.kind === 'triggered' || a.kind === 'activated') ? a.effect : undefined;
   }
   return undefined;
+}
+
+/** An instruction list as steps; an `if`'s branches follow it, guarded. */
+function flatten(body: InstrAst[], prefix: string, slots: SlotAst[], guard?: Step['guard']): Step[] {
+  const out: Step[] = [];
+  body.forEach((instr, i) => {
+    const key = `${prefix}${i}`;
+    out.push({ key, instr, slots, ...(guard ? { guard } : {}) });
+    if (instr.op === 'if') {
+      out.push(...flatten(instr.then, `${key}.t`, slots, { key, branch: 'then' }));
+      out.push(...flatten(instr.else ?? [], `${key}.e`, slots, { key, branch: 'else' }));
+    }
+  });
+  return out;
 }
 
 /** The instructions in order: the program's own, then each chosen mode's
@@ -68,13 +85,33 @@ function stepsOf(s: GameState, it: ChainItem): Step[] {
   const prog = programOf(s, it);
   if (!prog) return [];
   const own = prog.choose ?? [];
-  const out: Step[] = prog.body.map((instr, i) => ({ key: `b${i}`, instr, slots: own }));
+  const out: Step[] = flatten(prog.body, 'b', own);
   const chosen = it.play.choices.executions[0].modes;
   (prog.modes?.of ?? []).forEach((m, mi) => {
     if (!chosen.includes(mi)) return;
-    m.body.forEach((instr, i) => out.push({ key: `m${mi}.${i}`, instr, slots: [...own, ...(m.choose ?? [])] }));
+    out.push(...flatten(m.body, `m${mi}.`, [...own, ...(m.choose ?? [])]));
   });
   return out;
+}
+
+/** Where the battlefields the item's slots chose are ("friendly units there"). */
+function slotLocs(s: GameState, it: ChainItem): Record<string, Loc | null> {
+  const out: Record<string, Loc | null> = {};
+  for (const [slot, ts] of Object.entries(it.play.choices.executions[0].targets)) {
+    const t = ts[0];
+    if (t?.k !== 'obj') continue;
+    const bf = s.bfs.findIndex((b) => b.obj === t.id);
+    out[slot] = bf >= 0 ? { z: 'bf', bf } : null;
+  }
+  return out;
+}
+
+/** What the item's conditions read: its controller, its source, the facts of
+    the play that made it [135.2.b.7] and its outcomes so far. */
+function condCtx(s: GameState, it: ChainItem): CondCtx {
+  const src = it.source ?? it.obj ?? null;
+  const facts = it.kind === 'card' ? it.play.facts : (src !== null ? s.objects[src]?.played ?? null : null);
+  return { controller: it.controller, source: src, facts, outcomes: it.outcomes };
 }
 
 /** The R row: the newest finalized item resolves [339.1], [340.1]. */
@@ -118,8 +155,38 @@ function resolveRef(s: GameState, it: ChainItem, env: Env, r: RefAst | SelAst, s
     : { objs: [], ignored: { o: 'ignored', why: 'nullInfo' } };
 }
 
-function value(s: GameState, v: ValueAst, c: SelCtx): number {
-  return typeof v === 'number' ? v : selectAll(s, v.of, c).length;
+/** A number an instruction reads as it executes [359.3.f.2]. */
+function value(s: GameState, it: ChainItem, env: Env, v: ValueAst, st: Step, c: SelCtx): number {
+  if (typeof v === 'number') return v;
+  switch (v.v) {
+    case 'count': return selectAll(s, v.of, c).length;
+    case 'info': {
+      const n = it.trigger?.[v.key];
+      return typeof n === 'number' ? n : 0;
+    }
+    case 'shownPower': {
+      const n = it.trigger?.shownPower ?? shownPower(condCtx(s, it).facts ?? null);
+      return typeof n === 'number' ? n : 0;
+    }
+    case 'might': {
+      const r = typeof v.of === 'object' && 'slot' in v.of ? it.play.choices.executions[0].targets[v.of.slot] ?? [] : [];
+      const id = r[0]?.k === 'obj' ? r[0].id : (resolveRef(s, it, env, v.of, st, c).objs[0] ?? null);
+      if (id === null) return 0;
+      if (s.objects[id] && onBoard(s, id)) return Math.max(0, mightOf(s, id));
+      return Math.max(0, it.play.lookBack[id]?.chars.might ?? 0);    // look-back [359.3.e.13]
+    }
+  }
+}
+
+/** The Power cost of the card shown off, from its snapshot [832.1.d]. */
+export function shownPower(facts: { showOff: { picks: { chars: { cost: { power: unknown[] } | null } }[] }[] } | null): number {
+  const pick = facts?.showOff.flatMap((r) => r.picks)[0];
+  return pick?.chars.cost?.power.length ?? 0;
+}
+
+/** Keeps what an instruction is about to move off the board, for look-back [359.3.e.13]. */
+function lookBack(s: GameState, it: ChainItem, objs: ObjId[]) {
+  for (const id of objs) setField(s, it.play.lookBack, id, snapshotOf(s, id));
 }
 
 const onBoard = (s: GameState, id: ObjId) => locOf(s.objects[id]) !== null;
@@ -132,11 +199,18 @@ defineSteps('resolve', (s, f, x) => {
   const i = f.ip[0];
   if (!it || i >= steps.length) return finishResolve(s, x, f);       // [359.3.e.15], or the end
   const st = steps[i];
-  const c: SelCtx = { controller: it.controller, source: it.source ?? null };
+  if (st.guard && f.env.bound[`if:${st.guard.key}`] !== st.guard.branch) {   // the branch the `if` didn't take
+    f.ip = [i + 1];
+    return 'continue';
+  }
+  const c: SelCtx = { controller: it.controller, source: it.source ?? null, slotLoc: slotLocs(s, it) };
   const got = takeRet(f);
-  const out = execute(s, x, f, it, st, c, got);
+  // A linked instruction is ignored when the one it is linked to was [359.3.e.14.a].
+  const linkedTo = st.instr.link === undefined ? undefined : it.outcomes[`id:${st.instr.link}`];
+  const out: Outcome | 'asked' = linkedTo?.o === 'ignored' ? { o: 'ignored', why: 'linked' } : execute(s, x, f, it, st, c, got);
   if (out === 'asked') return 'continue';
   setField(s, it.outcomes, st.key, out);
+  if (st.instr.id !== undefined) setField(s, it.outcomes, `id:${st.instr.id}`, out);
   emit(s, x, { k: 'outcome', item: it.id, instr: st.key, outcome: out, rule: '359.3.e' });
   f.ip = [i + 1];
   return 'continue';
@@ -163,14 +237,50 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
       const objs = r.objs.filter((id) => onBoard(s, id));
       if (objs.length === 0) return negated;
       if (ins.op === 'deal') {
-        deal(s, x, objs.map((to) => ({ to, n: value(s, ins.n, c) })), { sources: attribution, by: p, combat: false,
+        deal(s, x, objs.map((to) => ({ to, n: value(s, it, f.env, ins.n, st, c) })), { sources: attribution, by: p, combat: false,
           rule: '418' });
-      } else if (ins.op === 'banish') banish(s, x, objs, '428');
-      else if (ins.op === 'kill') kill(s, x, objs, { rule: '429', inCombat: () => false });
+      } else if (ins.op === 'banish') { lookBack(s, it, objs); banish(s, x, objs, '428'); }
+      else if (ins.op === 'kill') { lookBack(s, it, objs); kill(s, x, objs, { rule: '429', inCombat: () => false }); }
       else if (ins.op === 'stun') return stunUnits(s, x, objs, '424').length > 0 ? ok : { o: 'negated', why: 'noop' };
       else if (ins.op === 'buff') return buffUnits(s, x, objs, '427').length > 0 ? ok : { o: 'negated', why: 'noop' };
-      else if (ins.op === 'might') addMight(s, x, objs, ins.sign * value(s, ins.n, c), { controller: p, source: it.source ?? it.obj ?? null, item: it.id,
-        rule: '479.4' });
+      else if (ins.op === 'might') addMight(s, x, objs, ins.sign * value(s, it, f.env, ins.n, st, c), { controller: p,
+        source: it.source ?? it.obj ?? null, item: it.id, rule: '479.4' });
+      return ok;
+    }
+    case 'baseMight': case 'grant': {
+      const r = resolveRef(s, it, f.env, ins.to, st, c);
+      if (r.ignored) return r.ignored;
+      const objs = r.objs.filter((id) => onBoard(s, id));
+      if (objs.length === 0) return negated;
+      const o = { controller: p, source: it.source ?? it.obj ?? null, item: it.id, rule: ins.op === 'baseMight' ? '479.2' : '479.3' };
+      if (ins.op === 'baseMight') addEffect(s, x, objs, { s: 'baseMight', n: value(s, it, f.env, ins.n, st, c) }, o);
+      else addEffect(s, x, objs, { s: 'keyword', kw: ins.kw.kw, value: ins.kw.value ?? 1 }, o);
+      return ok;
+    }
+    case 'if': {
+      // The condition is read as the instruction executes [359.3.e]; the
+      // branch it takes runs next (the frame's own bookkeeping).
+      const took = evalCond(s, ins.cond, condCtx(s, it)) ? 'then' : 'else';
+      f.env.bound = { ...f.env.bound, [`if:${st.key}`]: took };
+      return ok;
+    }
+    case 'delayed': {
+      // A delayed ability [390–393]: controlled by the item's controller as it
+      // is created (Spec E Q10), for the rest of this turn.
+      if (s.turn.phase === 'ending' && s.turn.step === 'expiration') return negated;   // too late to trigger [359.3.e.16]
+      const id = mint(s, 'eff');
+      append(s, s.delayed, { id, controller: p, createdBy: it.id, createdTurn: s.turn.n,
+        ability: { ...ins.ability, id: `eff:${id}#0` } as unknown as Json,
+        window: { during: 'thisTurn', uses: ins.uses }, info: {} });
+      return ok;
+    }
+    case 'draws': {
+      const ref = ins.who.controllerOf;
+      const t = typeof ref === 'object' && 'slot' in ref ? it.play.choices.executions[0].targets[ref.slot]?.[0] : undefined;
+      if (t?.k !== 'obj') return { o: 'ignored', why: 'nullInfo' };
+      const who = s.objects[t.id] && onBoard(s, t.id) ? s.objects[t.id].controller : it.play.lookBack[t.id]?.controller ?? null;
+      if (who === null) return { o: 'ignored', why: 'nullInfo' };
+      drawCards(s, x, who, ins.n, '414');
       return ok;
     }
     case 'ready': {
@@ -186,7 +296,7 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
         for (const id of ids) drawCard(s, x, p, id, '414.1');
         return ok;
       }
-      drawCards(s, x, p, value(s, ins.n, c), '414');
+      drawCards(s, x, p, value(s, it, f.env, ins.n, st, c), '414');
       return ok;
     }
     case 'burn': burn(s, x, p, ins.n, '441'); return ok;
@@ -222,7 +332,8 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
       return ok;
     }
     case 'predict': {
-      const top = s.players[p].deck.slice(0, ins.n);
+      const n = value(s, it, f.env, ins.n, st, c);
+      const top = s.players[p].deck.slice(0, n);
       if (top.length === 0) return negated;                          // no Burn Out [437.4.a]
       if (got === undefined) {
         look(s, x, p, top, '437.1');

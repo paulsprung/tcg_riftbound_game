@@ -121,6 +121,10 @@ const STEPS: StepTable<CleanupFrame> = [
       if (s.effects.some((e) => e.until === 'thisTurn')) {
         setField(s, s, 'effects', s.effects.filter((e) => e.until !== 'thisTurn'));
       }
+      // Delayed abilities "this turn" end with it (Fanfare's unused draws) [391.3].
+      if (s.delayed.some((d) => 'during' in d.window && d.window.during === 'thisTurn')) {
+        setField(s, s, 'delayed', s.delayed.filter((d) => !('during' in d.window && d.window.during === 'thisTurn')));
+      }
       emptyPools(s, x, '317.2.d');
     }
     return next(f);

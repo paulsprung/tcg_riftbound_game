@@ -10,14 +10,15 @@
  *
  * A card without a definition is played as M1.1 played it: a unit or gear
  * is a vanilla body; a spell has nothing to execute and can't be played.
- * Tokens have no abilities here yet (Bird's Deflect, Gold's Add: M1.3/M2).
+ * Tokens have no abilities here (Bird's Deflect is a keyword of its
+ * template; Gold's Add arrives with M2).
  *
  * defsHash() names the definitions in effect; a game record made under
  * other definitions is not replayed (§4.9).
  */
 import type { AbilityAst, CardDef, KeywordAst, TriggeredAst } from '../dsl/ast.ts';
 import { hashString, stableJson } from '../state/clone.ts';
-import type { DefId, Json, KeywordId } from '../state/types.ts';
+import type { DefId, GameState, Json, KeywordId } from '../state/types.ts';
 import { OTHER_DEFS, SERAPHINE_DEFS } from './defs/seraphine.ts';
 import { findCard, printedKeywords } from './oracle.ts';
 
@@ -71,6 +72,15 @@ export function abilitiesOf(def: DefId): AbilityAst[] {
 export function abilityById(id: string): AbilityAst | undefined {
   const def = id.slice(0, id.indexOf('#'));
   return abilitiesOf(def).find((a) => a.id === id);
+}
+
+/** An ability by its id, including delayed abilities of the state
+    ('eff:<id>#0' [390–393]), which no card prints. */
+export function abilityIn(s: GameState, id: string): AbilityAst | undefined {
+  if (!id.startsWith('eff:')) return abilityById(id);
+  const eid = Number(id.slice(4, id.indexOf('#')));
+  const d = s.delayed.find((x) => x.id === eid);
+  return d ? ({ ...(d.ability as object), id } as AbilityAst) : undefined;
 }
 
 /** Whether a card of this definition has any triggered ability. */

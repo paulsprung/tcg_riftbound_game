@@ -18,7 +18,7 @@
  *   5  targets still legal, timing [406], [381]
  *   6  finalized [407]; "once each turn" counts now [383.3.e], [386.2]
  */
-import { abilityById } from '../cards/registry.ts';
+import { abilityById, abilityIn } from '../cards/registry.ts';
 import { K } from '../core/decisions.ts';
 import { emit } from '../core/events.ts';
 import { answer, ask, awaitTasks, defineSteps, next, type FrameOf, type RunCtx, type StepTable } from '../core/frames.ts';
@@ -84,9 +84,9 @@ export function activatable(s: GameState, p: PlayerId, w: Window): { obj: ObjId;
 }
 
 const itemOf = (s: GameState, f: AbilityFrame): ChainItem => itemById(s, f.item)!;
-const abilityOf = (f: AbilityFrame) => abilityById(f.ability!) as TriggeredAst | ActivatedAst;
-const isActivated = (f: AbilityFrame) => abilityOf(f).kind === 'activated';
-const backOk = (f: AbilityFrame) => isActivated(f);
+const abilityOf = (s: GameState, f: AbilityFrame) => abilityIn(s, f.ability!) as TriggeredAst | ActivatedAst;
+const isActivated = (s: GameState, f: AbilityFrame) => abilityOf(s, f).kind === 'activated';
+const backOk = (s: GameState, f: AbilityFrame) => isActivated(s, f);
 
 /** Undoes an activation [358.5], [445.2.a]: back to S0. */
 function rollback(s: GameState, f: AbilityFrame, x: RunCtx, reason: 'back' | 'illegal' | 'declined') {
@@ -128,7 +128,7 @@ const STEPS: StepTable<AbilityFrame> = [
   // Step 2 [403]: a leading "you may", then the targets.
   (s, f, x) => {
     const it = itemOf(s, f);
-    const a = abilityOf(f);
+    const a = abilityOf(s, f);
     if (a.kind === 'triggered' && a.may && !a.cost && it.play.choices.asPlayed.may !== true) {
       const key = answer(f);
       if (key === undefined) {
@@ -143,7 +143,7 @@ const STEPS: StepTable<AbilityFrame> = [
       return 'continue';
     }
     const r = chooseNext(s, f, x, it, a.effect, {
-      back: backOk(f), onBack: () => rollback(s, f, x, 'back'),
+      back: backOk(s, f), onBack: () => rollback(s, f, x, 'back'),
       onImpossible: () => (a.kind === 'triggered' ? removeTrigger(s, f, x, 'noTargets') : rollback(s, f, x, 'illegal')),
       what: a.id,
     });
@@ -155,7 +155,7 @@ const STEPS: StepTable<AbilityFrame> = [
   // Step 3 [404]: the cost.
   (s, f) => {
     const it = itemOf(s, f);
-    const a = abilityOf(f);
+    const a = abilityOf(s, f);
     const c = a.cost ? resourceCost(a.cost, domainsOf(s, it.source!)) : { energy: 0, power: [] };
     setField(s, it.play, 'cost', { energy: c.energy, power: c.power, other: a.cost?.exhaustSelf ? ['exhaustSelf'] : [],
       components: [] });
@@ -167,10 +167,10 @@ const STEPS: StepTable<AbilityFrame> = [
   // the pool. A trigger's cost may be declined [405.2].
   (s, f, x) => {
     const it = itemOf(s, f);
-    const trig = !isActivated(f);
+    const trig = !isActivated(s, f);
     const r = payStep(s, f, x, {
       payer: it.controller, cost: { energy: it.play.cost!.energy, power: it.play.cost!.power }, what: f.ability!,
-      item: it.id, ...(it.source !== undefined ? { source: it.source } : {}), back: backOk(f),
+      item: it.id, ...(it.source !== undefined ? { source: it.source } : {}), back: backOk(s, f),
       onBack: () => rollback(s, f, x, 'back'),
       onDecline: () => (trig ? removeTrigger(s, f, x, 'unpaid') : rollback(s, f, x, 'declined')), rule: trig ? '405.2' : '405.1',
     });
@@ -188,7 +188,7 @@ const STEPS: StepTable<AbilityFrame> = [
   (s, f, x) => {
     const it = itemOf(s, f);
     setField(s, it.play, 'step', 5);
-    const a = abilityOf(f);
+    const a = abilityOf(s, f);
     const ex = it.play.choices.executions[0];
     const c = { controller: it.controller, source: it.source ?? null };
     const bad = slotsOf(a.effect, ex.modes).some((sl) => (ex.targets[sl.id] ?? []).some((t) => !stillLegal(s, t, sl, c)));

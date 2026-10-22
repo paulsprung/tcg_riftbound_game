@@ -1,20 +1,14 @@
 /*
- * Characteristics as M1.2 plays them: printed values, read off the oracle
- * (or a token's template [187]), plus the one kind of continuous effect the
- * chain's spells and abilities make so far: "+N / -N [M] this turn" on a
- * locked set of units (layer 4 [479.4], a stand-in for layers/derive.ts).
- *
- * The full layers (§6.7) arrive with M1.3, and so do the keywords whose
- * rules aren't in yet: hasKeyword() answers only for the ones the engine
- * implements (Tank and Backline for damage assignment, Deploy, Disarm, and
- * the timing keywords Action and Reaction). Everything else asks here, so
- * the layers replace one module.
+ * Characteristics as procedures read them: the card types, printed costs,
+ * Might, keywords, damage and lethality, and last-known information. Might
+ * and keywords come from the layers (layers/derive.ts, §6.7); everything
+ * else asks here, so the layers are one module.
  */
-import { findCard, printedKeywords } from '../cards/oracle.ts';
+import { findCard } from '../cards/oracle.ts';
 import { TOKENS } from '../cards/tokens.ts';
+import { derive, IMPLEMENTED_KEYWORDS, keywordValue, printedKeywordValues } from '../layers/derive.ts';
 import { locOf } from '../state/zones.ts';
 import type { CardType, ContinuousEffect, GameObject, GameState, KeywordId, ObjId, Snapshot, TokenId } from '../state/types.ts';
-import { buffValue } from './defaults.ts';
 
 const token = (def: string) => (Object.hasOwn(TOKENS, def) ? TOKENS[def as TokenId] : undefined);
 
@@ -33,18 +27,16 @@ export function isUnitOnBoard(o: GameObject): boolean {
 }
 
 /**
- * Effective Might [143.2.a]: printed Might plus one per buff [703]. Without
- * the layers there is nothing else to add. May be negative once effects
- * can lower it [143.2.c]; mightRef() clamps it for references and sums.
+ * Effective Might [143.2.a] after the layers (§6.7). May be negative once
+ * effects lower it [143.2.c]; mightRef() clamps it for references and sums.
+ * Objects without Might (gear, spells) read 0.
  */
 export function mightOf(s: GameState, id: ObjId): number {
-  const o = s.objects[id];
-  const printed = token(o.def)?.might ?? findCard(o.def)?.might ?? 0;
-  return printed + o.buffs * buffValue(s, id) + effectMight(s.effects, id);
+  return derive(s, id).might ?? 0;
 }
 
-/** The sum of the "+N [M]" effects on an object [479.4]: each holds its
-    delta, fixed as it was created [479.4.b]. */
+/** The sum of the "+N [M] this turn" effects on an object [479.4]: each holds
+    its delta, fixed as it was created [479.4.b]. */
 export function effectMight(effects: readonly ContinuousEffect[], id: ObjId): number {
   let n = 0;
   for (const e of effects) {
@@ -60,20 +52,18 @@ export const mightRef = (s: GameState, id: ObjId) => Math.max(0, mightOf(s, id))
 /** What a unit adds to its side's combat total: a stunned unit adds 0 [424.1.b], [467.2.a–b]. */
 export const combatMight = (s: GameState, id: ObjId) => (s.objects[id].stunned ? 0 : mightRef(s, id));
 
-/** The keywords whose rules the engine implements so far. */
-const IMPLEMENTED: readonly KeywordId[] = ['tank', 'backline', 'deploy', 'disarm', 'action', 'reaction'];
-
-/** Whether an object has a keyword: printed, for the implemented ones. */
+/** Whether an object has a keyword now [803]: printed or granted (layer 3),
+    for the keywords whose rules the engine implements. */
 export function hasKeyword(s: GameState, id: ObjId, kw: KeywordId): boolean {
-  return defHasKeyword(s.objects[id].def, kw);
+  return keywordValue(s, id, kw) > 0;
 }
 
+/** A keyword's value (Deflect 1, Shield 2): summed over its instances [807.2]. */
+export const keywordOf = (s: GameState, id: ObjId, kw: KeywordId) => keywordValue(s, id, kw);
+
+/** Whether a definition prints a keyword (timing keywords of cards in hand). */
 export function defHasKeyword(def: string, kw: KeywordId): boolean {
-  if (!IMPLEMENTED.includes(kw)) return false;                     // the other keywords come with the layers (M1.3)
-  const t = token(def);
-  if (t) return t.keywords.includes(kw);
-  const c = findCard(def);
-  return c !== undefined && printedKeywords(c).some((k) => k.kw === kw);
+  return IMPLEMENTED_KEYWORDS.includes(kw) && (printedKeywordValues(def)[kw] ?? 0) > 0;
 }
 
 /** A card's printed Energy cost [131]; tokens and cards without one: 0 [185.3.a.1]. */
@@ -96,7 +86,10 @@ export function isLethal(s: GameState, id: ObjId): boolean {
 export function snapshotOf(s: GameState, id: ObjId): Snapshot {
   const o = s.objects[id];
   const c = findCard(o.def), t = token(o.def);
-  const might = isType(o, 'unit') ? mightOf(s, id) : null;
+  const d = derive(s, id);
+  const might = isType(o, 'unit') ? d.might ?? 0 : null;
+  const keywords: Snapshot['chars']['keywords'] = {};
+  for (const [k, v] of Object.entries(d.keywords)) keywords[k as KeywordId] = { value: v, instances: 1, active: true };
   return {
     id, card: o.card, def: o.def, owner: o.owner, controller: o.controller, zone: structuredClone(o.zone),
     loc: locOf(o), damage: damageOf(o), buffs: o.buffs, exhausted: o.exhausted, stunned: o.stunned, attached: [],
@@ -104,7 +97,7 @@ export function snapshotOf(s: GameState, id: ObjId): Snapshot {
     chars: {
       name: c?.name ?? t?.name ?? o.def, types: typesOf(o), supertypes: c?.supertypes ?? [], tags: c?.tags ?? t?.tags ?? [],
       domains: c?.domains ?? [], cost: c?.cost ? { energy: c.cost.energy, power: c.cost.power } : null, might,
-      baseMight: might, mightBonus: null, keywords: {}, abilities: [], controller: o.controller,
+      baseMight: isType(o, 'unit') ? d.baseMight : null, mightBonus: null, keywords, abilities: [], controller: o.controller,
     },
   };
 }

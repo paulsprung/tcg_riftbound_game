@@ -31,15 +31,16 @@
  * or the player the trigger names ("they", "when you conquer here" on a
  * battlefield) [190.6.c].
  */
-import type { TriggeredAst } from '../dsl/ast.ts';
-import { abilitiesOf, abilityById, hasTriggers } from '../cards/registry.ts';
+import type { TriggerAst, TriggeredAst } from '../dsl/ast.ts';
+import { abilitiesOf, abilityIn, hasTriggers } from '../cards/registry.ts';
 import { TOKENS } from '../cards/tokens.ts';
 import { K, parseKey } from '../core/decisions.ts';
 import { answer, ask, defineSteps, type FrameOf, type StepTable } from '../core/frames.ts';
 import { mint, setField } from '../state/mut.ts';
+import { evalCond } from '../rules/conditions.ts';
 import { isBoard } from '../state/zones.ts';
 import type {
-  CardType, ChainItem, DefId, GameObject, GameState, Json, Loc, ObjId, PendingTrigger, PlayerId, Snapshot,
+  CardType, ChainItem, DefId, DelayedAbility, GameObject, GameState, Json, Loc, ObjId, PendingTrigger, PlayerId, Snapshot,
 } from '../state/types.ts';
 import { turnOrderFromTurnPlayer } from '../rules/board.ts';
 import { addItem, countUsage, playContext, usageKey } from '../rules/chain.ts';
@@ -56,7 +57,8 @@ export type TriggerEvent =
   | { e: 'exhausted'; p: PlayerId; objs: ObjId[] }                   // one Exhaust action [415]
   | { e: 'scored'; p: PlayerId; bf: number; how: 'conquer' | 'hold' }   // [471]
   | { e: 'died'; deaths: { snap: Snapshot; at: Loc | null }[] }      // one Kill action [429]
-  | { e: 'designated'; objs: ObjId[]; d: 'attacker' | 'defender' };  // first time this combat [383.4.e–f]
+  | { e: 'designated'; objs: ObjId[]; d: 'attacker' | 'defender' }   // first time this combat [383.4.e–f]
+  | { e: 'phase'; at: 'beginning' | 'mainStart' | 'endOfTurn'; p: PlayerId };   // [315.2.a], [316.4], [317.1.a]
 
 const sameLoc = (a: Loc | null | undefined, b: Loc | null | undefined) => !!a && !!b && a.z === b.z
   && (a.z === 'base' ? a.p === (b as typeof a).p : a.bf === (b as typeof a).bf);
@@ -81,83 +83,139 @@ function sources(s: GameState): GameObject[] {
   return Object.values(s.objects).filter((o) => hasTriggers(o.def) && (isBoard(o.zone.z) || o.zone.z === 'trash'));
 }
 
-/** The triggers an event meets [383.2]. */
+/** The instances a trigger condition meets: who did it and the referents
+    [359.3.f.3]. `o` is the source (null for a delayed ability) and `c` the
+    ability's controller as it would be. */
+function meets(s: GameState, w: TriggerAst, ev: TriggerEvent, o: GameObject | null, c: (p: PlayerId | null) => PlayerId | null,
+  key: (p: PlayerId | '*') => string | null): { p: PlayerId | null; info: Record<string, Json> }[] {
+  const instances: { p: PlayerId | null; info: Record<string, Json> }[] = [];
+  switch (w.on) {
+    case 'played':
+      if (o && ev.e === 'played' && ev.obj === o.id) instances.push({ p: ev.p, info: { p: ev.p, subject: o.id } });
+      break;
+    case 'cardPlayed': {
+      if (ev.e !== 'played') break;
+      if (w.by === 'you' && ev.p !== c(ev.p)) break;
+      if (w.what?.types && !w.what.types.some((t) => ev.types.includes(t))) break;
+      if (w.what?.card && !ev.isCard) break;                       // a token is not a card [052]
+      if (w.what?.minEnergy !== undefined && (!ev.isCard || ev.energy < w.what.minEnergy)) break;
+      if (w.to === 'here' && (!o || !sameLoc(ev.to, hereOf(s, o.id)))) break;
+      const info: Record<string, Json> = { p: ev.p, energy: ev.isCard ? ev.energy : 0 };
+      if (ev.obj !== null) info.subject = ev.obj;
+      instances.push({ p: ev.p, info });
+      break;
+    }
+    case 'attack': case 'defend':
+      if (o && ev.e === 'designated' && ev.d === (w.on === 'attack' ? 'attacker' : 'defender') && ev.objs.includes(o.id)) {
+        instances.push({ p: o.controller, info: { subject: o.id } });
+      }
+      break;
+    case 'conquer': case 'hold': {
+      if (!o || ev.e !== 'scored' || ev.how !== w.on || !sameLoc({ z: 'bf', bf: ev.bf }, hereOf(s, o.id))) break;
+      const ctl = c(ev.p);
+      if (ctl === null) break;
+      if (w.who === 'you' ? ev.p !== ctl : ev.p === ctl) break;
+      instances.push({ p: ev.p, info: { p: ev.p, bf: ev.bf } });
+      break;
+    }
+    case 'becomesExhausted':
+      if (o && ev.e === 'exhausted' && ev.objs.includes(o.id)) instances.push({ p: ev.p, info: { subject: o.id } });
+      break;
+    case 'exhaustBatch': {
+      if (ev.e !== 'exhausted') break;
+      const ctl = c(ev.p);
+      const units = ev.objs.filter((id) => s.objects[id] && isType(s.objects[id], 'unit') && s.objects[id].controller === ctl);
+      if (ev.p === ctl && units.length >= w.min) instances.push({ p: ev.p, info: { p: ev.p, n: units.length } });
+      break;
+    }
+    case 'unitDies': {
+      if (ev.e !== 'died' || !o) break;
+      const here = hereOf(s, o.id);
+      const by: PlayerId[] = [];
+      for (const d of ev.deaths) {
+        if (!sameLoc(d.at, here) || !d.snap.chars.types.includes('unit')) continue;
+        if (w.nonToken && isTokenDef(d.snap.def)) continue;
+        const p = d.snap.controller;
+        if (p === null || by.includes(p)) continue;                  // one crossing per player per group [383.1.b]
+        by.push(p);
+      }
+      for (const p of by) {
+        const k = key(p);
+        if (w.firstPerPlayer && k !== null) {
+          const seen = s.usage[k] ?? 0;
+          countUsage(s, k);
+          if (seen > 0) continue;
+        }
+        instances.push({ p, info: { p } });
+      }
+      break;
+    }
+    case 'phase':
+      if (ev.e === 'phase' && ev.at === w.at && c(ev.p) === ev.p) instances.push({ p: ev.p, info: { p: ev.p } });
+      break;
+    case 'dies': break;                                              // self-leave: placed by the kill itself [383.2.c.3]
+  }
+  return instances;
+}
+
+/** The triggers an event meets [383.2]: the board's (and the trash's where
+    a card says so [385.2]) and the delayed abilities' [391]. */
 export function collect(s: GameState, ev: TriggerEvent): PendingTrigger[] {
   const out: PendingTrigger[] = [];
   for (const o of sources(s)) {
     for (const a of abilitiesOf(o.def)) {
       if (a.kind !== 'triggered' || !activeHere(o, a)) continue;
-      const w = a.when;
-      const instances: { p: PlayerId | null; info: Record<string, Json> }[] = [];
-      switch (w.on) {
-        case 'played':
-          if (ev.e === 'played' && ev.obj === o.id) instances.push({ p: ev.p, info: { p: ev.p, subject: o.id } });
-          break;
-        case 'cardPlayed': {
-          if (ev.e !== 'played') break;
-          const c = controllerFor(o, a, ev.p);
-          if (w.by === 'you' && ev.p !== c) break;
-          if (w.what?.types && !w.what.types.some((t) => ev.types.includes(t))) break;
-          if (w.what?.minEnergy !== undefined && (!ev.isCard || ev.energy < w.what.minEnergy)) break;
-          if (w.to === 'here' && !sameLoc(ev.to, hereOf(s, o.id))) break;
-          instances.push({ p: ev.p, info: ev.obj === null ? { p: ev.p } : { p: ev.p, subject: ev.obj } });
-          break;
-        }
-        case 'attack': case 'defend':
-          if (ev.e === 'designated' && ev.d === (w.on === 'attack' ? 'attacker' : 'defender') && ev.objs.includes(o.id)) {
-            instances.push({ p: o.controller, info: { subject: o.id } });
-          }
-          break;
-        case 'conquer': case 'hold': {
-          if (ev.e !== 'scored' || ev.how !== w.on || !sameLoc({ z: 'bf', bf: ev.bf }, hereOf(s, o.id))) break;
-          const c = controllerFor(o, a, ev.p);
-          if (c === null) break;
-          if (w.who === 'you' ? ev.p !== c : ev.p === c) break;
-          instances.push({ p: ev.p, info: { p: ev.p, bf: ev.bf } });
-          break;
-        }
-        case 'becomesExhausted':
-          if (ev.e === 'exhausted' && ev.objs.includes(o.id)) instances.push({ p: ev.p, info: { subject: o.id } });
-          break;
-        case 'exhaustBatch': {
-          if (ev.e !== 'exhausted') break;
-          const c = controllerFor(o, a, ev.p);
-          const units = ev.objs.filter((id) => s.objects[id] && isType(s.objects[id], 'unit') && s.objects[id].controller === c);
-          if (ev.p === c && units.length >= w.min) instances.push({ p: ev.p, info: { p: ev.p, n: units.length } });
-          break;
-        }
-        case 'unitDies': {
-          if (ev.e !== 'died') break;
-          const here = hereOf(s, o.id);
-          const by: PlayerId[] = [];
-          for (const d of ev.deaths) {
-            if (!sameLoc(d.at, here) || !d.snap.chars.types.includes('unit')) continue;
-            if (w.nonToken && isTokenDef(d.snap.def)) continue;
-            const p = d.snap.controller;
-            if (p === null || by.includes(p)) continue;              // one crossing per player per group [383.1.b]
-            by.push(p);
-          }
-          for (const p of by) {
-            if (w.firstPerPlayer) {
-              const key = usageKey(o.id, a.id, p);
-              const seen = s.usage[key] ?? 0;
-              countUsage(s, key);
-              if (seen > 0) continue;
-            }
-            instances.push({ p, info: { p } });
-          }
-          break;
-        }
-      }
+      const instances = meets(s, a.when, ev, o, (p) => controllerFor(o, a, p), (p) => usageKey(o.id, a.id, p));
       for (const inst of instances) {
         const controller = controllerFor(o, a, inst.p);
         if (controller === null) continue;                           // uncontrolled battlefield (§8 'none')
         if (a.limit && (s.usage[usageKey(o.id, a.id, '*')] ?? 0) >= a.limit.n) continue;   // [383.3.e.1]
+        // An intervening "if": checked now, and never again [383.2.a.1].
+        if (a.if && !evalCond(s, a.if, { controller, source: o.id, facts: o.played })) continue;
         out.push({ ability: a.id, source: o.id, controller, info: inst.info, group: 0 });
       }
     }
   }
+  for (const d of s.delayed) {
+    const a = d.ability as unknown as TriggeredAst;
+    if (a.kind !== 'triggered' || !delayedActive(s, d)) continue;
+    let left = d.window && 'uses' in d.window && d.window.uses !== undefined ? d.window.uses : Infinity;
+    for (const inst of meets(s, a.when, ev, null, () => d.controller, () => null)) {
+      if (left <= 0) break;                                          // "the next three times" [391.4]
+      left--;
+      out.push({ ability: `eff:${d.id}#0`, source: null, controller: d.controller, info: inst.info, group: 0, delayed: d.id });
+    }
+  }
   return out;
+}
+
+/** A delayed ability that can still trigger: within its window, with uses
+    left [391]. */
+function delayedActive(s: GameState, d: DelayedAbility): boolean {
+  const w = d.window;
+  if ('during' in w) {
+    if (w.during === 'thisTurn' && d.createdTurn !== s.turn.n) return false;
+    return w.uses === undefined || w.uses > 0;
+  }
+  return false;                                                      // "at" windows fire from their phase task
+}
+
+/**
+ * The self-leave triggers of an object about to leave the board as it
+ * dies [383.2.c.3], [808.1.d]: "When I die" (Deathknell) goes on the chain
+ * as a Pending item before the card moves, with the last-known information
+ * of its source [808.1.d.2–3]. Its controller is the source's as it died
+ * [191.5.b].
+ */
+export function placeSelfLeave(s: GameState, x: X, id: ObjId, snap: Snapshot) {
+  const o = s.objects[id];
+  if (!o) return;
+  const found: PendingTrigger[] = [];
+  for (const a of abilitiesOf(o.def)) {
+    if (a.kind !== 'triggered' || a.when.on !== 'dies' || snap.controller === null) continue;
+    found.push({ ability: a.id, source: id, controller: snap.controller, info: { subject: id }, group: 0, lki: snap });
+  }
+  if (found.length > 0) placeAll(s, x, found, 'turnOrder');
 }
 
 /** The order players place their triggers in [383.3.d.1], [466.2.d.1]. */
@@ -169,6 +227,7 @@ function placingOrder(s: GameState, order: 'turnOrder' | 'combat'): PlayerId[] {
 /** Two triggers are interchangeable when they are the same ability with
     the same information: their order changes nothing [383.3.d]. */
 const sameTrigger = (a: PendingTrigger, b: PendingTrigger) => {
+  if (a.delayed !== b.delayed) return false;
   const info = (t: PendingTrigger) => JSON.stringify({ ...t.info, item: null });
   return a.ability === b.ability && a.source === b.source && info(a) === info(b);
 };
@@ -199,16 +258,27 @@ export function fire(s: GameState, x: X, ev: TriggerEvent, order: 'turnOrder' | 
     [389.2], [402.1]. Triggers reset the priority passes but never the
     Focus passes (Spec C Q4). */
 export function placeTrigger(s: GameState, x: X, t: PendingTrigger): ChainItem {
-  const src = s.objects[t.source];
+  const src = t.source === null ? undefined : s.objects[t.source];
   const id = mint(s, 'item');
+  const lki = t.lki ?? (src ? snapshotOf(s, t.source!) : undefined);
   const it: ChainItem = {
-    id, seq: id, kind: 'triggered', sub: 'normal', status: 'pending', controller: t.controller, owner: t.controller,
-    source: t.source, ability: t.ability, isAdd: false, outcomes: {}, trigger: structuredClone(t.info),
+    id, seq: id, kind: 'triggered', sub: t.delayed !== undefined ? 'delayed' : 'normal', status: 'pending',
+    controller: t.controller, owner: t.controller, ability: t.ability, isAdd: false, outcomes: {},
+    trigger: structuredClone(t.info),
     play: playContext(s, { mode: 'limited', origin: src ? src.zone : { z: 'gone' }, item: id, by: t.controller }),
-    ...(src ? { sourceLki: snapshotOf(s, t.source) } : {}),
+    ...(t.source !== null ? { source: t.source } : {}),
+    ...(lki ? { sourceLki: lki } : {}),
   };
+  if (t.delayed !== undefined) useDelayed(s, t.delayed);
   addItem(s, x, it, { played: false });
   return it;
+}
+
+/** One use of a delayed ability is spent as it triggers [391.4]. */
+function useDelayed(s: GameState, id: number) {
+  const d = s.delayed.find((e) => e.id === id);
+  if (!d || !('during' in d.window) || d.window.uses === undefined) return;
+  setField(s, d.window, 'uses', d.window.uses - 1);
 }
 
 // ---- the placeTriggers task: one player orders their triggers ----
@@ -233,7 +303,8 @@ const STEPS: StepTable<TriggersFrame> = [
         player: p, kind: 'orderTriggers',
         prompt: { t: 'orderTriggers', abilities: distinct.map((t) => t.ability), placed: f.placed.length },
         ctx: { rule: '383.3.d' },
-        options: distinct.map((t) => ({ key: K.next(f.batch.indexOf(t)), refs: [{ obj: t.source }, { item: t.info.item as number }] })),
+        options: distinct.map((t) => ({ key: K.next(f.batch.indexOf(t)),
+          refs: [...(t.source !== null && s.objects[t.source] ? [{ obj: t.source }] : []), { item: t.info.item as number }] })),
         privateOptions: false, batch: `triggers:p${p}:item${f.batch[0].info.item}`,
       });
     }
@@ -252,13 +323,13 @@ const STEPS: StepTable<TriggersFrame> = [
 defineSteps('triggers', STEPS);
 
 /** The ability an item names, if it is a triggered one. */
-export function triggeredOf(it: ChainItem): TriggeredAst | undefined {
-  const a = it.ability ? abilityById(it.ability) : undefined;
+export function triggeredOf(s: GameState, it: ChainItem): TriggeredAst | undefined {
+  const a = it.ability ? abilityIn(s, it.ability) : undefined;
   return a?.kind === 'triggered' ? a : undefined;
 }
 
 /** Counts a finalized "once each turn" trigger [383.3.e], [386.2]. */
 export function countFinalized(s: GameState, it: ChainItem) {
-  const a = triggeredOf(it);
+  const a = triggeredOf(s, it);
   if (a?.limit && it.source !== undefined) countUsage(s, usageKey(it.source, a.id, '*'));
 }

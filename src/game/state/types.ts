@@ -507,9 +507,13 @@ export interface ProposedEvent {
 }
 
 export interface PendingTrigger {
-  ability: AbilityId; source: ObjId; controller: PlayerId;
+  ability: AbilityId;
+  source: ObjId | null;               // null: a delayed ability's, which has no source object [391]
+  controller: PlayerId;
   info: Record<string, Json>;         // trigger-condition referents (where I moved from, the dying unit's LKI) [359.3.f.3]
   named?: 'play' | 'targeting' | 'conquer' | 'hold' | 'attack' | 'defend';   // [383.4]
   synthetic?: boolean;                // "activate the conquer effects" [383.4.g] (multipliers ignore it)
   group: number;
+  delayed?: EffId;                    // the delayed ability that triggered (one of its uses) [391.4]
+  lki?: Snapshot;                     // a self-leave trigger's source as it left the board [383.2.c.3.b]
 }

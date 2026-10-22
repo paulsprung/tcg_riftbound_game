@@ -38,7 +38,10 @@ function needsProbe(s: GameState, key: string): boolean {
   const o = s.objects[k.obj];
   if (!o) return false;
   if (k.head === 'play') return interacting(cardDef(o.def)?.spell);
-  if (k.head === 'act') return interacting(abilityById(`${o.def}#${k.sub}`)?.effect);
+  if (k.head === 'act') {
+    const a = abilityById(`${o.def}#${k.sub}`);
+    return a?.kind === 'activated' && interacting(a.effect);
+  }
   return false;
 }
 

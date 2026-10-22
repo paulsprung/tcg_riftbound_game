@@ -23,7 +23,7 @@
 import { endGame } from '../core/end.ts';
 import { emit, emitZone, knowers, newGroup } from '../core/events.ts';
 import { emptyPool } from '../state/blank.ts';
-import { fire } from '../abilities/triggers.ts';
+import { fire, placeSelfLeave } from '../abilities/triggers.ts';
 import { bit } from '../state/ids.ts';
 import { append, deleteObject, mint, moveObject, setField } from '../state/mut.ts';
 import { shuffled, shuffleZone } from '../state/rng.ts';
@@ -251,9 +251,11 @@ export function kill(s: GameState, x: X, units: ObjId[], o: { rule: string; inCo
   const group = newGroup(s);
   emit(s, x, { k: 'kill', objs: units.slice(), rule: o.rule, group });
   const deaths: { snap: ReturnType<typeof snapshotOf>; at: Loc | null }[] = [];
-  for (const id of units) {
+  const snaps = units.map((id) => snapshotOf(s, id));               // all at once: they die simultaneously [303.1]
+  units.forEach((id, i) => placeSelfLeave(s, x, id, snaps[i]));     // Deathknell, before the move [808.1.d.2]
+  for (const [i, id] of units.entries()) {
     const u = s.objects[id];
-    const snap = snapshotOf(s, id), at = locOf(u), inCombat = o.inCombat(id);
+    const snap = snaps[i], at = locOf(u), inCombat = o.inCombat(id);
     toZone(s, x, id, Z.trash(u.owner), { why: 'kill', rule: o.rule, group });
     append(s, s.log.deaths, { snap, group, inCombat, at });
     deaths.push({ snap, at });
@@ -390,6 +392,23 @@ export function addMight(s: GameState, x: X, units: ObjId[], n: number, o: { con
     layer: 4, sub: n > 0 ? 'inc' : 'dec', affects: { objs: units.slice() }, spec: { s: 'might', n }, until: 'thisTurn',
   });
   for (const id of units) emit(s, x, { k: 'mightChanged', obj: id, from: null, to: null, rule: o.rule });
+  requestCleanup(s);                                                 // a Might change can make damage lethal [319.7]
+}
+
+/** A continuous effect on a locked set of objects for the rest of the turn
+    [479]: "its base Might becomes N" (layer 2), "give … [Shield 2]" (layer
+    3). The objects are fixed now [479.4.b]. */
+export function addEffect(s: GameState, x: X, objs: ObjId[], spec: { s: 'baseMight'; n: number } | { s: 'keyword'; kw: string;
+  value: number }, o: { controller: PlayerId; source: ObjId | null; item: number | null; rule: string }) {
+  if (objs.length === 0) return;
+  append(s, s.effects, {
+    id: mint(s, 'eff'), ts: mint(s, 'ts'), controller: o.controller, source: o.source, item: o.item, rule: o.rule,
+    layer: spec.s === 'baseMight' ? 2 : 3, affects: { objs: objs.slice() }, spec, until: 'thisTurn',
+  });
+  for (const id of objs) {
+    emit(s, x, spec.s === 'baseMight' ? { k: 'mightChanged', obj: id, from: null, to: null, rule: o.rule }
+      : { k: 'keywordsChanged', obj: id, rule: o.rule });
+  }
   requestCleanup(s);                                                 // a Might change can make damage lethal [319.7]
 }
 
