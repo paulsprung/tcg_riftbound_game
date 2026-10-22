@@ -106,9 +106,8 @@ describe('132 canonical names and DefIds', () => {
     expect(card(def).name).toBe(name);
   });
 
-  it('keeps the data spellings for search', () => {
-    expect(card('master-yi-wuju-bladesman').printedNames).toEqual(
-      ['Wuju Bladesman, Starter', 'Master Yi - Wuju Bladesman (Metal)']);
+  it('keeps one spelling per card now that the data is tidied', () => {
+    expect(card('master-yi-wuju-bladesman').printedNames).toBeUndefined();
     expect(card('encore').printedNames).toBeUndefined();
   });
 

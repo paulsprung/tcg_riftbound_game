@@ -64,7 +64,7 @@ describe('card index (the oracle\'s names, wording and printings)', () => {
 
   it('names legends with their champion tag, as the canonical name does [132]', () => {
     expect(nameOf(ix, 'seraphine-starry-eyed-songstress')).toBe('Seraphine, Starry-Eyed Songstress');
-    expect(cardFor(ix, 'seraphine-starry-eyed-songstress')?.name).toBe('Starry-Eyed Songstress');
+    expect(cardFor(ix, 'seraphine-starry-eyed-songstress')?.name).toBe('Seraphine, Starry-Eyed Songstress');
     expect(nameOf(ix, 'ksante-courageous')).toBe("K'Sante, Courageous");
     expect(nameOf(ix, 'annie-dark-child')).toBe('Annie, Dark Child');        // ", Starter" and promo spellings folded
     expect(nameOf(ix, 'bullet-time')).toBe('Bullet Time');                    // Signature cards lose ", Miss Fortune"

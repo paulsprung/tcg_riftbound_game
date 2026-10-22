@@ -30,6 +30,8 @@ export interface Card {
   tags: string[];
   /** Rules text as printed. */
   text: string;
+  /** A print finish that is not part of the name, e.g. "Metal". */
+  edition?: string;
   /** Riot's errata, when the official wording now differs from the print. */
   errata?: string;
   flavor: string;

@@ -94,6 +94,7 @@ export function Inspector({ target, db, onClose }: { target: InspectTarget; db: 
               {cap(card.rarity)}
             </span>
             {card.variant !== 'base' && <span className="chip chip--gold">{VARIANT_LABEL[card.variant]}</span>}
+            {card.edition && <span className="chip chip--gold">{card.edition}</span>}
             {card.type && <span className="chip">{card.type}</span>}
             {card.supertype && <span className="chip">{card.supertype}</span>}
             {card.domains.map((d) => {

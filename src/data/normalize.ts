@@ -260,6 +260,30 @@ export function splitTokenFaces(cards: Card[]): Card[] {
   return faces;
 }
 
+/**
+ * One house style for names and texts, whichever source a card came from:
+ * "Name, Title" (Riftcodex writes "Name - Title"), legends as printed on
+ * the card, "Champion, Title" (Riot lists only the title), print finishes
+ * like "(Metal)" as an `edition`, and no markup or placeholder in the text.
+ */
+export function tidyCards(cards: Card[]): void {
+  for (const c of cards) {
+    let name = c.name.replace(/\s+-\s+/g, ', ');
+    const edition = /\s*\(([^()]+)\)\s*$/.exec(name);
+    if (edition && !/^[A-Z]{2}$/.test(edition[1]) && !name.includes('//')) {
+      c.edition = edition[1];
+      name = name.slice(0, edition.index);
+    }
+    name = name.replace(/,\s*Starter$/i, '').trim();
+    if (c.type === 'Legend' && c.tags[0] && !name.toLowerCase().startsWith(c.tags[0].toLowerCase() + ',')) {
+      name = `${c.tags[0]}, ${name}`;
+    }
+    c.name = name;
+    c.text = c.text.replace(/\[NO TEXT\]/gi, '').replace(/&gt;/g, '>').replace(/&lt;/g, '<').replace(/&amp;/g, '&').trim();
+    if (c.errata) c.errata = c.errata.replace(/&gt;/g, '>').replace(/&lt;/g, '<').replace(/&amp;/g, '&');
+  }
+}
+
 /** Set names as the products print them, where the sources disagree. */
 const SET_NAMES: Record<string, string> = { ogs: 'Origins: Proving Grounds' };
 
@@ -318,6 +342,7 @@ export function buildDb(riotRaw: Raw[], riftcodexRaw: Raw[], supplements: Supple
     if (fix) for (const [k, v] of Object.entries(fix)) if (!k.startsWith('_')) (c as unknown as Record<string, unknown>)[k] = v;
   }
   if (supplements.hidden) cards = cards.filter((c) => !supplements.hidden![c.id]);
+  tidyCards(cards);
   const tokenFaces = splitTokenFaces(cards);
   cards = cards.filter((c) => !tokenFaces.includes(c));
 

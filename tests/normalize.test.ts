@@ -1,5 +1,6 @@
+import { makeCard } from './fixtures.ts';
 import { describe, expect, it } from 'vitest';
-import { buildDb, normalizeRiftcodex, normalizeRiot, parseRarity, plainText, variantFromCode } from '../src/data/normalize.ts';
+import { tidyCards, buildDb, normalizeRiftcodex, normalizeRiot, parseRarity, plainText, variantFromCode } from '../src/data/normalize.ts';
 
 const riot = (over: Record<string, unknown> = {}) => ({
   id: 'ogn-056-298',
@@ -109,5 +110,22 @@ describe('text helpers', () => {
     expect(parseRarity('Uncommon')).toBe('uncommon');
     expect(parseRarity({ id: 'common', label: 'Common' })).toBe('common');
     expect(parseRarity('???')).toBe('unknown');
+  });
+});
+
+describe('tidyCards', () => {
+  it('writes names and texts in one style', () => {
+    const cards = [
+      makeCard({ id: 'a', name: 'Annie - Dark Child (Metal)', type: 'Legend', tags: ['Annie'] }),
+      makeCard({ id: 'b', name: 'Dark Child, Starter', type: 'Legend', tags: ['Annie'] }),
+      makeCard({ id: 'c', name: 'Heimerdinger - Inventor' }),
+      makeCard({ id: 'd', name: 'Recruit (DE)', text: '[NO TEXT]' }),
+      makeCard({ id: 'e', text: '[Level 3][&gt;] I have +1.' }),
+    ];
+    tidyCards(cards);
+    expect(cards.map((c) => c.name)).toEqual(['Annie, Dark Child', 'Annie, Dark Child', 'Heimerdinger, Inventor', 'Recruit (DE)', 'e']);
+    expect(cards[0].edition).toBe('Metal');
+    expect(cards[3].text).toBe('');
+    expect(cards[4].text).toBe('[Level 3][>] I have +1.');
   });
 });
