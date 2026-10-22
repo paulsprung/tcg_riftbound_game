@@ -79,7 +79,8 @@ function finishParams(finish, rarity) {
   const p = { foil: 0, etch: 0, spark: 0, gold: 0, ice: 0, gloss: 0.65, body: 0 };
   switch (finish) {
     case 'foil': Object.assign(p, { foil: 0.9 }); break;
-    case 'holo': Object.assign(p, { foil: 1.0, body: 0.1 }); if (rarity === 'epic') p.spark = 1.0; break;
+    case 'holo': Object.assign(p, { foil: 1.0, body: 0.1 }); break;
+    case 'textured': Object.assign(p, { foil: 1.45, body: 0.5 }); break;
     case 'etched': Object.assign(p, { foil: 1.15, etch: 1.0, spark: 0.3, body: 0.7 }); break;
     case 'signature': Object.assign(p, { foil: 1.15, etch: 0.9, spark: 0.3, gold: 1.0, body: 0.7 }); break;
     case 'ultimate': Object.assign(p, { foil: 1.1, spark: 1.0, ice: 1.0, body: 0.0 }); break;

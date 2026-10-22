@@ -91,7 +91,8 @@ describe('pools and finishes', () => {
     expect(finishFor(makeCard({ id: 'a' }), false)).toBe('none');
     expect(finishFor(makeCard({ id: 'a' }), true)).toBe('foil');
     expect(finishFor(makeCard({ id: 'a', rarity: 'rare' }), false)).toBe('holo');   // rares are always foil
-    expect(finishFor(makeCard({ id: 'a', variant: 'alt-art' }), true)).toBe('etched');
+    expect(finishFor(makeCard({ id: 'a', variant: 'alt-art' }), true)).toBe('textured');
+    expect(finishFor(makeCard({ id: 'o', variant: 'overnumbered', rarity: 'showcase' }), true)).toBe('etched');
     expect(finishFor(makeCard({ id: 'a', variant: 'signature' }), true)).toBe('signature');
     expect(finishFor(set.find((c) => c.id === 'ult')!, true, radiance)).toBe('ultimate');
   });

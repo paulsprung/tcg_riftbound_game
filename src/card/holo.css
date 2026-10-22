@@ -274,7 +274,6 @@
 
 .hc[data-finish="foil"]      { --shine: .9;  --rest: .2;  --tint: .8;  --glare: .38; --sheen: .16; }
 .hc[data-finish="holo"]      { --shine: 1;   --rest: .24; --tint: .9;  --glare: .4;  --sheen: .14; --floor: #0c0c0c; }
-.hc[data-finish="holo"][data-rarity="epic"] { --glitter: 1; }
 .hc[data-finish="etched"],
 .hc[data-finish="signature"],
 .hc[data-finish="ultimate"]  { --shine: 1;   --rest: .28; --tint: 1;   --glare: .42; --sheen: .2;  --floor: #3a3a3a;

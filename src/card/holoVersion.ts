@@ -24,7 +24,7 @@ export const HOLO_VERSIONS: { id: HoloVersion; label: string; title: string }[] 
   { id: 'c', label: 'C', title: 'Version C: B with the second review’s fixes' },
 ];
 
-const SHOWCASE: Finish[] = ['etched', 'signature', 'ultimate'];
+const SHOWCASE: Finish[] = ['textured', 'etched', 'signature', 'ultimate'];
 
 /** The look a card gets under a holo version. */
 export function lookFor(version: HoloVersion, finish: Finish): HoloLook {

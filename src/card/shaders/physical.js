@@ -50,7 +50,8 @@ function finishParams(finish, rarity) {
   const p = { foil: 0, etch: 0, spark: 0, gold: 0, ice: 0, gloss: 1, grain: 0.006 };
   switch (finish) {
     case 'foil': Object.assign(p, { foil: 0.92, grain: 0.005 }); break;
-    case 'holo': Object.assign(p, { foil: 1.0, grain: 0.007 }); if (rarity === 'epic') p.spark = 0.85; break;
+    case 'holo': Object.assign(p, { foil: 1.0, grain: 0.007 }); break;   // real epics differ by frame, not glitter
+    case 'textured': Object.assign(p, { foil: 1.45, grain: 0.011 }); break;   // alt art: smooth, strong metal foil, no lines
     case 'etched': Object.assign(p, { foil: 1.15, etch: 1.0, spark: 0.35, grain: 0.008 }); break;
     case 'signature': Object.assign(p, { foil: 1.15, etch: 0.85, spark: 0.30, gold: 1.0, grain: 0.008 }); break;
     case 'ultimate': Object.assign(p, { foil: 1.2, etch: 0.3, spark: 1.0, ice: 1.0, grain: 0.009 }); break;
@@ -218,15 +219,24 @@ void main() {
   vec2 g = vec2(cos(ang), sin(ang));
   float D = mix(1750.0, 1900.0, vivid);
 #ifdef HAS_FOIL
-  vec3 film = filmOf(lk, g, D, vivid, true) + fw * filmOf(lf, g, D, vivid, false);
+  // overnumbered swirls are bright, saturated rainbow on real cards: the
+  // EN warm pastel stays on the plain film only
+  float vf = vivid;
+#ifdef HAS_ETCH
+  vf = max(vivid, 0.9 * uA.y);
+#endif
+  vec3 film = filmOf(lk, g, D, vf, true) + fw * filmOf(lf, g, D, vf, false);
 
 #ifdef HAS_ETCH
   float e = aux.g * uA.y;
   float th = aux.a * PI;
   vec2 gn = vec2(cos(th), sin(th));          // across the etched line
   vec2 tl = vec2(-gn.y, gn.x);               // along it
-  vec3 line = etchOf(lk, gn, tl, D, sig) + fw * etchOf(lf, gn, tl, D, sig);
-  film = mix(film * (1.0 - 0.32 * uA.y), film * 0.3 + line, clamp(e * 1.15, 0.0, 1.0));
+  vec3 line = (etchOf(lk, gn, tl, D, sig) + fw * etchOf(lf, gn, tl, D, sig)) * 1.4;
+  // each line carries its own colour all the time, shifting with the tilt
+  vec3 lhue = spectral(410.0 + 290.0 * fract(th * 0.32 + dot(lk.u, gn) * 0.9 + vUv.y * 0.6));
+  line += lhue * (0.55 + 0.9 * lk.env);
+  film = mix(film * (1.0 - 0.15 * uA.y), film * 0.8 + line, clamp(e * 1.15, 0.0, 1.0));
 #endif
 
 #ifdef HAS_ICE
@@ -251,6 +261,9 @@ void main() {
   float mask = aux.r * uA.x;
   vec3 T = lin * (1.6 - 0.6 * lin);
   float dim = mix(0.10, 0.18, vivid) * on * (1.0 - clamp(lk.env + fw * lf.env, 0.0, 1.0) * 0.5);
+#ifdef HAS_ETCH
+  dim *= 1.0 - 0.7 * uA.y;   // the swirls light up, they don't darken the ink
+#endif
   col = lin * (1.0 - dim * mask) + T * film * mask;
 
 #ifdef HAS_GLITTER
@@ -271,9 +284,13 @@ void main() {
   float lobe = exp(-lk.h2 / 0.05) + fw * exp(-lf.h2 / 0.05);
   float sharp = exp(-lk.h2 / 0.006) + fw * exp(-lf.h2 / 0.006);
   vec3 grb = grating2(dot(lk.u, g) * 0.8, D);
-  vec3 gcol = gold * 0.42 * (0.85 + 0.3 * gh.z)
-            + kOn * (gold * (1.2 * lobe + 0.8 * (lk.env + fw * lf.env)) + gold * grb * 0.5 * lk.env * (0.3 + 0.7 * vivid)
-                     + vec3(1.0, 0.92, 0.7) * sharp * 1.8);
+  // a metal: dark where it mirrors nothing, bright gold where the light
+  // sweeps across it as the card tilts
+  float sweep = exp(-pow(dot(vUv - 0.5, vec2(0.8, 0.6)) - 0.9 * (lk.u.x * 0.8 + lk.u.y * 0.6), 2.0) / 0.012);
+  vec3 gcol = gold * 0.40 * (0.85 + 0.3 * gh.z)
+            + gold * sweep * mix(0.5, 1.1, on)
+            + kOn * (gold * (1.2 * lobe + 0.6 * (lk.env + fw * lf.env)) + gold * grb * 0.4 * lk.env * (0.3 + 0.7 * vivid)
+                     + vec3(1.0, 0.82, 0.45) * sharp * 0.9);
   col = mix(col, gcol, clamp(gm, 0.0, 1.0));
 #endif
 
@@ -427,7 +444,7 @@ function computeAux(px, W, H, finish) {
     const cand = new Uint8Array(N);
     for (let y = y0; y < y1; y++) for (let x = 0; x < W; x++) {
       const i = y * W + x;
-      if (minc[i] > 0.80 && lum[i] - bg[i] > 0.10) cand[i] = 1;
+      if ((minc[i] > 0.70 && lum[i] - bg[i] > 0.06) || (minc[i] > 0.58 && lum[i] - bg[i] > 0.14)) cand[i] = 1;
     }
     // union-find, 8-connected
     const par = new Int32Array(N).fill(-1);
@@ -446,7 +463,7 @@ function computeAux(px, W, H, finish) {
     // script strokes: long, thin, neutral white (pale-pink highlights are
     // not), and clustered around the biggest such stroke (icons are not)
     const minSpan = 0.07 * W;
-    const ok = (b) => { const span = Math.max(b[2] - b[0], b[3] - b[1]), fill = b[4] / ((b[2] - b[0] + 1) * (b[3] - b[1] + 1)); return span >= minSpan * 0.5 && fill < 0.25 && b[5] / b[4] < 0.045; };
+    const ok = (b) => { const span = Math.max(b[2] - b[0], b[3] - b[1]), fill = b[4] / ((b[2] - b[0] + 1) * (b[3] - b[1] + 1)); return span >= minSpan * 0.3 && fill < 0.3 && b[5] / b[4] < 0.09; };
     let big = null;
     for (const b of box.values()) if (ok(b) && (!big || Math.max(b[2] - b[0], b[3] - b[1]) > Math.max(big[2] - big[0], big[3] - big[1]))) big = b;
     const pad = 0.1 * W;
@@ -457,7 +474,7 @@ function computeAux(px, W, H, finish) {
       if (ok(b) && near(b)) keep[i] = 1;
     }
     // grow by ~1px to catch the anti-aliased rim, with a soft coverage
-    const rr = Math.max(1, Math.round(1.5 * s));
+    const rr = Math.max(2, Math.round(2.2 * s));
     const grown = new Uint8Array(N);
     for (let y = y0; y < y1; y++) for (let x = 0; x < W; x++) {
       if (!keep[y * W + x]) continue;

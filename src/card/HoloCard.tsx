@@ -84,7 +84,7 @@ function HoloCardInner({
   const src = image.src;
   const failed = broken || image.failed;
   const imgClass = `hc__img${sideways ? ' hc__img--sideways' : ''}`;
-  const glitter = (finish === 'holo' && card.rarity === 'epic') || ETCHED.includes(finish);
+  const glitter = ETCHED.includes(finish);
   // the ultimate's groove is its ice, not marbling
   const marbled = finish === 'etched' || finish === 'signature';
   const copy = (extra: string) => (

@@ -30,7 +30,8 @@
 
 .hc[data-finish="foil"]      { --c-holo: .6;  --c-prism: .5; --c-glare: .45; --c-band: .25; }
 .hc[data-finish="holo"]      { --c-holo: .8;  --c-prism: .8; --c-glare: .5;  --c-band: .3; }
-.hc[data-finish="holo"][data-rarity="epic"] { --c-holo: .95; --c-prism: 1; --c-sparkle: .45; }
+.hc[data-finish="holo"][data-rarity="epic"] { --c-holo: .95; --c-prism: 1; }
+.hc[data-finish="textured"]  { --c-holo: 1;   --c-prism: 1;  --c-glare: .55; --c-band: .45; }
 .hc[data-finish="etched"]    { --c-holo: .9;  --c-prism: 1;  --c-glare: .5;  --c-band: .3; --c-etch: .9; --c-sparkle: .6; }
 .hc[data-finish="signature"] { --c-holo: .9;  --c-prism: 1;  --c-glare: .5;  --c-band: .3; --c-etch: .9; --c-sparkle: 1; }
 .hc[data-finish="ultimate"]  { --c-holo: 1;   --c-prism: 1;  --c-glare: .55; --c-band: .4; --c-etch: 1;  --c-sparkle: 1; }

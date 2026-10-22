@@ -13,7 +13,7 @@ import type { PackConfig, PoolKey } from './packConfig.ts';
  *   signature etched holo with a gold-stamped signature
  *   ultimate  everything at once
  */
-export type Finish = 'none' | 'foil' | 'holo' | 'etched' | 'signature' | 'ultimate';
+export type Finish = 'none' | 'foil' | 'holo' | 'textured' | 'etched' | 'signature' | 'ultimate';
 
 export interface Pull {
   card: Card;
@@ -88,7 +88,10 @@ const NO_REPEAT: ReadonlySet<PoolKey> = new Set<PoolKey>(['ultimate', 'signature
 export function finishFor(card: Card, foil: boolean, config?: PackConfig): Finish {
   if (config?.ultimate?.some((u) => codeKey(u) === codeKey(card.code))) return 'ultimate';
   if (card.variant === 'signature') return 'signature';
-  if (card.variant === 'alt-art' || card.variant === 'overnumbered' || card.rarity === 'showcase') return 'etched';
+  // alt arts: a smooth, strong metallic foil over the whole card; only the
+  // overnumbered printings carry the etched swirl lines
+  if (card.variant === 'alt-art') return 'textured';
+  if (card.variant === 'overnumbered' || card.rarity === 'showcase') return 'etched';
   if (card.rarity === 'rare' || card.rarity === 'epic') return 'holo';   // always foil
   return foil ? 'foil' : 'none';
 }
@@ -97,6 +100,7 @@ export function hypeFor(finish: Finish, card: Card): number {
   switch (finish) {
     case 'ultimate': return 5;
     case 'signature': return 4;
+    case 'textured':
     case 'etched': return 3;
     default: return card.rarity === 'epic' ? 2 : card.rarity === 'rare' ? 1 : 0;
   }
