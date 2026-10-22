@@ -11,10 +11,9 @@ const KEY = 'riftbound-sim:foil';
 
 const read = (): FoilStyle => (document.documentElement.dataset.foil === 'vivid' ? 'vivid' : 'subtle');
 
+/** Subtle is the look now; the switch is gone, so stored choices are ignored. */
 export function initFoilStyle() {
-  let v: string | null = null;
-  try { v = localStorage.getItem(KEY); } catch { /* storage blocked */ }
-  document.documentElement.dataset.foil = v === 'vivid' ? 'vivid' : 'subtle';
+  document.documentElement.dataset.foil = 'subtle';
 }
 
 export function setFoilStyle(v: FoilStyle) {

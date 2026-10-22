@@ -42,10 +42,9 @@ function read(): HoloVersion {
   return valid(v) ? v : DEFAULT;
 }
 
+/** Mix is the look now; the A/B/C switch is gone, so stored choices are ignored. */
 export function initHoloVersion() {
-  let v: string | null = null;
-  try { v = localStorage.getItem(KEY); } catch { /* storage blocked */ }
-  document.documentElement.dataset.holo = valid(v) ? v : DEFAULT;
+  document.documentElement.dataset.holo = DEFAULT;
 }
 
 export function setHoloVersion(v: HoloVersion) {

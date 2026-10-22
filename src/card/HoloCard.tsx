@@ -4,6 +4,7 @@ import { isReadable, useCardImage } from '../data/images.ts';
 import type { Finish } from '../pack/generate.ts';
 import { CardBack } from './CardBack.tsx';
 import { HoloCanvas, type HoloCanvasHandle } from './HoloCanvas.tsx';
+import { useEffects } from './effects.ts';
 import { useFoilStyle } from './foilStyle.ts';
 import { lookFor, useHoloVersion } from './holoVersion.ts';
 import { createTilt, type TiltState } from './tilt.ts';
@@ -40,7 +41,13 @@ export interface HoloCardProps {
 const ETCHED: Finish[] = ['etched', 'signature', 'ultimate'];
 
 
-export function HoloCard({
+export function HoloCard(props: HoloCardProps) {
+  // effects off: a still, flat scan (no foil, no tilt, no shader)
+  const still = useEffects() === 'off';
+  return <HoloCardInner {...props} {...(still ? { finish: 'none' as Finish, tilt: props.tilt === 'parent' ? 'parent' : 'off', gl: false, gyro: false } : {})} />;
+}
+
+function HoloCardInner({
   card, finish, width, faceDown = false, tilt = 'hover', gyro = false, thick = false,
   upright = false, imageWidth, gl = false, onClick, className = '', style,
 }: HoloCardProps) {

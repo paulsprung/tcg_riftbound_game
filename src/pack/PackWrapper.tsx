@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, type CSSProperties, type PointerEvent as RPointerEvent } from 'react';
+import { useEffects } from '../card/effects.ts';
 import { createTilt } from '../card/tilt.ts';
 import { useCardImage } from '../data/images.ts';
 import { packArt, type PackArt } from '../data/media.ts';
@@ -86,11 +87,12 @@ export function PackWrapper({ set, style, hero, width, torn = false, onTear, onC
   const art = packArt(set.id);
   const clips = useMemo(() => jagged(set.id.length * 1.7, art?.tear), [set.id, art?.tear]);
 
+  const still = useEffects() === 'off';
   useEffect(() => {
-    if (!scene.current) return;
+    if (!scene.current || still) return;
     const t = createTilt(scene.current, { idle: tilt === 'idle', hoverScale: 1.03 });
     return () => t.destroy();
-  }, [tilt]);
+  }, [tilt, still]);
 
   const setPull = (v: number) => scene.current?.style.setProperty('--pull', v.toFixed(3));
 

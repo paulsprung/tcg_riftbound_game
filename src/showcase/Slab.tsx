@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, type CSSProperties, type ReactNode } from 'react';
 import { HoloCard } from '../card/HoloCard.tsx';
+import { useEffects } from '../card/effects.ts';
 import { createTilt } from '../card/tilt.ts';
 import { TiltFeed, type TiltListener } from '../card/tiltFeed.ts';
 import { defaultFinish } from '../data/cardInfo.ts';
@@ -73,9 +74,10 @@ export function Slab({
   const well = useRef<HTMLDivElement>(null);
   const feed = useMemo(() => new Set<TiltListener>(), []);
   const labelStyle = useLabelStyle();
+  const still = useEffects() === 'off';
 
   useEffect(() => {
-    if (tilt === 'off' || !scene.current) return;
+    if (tilt === 'off' || still || !scene.current) return;
     const t = createTilt(scene.current, {
       idle: tilt === 'idle',
       gyro,
@@ -98,7 +100,7 @@ export function Slab({
       },
     });
     return () => t.destroy();
-  }, [tilt, gyro, feed]);
+  }, [tilt, gyro, feed, still]);
 
   const finish = defaultFinish(card, slab.foil);
   const extras = [
