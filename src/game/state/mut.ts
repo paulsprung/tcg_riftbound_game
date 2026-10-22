@@ -363,3 +363,32 @@ function extract(s: GameState, z: Zone, id: ObjId) {
     case 'chain': case 'gone': return;
   }
 }
+
+// ---- rollback ----
+
+/**
+ * Puts the game back as it was at a snapshot taken earlier in the same
+ * process: S0 of a discretionary play, taken before its step 1 (§4.4,
+ * [358.5]). Everything the snapshot holds comes back, except what records
+ * how the engine got here: the id counters (ids are never reused), the
+ * frames, the pending decision, the events not yet handed over and the
+ * decision count of the turn. Nobody can unsee a card: every knowledge bit
+ * gained since the snapshot is kept, matched by CardRef (§4.4). The epoch
+ * moves on, never back, so nothing memoized on it is mistaken for current.
+ */
+export function restoreSnapshot(s: GameState, snap: GameState) {
+  const known: Record<CardRef, Mask> = {};
+  for (const o of Object.values(s.objects)) known[o.card] = (known[o.card] ?? 0) | o.knownBy;
+  const keep = { next: s.next, frames: s.frames, pending: s.pending, out: s.out, epoch: s.epoch };
+  const decisions = s.turn.decisionsThisTurn;
+  Object.assign(s, structuredClone(snap), keep);
+  s.turn.decisionsThisTurn = decisions;
+  for (const o of Object.values(s.objects)) o.knownBy |= known[o.card] ?? 0;
+  touch(s);
+}
+
+/** A copy of the state to roll back to: without the frames (and so without
+    their own snapshots), the pending decision and the events (§4.4). */
+export function snapshotState(s: GameState): GameState {
+  return structuredClone({ ...s, frames: [], pending: null, out: [] });
+}

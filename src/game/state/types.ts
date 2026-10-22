@@ -357,6 +357,8 @@ export interface CombatState {                                                  
   excess: number[];                    // excess per player (Tryndamere, Vi, Sivir, Yeti Brawler)
   recalled: boolean; tie: boolean;     // [468.1.a.2], [740.3.a]
   result?: ('won' | 'lost' | 'noResult')[];       // [468.3]
+  next: CombatTaskId | null;           // the combat step the master loop enqueues once nothing else is left
+                                       // (§5.10.3 item 2); an addition to the design
 }
 
 // ---- 3.9 Continuous effects, delayed abilities, history ----
@@ -435,7 +437,8 @@ export type FrameBody =
   | { f: 'move'; by: PlayerId; units: ObjId[]; dest: Loc | null; pc: number; snap: GameState | null }
   | { f: 'hide'; by: PlayerId; obj: ObjId | null; bf: number | null; pc: number; snap: GameState | null }
   | { f: 'pay'; who: PlayerId; cost: TotalCost; purpose: 'play' | 'applied' | 'instruction'; pc: number }
-  | { f: 'assign'; by: PlayerId; order: ObjId[]; tier: Record<ObjId, 'tank' | 'backline'>; pc: number }
+  | { f: 'assign'; by: PlayerId; order: ObjId[]; tier: Record<ObjId, 'tank' | 'backline'>; pc: number;
+      total: number; excess: ObjId[] }                                // [467.2.c]; total and excess: additions
   | { f: 'custom'; handler: string; pc: number; locals: Json };      // tier-3 cards (§9.6)
 export type FrameTag = FrameBody['f'];
 

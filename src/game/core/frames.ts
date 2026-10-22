@@ -82,7 +82,9 @@ export function defineStart(fn: StartFn, o: { replace?: boolean } = {}) {
   start = fn;
 }
 
-export function defineLoop(fn: LoopFn, o: { replace?: boolean } = {}) {
+/** Registers the master loop. Tests of the setup alone pass null with
+    `replace`, so a game rests once its frames run out, as it did in M0. */
+export function defineLoop(fn: LoopFn | null, o: { replace?: boolean } = {}) {
   once('the master loop', loop !== null, o);
   loop = fn;
 }
