@@ -114,7 +114,13 @@ export interface GameSetup {
   rules?: Partial<RulesConfig>;
   /** A fixed player is for tests and the Card Lab; default TR 407. */
   firstPlayer?: 'random-designee-chooses' | 'random' | PlayerId;
+  /** Tutorials and tests: cards put on top of each deck after the shuffle
+      [114], top first (a scripted lesson needs a known draw order). */
+  stack?: [DeckStack?, DeckStack?];
 }
+
+/** The cards on top of a player's decks, top first, by definition. */
+export interface DeckStack { main?: DefId[]; runes?: DefId[] }
 
 /** The rules a game runs under: the defaults with the setup's overrides. */
 export function rulesFor(setup: Pick<GameSetup, 'rules'>): RulesConfig {

@@ -32,7 +32,7 @@ import { emit, emitZone, knowers, newGroup } from '../core/events.ts';
 import { answer, ask, defineStart, defineSteps, next, type FrameOf, type RunCtx, type StepTable } from '../core/frames.ts';
 import { defsHash } from '../cards/registry.ts';
 import {
-  createBattlefield, createObject, moveObject, pushFrame, setField,
+  createBattlefield, createObject, moveObject, pushFrame, reorderZone, setField,
 } from '../state/mut.ts';
 import { randInt, shuffled, shuffleZone } from '../state/rng.ts';
 import { Z } from '../state/zones.ts';
@@ -110,6 +110,20 @@ function deckIssues(s: GameState, d: DeckList, p: PlayerId, chosen: DefId): stri
   }
   if (new Set(d.battlefields).size !== d.battlefields.length) out.push(`${at}: two battlefields share a name [103.5.c]`);
   return out;
+}
+
+/** Puts these cards on top of a shuffled deck, top first (GameSetup.stack):
+    each the first copy left of its definition; the rest keep the shuffle's
+    order. Uses no randomness, so a stacked game is as replayable as any. */
+function stackZone(s: GameState, z: { z: 'deck' | 'runeDeck'; p: PlayerId }, top: DefId[]) {
+  const rest = s.players[z.p][z.z].slice();
+  const head: ObjId[] = [];
+  for (const def of top) {
+    const i = rest.findIndex((id) => s.objects[id].def === def);
+    if (i < 0) throw new SetupError([`P${z.p}: no ${def} left to stack on top of the ${z.z === 'deck' ? 'Main Deck' : 'Rune Deck'}`]);
+    head.push(rest.splice(i, 1)[0]);
+  }
+  reorderZone(s, z, [...head, ...rest]);
 }
 
 /** The Card id for the art of copy i of a card, when the deck names one. */
@@ -246,6 +260,8 @@ defineStart((s: GameState, setup: GameSetup, x: RunCtx) => {
     for (const zone of ['deck', 'runeDeck'] as const) {
       const ids = shuffleZone(s, { z: zone, p: pl.id });
       emit(s, x, { k: 'shuffle', p: pl.id, zone, count: ids.length, rule: '114' });
+      const top = setup.stack?.[pl.id]?.[zone === 'deck' ? 'main' : 'runes'];
+      if (top && top.length > 0) stackZone(s, { z: zone, p: pl.id }, top);
     }
   }
 

@@ -44,7 +44,7 @@ export {
 export { EVELYNN_PRECON, PRECONS, SERAPHINE_PRECON } from './decks/precons.ts';
 export { PRODUCTS, STARTERS, type Starter } from './decks/starters.ts';
 
-export type { EngineOptions, GameSetup, ModeConfig, RulesConfig } from './config.ts';
+export type { DeckStack, EngineOptions, GameSetup, ModeConfig, RulesConfig } from './config.ts';
 export type { DeckEntry, DeckList } from './decks/decklist.ts';
 export type {
   DeckRule, KeywordLine, OracleCard, OracleCost, OracleFile, OracleKeyword, Supertype,

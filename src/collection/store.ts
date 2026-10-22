@@ -30,6 +30,8 @@ export interface CollectionState {
   starter: string | null;
   /** When the daily coins were last taken (ms), 0 for never. */
   dailyAt: number;
+  /** The guided first match was finished (or skipped) and its reward taken. */
+  tutorialDone: boolean;
 }
 
 export const PACK_PRICE = 100;
@@ -38,17 +40,30 @@ const DAY = 86_400_000;
 
 export const SHOWCASE_SIZE = 12;
 
+/** The tutorial's reward: one booster of each set the shop sells. */
+export const TUTORIAL_PACKS = ['ogn', 'sfd', 'unl', 'rad', 'ven'] as const;
+
 const KEY = 'riftbound-sim:collection:v1';
-const empty = (): CollectionState => ({ cards: {}, packsOpened: {}, slabs: [], showcase: [], coins: 0, packs: {}, starter: null, dailyAt: 0 });
+const empty = (): CollectionState => ({ cards: {}, packsOpened: {}, slabs: [], showcase: [], coins: 0, packs: {}, starter: null, dailyAt: 0,
+  tutorialDone: false });
 
 const sameItem = (a: ShowcaseItem, b: ShowcaseItem) =>
   a.kind === 'slab' ? b.kind === 'slab' && a.cert === b.cert
     : b.kind === 'raw' && a.cardId === b.cardId && a.foil === b.foil;
 
+/** A saved collection as the current shape: fields added since it was saved
+    get their defaults (tutorialDone: false, so players from before the
+    tutorial are offered it and its reward). */
+export function fromSaved(saved: unknown): CollectionState {
+  const out = { ...empty(), ...(saved && typeof saved === 'object' ? saved as Partial<CollectionState> : {}) };
+  if (typeof out.tutorialDone !== 'boolean') out.tutorialDone = false;
+  return out;
+}
+
 function read(): CollectionState {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return { ...empty(), ...JSON.parse(raw) };
+    if (raw) return fromSaved(JSON.parse(raw));
   } catch { /* fall through */ }
   return empty();
 }
@@ -150,6 +165,15 @@ export const collection = {
     const inv = { ...state.packs };
     for (const [setId, n] of Object.entries(packs)) inv[setId] = (inv[setId] ?? 0) + n;
     commit({ ...state, cards: next, packs: inv, coins: state.coins + coins, starter: id });
+    return true;
+  },
+  /** The tutorial is over (played or skipped): its packs, once. Returns
+      false, granting nothing, when it was already done. */
+  completeTutorial(): boolean {
+    if (state.tutorialDone) return false;
+    const packs = { ...state.packs };
+    for (const setId of TUTORIAL_PACKS) packs[setId] = (packs[setId] ?? 0) + 1;
+    commit({ ...state, packs, tutorialDone: true });
     return true;
   },
   reset() { commit(empty()); },

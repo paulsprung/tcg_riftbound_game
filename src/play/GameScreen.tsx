@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { CardDb } from '../data/types.ts';
 import { explainUnavailable, type GameRecord } from '../game/index.ts';
 import { DevPanel } from './dev/DevPanel.tsx';
@@ -44,9 +44,15 @@ const FX_MS = 1500;
 
 export interface SeatNames { me: string; opponent: string }
 
-export function GameScreen({ host, cards, db, names, onNewGame, onChangeDecks, onLoadRecord, coach }: {
+/** A guided game (tutorial/TutorialView.tsx): its own subtitle and header
+    buttons; no setup sheets, concede or game-over sheet (the tutorial shows
+    its own ending). */
+export interface TutorialFrame { subtitle: string; actions: ReactNode }
+
+export function GameScreen({ host, cards, db, names, onNewGame, onChangeDecks, onLoadRecord, coach, tutorial }: {
   host: GameHost; cards: CardIndex; db: CardDb; names: [string, string];
   onNewGame: () => void; onChangeDecks: () => void; onLoadRecord?: (r: GameRecord) => void; coach?: Coach;
+  tutorial?: TutorialFrame;
 }) {
   const snap = useHost(host);
   const { view, events, error, viewer, handoff, thinking } = snap;
@@ -209,7 +215,7 @@ export function GameScreen({ host, cards, db, names, onNewGame, onChangeDecks, o
         <div>
           <h1>{board.me.deckName} <span className="muted">vs</span> {board.opponent.deckName}</h1>
           <p className="muted small">
-            {hot ? `Hot-seat · ${names[0]} and ${names[1]} on one device` : `You against ${seatNames.opponent}`} · 1v1 Duel · seed {host.setup.seed}
+            {tutorial ? tutorial.subtitle : <>{hot ? `Hot-seat · ${names[0]} and ${names[1]} on one device` : `You against ${seatNames.opponent}`} · 1v1 Duel · seed {host.setup.seed}</>}
           </p>
         </div>
         <div className="play__actions">
@@ -225,7 +231,8 @@ export function GameScreen({ host, cards, db, names, onNewGame, onChangeDecks, o
             </label>
           )}
           <button type="button" className="btn btn--small btn--ghost" onClick={() => setReport(true)}>Report a rules problem</button>
-          {playing && stage.k !== 'over' && (
+          {tutorial?.actions}
+          {!tutorial && playing && stage.k !== 'over' && (
             confirmConcede ? (
               <>
                 <button type="button" className="btn btn--small" onClick={() => { setConfirmConcede(false); host.concede(viewer); }}>
@@ -235,9 +242,9 @@ export function GameScreen({ host, cards, db, names, onNewGame, onChangeDecks, o
               </>
             ) : <button type="button" className="btn btn--small btn--ghost" onClick={() => setConfirmConcede(true)}>Concede</button>
           )}
-          <button type="button" className="btn btn--small" onClick={onNewGame}>New game</button>
-          <button type="button" className="btn btn--small btn--ghost" onClick={onChangeDecks}>Change decks</button>
-          {(import.meta.env.DEV || settings.dev) && (
+          {!tutorial && <button type="button" className="btn btn--small" onClick={onNewGame}>New game</button>}
+          {!tutorial && <button type="button" className="btn btn--small btn--ghost" onClick={onChangeDecks}>Change decks</button>}
+          {!tutorial && (import.meta.env.DEV || settings.dev) && (
             <button type="button" className="btn btn--small btn--ghost" aria-pressed={settings.dev}
               onClick={() => setSettings({ dev: !settings.dev })}>DEV</button>
           )}
@@ -254,14 +261,14 @@ export function GameScreen({ host, cards, db, names, onNewGame, onChangeDecks, o
         {stage.k === 'order' && handoff === null && (
           <OrderChoice view={view} board={board} cards={cards} onCommit={commit} onZoom={setZoom} />
         )}
-        {stage.k === 'mulligan' && handoff === null && (
+        {stage.k === 'mulligan' && handoff === null && (!tutorial || mine) && (
           <Mulligan key={view.pending?.batch ?? 'waiting'} view={view} board={board} summary={summary} cards={cards}
             preview={preview} onCommit={commit} />
         )}
-        {(stage.k === 'ready' || (playing && view.turn.n === 1)) && !atTable && stage.k !== 'over' && handoff === null && (
+        {!tutorial && (stage.k === 'ready' || (playing && view.turn.n === 1)) && !atTable && stage.k !== 'over' && handoff === null && (
           <SetupDone board={board} summary={summary} onClose={() => setAtTable(true)} />
         )}
-        {stage.k === 'over' && !dismissed && (
+        {stage.k === 'over' && !dismissed && !tutorial && (
           <SetupSheet step={`Turn ${view.turn.n} · game over`} title={hot ? hotResult(stage.result.winner, names) : resultText(stage.result, view.me)}>
             <p>
               Final score: {seatNames.me} {board.me.points}, {seatNames.opponent} {board.opponent.points}
