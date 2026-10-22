@@ -20,6 +20,7 @@ import type {
 } from '../state/types.ts';
 import type { DecisionStub } from './decisions.ts';
 import { knows } from './view.ts';
+import { copyJson } from '../state/clone.ts';
 
 export interface EventBase { seq: number; group: number; vis: Mask; rule: string }
 
@@ -70,7 +71,7 @@ export function emit(s: GameState, x: { present: boolean }, ev: EventDraft): Gam
   const seq = mint(s, 'event');
   const group = ev.group ?? mint(s, 'group');
   const e = { ...ev, seq, group, vis: ev.vis ?? allMask(s.players.length) } as GameEvent;
-  if (x.present) pushEvent(s, structuredClone(e));
+  if (x.present) pushEvent(s, copyJson(e));
   return e;
 }
 

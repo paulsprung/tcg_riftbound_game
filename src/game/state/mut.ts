@@ -29,6 +29,7 @@ import type {
   BattlefieldState, CardRef, DefId, Frame, GameObject, GameResult, GameState, IdCounters, Mask, ObjId,
   PlayContext, PlayerId, Zone,
 } from './types.ts';
+import { copyJson } from './clone.ts';
 
 // ---- procedural writes: never bump the epoch ----
 
@@ -106,7 +107,7 @@ export function same(a: unknown, b: unknown): boolean {
   return ka.length === kb.length && ka.every((k) => same(ra[k], rb[k]));
 }
 
-const copy = <T>(v: T): T => (typeof v === 'object' && v !== null ? structuredClone(v) : v);
+const copy = <T>(v: T): T => (typeof v === 'object' && v !== null ? copyJson(v) : v);
 
 /**
  * Sets one field of a state structure (s itself, a player, the turn, a
@@ -202,7 +203,7 @@ export function createObject(s: GameState, o: NewObject): GameObject {
   const controller = o.controller !== undefined ? o.controller : o.owner;
   const obj: GameObject = {
     id, card: o.card ?? mint(s, 'card'), def: o.def, printing: o.printing, token: o.token ?? false,
-    owner: o.owner, controller, zone: structuredClone(o.zone),
+    owner: o.owner, controller, zone: copyJson(o.zone),
     knownBy: o.knownBy ?? defaultKnownBy(s, o.zone, o.owner, controller),
     ts: mint(s, 'ts'), enteredTurn: s.turn.n, ...freshStatus(),
   };
@@ -279,7 +280,7 @@ export function moveObject(s: GameState, id: ObjId, to: Zone, o: MoveOptions = {
   let obj: GameObject;
   if (isBoard(from.z) && isBoard(to.z)) {
     obj = old;                                                     // not a zone change: same object [124], [448.1]
-    obj.zone = structuredClone(to);
+    obj.zone = copyJson(to);
     if (o.controller !== undefined) obj.controller = o.controller;
     obj.knownBy = o.knownBy ?? (isPublic(to.z) ? allMask(s.players.length) : obj.knownBy);
   } else {
@@ -287,8 +288,8 @@ export function moveObject(s: GameState, id: ObjId, to: Zone, o: MoveOptions = {
     if (o.reuseId !== undefined && s.objects[o.reuseId]) throw new EngineError(`moveObject: id ${o.reuseId} is taken`);
     obj = {
       id: o.reuseId ?? mint(s, 'obj'), card: old.card, def: old.def, printing: old.printing, token: old.token, owner: old.owner,
-      controller, zone: structuredClone(to), knownBy: o.knownBy ?? knownAfter(s, old, from, to, controller),
-      ts: mint(s, 'ts'), enteredTurn: s.turn.n, ...freshStatus(), ...structuredClone(o.carry ?? {}),
+      controller, zone: copyJson(to), knownBy: o.knownBy ?? knownAfter(s, old, from, to, controller),
+      ts: mint(s, 'ts'), enteredTurn: s.turn.n, ...freshStatus(), ...copyJson(o.carry ?? {}),
     };
     delete s.objects[id];
     s.objects[obj.id] = obj;
@@ -396,7 +397,7 @@ export function restoreSnapshot(s: GameState, snap: GameState) {
   for (const o of Object.values(s.objects)) known[o.card] = (known[o.card] ?? 0) | o.knownBy;
   const keep = { next: s.next, frames: s.frames, pending: s.pending, out: s.out, epoch: s.epoch };
   const decisions = s.turn.decisionsThisTurn;
-  Object.assign(s, structuredClone(snap), keep);
+  Object.assign(s, copyJson(snap), keep);
   s.turn.decisionsThisTurn = decisions;
   for (const o of Object.values(s.objects)) o.knownBy |= known[o.card] ?? 0;
   touch(s);
@@ -413,5 +414,5 @@ export function setSnap2(s: GameState, play: PlayContext, snap: GameState | null
 /** A copy of the state to roll back to: without the frames (and so without
     their own snapshots), the pending decision and the events (§4.4). */
 export function snapshotState(s: GameState): GameState {
-  return structuredClone({ ...s, frames: [], pending: null, out: [] });
+  return copyJson({ ...s, frames: [], pending: null, out: [] });
 }

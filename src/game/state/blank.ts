@@ -9,6 +9,7 @@ import { ENGINE_VERSION } from '../version.ts';
 import { firstIds } from './ids.ts';
 import { seedState } from './rng.ts';
 import type { GameHistory, GameState, PlayerId, PlayerState, RunePool, TurnLog, TurnState } from './types.ts';
+import { copyJson } from './clone.ts';
 
 export function emptyPool(): RunePool {
   return { energy: 0, power: { fury: 0, calm: 0, mind: 0, body: 0, chaos: 0, order: 0 }, universal: 0, restricted: [] };
@@ -47,8 +48,8 @@ export function blankState(o: { seed: number; mode: ModeConfig; rules: RulesConf
     channelPhasesTaken: new Array<number>(n).fill(0),
   };
   return {
-    schema: 1, engine: ENGINE_VERSION, defsHash: o.defsHash ?? '', mode: structuredClone(o.mode),
-    rules: structuredClone(o.rules), rng: seedState(o.seed), next: firstIds(),
+    schema: 1, engine: ENGINE_VERSION, defsHash: o.defsHash ?? '', mode: copyJson(o.mode),
+    rules: copyJson(o.rules), rng: seedState(o.seed), next: firstIds(),
     players: Array.from({ length: n }, (_, p) => emptyPlayer(p as PlayerId)),
     bfs: [], objects: {}, chain: [], turn: setupTurn(), showdown: null, combat: null, effects: [], delayed: [],
     usage: {}, log: emptyTurnLog(0, n), history, frames: [], pending: null, result: null, epoch: 0, out: [],

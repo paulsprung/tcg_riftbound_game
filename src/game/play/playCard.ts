@@ -67,6 +67,7 @@ import { cardTiming, timingOk, windowAllows, type Window } from '../rules/timing
 import { requestCleanup } from '../rules/tasks.ts';
 import { choicesPossible, chooseNext, slotsOf } from './choices.ts';
 import { payStep } from './pay.ts';
+import { copyJson } from '../state/clone.ts';
 
 type PlayFrame = FrameOf<'play'>;
 
@@ -176,7 +177,7 @@ export function putOnChain(s: GameState, x: { present: boolean }, o: {
   const overrides: PlayOverrides = { ...o.overrides };
   if (typeof o.obj === 'number') {
     const c = s.objects[o.obj];
-    origin = structuredClone(c.zone);
+    origin = copyJson(c.zone);
     owner = c.owner;
     card = c.card;
     kind = 'card';
@@ -348,7 +349,7 @@ function replacementStep(s: GameState, f: PlayFrame, x: RunCtx, it: ChainItem) {
   setField(s, it.play.choices.asPlayed, 'lineage', lineage);
   if (key !== K.yes) return 'continue';
   const old = s.objects[f.obj];
-  const zone = structuredClone(old.zone);
+  const zone = copyJson(old.zone);
   deleteObject(s, old.id);
   const obj = createObject(s, { def: off.a.instead.playToken, printing: null, owner: old.owner, zone, token: true,
     controller: old.controller }).id;
@@ -416,7 +417,7 @@ const STEPS: StepTable<PlayFrame> = [
     f.snap = snapshotState(s);
     const card = s.objects[f.obj];
     const p = card.owner;
-    const origin = structuredClone(card.zone);
+    const origin = copyJson(card.zone);
     const item = mint(s, 'item');
     const before = knowers(s, [f.obj]);
     const it: ChainItem = {

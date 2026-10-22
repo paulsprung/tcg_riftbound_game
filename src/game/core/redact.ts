@@ -35,7 +35,7 @@
  * This module and core/view.ts write into the copy they make, never into the
  * live state (the purity test allows them that).
  */
-import { cloneState } from '../state/clone.ts';
+import { cloneState, copyJson } from '../state/clone.ts';
 import { bit } from '../state/ids.ts';
 import { visibility } from '../state/zones.ts';
 import type { Frame, GameObject, GameState, Json, ObjId, PlayerId, Zone } from '../state/types.ts';
@@ -89,7 +89,7 @@ export function aliasMap(s: GameState, known: (o: GameObject) => boolean): Alias
 
 /** What a viewer sees of an object they don't know: its public facts. */
 function stubFor(o: GameObject, alias: Alias): Stub {
-  const stub: Stub = { id: alias, zone: structuredClone(o.zone), owner: o.owner, controller: o.controller };
+  const stub: Stub = { id: alias, zone: copyJson(o.zone), owner: o.owner, controller: o.controller };
   if (o.facedown) stub.facedown = { hiddenOnTurn: o.facedown.hiddenOnTurn, bf: o.facedown.bf };
   return stub;
 }
@@ -166,7 +166,7 @@ export function redact(s: GameState, p: PlayerId, known: (o: GameObject) => bool
   const d = s.pending;
   const mine = d !== null && d.player === p;
   return {
-    ...v, objects, rng: 0, pending: mine ? redactDecision(structuredClone(d), a) : null,
+    ...v, objects, rng: 0, pending: mine ? redactDecision(copyJson(d), a) : null,
     me: p, opponentDecision: d !== null && !mine ? redactStub(stubOf(d), a) : null,
   } as unknown as PlayerView;
 }
@@ -240,7 +240,7 @@ export const PLACEHOLDER_DEF = 'placeholder';
 export function placeholderFor(st: Stub): GameObject {
   return {
     id: st.id, card: st.id, def: PLACEHOLDER_DEF, printing: null, token: false, owner: st.owner,
-    controller: st.controller, zone: structuredClone(st.zone), knownBy: placeholderKnownBy(st), ts: 0, enteredTurn: 0,
+    controller: st.controller, zone: copyJson(st.zone), knownBy: placeholderKnownBy(st), ts: 0, enteredTurn: 0,
     exhausted: false, damage: [], buffs: 0, stunned: false, empowered: 0, attachedTo: null, designation: null,
     facedown: st.facedown ? { ...st.facedown, by: st.controller ?? st.owner } : null, revealedUntil: null, moves: 0,
     lastDamage: null, played: null, links: [],

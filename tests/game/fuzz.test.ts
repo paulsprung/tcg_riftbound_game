@@ -17,12 +17,14 @@ import { SERAPHINE } from './helpers/decks.ts';
  * showdowns), place and resolve triggers, play tokens and make limited
  * plays; since M1.3 they show off, pay non-standard costs, replace token
  * plays, trigger delayed abilities and Deathknells and grant keywords. The
- * tally at the end checks that they did. The 200 games run in
- * four batches so no single test holds the worker for minutes.
+ * tally at the end checks that they did. The games run in batches of 50 so
+ * no single test holds the worker for minutes.
  */
 
-const GAMES = 200;
-const BATCHES = 4;
+// The M1 exit criterion is 500 games: FUZZ_GAMES=500 npx vitest run tests/game/fuzz.test.ts
+// (about 5 minutes). The default run keeps 200.
+const GAMES = Math.max(50, Number(process.env.FUZZ_GAMES ?? 200));
+const BATCHES = Math.ceil(GAMES / 50);
 
 interface Played { end: GameState; record: GameRecord; decisions: number; seen: Record<string, number> }
 
@@ -74,7 +76,7 @@ describe('§14.7 fuzzing: random Seraphine mirrors', () => {
   let turns = 0, played = 0;
 
   for (let b = 0; b < BATCHES; b++) {
-    const from = b * (GAMES / BATCHES) + 1, to = (b + 1) * (GAMES / BATCHES);
+    const from = b * 50 + 1, to = Math.min(GAMES, (b + 1) * 50);
     it(`games ${from}–${to} end without an invariant failure and replay to the same hash`, async () => {
       for (let seed = from; seed <= to; seed++) {
         await new Promise((r) => setTimeout(r, 0));                  // let the worker talk to vitest between games

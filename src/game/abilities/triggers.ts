@@ -47,6 +47,7 @@ import { addItem, countUsage, playContext, usageKey } from '../rules/chain.ts';
 import { isType, snapshotOf } from '../rules/chars.ts';
 import { hereOf } from '../rules/targets.ts';
 import { enqueue } from '../rules/tasks.ts';
+import { copyJson } from '../state/clone.ts';
 
 type X = { present: boolean };
 
@@ -268,7 +269,7 @@ export function placeTrigger(s: GameState, x: X, t: PendingTrigger): ChainItem {
   const it: ChainItem = {
     id, seq: id, kind: 'triggered', sub: t.delayed !== undefined ? 'delayed' : 'normal', status: 'pending',
     controller: t.controller, owner: t.controller, ability: t.ability, isAdd: false, outcomes: {},
-    trigger: structuredClone(t.info),
+    trigger: copyJson(t.info),
     play: playContext(s, { mode: 'limited', origin: src ? src.zone : { z: 'gone' }, item: id, by: t.controller }),
     ...(t.source !== null ? { source: t.source } : {}),
     ...(lki ? { sourceLki: lki } : {}),

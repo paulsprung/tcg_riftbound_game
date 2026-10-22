@@ -5,13 +5,17 @@ import type { CardDb } from '../../data/types.ts';
 import type { DefId } from '../../game/index.ts';
 import { BUILT_IN_DECKS, deckProblems, type BuiltInDeck } from '../host/decks.ts';
 import { cardFor, nameOf, type CardIndex } from '../model/cards.ts';
+import type { SavedGame } from '../host/autosave.ts';
 import type { OrderChoice } from '../model/setup.ts';
+import type { OpponentChoice } from '../settings.ts';
 
 /*
  * The first screen of '#play' (§12.1 step 1): your deck (the two built-in
  * precons), your Chosen Champion among its Champion Options [103.3.a],
- * the opponent's deck, and how the first player is settled: TR 407 by
- * default, or fixed for a casual game.
+ * the opponent (the computer at Beginner or Normal, §11.7, or a second
+ * human on the same device: hot-seat) and its deck, and how the first
+ * player is settled: TR 407 by default, or fixed for a casual game. A saved
+ * game in progress shows as a Resume card on top (§12.1).
  */
 
 export interface DeckSetupChoice {
@@ -19,6 +23,7 @@ export interface DeckSetupChoice {
   theirs: BuiltInDeck['id'];
   champion: DefId;
   order: OrderChoice;
+  opponent: OpponentChoice;
 }
 
 const deckById = (id: BuiltInDeck['id']) => BUILT_IN_DECKS.find((b) => b.id === id)!;
@@ -26,7 +31,14 @@ const deckById = (id: BuiltInDeck['id']) => BUILT_IN_DECKS.find((b) => b.id === 
 /** The Seraphine mirror: the deck M1 plays against itself (§15 M1). */
 export const DEFAULT_CHOICE: DeckSetupChoice = {
   mine: 'seraphine', theirs: 'seraphine', champion: deckById('seraphine').deck.chosenChampion, order: 'random',
+  opponent: 'normal',
 };
+
+const OPPONENTS: { id: OpponentChoice; label: string; text: string }[] = [
+  { id: 'beginner', label: 'Computer: Beginner', text: 'Makes the obvious plays, often misses a Reaction.' },
+  { id: 'normal', label: 'Computer: Normal', text: 'Weighs each play by playing it out: trades in combat, holds battlefields, answers with Reactions.' },
+  { id: 'hotseat', label: 'Hot-seat', text: 'Two players on this device. The screen is covered between turns so each sees only their own hand.' },
+];
 
 const ORDERS: { id: OrderChoice; label: string }[] = [
   { id: 'random', label: 'Random (TR 407)' }, { id: 'first', label: 'I play first' }, { id: 'second', label: 'I play second' },
@@ -60,8 +72,9 @@ function DeckTile({ b, cards, db, selected, onPick }: {
   );
 }
 
-export function DeckSetup({ cards, db, initial, error, onStart }: {
+export function DeckSetup({ cards, db, initial, error, onStart, saved, onResume, onDiscard }: {
   cards: CardIndex; db: CardDb; initial: DeckSetupChoice; error: string | null; onStart: (c: DeckSetupChoice) => void;
+  saved?: SavedGame | null; onResume?: (g: SavedGame) => void; onDiscard?: () => void;
 }) {
   const [c, setC] = useState<DeckSetupChoice>(initial);
   const mine = deckById(c.mine), theirs = deckById(c.theirs);
@@ -76,10 +89,28 @@ export function DeckSetup({ cards, db, initial, error, onStart }: {
       <div className="page-head">
         <h1>Play</h1>
         <p className="muted">
-          A 1v1 Duel with the official Radiance Showdown Decks. This first version covers the start of a game: pick
-          the decks, see the battlefields, settle who plays first and take your mulligan. Taking turns comes next.
+          A 1v1 Duel with the official Radiance Showdown Decks under the full rules: the Seraphine deck plays every card
+          as printed. Play against the computer or a friend on the same device.
         </p>
       </div>
+
+      {saved && onResume && (
+        <section className="play-resume" aria-label="Saved game">
+          <div>
+            <p className="eyebrow">Game in progress</p>
+            <strong>{saved.title}</strong>
+            <p className="muted small">
+              Turn {saved.turn} · score {saved.points[0]}–{saved.points[1]} ·{' '}
+              {saved.seats[1].k === 'human' ? 'hot-seat' : saved.seats[1].k === 'ai' ? `computer (${saved.seats[1].level})` : 'simple bot'}
+              {' '}· saved {new Date(saved.savedAt).toLocaleString()}
+            </p>
+          </div>
+          <div className="play-resume__buttons">
+            <button type="button" className="btn btn--primary" onClick={() => onResume(saved)}>Resume</button>
+            {onDiscard && <button type="button" className="btn btn--ghost" onClick={onDiscard}>Discard</button>}
+          </div>
+        </section>
+      )}
 
       <div className="play-setup__grid">
         <section className="play-setup__block">
@@ -109,7 +140,16 @@ export function DeckSetup({ cards, db, initial, error, onStart }: {
 
         <section className="play-setup__block">
           <h2>Opponent</h2>
-          <p className="muted small">The computer. For now it answers its setup choices only.</p>
+          <div className="opponents" role="radiogroup" aria-label="Opponent">
+            {OPPONENTS.map((o) => (
+              <button key={o.id} type="button" role="radio" aria-checked={o.id === c.opponent} className="opponent"
+                onClick={() => setC({ ...c, opponent: o.id })}>
+                <strong>{o.label}</strong>
+                <span className="muted small">{o.text}</span>
+              </button>
+            ))}
+          </div>
+          <h3>{c.opponent === 'hotseat' ? "Player 2's deck" : "The computer's deck"}</h3>
           <div className="seg" role="group" aria-label="Opponent's deck">
             {BUILT_IN_DECKS.map((b) => (
               <button key={b.id} type="button" aria-pressed={b.id === c.theirs} onClick={() => setC({ ...c, theirs: b.id })}>

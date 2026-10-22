@@ -11,8 +11,9 @@ import { SetupSheet } from './SetupSheet.tsx';
  * once setup is done the board rests at the start of the first turn.
  */
 
-export function PromptBar({ view, stage, a, onCommit }: {
-  view: PlayerView; stage: Stage; a?: Affordances | null; onCommit?: (keys: string[]) => void;
+export function PromptBar({ view, stage, a, onCommit, thinking, coachKeys, opponent = 'The opponent' }: {
+  view: PlayerView; stage: Stage; a?: Affordances | null; onCommit?: (keys: string[]) => void; thinking?: boolean;
+  coachKeys?: ReadonlySet<string>; opponent?: string;
 }) {
   if (stage.k === 'deciding' && stage.mine && a && onCommit) {
     return (
@@ -21,7 +22,8 @@ export function PromptBar({ view, stage, a, onCommit }: {
           {a.prompt} {a.rule && <span className="muted small">{/^\d/.test(a.rule) ? `[${a.rule}]` : a.rule}</span>}
         </p>
         {a.buttons.map((b) => (
-          <button key={b.key ?? 'commit'} type="button" className={`btn btn--small${b.primary ? ' btn--primary' : ''}`}
+          <button key={b.key ?? 'commit'} type="button" data-key={b.key ?? undefined}
+            className={`btn btn--small${b.primary ? ' btn--primary' : ''}${b.key && coachKeys?.has(b.key) ? ' is-coached' : ''}`}
             onClick={() => onCommit(b.commit)}>
             {b.label}
           </button>
@@ -35,10 +37,10 @@ export function PromptBar({ view, stage, a, onCommit }: {
     case 'mulligan': text = stage.mine ? 'Choose cards to set aside.' : waitingText(view.opponentDecision!); break;
     case 'ready': text = 'Setup is done. The first turn begins with its Awaken Phase [118].'; break;
     case 'deciding': text = stage.mine ? `Your decision: ${stage.kind}.`
-      : view.opponentDecision ? waitingText(view.opponentDecision) : 'The opponent is deciding…'; break;
+      : view.opponentDecision ? waitingText(view.opponentDecision).replace(/^The opponent/, opponent) : `${opponent} is deciding…`; break;
     case 'over': text = `The game is over. ${resultText(stage.result, view.me)}`; break;
   }
-  return <p className="prompt" aria-live="assertive">{text}</p>;
+  return <p className={`prompt${thinking ? ' prompt--thinking' : ''}`} aria-live="assertive">{text}</p>;
 }
 
 /** The end of setup, once (§12.1): how it went, then to the table. */

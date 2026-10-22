@@ -15,6 +15,7 @@ import { EngineError } from './errors.ts';
 import type {
   DefId, ItemId, Json, Loc, ObjId, PaymentPlan, PlayerId, PowerReq, Zone,
 } from '../state/types.ts';
+import { copyJson } from '../state/clone.ts';
 
 /** What a decision is about (§4.3). The kind, its ctx and how long the
     answer takes are visible to every player; the options are not. */
@@ -253,5 +254,5 @@ export function autoKey(spec: AskSpec, options: readonly Option[]): string | nul
 }
 
 export function stubOf(d: Decision): DecisionStub {
-  return { player: d.player, kind: d.kind, ctx: structuredClone(d.ctx) };
+  return { player: d.player, kind: d.kind, ctx: copyJson(d.ctx) };
 }

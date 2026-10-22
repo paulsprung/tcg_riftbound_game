@@ -9,6 +9,7 @@ import { TOKENS } from '../cards/tokens.ts';
 import { derive, IMPLEMENTED_KEYWORDS, keywordValue, printedKeywordValues } from '../layers/derive.ts';
 import { locOf } from '../state/zones.ts';
 import type { CardType, ContinuousEffect, GameObject, GameState, KeywordId, ObjId, Snapshot, TokenId } from '../state/types.ts';
+import { copyJson } from '../state/clone.ts';
 
 const token = (def: string) => (Object.hasOwn(TOKENS, def) ? TOKENS[def as TokenId] : undefined);
 
@@ -91,7 +92,7 @@ export function snapshotOf(s: GameState, id: ObjId): Snapshot {
   const keywords: Snapshot['chars']['keywords'] = {};
   for (const [k, v] of Object.entries(d.keywords)) keywords[k as KeywordId] = { value: v, instances: 1, active: true };
   return {
-    id, card: o.card, def: o.def, owner: o.owner, controller: o.controller, zone: structuredClone(o.zone),
+    id, card: o.card, def: o.def, owner: o.owner, controller: o.controller, zone: copyJson(o.zone),
     loc: locOf(o), damage: damageOf(o), buffs: o.buffs, exhausted: o.exhausted, stunned: o.stunned, attached: [],
     knownBy: o.knownBy, epoch: s.epoch,
     chars: {

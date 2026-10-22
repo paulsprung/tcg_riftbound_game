@@ -20,6 +20,7 @@ import type { DecisionStub } from './decisions.ts';
 import { EngineError } from './errors.ts';
 import type { GameEvent } from './events.ts';
 import { placeholderFor, redact } from './redact.ts';
+import { copyJson } from '../state/clone.ts';
 
 export type { DecisionStub } from './decisions.ts';
 
@@ -83,7 +84,7 @@ export function viewFor(s: GameState, p: PlayerId): PlayerView {
 
 /** The events of one step as player p saw them (§7.4). */
 export function observe(events: GameEvent[], p: PlayerId): ObservedEvent[] {
-  return events.map((e) => observed(structuredClone(e), p));
+  return events.map((e) => observed(copyJson(e), p));
 }
 
 function observed(e: GameEvent, p: PlayerId): ObservedEvent {
@@ -113,7 +114,7 @@ function observed(e: GameEvent, p: PlayerId): ObservedEvent {
  * (§4.6, §12.7).
  */
 export function blankFill(v: PlayerView): GameState {
-  const { me: _me, opponentDecision: _stub, ...rest } = structuredClone(v);
+  const { me: _me, opponentDecision: _stub, ...rest } = copyJson(v);
   const objects: Record<ObjId, GameObject> = {};
   for (const o of Object.values(rest.objects)) objects[o.id] = 'def' in o ? o : placeholderFor(o);
   return { ...rest, objects } as GameState;

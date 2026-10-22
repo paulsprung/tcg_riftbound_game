@@ -24,6 +24,7 @@ import type {
 } from '../state/types.ts';
 import { isShowdownState, nextPlayer } from './board.ts';
 import { requestCleanup } from './tasks.ts';
+import { copyJson } from '../state/clone.ts';
 
 type X = { present: boolean };
 
@@ -39,7 +40,7 @@ export function playContext(s: GameState, o: {
     showOff: [], energySpent: 0, powerSpent: 0, costObjects: {},
   };
   const ctx: PlayContext = {
-    mode: o.mode, step: 1, origin: structuredClone(o.origin), closedTheState: s.chain.length === 0,
+    mode: o.mode, step: 1, origin: copyJson(o.origin), closedTheState: s.chain.length === 0,
     atStart: { showdown: isShowdownState(s), turnPlayer: s.turn.player, phase: s.turn.phase },
     choices: { asPlayed: {}, optionalCosts: {}, executions: [{ modes: [], dests: {}, targets: {} }] },
     paid: [], facts, lookBack: {}, restrictions: [], snap2: null, ...(o.instructedBy ? { instructedBy: o.instructedBy } : {}),

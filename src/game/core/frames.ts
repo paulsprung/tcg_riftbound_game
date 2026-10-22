@@ -37,6 +37,7 @@ import { autoKey, canonical, checkOptions, stubOf, type AskSpec, type Decision, 
 import { endGame } from './end.ts';
 import { EngineError } from './errors.ts';
 import { emit } from './events.ts';
+import { copyJson } from '../state/clone.ts';
 
 export type StepOut = 'continue' | 'waiting' | 'done';
 
@@ -206,7 +207,7 @@ export function ask(s: GameState, f: Frame, x: RunCtx, spec: AskSpec): StepOut {
   if (spec.batch !== undefined) d.batch = spec.batch;
   if (spec.back) d.back = true;
   if (spec.mustAsk) d.mustAsk = true;
-  setPending(s, structuredClone(d));
+  setPending(s, copyJson(d));
   emit(s, x, { k: 'deciding', stub: stubOf(d), rule: spec.ctx.rule });
   if (countDecision(s) > s.rules.turnDecisionCap) {
     endGame(s, x, { winner: null, reason: 'loop', rule: 'turnDecisionCap (§8)', turn: s.turn.n });
@@ -218,7 +219,7 @@ export function ask(s: GameState, f: Frame, x: RunCtx, spec: AskSpec): StepOut {
 export function taskFrame(s: GameState, t: Task): Frame {
   switch (t.t) {
     case 'cleanup': return { f: 'cleanup', v: t.v, pc: 0, epoch0: s.epoch };
-    case 'placeTriggers': return { f: 'triggers', batch: structuredClone(t.batch), placed: [], pc: 0, order: t.order };
-    default: return { f: 'task', task: structuredClone(t), pc: 0, locals: null };
+    case 'placeTriggers': return { f: 'triggers', batch: copyJson(t.batch), placed: [], pc: 0, order: t.order };
+    default: return { f: 'task', task: copyJson(t), pc: 0, locals: null };
   }
 }

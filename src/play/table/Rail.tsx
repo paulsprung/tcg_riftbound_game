@@ -3,6 +3,7 @@ import type { Phase } from '../../game/index.ts';
 import type { BoardModel } from '../model/board.ts';
 import { nameOf, type CardIndex } from '../model/cards.ts';
 import type { LogLine } from '../model/describe.ts';
+import { useTableLook } from './tableContext.ts';
 
 /*
  * The right rail (§12.2): the score track, the chain, the log; and the
@@ -10,14 +11,15 @@ import type { LogLine } from '../model/describe.ts';
  * item (the next to resolve [340.1]) on top.
  */
 
-export function ScoreTrack({ board }: { board: BoardModel }) {
-  const rows = [{ label: 'You', side: board.me }, { label: 'Opponent', side: board.opponent }];
+export function ScoreTrack({ board, names }: { board: BoardModel; names?: { me: string; opponent: string } }) {
+  const look = useTableLook();
+  const rows = [{ label: names?.me ?? 'You', side: board.me }, { label: names?.opponent ?? 'Opponent', side: board.opponent }];
   const steps = Array.from({ length: board.victoryScore + 1 }, (_, i) => i);
   return (
     <section className="rail__box" aria-label="Score">
       <h2 className="rail__title">Score <span className="muted">· {board.victoryScore} to win</span></h2>
       {rows.map(({ label, side }) => (
-        <div key={label} className={`score score--${side.me ? 'me' : 'opp'}`}>
+        <div key={label} className={`score score--${side.me ? 'me' : 'opp'}${look.fx.score.includes(side.p) ? ' fx--score' : ''}`}>
           <span className="score__who">{label}</span>
           <span className="score__track" aria-hidden>
             {steps.map((n) => <span key={n} className={n === side.points ? 'is-at' : n < side.points ? 'is-on' : ''} />)}
@@ -31,8 +33,9 @@ export function ScoreTrack({ board }: { board: BoardModel }) {
 
 export function ChainBox({ board, cards }: { board: BoardModel; cards: CardIndex }) {
   const items = board.chain.slice().reverse();
+  const look = useTableLook();
   return (
-    <section className="rail__box" aria-label="Chain">
+    <section className={`rail__box${look.fx.chain && items.length > 0 ? ' fx--chain' : ''}`} aria-label="Chain">
       <h2 className="rail__title">Chain {items.length > 0 && <span className="muted">· {items.length}, newest on top</span>}</h2>
       {items.length === 0 ? <p className="muted small">Empty: nothing waits to resolve.</p> : (
         <ol className="chain">
@@ -52,7 +55,7 @@ export function ChainBox({ board, cards }: { board: BoardModel; cards: CardIndex
   );
 }
 
-export function GameLog({ lines, rules }: { lines: LogLine[]; rules: boolean }) {
+export function GameLog({ lines, rules, onRules }: { lines: LogLine[]; rules: boolean; onRules?: () => void }) {
   // Keep the newest line in sight, scrolling the log only, never the page.
   const list = useRef<HTMLOListElement>(null);
   useEffect(() => {
@@ -61,7 +64,13 @@ export function GameLog({ lines, rules }: { lines: LogLine[]; rules: boolean }) 
   }, [lines.length]);
   return (
     <section className="rail__box rail__log" aria-label="Game log">
-      <h2 className="rail__title">Log</h2>
+      <h2 className="rail__title">Log
+        {onRules && (
+          <button type="button" className="rail__toggle" aria-pressed={rules} onClick={onRules} title="Show rule numbers">
+            rules {rules ? 'on' : 'off'}
+          </button>
+        )}
+      </h2>
       <ol className="log" aria-live="polite" ref={list}>
         {lines.map((l) => (
           <li key={l.seq} className={`log__line log__line--${l.who}`}>

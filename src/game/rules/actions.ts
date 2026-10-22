@@ -33,6 +33,7 @@ import { opponentsOf } from './board.ts';
 import { snapshotOf } from './chars.ts';
 import { maxBuffs, victoryScore } from './defaults.ts';
 import { requestCleanup } from './tasks.ts';
+import { copyJson } from '../state/clone.ts';
 
 type X = { present: boolean };
 
@@ -130,7 +131,7 @@ export function channelRunes(s: GameState, x: X, p: PlayerId, n: number, rule: s
 export function recycleRune(s: GameState, x: X, id: ObjId, rule: string): ObjId {
   const o = s.objects[id];
   const before = knowers(s, [id]);
-  const from = structuredClone(o.zone);
+  const from = copyJson(o.zone);
   const obj = moveObject(s, id, Z.runeDeck(o.owner), { pos: 'bottom' });
   const group = newGroup(s);
   emitZone(s, x, { obj, prev: id, from, to: Z.runeDeck(o.owner), why: 'recycle', rule, before, group });
@@ -169,7 +170,7 @@ export function addToPool(s: GameState, x: X, p: PlayerId, energy: number, power
   const pool = s.players[p].pool;
   if (energy > 0) setField(s, pool, 'energy', pool.energy + energy);
   for (const d of power) setField(s, pool.power, d, pool.power[d] + 1);
-  emit(s, x, { k: 'pool', p, pool: structuredClone(pool), rule });
+  emit(s, x, { k: 'pool', p, pool: copyJson(pool), rule });
 }
 
 /**
@@ -186,7 +187,7 @@ export function payFromPool(s: GameState, x: X, p: PlayerId, energy: number, pow
     if (d) setField(s, pool.power, d, pool.power[d] - 1);
     else setField(s, pool, 'universal', pool.universal - 1);
   }
-  emit(s, x, { k: 'pool', p, pool: structuredClone(pool), rule });
+  emit(s, x, { k: 'pool', p, pool: copyJson(pool), rule });
 }
 
 /** Narrow Power symbols first, so a broad one doesn't take the only Power a
@@ -272,7 +273,7 @@ export function kill(s: GameState, x: X, units: ObjId[], o: { rule: string; inCo
 export function toZone(s: GameState, x: X, id: ObjId, to: Zone, o: { why: string; rule: string; group?: number;
   pos?: 'top' | 'bottom' }): ObjId | null {
   const u = s.objects[id];
-  const from = structuredClone(u.zone);
+  const from = copyJson(u.zone);
   if (u.token && to.z !== 'chain') {
     deleteObject(s, id);
     emit(s, x, { k: 'tokenGone', obj: id, rule: '186.1', group: o.group });
@@ -329,7 +330,7 @@ export function discard(s: GameState, x: X, p: PlayerId, objs: ObjId[], rule: st
 export function drawCard(s: GameState, x: X, p: PlayerId, id: ObjId, rule: string): ObjId {
   const group = newGroup(s);
   const before = knowers(s, [id]);
-  const from = structuredClone(s.objects[id].zone);
+  const from = copyJson(s.objects[id].zone);
   const obj = moveObject(s, id, Z.hand(p));
   emitZone(s, x, { obj, prev: id, from, to: Z.hand(p), why: 'draw', rule, before, group });
   setField(s, s.log.draws, p, s.log.draws[p] + 1);
@@ -346,7 +347,7 @@ export function recycleCards(s: GameState, x: X, p: PlayerId, objs: ObjId[], rul
   const out: ObjId[] = [];
   for (const id of order) {
     const before = knowers(s, [id]);
-    const from = structuredClone(s.objects[id].zone);
+    const from = copyJson(s.objects[id].zone);
     const obj = moveObject(s, id, Z.deck(p), { pos: 'bottom', ...(objs.length > 1 ? { knownBy: 0 } : {}) });
     emitZone(s, x, { obj, prev: id, from, to: Z.deck(p), why: 'recycle', rule, before, group });
     out.push(obj);

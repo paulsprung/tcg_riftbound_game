@@ -4,6 +4,7 @@ import { HoloCard } from '../../card/HoloCard.tsx';
 import { defaultFinish } from '../../data/cardInfo.ts';
 import type { CardSlot } from '../model/board.ts';
 import { cardFor, nameOf, type CardIndex } from '../model/cards.ts';
+import { useTableLook } from './tableContext.ts';
 
 /*
  * One card on the table (§12.4): its art when the viewer knows it, a card
@@ -46,10 +47,14 @@ function kwText(slot: CardSlot): string {
 export const TableCard = memo(function TableCard({
   slot, cards, size, landscape = false, selectable, selected, dimmed, tilt = false, onTap, label, onAct,
 }: TableCardProps) {
+  const look = useTableLook();
+  const fx = look.fx.objs[slot.id];
+  const coached = look.coachObjs.has(slot.id);
   const card = slot.def !== null ? cardFor(cards, slot.def, slot.printing) : null;
   const px = CARD_PX[size] * (landscape ? 1039 / 744 : 1);
   const cls = ['tcard', `tcard--${size}`, landscape && 'tcard--land', selectable && 'is-selectable',
-    selected && 'is-selected', dimmed && 'is-dim', slot.exhausted && 'is-exhausted', onAct && 'is-actionable']
+    selected && 'is-selected', dimmed && 'is-dim', slot.exhausted && 'is-exhausted', onAct && 'is-actionable',
+    fx && `fx fx--${fx.k}`, fx && look.fx.theirs && 'fx--theirs', coached && 'is-coached']
     .filter(Boolean).join(' ');
   const tap = onAct ? () => onAct(slot) : onTap ? () => onTap(slot) : undefined;
   const name = slot.def !== null ? nameOf(cards, slot.def) : 'Face-down card';
@@ -67,7 +72,7 @@ export const TableCard = memo(function TableCard({
   } : {};
 
   return (
-    <div className={cls} title={title} {...control}>
+    <div className={cls} title={title} data-obj={slot.id} {...control}>
       {card ? (
         <HoloCard card={card} finish={defaultFinish(card)} width="100%" tilt={tilt ? 'hover' : 'off'} upright={landscape}
           imageWidth={Math.min(744, Math.ceil((px * 2) / 50) * 50)} />
@@ -87,6 +92,8 @@ export const TableCard = memo(function TableCard({
       {slot.stunned && <span className="tcard__stun">Stunned</span>}
       {kwText(slot) && <span className="tcard__kw" title="Keywords now (printed or given)">{kwText(slot)}</span>}
       {slot.designation && <span className={`tcard__role tcard__role--${slot.designation}`}>{slot.designation}</span>}
+      {fx?.k === 'hit' && <span key={look.fx.token} className="tcard__pop" aria-hidden>−{fx.n}</span>}
+      {fx?.k === 'buff' && <span key={look.fx.token} className="tcard__pop tcard__pop--up" aria-hidden>+</span>}
     </div>
   );
 });

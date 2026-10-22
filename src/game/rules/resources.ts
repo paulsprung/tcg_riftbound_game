@@ -32,6 +32,7 @@ import type {
 } from '../state/types.ts';
 import { addItem, finalizeItem, itemById, playContext, removeItem } from './chain.ts';
 import { addToPool, byWidth, exhaust, payFromPool, recycleRune } from './actions.ts';
+import { copyJson } from '../state/clone.ts';
 
 const DOMAINS: Domain[] = ['fury', 'calm', 'mind', 'body', 'chaos', 'order'];
 
@@ -187,7 +188,7 @@ function concrete(s: GameState, p: PlayerId, c: { recycleTired: Record<Domain, n
   const power = { ...left.power };
   for (const d of DOMAINS) power[d] -= base.spend.power[d] ?? 0;
   const after: RunePool = { energy: left.energy + exhausts.length - cost.energy, power,
-    universal: left.universal - base.spend.universal, restricted: structuredClone(left.restricted) };
+    universal: left.universal - base.spend.universal, restricted: copyJson(left.restricted) };
   const onBoard = runes.length - recycleIds.length;
   const byDomain = zero();
   for (const r of runes) if (!recycleIds.includes(r.id)) byDomain[r.d]++;

@@ -7,7 +7,25 @@
 import type { GameState } from './types.ts';
 
 export function cloneState(s: GameState): GameState {
-  return structuredClone(s);
+  return copyJson(s);
+}
+
+/**
+ * A deep copy of plain JSON data (objects, arrays, primitives), the shape
+ * every state, event and decision has. Same result as structuredClone for
+ * such data (undefined fields are kept), several times faster: a state is
+ * copied for every play's S0 snapshot and for every AI simulation.
+ */
+export function copyJson<T>(v: T): T {
+  if (v === null || typeof v !== 'object') return v;
+  if (Array.isArray(v)) {
+    const n = v.length, a = new Array(n);
+    for (let i = 0; i < n; i++) a[i] = copyJson(v[i]);
+    return a as T;
+  }
+  const o: Record<string, unknown> = {};
+  for (const k in v) o[k] = copyJson((v as Record<string, unknown>)[k]);
+  return o as T;
 }
 
 /**
