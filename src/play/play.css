@@ -221,3 +221,29 @@ ul.play__error { padding-left: 30px; }
 }
 .champion[aria-pressed="true"] { border-color: var(--accent); background: rgba(233, 196, 106, .08); }
 .champion .small { line-height: 1.2; text-align: center; }
+
+/* ------------------------------------------------------------ in play -- */
+
+.tcard.is-actionable { cursor: pointer; transition: transform .15s ease; }
+.tcard.is-actionable .hc__face, .tcard.is-actionable .tcard__back, .tcard.is-actionable .tcard__missing {
+  box-shadow: 0 0 0 2px #7fd1ff, 0 0 18px rgba(127, 209, 255, .45);
+}
+.tcard.is-actionable:hover { transform: translateY(-4px); }
+.tcard__might {
+  position: absolute; right: -5px; top: -5px; min-width: 22px; padding: 1px 5px; border-radius: 99px;
+  background: rgba(10, 8, 18, .92); border: 1px solid var(--line); font: 700 11px/1.4 var(--font-ui); text-align: center;
+}
+.tcard__might.is-hurt { border-color: #e0475f; color: #ffb3bb; }
+.tcard__role {
+  position: absolute; left: 50%; top: -9px; translate: -50% 0; padding: 0 6px; border-radius: 99px;
+  font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+}
+.tcard__role--attacker { background: #e0475f; color: #fff; }
+.tcard__role--defender { background: #4f8fe0; color: #fff; }
+.lane[data-active="true"] { border-color: var(--accent); }
+.lane__tag { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); }
+.lane__choose, .side__choose { font-size: 12px; }
+.act-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; flex: 1 1 360px; }
+.act-bar .prompt { flex: 1 1 100%; }
+.pool-chip { font-size: 11px; color: var(--muted); }
+.side__row--choose { outline: 2px dashed #7fd1ff; outline-offset: 2px; }

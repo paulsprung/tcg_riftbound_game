@@ -1,3 +1,4 @@
+import './helpers/setupOnly.ts';
 import { describe, expect, it } from 'vitest';
 import {
   ENGINE_VERSION, hashState, RecordMismatchError, replay, type GameRecord, type GameSetup,

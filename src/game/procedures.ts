@@ -11,4 +11,12 @@
  *   import './core/loop.ts';        // M1: the master loop (§5.2)
  */
 import './rules/setup.ts';
+import './rules/tasks.ts';
+import './rules/turn.ts';
+import './rules/cleanup.ts';
+import './rules/combat.ts';
+import './rules/assignment.ts';
+import './rules/move.ts';
+import './play/playCard.ts';
+import './core/loop.ts';
 

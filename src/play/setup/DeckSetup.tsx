@@ -23,8 +23,9 @@ export interface DeckSetupChoice {
 
 const deckById = (id: BuiltInDeck['id']) => BUILT_IN_DECKS.find((b) => b.id === id)!;
 
+/** The Seraphine mirror: the deck M1 plays against itself (§15 M1). */
 export const DEFAULT_CHOICE: DeckSetupChoice = {
-  mine: 'seraphine', theirs: 'evelynn', champion: deckById('seraphine').deck.chosenChampion, order: 'random',
+  mine: 'seraphine', theirs: 'seraphine', champion: deckById('seraphine').deck.chosenChampion, order: 'random',
 };
 
 const ORDERS: { id: OrderChoice; label: string }[] = [

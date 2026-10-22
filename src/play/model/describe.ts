@@ -10,8 +10,9 @@ import type { SetupSummary } from './stage.ts';
  * from the events' own `def` fields, which observe() left only where the
  * viewer may see them.
  *
- * M0 covers the events of setup; every later event kind gets its line
- * with the procedure that emits it.
+ * Setup (M0) and the vanilla duel of M1.1: turns, channels, draws, plays,
+ * moves, showdowns, combats, damage, deaths, scoring and points. Every
+ * later event kind gets its line with the procedure that emits it.
  */
 
 export interface LogLine {
@@ -29,6 +30,8 @@ export interface DescribeCtx {
   /** An object as the viewer's current view knows it, for events that
       name objects without their definition (battlefields). */
   objOf: (id: ObjId) => { def: DefId | null; owner: PlayerId } | null;
+  /** The object of battlefield i, for its name. */
+  bfObj?: (bf: number) => ObjId | undefined;
 }
 
 /** "A", "A and B", "A, B and C". */
@@ -40,7 +43,7 @@ export function listOf(items: readonly string[]): string {
 const cards = (n: number) => `${n} card${n === 1 ? '' : 's'}`;
 const ZONE_NAME = { deck: 'Main Deck', runeDeck: 'Rune Deck' } as const;
 
-function resultText(r: GameResult, me: PlayerId): string {
+export function resultText(r: GameResult, me: PlayerId): string {
   const who = r.winner === null ? 'Nobody wins' : r.winner === me ? 'You win' : 'The opponent wins';
   const how: Record<GameResult['reason'], string> = {
     score: 'by points', burnout: 'by burn out', concede: 'by concession', effect: 'by a card effect',
@@ -66,6 +69,24 @@ export function describeAll(events: readonly ObservedEvent[], c: DescribeCtx): L
     return defs.length > 0 && defs.every((d) => d !== undefined) ? defs.map((d) => c.nameOf(d!)) : null;
   };
 
+  const subject = (p: PlayerId) => (p === c.me ? 'You' : 'The opponent');
+  // What each id was, from the moves the viewer saw: a unit that died since
+  // is gone from the view but not from the log.
+  const known: Record<ObjId, DefId> = {};
+  for (const e of events) {
+    if (e.k !== 'zone' || !e.def) continue;
+    if (e.obj !== null) known[e.obj] = e.def;
+    if (e.prev !== undefined) known[e.prev] = e.def;
+  }
+  const unitName = (id: ObjId | null) => {
+    const def = id === null ? null : c.objOf(id)?.def ?? known[id] ?? null;
+    return def ? c.nameOf(def) : 'a unit';
+  };
+  const bfName = (bf: number) => {
+    const id = c.bfObj?.(bf);
+    const o = id === undefined ? null : c.objOf(id);
+    return o?.def ? c.nameOf(o.def) : `battlefield ${bf + 1}`;
+  };
   for (const e of events) {
     switch (e.k) {
       case 'gameStart': add(e, 'The game begins.', 'game'); break;
@@ -110,6 +131,55 @@ export function describeAll(events: readonly ObservedEvent[], c: DescribeCtx): L
         break;
       }
       case 'gameOver': if (e.result) add(e, resultText(e.result, c.me), 'game'); break;
+      case 'turnStart': add(e, `Turn ${e.n}: ${e.p === c.me ? 'your turn' : "the opponent's turn"}.`, 'game'); break;
+      case 'channel': add(e, `${subject(e.p)} channel${e.p === c.me ? '' : 's'} ${e.objs.length} rune${e.objs.length === 1 ? '' : 's'}.`,
+        who(e.p)); break;
+      case 'played': {
+        const o = events.find((z) => z.k === 'zone' && z.why === 'play' && z.group !== undefined && z.to.z === 'chain'
+          && 'item' in z.to && z.to.item === e.item);
+        const p = o && o.k === 'zone' && 'p' in o.from ? o.from.p : null;
+        const by = p === null ? 'A card is' : p === c.me ? 'You' : 'The opponent';
+        add(e, `${by}${p === null ? '' : ' plays'} ${c.nameOf(e.def)}${p === null ? ' played' : ''}.`, p === null ? 'game' : who(p));
+        break;
+      }
+      case 'payment': add(e, `${subject(e.p)} pay${e.p === c.me ? '' : 's'}: ${e.summary}.`, who(e.p)); break;
+      case 'move': {
+        const first = e.objs[0];
+        const owner = first === null || first === undefined ? null : c.objOf(first)?.owner ?? null;
+        const names = e.objs.map((id) => unitName(id));
+        const to = e.to.z === 'base' ? 'base' : bfName(e.to.bf);
+        add(e, `${owner === null ? 'Units move' : `${subject(owner)} move${owner === c.me ? '' : 's'}`} ${listOf(names)} to ${to}.`,
+          owner === null ? 'game' : who(owner));
+        break;
+      }
+      case 'recall': add(e, `${listOf(e.objs.map(unitName))} ${e.objs.length === 1 ? 'is' : 'are'} recalled to base.`, 'game'); break;
+      case 'showdownStart': add(e, `A showdown begins at ${bfName(e.bf)}.`, 'game'); break;
+      case 'combatStart': add(e, `Combat at ${bfName(e.bf)}: ${e.attacker === c.me ? 'you attack' : 'the opponent attacks'}.`, 'game'); break;
+      case 'deal': add(e, `${unitName(e.to)} takes ${e.n} damage.`, 'game'); break;
+      case 'zone':
+        if (e.why === 'kill') add(e, `${e.def ? c.nameOf(e.def) : 'A unit'} dies.`, 'game');
+        break;
+      case 'combatResult': {
+        const r = e.result ?? [];
+        const won = r.findIndex((x) => x === 'won');
+        add(e, won < 0 ? 'The combat ends with no result.' : won === c.me ? 'You win the combat.' : 'The opponent wins the combat.',
+          'game');
+        break;
+      }
+      case 'control':
+        add(e, e.p === null ? `Nobody controls ${bfName(e.bf)} now.` : `${subject(e.p)} control${e.p === c.me ? '' : 's'} ${bfName(e.bf)}.`,
+          e.p === null ? 'game' : who(e.p));
+        break;
+      case 'score': {
+        const how = e.how === 'conquer' ? 'conquer' : 'hold';
+        const verb = e.p === c.me ? how : `${how}s`;
+        add(e, `${subject(e.p)} ${verb} ${bfName(e.bf)}${e.point ? '' : ' (at the final point: a card instead of the point)'}.`,
+          who(e.p));
+        break;
+      }
+      case 'points': add(e, `${subject(e.p)} ${e.p === c.me ? 'have' : 'has'} ${e.total} point${e.total === 1 ? '' : 's'}.`, who(e.p)); break;
+      case 'burnOut': add(e, `${subject(e.p)} burn${e.p === c.me ? '' : 's'} out: the trash is shuffled back.`, who(e.p)); break;
+      case 'rollback': add(e, e.reason === 'illegal' ? 'The play fails and is undone.' : 'The play is taken back.', 'me'); break;
       default: break;                 // zone moves are told by their summaries; decisions by the prompt
     }
   }

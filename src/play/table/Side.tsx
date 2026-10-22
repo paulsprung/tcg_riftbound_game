@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { CardSlot, SideModel } from '../model/board.ts';
 import type { CardIndex } from '../model/cards.ts';
 import { OpenPile, Pile } from './Pile.tsx';
+import { actOn, laneButtons, type Acts } from './acts.ts';
 import { TableCard } from './TableCard.tsx';
 
 /*
@@ -15,6 +16,8 @@ interface SideProps {
   side: SideModel;
   cards: CardIndex;
   onZoom: (s: CardSlot) => void;
+  acts?: Acts;
+  kind?: string;
 }
 
 function Zone({ label, children }: { label: string; children: ReactNode }) {
@@ -26,25 +29,34 @@ function Zone({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function Strip({ side, cards, onZoom }: SideProps) {
+function poolText(side: SideModel): string {
+  const p = side.pool;
+  const power = Object.entries(p.power).filter(([, n]) => n > 0).map(([d, n]) => `${n} ${d}`);
+  const parts = [p.energy > 0 ? `${p.energy} Energy` : '', ...power, p.universal > 0 ? `${p.universal} any` : '']
+    .filter(Boolean);
+  return parts.length > 0 ? `Pool: ${parts.join(', ')}` : '';
+}
+
+function Strip({ side, cards, onZoom, acts }: SideProps) {
   return (
     <div className="side__strip">
       <div className="side__who">
         <strong>{side.me ? 'You' : 'Opponent'}</strong>
         <span className="muted small">{side.deckName}</span>
         {side.first !== null && <span className="chip side__order">{side.first ? 'Plays first' : 'Plays second'}</span>}
+        <span className="pool-chip">{poolText(side)}</span>
       </div>
       <Zone label="Legend">
         {side.legend.map((c) => <TableCard key={c.id} slot={c} cards={cards} size="m" onTap={onZoom} />)}
       </Zone>
       <Zone label="Champion">
-        {side.champion ? <TableCard slot={side.champion} cards={cards} size="m" onTap={onZoom} />
+        {side.champion ? <TableCard slot={side.champion} cards={cards} size="m" onTap={onZoom} onAct={actOn(acts, side.champion)} />
           : <div className="tcard tcard--m is-empty" />}
       </Zone>
       <div className={`hand${side.me ? ' hand--mine' : ''}`} aria-label={side.me ? 'Your hand' : "Opponent's hand"}>
         {side.hand.map((c) => (
           <TableCard key={c.id} slot={c} cards={cards} size={side.me ? 'l' : 's'} tilt={side.me}
-            onTap={c.def !== null ? onZoom : undefined} />
+            onTap={c.def !== null ? onZoom : undefined} onAct={actOn(acts, c)} label={actOn(acts, c) ? 'play it' : undefined} />
         ))}
         <span className="zone__label">Hand · {side.hand.length}</span>
       </div>
@@ -58,15 +70,21 @@ function Strip({ side, cards, onZoom }: SideProps) {
   );
 }
 
-function Row({ label, slots, empty, cards, onZoom }: {
-  label: string; slots: CardSlot[]; empty: string; cards: CardIndex; onZoom: (s: CardSlot) => void;
+function Row({ label, slots, empty, cards, onZoom, acts, choose }: {
+  label: string; slots: CardSlot[]; empty: string; cards: CardIndex; onZoom: (s: CardSlot) => void; acts?: Acts;
+  choose?: { key: string; label: string }[];
 }) {
   return (
-    <div className="side__row">
+    <div className={`side__row${choose && choose.length > 0 ? ' side__row--choose' : ''}`}>
       <span className="side__row-label">{label}</span>
       <div className="side__row-cards">
         {slots.length === 0 ? <span className="muted small">{empty}</span>
-          : slots.map((c) => <TableCard key={c.id} slot={c} cards={cards} size="s" onTap={onZoom} />)}
+          : slots.map((c) => <TableCard key={c.id} slot={c} cards={cards} size="s" onTap={onZoom} onAct={actOn(acts, c)} />)}
+        {choose?.map((b) => (
+          <button key={b.key} type="button" className="btn btn--small btn--primary side__choose" onClick={() => acts!.send(b.key)}>
+            {b.label === 'Move here' ? 'Move to base' : b.label === 'Play here' ? 'Play to base' : b.label}
+          </button>
+        ))}
       </div>
     </div>
   );
@@ -75,8 +93,9 @@ function Row({ label, slots, empty, cards, onZoom }: {
 export function Side(p: SideProps) {
   const base = (
     <div className="side__base" key="base">
-      <Row label="Base" slots={p.side.base} empty="No units or gear" cards={p.cards} onZoom={p.onZoom} />
-      <Row label="Runes" slots={p.side.runes} empty="No runes channeled" cards={p.cards} onZoom={p.onZoom} />
+      <Row label="Base" slots={p.side.base} empty="No units or gear" cards={p.cards} onZoom={p.onZoom} acts={p.acts}
+        choose={p.side.me ? laneButtons(p.acts, 'base', p.kind) : undefined} />
+      <Row label="Runes" slots={p.side.runes} empty="No runes channeled" cards={p.cards} onZoom={p.onZoom} acts={p.acts} />
     </div>
   );
   const strip = <Strip key="strip" {...p} />;

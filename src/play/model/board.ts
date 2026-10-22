@@ -1,5 +1,6 @@
-import type {
-  DefId, GameObject, ObjId, Phase, PlayerId, PlayerView, Stub,
+import {
+  findCard, TOKENS, type DefId, type GameObject, type ObjId, type Phase, type PlayerId, type PlayerView, type RunePool,
+  type Step, type Stub, type TokenId,
 } from '../../game/index.ts';
 
 /*
@@ -22,6 +23,12 @@ export interface CardSlot {
   exhausted: boolean;
   /** Hidden runes show the rune-deck back [129.2]. */
   rune: boolean;
+  /** Damage marked [142]; 0 off the board. */
+  damage: number;
+  /** A unit's printed Might (abilities are off in M1.1); null for others. */
+  might: number | null;
+  /** In a combat [466.2.c.3]. */
+  designation: 'attacker' | 'defender' | null;
 }
 
 export interface SideModel {
@@ -41,6 +48,8 @@ export interface SideModel {
   banish: CardSlot[];
   points: number;
   xp: number;
+  /** Energy and Power waiting in the Rune Pool [165]. */
+  pool: RunePool;
   /** Plays first; null until the turn order is fixed [115]. */
   first: boolean | null;
 }
@@ -57,6 +66,9 @@ export interface LaneModel {
   mine: CardSlot[];
   theirs: CardSlot[];
   facedown: CardSlot[];
+  /** A showdown or a combat is on here. */
+  showdown: boolean;
+  combat: boolean;
 }
 
 export interface BoardModel {
@@ -66,6 +78,10 @@ export interface BoardModel {
   /** 0 during setup [118]. */
   turn: number;
   phase: Phase;
+  step: Step;
+  /** Who holds Priority and Focus [312], [313]. */
+  priority: PlayerId | null;
+  focus: PlayerId | null;
   /** Null before the first turn. */
   turnPlayer: PlayerId | null;
   victoryScore: number;
@@ -79,9 +95,17 @@ export function slotOf(v: PlayerView, id: ObjId, isRune: (def: DefId) => boolean
   const o = v.objects[id];
   if (!o) throw new Error(`the view names ${id} but holds no such object`);
   if (!isKnown(o)) {
-    return { id, def: null, printing: null, owner: o.owner, exhausted: false, rune: runeZone };
+    return { id, def: null, printing: null, owner: o.owner, exhausted: false, rune: runeZone, damage: 0, might: null,
+      designation: null };
   }
-  return { id, def: o.def, printing: o.printing, owner: o.owner, exhausted: o.exhausted, rune: isRune(o.def) };
+  const token = Object.hasOwn(TOKENS, o.def) ? TOKENS[o.def as TokenId] : undefined;
+  const c = findCard(o.def);
+  const unit = token ? token.type === 'unit' : c?.types.includes('unit') ?? false;
+  return {
+    id, def: o.def, printing: o.printing, owner: o.owner, exhausted: o.exhausted, rune: isRune(o.def),
+    damage: o.damage.reduce((n, d) => n + d.amount, 0), might: unit ? (token?.might ?? c?.might ?? 0) + o.buffs : null,
+    designation: o.designation,
+  };
 }
 
 function sideOf(v: PlayerView, p: PlayerId, isRune: (def: DefId) => boolean): SideModel {
@@ -97,7 +121,7 @@ function sideOf(v: PlayerView, p: PlayerId, isRune: (def: DefId) => boolean): Si
     base: base.filter((c) => !c.rune), runes: base.filter((c) => c.rune),
     deck: pl.deck.length, runeDeck: pl.runeDeck.length,
     trash: pl.trash.map(slot), banish: pl.banish.map(slot),
-    points: pl.points, xp: pl.xp,
+    points: pl.points, xp: pl.xp, pool: pl.pool,
     first: ordered ? v.turn.firstPlayer === p : null,
   };
 }
@@ -115,6 +139,7 @@ export function boardOf(v: PlayerView, isRune: (def: DefId) => boolean = () => f
       mine: here.filter((c) => controllerOf(c) === v.me),
       theirs: here.filter((c) => controllerOf(c) !== v.me),
       facedown: b.facedown.map((id) => slotOf(v, id, isRune)),
+      showdown: v.showdown?.bf === bf, combat: v.combat?.bf === bf,
     };
   });
   return {
@@ -123,6 +148,9 @@ export function boardOf(v: PlayerView, isRune: (def: DefId) => boolean = () => f
     lanes,
     turn: v.turn.n,
     phase: v.turn.phase,
+    step: v.turn.step,
+    priority: v.turn.priority,
+    focus: v.turn.focus,
     turnPlayer: v.turn.n > 0 ? v.turn.player : null,
     victoryScore: v.mode.victoryScore,
     chain: v.chain.length,

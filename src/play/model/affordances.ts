@@ -45,8 +45,9 @@ export interface Affordances {
 }
 
 const META_LABEL: Record<string, string> = {
-  pass: 'Pass', end: 'End turn', done: 'Done', yes: 'Yes', no: 'No', decline: 'Decline', back: 'Back',
-  manualPay: 'Pay manually', first: 'Play first', second: 'Play second',
+  pass: 'Pass', end: 'End turn', done: 'Done', yes: 'Yes', no: 'No', decline: 'Don\'t pay', back: 'Back',
+  manualPay: 'Pay manually', first: 'Play first', second: 'Play second', move: 'Move units', tank: 'As Tank',
+  backline: 'As Backline',
 };
 
 /** The decision's prompt in words. */
@@ -57,6 +58,24 @@ export function promptText(d: Pick<Decision, 'kind' | 'prompt'>): string {
       const max = typeof d.prompt.max === 'number' ? d.prompt.max : 2;
       return `Choose up to ${max} cards to set aside. You draw that many, then they go to the bottom of your deck.`;
     }
+    case 'priority':
+      if (d.prompt.window === 'main') return 'Your turn: play a card from your hand, move units, or end the turn.';
+      if (d.prompt.window === 'showdown') return 'Showdown: you have Focus. Play an Action, or pass.';
+      return 'You have priority on the chain: respond, or pass.';
+    case 'location': return 'Where should the unit enter? Your base, or a battlefield you control.';
+    case 'payment': {
+      const e = typeof d.prompt.energy === 'number' ? d.prompt.energy : 0;
+      const power = Array.isArray(d.prompt.power) ? d.prompt.power.length : 0;
+      return `Pay ${e} Energy${power > 0 ? ` and ${power} Power` : ''}: choose how.`;
+    }
+    case 'moveUnits': return 'Choose the units to move (all go to the same place), then Done.';
+    case 'moveDest': return 'Choose where they move: a battlefield, or back to base.';
+    case 'chooseBattlefield':
+      return d.prompt.t === 'holdOrder' ? 'You hold several battlefields: which scores first?'
+        : 'Several battlefields are waiting: choose where the showdown or combat happens first.';
+    case 'assignNext': return `Assign your ${d.prompt.left} combat damage: choose the next enemy unit (lethal damage, in order).`;
+    case 'assignExcess': return `Every enemy unit has lethal damage: place the remaining ${d.prompt.left}.`;
+    case 'assignTier': return 'This unit has Tank and Backline: which counts for your assignment?';
     default: return `Choose (${d.kind})`;
   }
 }
@@ -65,10 +84,16 @@ function buttonLabel(d: Decision, key: string, draft: readonly string[]): string
   if (d.kind === 'mulligan' && key === 'done') {
     return draft.length === 0 ? 'Keep my hand' : `Set aside ${draft.length}`;
   }
+  const k = parseKey(key);
+  if (k?.head === 'pay' && k.n !== undefined) {
+    const plans = Array.isArray(d.prompt.plans) ? d.prompt.plans : [];
+    return `Pay: ${String(plans[k.n] ?? `plan ${k.n + 1}`)}`;
+  }
+  if (d.kind === 'assignExcess' && key === 'done') return 'Rest on the last one';
   return META_LABEL[key] ?? key;
 }
 
-const PRIMARY = ['done', 'first', 'pass', 'yes'];
+const PRIMARY = ['done', 'first', 'pass', 'yes', 'pay:0'];
 
 export function affordances(
   view: PlayerView, d: Decision | null, draft: readonly string[] = [], first: Decision | null = d,

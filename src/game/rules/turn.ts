@@ -176,7 +176,8 @@ defineTask('scoring.holdAll', [(s, f, x) => {
     the second player's first Channel Phase in a Duel [487.7]. */
 defineTask('channel.channel', [(s, _f, x) => {
   const p = s.turn.player;
-  channelRunes(s, x, p, channelCount(s, p), s.history.channelPhasesTaken[p] === 0 ? '487.7' : '315.3.b');
+  const n = channelCount(s, p);
+  channelRunes(s, x, p, n, n > 2 ? '487.7' : '315.3.b');
   setField(s, s.history.channelPhasesTaken, p, s.history.channelPhasesTaken[p] + 1);
   return 'done';
 }]);

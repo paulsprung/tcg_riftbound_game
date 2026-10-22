@@ -1,3 +1,4 @@
+import '../game/helpers/setupOnly.ts';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { CardDb } from '../../src/data/types.ts';
@@ -88,7 +89,7 @@ describe('GameHost', () => {
     expect(r.answers.length).toBeGreaterThan(1);
     expect(new Set(r.answers.map((a) => a.by))).toEqual(new Set([0, 1]));
     expect(viewFor(replay(r).state, 0)).toEqual(view(h));
-    expect(r.meta).toEqual({ started: '2026-10-21T00:00:00Z', difficulty: 'setup-bot', humanSeat: 0, aiKnowsList: false });
+    expect(r.meta).toEqual({ started: '2026-10-21T00:00:00Z', difficulty: 'simple-bot', humanSeat: 0, aiKnowsList: false });
   });
 
   it('is deterministic: the same seed and answers give the same game', () => {

@@ -22,12 +22,14 @@
  * moving, a shuffle, a decision, an event), so they tell nothing hidden. The
  * invariance test (§14.5 #2) fails the day one of them does.
  *
- * The walker knows the paths of the state M0 fills: zones, objects,
- * battlefields, the setup frame, the decision. The chain, continuous
- * effects, delayed abilities, combat, pending triggers and the frames of the
- * M1 procedures hold ObjIds and snapshots too; the walker refuses a state
- * that has any of them until their paths are added here, alongside the
- * procedure that first writes them, rather than let an id slip through.
+ * The walker knows the paths of the state M0 and M1.1 fill: zones,
+ * objects, battlefields, the decision, the chain, the combat, and the
+ * setup, priority, cleanup, task, play, move and assign frames (a play's S0
+ * snapshot is dropped). Continuous effects, delayed abilities, pending
+ * triggers and the other frames hold ObjIds and snapshots too; the walker
+ * refuses a state that has any of them until their paths are added here,
+ * alongside the procedure that first writes them, rather than let an id
+ * slip through.
  *
  * This module and core/view.ts write into the copy they make, never into the
  * live state (the purity test allows them that).
@@ -93,17 +95,15 @@ function stubFor(o: GameObject, alias: Alias): Stub {
 
 /** What the walker can't redact yet, or null. */
 function unsupported(s: GameState): string | null {
-  if (s.chain.length > 0) return 'chain items';
   if (s.effects.length > 0) return 'continuous effects';
   if (s.delayed.length > 0) return 'delayed abilities';
-  if (s.combat) return 'combat';
   if (s.turn.tasks.some((t) => t.t === 'placeTriggers')) return 'pending triggers';
   const f = s.frames.find((fr) => !FRAMES.includes(fr.f));
   return f ? `'${f.f}' frames` : null;
 }
 
 /** Frames whose fields the walker knows. */
-const FRAMES: readonly Frame['f'][] = ['setup', 'priority', 'cleanup'];
+const FRAMES: readonly Frame['f'][] = ['setup', 'priority', 'cleanup', 'task', 'play', 'move', 'assign'];
 
 /**
  * Builds p's view of s (§7.3): a copy in which unknown objects are stubs,
@@ -149,7 +149,14 @@ export function redact(s: GameState, p: PlayerId, known: (o: GameObject) => bool
     pl.runeDeck = as(pl.runeDeck);
   }
   for (const b of v.bfs) b.facedown = as(b.facedown);
-  for (const f of v.frames) redactFrame(f, p);
+  for (const f of v.frames) redactFrame(f, p, a);
+  // Chain items and the combat name only public objects (the chain and the
+  // board are public zones); rollback snapshots never leave the engine.
+  for (const it of v.chain) {
+    if (it.obj !== undefined) it.obj = a(it.obj);
+    it.play.snap2 = null;
+    it.play.lookBack = {};
+  }
 
   const d = s.pending;
   const mine = d !== null && d.player === p;
@@ -160,9 +167,15 @@ export function redact(s: GameState, p: PlayerId, known: (o: GameObject) => bool
 }
 
 /** Frame locals that belong to one player: the setup frame's scratch (the
-    cards set aside so far in a mulligan) is the deciding player's alone. */
-function redactFrame(f: Frame, p: PlayerId) {
+    cards set aside so far in a mulligan) is the deciding player's alone. A
+    play's S0 snapshot is the whole true state: no view keeps it (§7.3). */
+function redactFrame(f: Frame, p: PlayerId, a: (id: ObjId) => ObjId) {
   if (f.f === 'setup' && f.p !== p) f.locals = null;
+  if (f.f === 'play') {
+    f.snap = null;
+    f.obj = a(f.obj);
+  }
+  if (f.f === 'move') f.snap = null;
 }
 
 function redactRefs(refs: Ref[], a: (id: ObjId) => ObjId) {

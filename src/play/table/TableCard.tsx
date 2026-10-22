@@ -30,16 +30,20 @@ export interface TableCardProps {
   onTap?: (slot: CardSlot) => void;
   /** What tapping does, after the card's name in its tooltip and label. */
   label?: string;
+  /** Tapping answers the pending decision with this card (§12.5); the
+      zoom is then on right-click. */
+  onAct?: (slot: CardSlot) => void;
 }
 
 export const TableCard = memo(function TableCard({
-  slot, cards, size, landscape = false, selectable, selected, dimmed, tilt = false, onTap, label,
+  slot, cards, size, landscape = false, selectable, selected, dimmed, tilt = false, onTap, label, onAct,
 }: TableCardProps) {
   const card = slot.def !== null ? cardFor(cards, slot.def, slot.printing) : null;
   const px = CARD_PX[size] * (landscape ? 1039 / 744 : 1);
   const cls = ['tcard', `tcard--${size}`, landscape && 'tcard--land', selectable && 'is-selectable',
-    selected && 'is-selected', dimmed && 'is-dim', slot.exhausted && 'is-exhausted'].filter(Boolean).join(' ');
-  const tap = onTap ? () => onTap(slot) : undefined;
+    selected && 'is-selected', dimmed && 'is-dim', slot.exhausted && 'is-exhausted', onAct && 'is-actionable']
+    .filter(Boolean).join(' ');
+  const tap = onAct ? () => onAct(slot) : onTap ? () => onTap(slot) : undefined;
   const name = slot.def !== null ? nameOf(cards, slot.def) : 'Face-down card';
   const title = label ? `${name}: ${label}` : name;
 
@@ -48,6 +52,7 @@ export const TableCard = memo(function TableCard({
   const control = tap ? {
     role: 'button', tabIndex: 0, 'aria-pressed': selectable ? !!selected : undefined, 'aria-label': title,
     onClick: tap,
+    onContextMenu: onAct && onTap ? (e: { preventDefault: () => void }) => { e.preventDefault(); onTap(slot); } : undefined,
     onKeyDown: (e: KeyboardEvent) => {
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tap(); }
     },
@@ -66,6 +71,12 @@ export const TableCard = memo(function TableCard({
         </div>
       )}
       {slot.exhausted && <span className="tcard__badge">Exhausted</span>}
+      {slot.might !== null && (
+        <span className={`tcard__might${slot.damage > 0 ? ' is-hurt' : ''}`} title={`Might ${slot.might}, damage ${slot.damage}`}>
+          {slot.damage > 0 ? `${slot.might - slot.damage}/${slot.might}` : slot.might}
+        </span>
+      )}
+      {slot.designation && <span className={`tcard__role tcard__role--${slot.designation}`}>{slot.designation}</span>}
     </div>
   );
 });

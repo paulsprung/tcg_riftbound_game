@@ -1,3 +1,4 @@
+import './helpers/setupOnly.ts';
 import { describe, expect, it } from 'vitest';
 import { K, parseKey, stubOf } from '../../src/game/core/decisions.ts';
 import { aliasOf, PLACEHOLDER_DEF, zoneSlot } from '../../src/game/core/redact.ts';

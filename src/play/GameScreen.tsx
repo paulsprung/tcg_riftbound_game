@@ -4,12 +4,14 @@ import type { GameHost } from './host/GameHost.ts';
 import { useHost } from './host/useHost.ts';
 import { boardOf, type CardSlot } from './model/board.ts';
 import { isRune, nameOf, type CardIndex } from './model/cards.ts';
-import { describeAll, whereText } from './model/describe.ts';
+import { affordances } from './model/affordances.ts';
+import { describeAll, resultText, whereText } from './model/describe.ts';
 import { setupSummary, stageOf } from './model/stage.ts';
 import { Mulligan } from './prompt/Mulligan.tsx';
 import { OrderChoice } from './prompt/OrderChoice.tsx';
 import { PromptBar, SetupDone } from './prompt/PromptBar.tsx';
 import { CardZoom } from './table/CardZoom.tsx';
+import { SetupSheet } from './prompt/SetupSheet.tsx';
 import { Table } from './table/Table.tsx';
 
 /*
@@ -33,6 +35,7 @@ export function GameScreen({ host, cards, db, onNewGame, onChangeDecks }: {
       const o = view.objects[id];
       return o ? { def: 'def' in o ? o.def : null, owner: o.owner } : null;
     },
+    bfObj: (bf) => view.bfs[bf]?.obj,
   }), [events, view, cards]);
 
   const [zoom, setZoom] = useState<CardSlot | null>(null);
@@ -40,6 +43,11 @@ export function GameScreen({ host, cards, db, onNewGame, onChangeDecks }: {
   const closeZoom = useCallback(() => setZoom(null), []);
   const preview = useCallback((keys: string[]) => host.preview(keys), [host]);
   const commit = useCallback((keys: string[]) => { host.commit(keys); }, [host]);
+  const mine = stage.k === 'deciding' && stage.mine && view.pending !== null;
+  const a = useMemo(() => (mine ? affordances(view, view.pending) : null), [mine, view]);
+  const acts = useMemo(() => ({ a, send: (key: string) => { host.commit([key]); } }), [a, host]);
+  const playing = view.turn.n > 0;
+  const [dismissed, setDismissed] = useState(false);
 
   return (
     <section className="play">
@@ -51,7 +59,7 @@ export function GameScreen({ host, cards, db, onNewGame, onChangeDecks }: {
           </p>
         </div>
         <div className="play__actions">
-          {stage.k === 'ready' && atTable && (
+          {(stage.k === 'ready' || playing) && atTable && !playing && (
             <button type="button" className="btn btn--small btn--ghost" onClick={() => setAtTable(false)}>Setup summary</button>
           )}
           <button type="button" className="btn btn--small" onClick={onNewGame}>New game</button>
@@ -61,7 +69,8 @@ export function GameScreen({ host, cards, db, onNewGame, onChangeDecks }: {
       {error && <p className="play__error" role="alert">{error}</p>}
 
       <div className="play__stage">
-        <Table board={board} cards={cards} log={log} onZoom={setZoom} prompt={<PromptBar view={view} stage={stage} />} />
+        <Table board={board} cards={cards} log={log} onZoom={setZoom} acts={acts} kind={view.pending?.kind}
+          prompt={<PromptBar view={view} stage={stage} a={a} onCommit={commit} />} />
         {stage.k === 'order' && (
           <OrderChoice view={view} board={board} cards={cards} onCommit={commit} onZoom={setZoom} />
         )}
@@ -69,7 +78,21 @@ export function GameScreen({ host, cards, db, onNewGame, onChangeDecks }: {
           <Mulligan key={view.pending?.batch ?? 'waiting'} view={view} board={board} summary={summary} cards={cards}
             preview={preview} onCommit={commit} />
         )}
-        {stage.k === 'ready' && !atTable && <SetupDone board={board} summary={summary} onClose={() => setAtTable(true)} />}
+        {(stage.k === 'ready' || (playing && view.turn.n === 1)) && !atTable && stage.k !== 'over' && (
+          <SetupDone board={board} summary={summary} onClose={() => setAtTable(true)} />
+        )}
+        {stage.k === 'over' && !dismissed && (
+          <SetupSheet step={`Turn ${view.turn.n} · game over`} title={resultText(stage.result, view.me)}>
+            <p>
+              Final score: you {board.me.points}, the opponent {board.opponent.points}
+              <span className="muted small"> [{stage.result.rule}]</span>
+            </p>
+            <div className="sheet__buttons">
+              <button type="button" className="btn btn--primary" onClick={onNewGame}>New game</button>
+              <button type="button" className="btn" onClick={() => setDismissed(true)}>Look at the table</button>
+            </div>
+          </SetupSheet>
+        )}
       </div>
       {zoom && <CardZoom slot={zoom} where={whereText(view, zoom.id)} cards={cards} db={db} onClose={closeZoom} />}
     </section>

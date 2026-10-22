@@ -1,6 +1,7 @@
 import type { PlayerView } from '../../game/index.ts';
+import type { Affordances } from '../model/affordances.ts';
 import type { BoardModel } from '../model/board.ts';
-import { orderText, setAsideText, waitingText } from '../model/describe.ts';
+import { orderText, resultText, setAsideText, waitingText } from '../model/describe.ts';
 import type { SetupSummary, Stage } from '../model/stage.ts';
 import { SetupSheet } from './SetupSheet.tsx';
 
@@ -10,16 +11,32 @@ import { SetupSheet } from './SetupSheet.tsx';
  * once setup is done the board rests at the start of the first turn.
  */
 
-export function PromptBar({ view, stage }: { view: PlayerView; stage: Stage }) {
+export function PromptBar({ view, stage, a, onCommit }: {
+  view: PlayerView; stage: Stage; a?: Affordances | null; onCommit?: (keys: string[]) => void;
+}) {
+  if (stage.k === 'deciding' && stage.mine && a && onCommit) {
+    return (
+      <div className="act-bar">
+        <p className="prompt" aria-live="assertive">
+          {a.prompt} {a.rule && <span className="muted small">{/^\d/.test(a.rule) ? `[${a.rule}]` : a.rule}</span>}
+        </p>
+        {a.buttons.map((b) => (
+          <button key={b.key ?? 'commit'} type="button" className={`btn btn--small${b.primary ? ' btn--primary' : ''}`}
+            onClick={() => onCommit(b.commit)}>
+            {b.label}
+          </button>
+        ))}
+      </div>
+    );
+  }
   let text: string;
   switch (stage.k) {
     case 'order': text = stage.mine ? 'Choose to play first or second.' : waitingText(view.opponentDecision!); break;
     case 'mulligan': text = stage.mine ? 'Choose cards to set aside.' : waitingText(view.opponentDecision!); break;
-    case 'ready':
-      text = 'Setup is done. The first turn begins with its Awaken Phase [118]; taking turns comes with the next milestone.';
-      break;
-    case 'deciding': text = stage.mine ? `Your decision: ${stage.kind}.` : 'The opponent is deciding…'; break;
-    case 'over': text = 'The game is over.'; break;
+    case 'ready': text = 'Setup is done. The first turn begins with its Awaken Phase [118].'; break;
+    case 'deciding': text = stage.mine ? `Your decision: ${stage.kind}.`
+      : view.opponentDecision ? waitingText(view.opponentDecision) : 'The opponent is deciding…'; break;
+    case 'over': text = `The game is over. ${resultText(stage.result, view.me)}`; break;
   }
   return <p className="prompt" aria-live="assertive">{text}</p>;
 }
@@ -36,7 +53,11 @@ export function SetupDone({ board, summary, onClose }: { board: BoardModel; summ
         Legends, Chosen Champions and battlefields are in place, both decks are shuffled and both players hold four
         cards. The First Player's turn begins with the Awaken Phase <span className="muted small">[118]</span>.
       </p>
-      <p className="muted small">Taking turns comes with the next milestone. For now the table shows where everything starts.</p>
+      <p className="muted small">
+        On your turn, click a glowing card in your hand to play it, use Move units to send units to a battlefield,
+        and End turn when done. Card abilities are not in yet: units fight with their printed Might. Right-click a
+        card to read it.
+      </p>
       <div className="sheet__buttons">
         <button type="button" className="btn btn--primary" onClick={onClose} autoFocus>To the table</button>
       </div>

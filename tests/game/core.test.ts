@@ -4,7 +4,7 @@ import { DEFAULT_RULES, DUEL, type GameSetup } from '../../src/game/config.ts';
 import { autoKey, canonical, K, parseKey, type AskSpec } from '../../src/game/core/decisions.ts';
 import { emit, emitZone, knowers } from '../../src/game/core/events.ts';
 import {
-  answer, ask, awaitTasks, call, defineStart, defineSteps, next, ret, takeRet, type FrameOf, type StepTable,
+  answer, ask, awaitTasks, call, defineLoop, defineStart, defineSteps, next, ret, takeRet, type FrameOf, type StepTable,
 } from '../../src/game/core/frames.ts';
 import {
   choose, cloneState, concede, createGame, EngineError, EngineLoopError, ENGINE_VERSION, hashState,
@@ -38,6 +38,7 @@ const fresh = (seed = 7) => blankState({ seed, mode: DUEL, rules: DEFAULT_RULES 
 let script = 'toy';
 let ran: string[] = [];
 
+defineLoop(null, { replace: true });
 defineStart((s, _setup, x) => {
   for (const p of [0, 1] as PlayerId[]) {
     createObject(s, { def: 'toy-legend', printing: null, owner: p, zone: Z.legend(p) });

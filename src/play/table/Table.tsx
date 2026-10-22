@@ -4,6 +4,7 @@ import type { CardIndex } from '../model/cards.ts';
 import type { LogLine } from '../model/describe.ts';
 import { Lane } from './Lane.tsx';
 import { ChainBox, GameLog, PhaseBar, ScoreTrack } from './Rail.tsx';
+import type { Acts } from './acts.ts';
 import { Side } from './Side.tsx';
 
 /*
@@ -13,17 +14,18 @@ import { Side } from './Side.tsx';
  * right. The phone arrangement is M2 (§12.3).
  */
 
-export function Table({ board, cards, log, onZoom, prompt }: {
-  board: BoardModel; cards: CardIndex; log: LogLine[]; onZoom: (s: CardSlot) => void; prompt: ReactNode;
+export function Table({ board, cards, log, onZoom, prompt, acts, kind }: {
+  board: BoardModel; cards: CardIndex; log: LogLine[]; onZoom: (s: CardSlot) => void; prompt: ReactNode; acts?: Acts;
+  kind?: string;
 }) {
   return (
     <div className="table">
       <div className="table__board">
-        <Side side={board.opponent} cards={cards} onZoom={onZoom} />
+        <Side side={board.opponent} cards={cards} onZoom={onZoom} acts={acts} kind={kind} />
         <div className="lanes" style={{ gridTemplateColumns: `repeat(${board.lanes.length}, minmax(0, 1fr))` }}>
-          {board.lanes.map((l) => <Lane key={l.bf} lane={l} me={board.me.p} cards={cards} onZoom={onZoom} />)}
+          {board.lanes.map((l) => <Lane key={l.bf} lane={l} me={board.me.p} cards={cards} onZoom={onZoom} acts={acts} kind={kind} />)}
         </div>
-        <Side side={board.me} cards={cards} onZoom={onZoom} />
+        <Side side={board.me} cards={cards} onZoom={onZoom} acts={acts} kind={kind} />
         <div className="table__bar">
           <PhaseBar board={board} />
           {prompt}

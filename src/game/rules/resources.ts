@@ -180,10 +180,10 @@ function concrete(s: GameState, p: PlayerId, c: { recycleTired: Record<Domain, n
     ...recycleIds.sort((a, b) => a - b).map((obj) => ({ obj, ability: 'recycle' as const })),
   ];
   const left = s.players[p].pool;
-  const after: RunePool = structuredClone(left);
-  after.energy = left.energy + exhausts.length - cost.energy;
-  for (const [d, k] of Object.entries(base.spend.power) as [Domain, number][]) after.power[d] -= k;
-  after.universal -= base.spend.universal;
+  const power = { ...left.power };
+  for (const d of DOMAINS) power[d] -= base.spend.power[d] ?? 0;
+  const after: RunePool = { energy: left.energy + exhausts.length - cost.energy, power,
+    universal: left.universal - base.spend.universal, restricted: structuredClone(left.restricted) };
   const onBoard = runes.length - recycleIds.length;
   const byDomain = zero();
   for (const r of runes) if (!recycleIds.includes(r.id)) byDomain[r.d]++;

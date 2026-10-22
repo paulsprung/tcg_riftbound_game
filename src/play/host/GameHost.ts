@@ -13,9 +13,17 @@ import { botAnswer, botPace } from './bot.ts';
  * depends only on the kind of decision (§4.8), and its answers are
  * recorded the same way, so the record replays the game.
  *
- * M0 seats one human against the setup bot (host/bot.ts). The AI worker,
- * stops, autosave and hot-seat arrive with M1–M3.
+ * M1.1 seats one human against a simple bot (host/bot.ts). One stop of
+ * §4.8 is built in: a priority decision of the human's whose only real
+ * option is to pass is passed for them after a short pause (the record
+ * marks it `auto`), so a showdown in which they can do nothing doesn't wait
+ * for a click. The AI worker, the other stops, autosave and hot-seat
+ * arrive with M1.4–M3.
  */
+
+/** How long a pass-only decision of the human's waits before the host
+    passes for them (§4.8 stops). */
+export const AUTO_PASS_MS = 450;
 
 /** When the bot answers. Tests pass a clock that runs at once. */
 export interface Clock { after(ms: number, fn: () => void): () => void }
@@ -154,14 +162,14 @@ export class GameHost {
   record(): GameRecord {
     return {
       engine: ENGINE_VERSION, defsHash: this.state.defsHash, setup: this.setup, answers: this.answers.slice(),
-      meta: { started: this.started, difficulty: 'setup-bot', humanSeat: this.human, aiKnowsList: false },
+      meta: { started: this.started, difficulty: 'simple-bot', humanSeat: this.human, aiKnowsList: false },
     };
   }
 
   // ---- inside ----
 
   /** Applies keys as `by`, all or nothing. */
-  private apply(keys: readonly string[], by: PlayerId) {
+  private apply(keys: readonly string[], by: PlayerId, auto = false) {
     let s = this.state;
     const answers: GameRecord['answers'] = [];
     const events: GameEvent[] = [];
@@ -170,7 +178,7 @@ export class GameHost {
       if (!d || d.player !== by) throw new Error(`P${by} has no decision to answer with '${key}'`);
       const r = choose(s, { decision: d.id, key }, { check: this.check });
       s = r.state;
-      answers.push({ d: d.id, k: key, by });
+      answers.push(auto ? { d: d.id, k: key, by, auto } : { d: d.id, k: key, by });
       events.push(...r.events);
     }
     this.state = s;
@@ -186,8 +194,18 @@ export class GameHost {
     this.cancel?.();
     this.cancel = null;
     const d = this.state.pending;
-    if (!this.running || !d || d.player !== this.opponent) return;
+    if (!this.running || !d) return;
     const id = d.id;
+    if (d.player === this.human) {
+      const real = d.options.filter((o) => !o.ui);
+      if (d.kind !== 'priority' || real.length !== 1 || real[0].key !== 'pass') return;
+      const cancel = this.clock.after(AUTO_PASS_MS, () => {
+        if (!this.running || this.state.pending?.id !== id) return;
+        this.apply(['pass'], this.human, true);
+      });
+      if (this.state.pending?.id === id) this.cancel = cancel;
+      return;
+    }
     const cancel = this.clock.after(botPace(d.kind, this.pace), () => {
       if (!this.running || this.state.pending?.id !== id) return;
       try {

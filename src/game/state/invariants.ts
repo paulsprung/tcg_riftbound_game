@@ -18,6 +18,7 @@ import { checkOptions, stubOf } from '../core/decisions.ts';
 import { InvariantError } from '../core/errors.ts';
 import type { Stub } from '../core/view.ts';
 import { knows, viewFor } from '../core/view.ts';
+import { isLethal, isType } from '../rules/chars.ts';
 import { openingHandSize, turnOrder } from '../rules/defaults.ts';
 import { hashState, stableJson } from './clone.ts';
 import { allMask, bit } from './ids.ts';
@@ -158,11 +159,63 @@ const beforeFirstTurn: Check = (s) => {
   return out;
 };
 
-const CHECKS: Check[] = [zonesAgree, idsAndKnowledge, decisionAndFrames, battlefieldsAndTurn, beforeFirstTurn, json];
+/**
+ * The rules' own invariants whenever the engine waits (Spec C §1.5, Spec G
+ * §1.5, Spec B §15): no pending chain item while priority is asked [337];
+ * no Discretionary decision while tasks are outstanding or a cleanup runs
+ * [320.1], [334]; after the cleanups that precede priority, no unit with
+ * lethal damage [323.4] and designations only at the combat battlefield
+ * [323.2]; units unattached [143.5] and at a location of their controller's
+ * [141.1.a.1]; Contested never by the controller [190.3.a]; a combat between
+ * two players, with its combat showdown during Step 1 [464], [466.2]; pools
+ * never negative.
+ */
+const rules: Check = (s) => {
+  const out: string[] = [];
+  for (const o of Object.values(s.objects)) {
+    if (!isType(o, 'unit') || (o.zone.z !== 'base' && o.zone.z !== 'bf')) continue;
+    if (o.attachedTo !== null) out.push(`unit ${o.id} is attached [143.5]`);
+    if (o.zone.z === 'base' && o.zone.p !== o.controller && !s.turn.inCleanup) {
+      out.push(`unit ${o.id} is in P${o.zone.p}'s base but controlled by P${o.controller} [323.6]`);
+    }
+  }
+  s.bfs.forEach((b, bf) => {
+    if (b.contested !== null && b.contested === b.controller) out.push(`bf${bf} is Contested by its controller [190.3.a]`);
+  });
+  for (const pl of s.players) {
+    const pool = pl.pool;
+    if (pool.energy < 0 || pool.universal < 0 || Object.values(pool.power).some((n) => n < 0)) {
+      out.push(`P${pl.id}'s Rune Pool is negative`);
+    }
+  }
+  const c = s.combat;
+  if (c) {
+    if (c.attacker === c.defender) out.push('a combat with one player [464]');
+    if (c.step === 'showdown' && (s.showdown?.kind !== 'combat' || s.showdown.bf !== c.bf)) {
+      out.push('a combat in Step 1 without its combat showdown [466.2]');
+    }
+  }
+  if (s.pending?.kind === 'priority') {
+    if (s.chain.some((i) => i.status === 'pending')) out.push('priority is asked with a pending chain item [337]');
+    if (s.turn.tasks.length > 0 || s.turn.inCleanup) out.push('priority is asked with tasks outstanding [334], [320.1]');
+    for (const o of Object.values(s.objects)) {
+      if ((o.zone.z === 'base' || o.zone.z === 'bf') && isType(o, 'unit') && isLethal(s, o.id)) {
+        out.push(`unit ${o.id} has lethal damage at a priority decision [323.4]`);
+      }
+      const atCombat = c !== null && o.zone.z === 'bf' && o.zone.bf === c.bf;
+      if (o.designation !== null && !atCombat) out.push(`unit ${o.id} has a designation outside combat [323.2.c]`);
+    }
+    if (s.turn.priority !== s.pending.player) out.push(`P${s.pending.player} is asked priority P${s.turn.priority} holds`);
+  }
+  return out;
+};
 
-/** Every broken invariant, as text; empty when the state is sound. */
-export function checkInvariants(s: GameState): string[] {
-  return CHECKS.flatMap((c) => c(s));
+const CHECKS: Check[] = [zonesAgree, idsAndKnowledge, decisionAndFrames, battlefieldsAndTurn, beforeFirstTurn, rules, json];
+
+/** Every broken invariant, as text; empty when the state is sound. The
+    JSON round trip is the slow one: a fuzzer may run it less often. */
+export function checkInvariants(s: GameState, o: { json?: boolean } = {}): string[] {
+  return CHECKS.filter((c) => o.json !== false || c !== json).flatMap((c) => c(s));
 }
 
 export function assertInvariants(s: GameState) {

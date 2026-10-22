@@ -1,3 +1,4 @@
+import '../game/helpers/setupOnly.ts';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { CardDb } from '../../src/data/types.ts';

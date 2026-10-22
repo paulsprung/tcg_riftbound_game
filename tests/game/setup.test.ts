@@ -1,3 +1,4 @@
+import './helpers/setupOnly.ts';
 import { describe, expect, it } from 'vitest';
 import { K } from '../../src/game/core/decisions.ts';
 import {

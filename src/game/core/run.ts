@@ -49,6 +49,7 @@ export function run(s: GameState, x: RunCtx): void {
       delete f.await;                                                // all tasks handled: resume f
     }
     const out = stepFrame(s, f, x);
+    if (s.result) return;                                            // the game ended inside the step
     if (out === 'done') {
       if (top(s) !== f) throw new EngineError(`a '${f.f}' step returned 'done' with a frame above it`);
       popFrame(s);
