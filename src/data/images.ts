@@ -21,7 +21,8 @@ export function imageAt(card: Card, width: number): string {
   const url = `${card.image}${card.image.includes('?') ? '&' : '?'}w=${width}`;
   // Same-origin through the dev server's proxy (vite.config.ts), so the
   // WebGL foil can read the pixels while developing.
-  return import.meta.env.DEV ? url.replace(/^https:\/\/cmsassets\.rgpub\.io/, '/riot-img') : url;
+  // (and through our server in the hosted build, VITE_RIOT_PROXY)
+  return import.meta.env.DEV || import.meta.env.VITE_RIOT_PROXY ? url.replace(/^https:\/\/cmsassets\.rgpub\.io/, '/riot-img') : url;
 }
 
 /** Can a WebGL texture be made from this URL? Cross-origin images without

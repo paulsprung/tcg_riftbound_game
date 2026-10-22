@@ -16,6 +16,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/riot-img/, ''),
       },
+      // RIFT_API=http://localhost:8080 npm run dev: talk to a local server
+      ...(process.env.RIFT_API ? {
+        '/api': { target: process.env.RIFT_API },
+        '/auth': { target: process.env.RIFT_API },
+      } : {}),
     },
   },
 });

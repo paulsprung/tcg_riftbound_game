@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { FoilDefs } from './card/HoloCard.tsx';
 import { HoloSwitches } from './card/HoloSwitches.tsx';
+import { AccountButton } from './net/AccountButton.tsx';
 import { Inspector, type InspectTarget } from './card/Inspector.tsx';
 import { useCardDb } from './data/useCardDb.ts';
 import { CardsView } from './views/CardsView.tsx';
@@ -63,6 +64,7 @@ export function App() {
           ))}
         </nav>
         <HoloSwitches />
+        <AccountButton />
       </header>
 
       <main className="main">

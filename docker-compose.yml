@@ -1,0 +1,42 @@
+# The app, its Postgres and a Cloudflare Tunnel on one server. Settings come
+# from .env (copy .env.example). Nothing is published to the internet: the
+# tunnel connects out to Cloudflare, which serves rift.shyy.dev. The app's
+# port is only open on the server's localhost, for checks.
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://rift:${POSTGRES_PASSWORD}@db:5432/rift
+    ports:
+      - "127.0.0.1:${APP_PORT:-8080}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rift
+      POSTGRES_DB: rift
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rift -d rift"]
+      interval: 5s
+      retries: 10
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN}
+    depends_on:
+      - app
+
+volumes:
+  pgdata:

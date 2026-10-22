@@ -312,3 +312,11 @@ body::before {
 
 .inspector__switches { display: flex; flex-wrap: wrap; gap: 8px; }
 .inspector__switches .foil-toggle { margin-left: 0; }
+
+/* ------------------------------------------------------------- account -- */
+
+.account { display: flex; align-items: center; gap: 8px; }
+.account__avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--panel); object-fit: cover; }
+.account__name { font-size: 13px; font-weight: 600; max-width: 12ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-login { white-space: nowrap; }
+@media (max-width: 760px) { .account__name { display: none; } }
