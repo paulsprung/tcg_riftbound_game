@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 import { CardBack } from '../card/CardBack.tsx';
 import { HoloCard } from '../card/HoloCard.tsx';
 import type { InspectTarget } from '../card/Inspector.tsx';
-import { collection, gradedCounts } from '../collection/store.ts';
+import { collection, gradedCounts, useCollection } from '../collection/store.ts';
 import { RARITY_COLOR, RARITY_ORDER, VARIANT_LABEL } from '../data/cardInfo.ts';
 import type { Card, SetInfo } from '../data/types.ts';
 import { cardImageReady } from '../data/images.ts';
@@ -115,6 +115,8 @@ export function PackOpening({ set, cards, pack, style, onInspect, onExit }: Prop
 
   const tear = useCallback(() => {
     if (phase !== 'sealed') return;
+    // the pack comes out of the inventory (bought in the shop, or a starter's)
+    if (!collection.takePack(set.id)) return;
     askMotion();
     setPhase('tearing');
     // Into the collection straight away, so closing the tab mid-reveal
@@ -179,7 +181,9 @@ export function PackOpening({ set, cards, pack, style, onInspect, onExit }: Prop
     return () => window.removeEventListener('keydown', onKey);
   }, [phase, tear, advance]);
 
+  const left = useCollection().packs[set.id] ?? 0;
   const another = () => {
+    if (left < 1) return;
     window.scrollTo(0, 0);
     savePending(null);
     setPulls(openPack(cards, pack));
@@ -241,7 +245,9 @@ export function PackOpening({ set, cards, pack, style, onInspect, onExit }: Prop
             <PackWrapper set={set} style={style} hero={hero} width={packW} tilt="idle"
               torn={phase === 'tearing'} onTear={tear} />
           </div>
-          <p className={`hint${phase === 'tearing' ? ' is-gone' : ''}`}>Swipe across the pack to tear it open, or tap</p>
+          <p className={`hint${phase === 'tearing' ? ' is-gone' : ''}`}>
+            {left > 0 || phase === 'tearing' ? 'Swipe across the pack to tear it open, or tap' : <>No packs of this set left. <a href="#shop">Buy one in the shop</a></>}
+          </p>
         </div>
       )}
 
@@ -285,7 +291,10 @@ export function PackOpening({ set, cards, pack, style, onInspect, onExit }: Prop
             {fresh} new · {pulls.length - fresh} {pulls.length - fresh === 1 ? 'duplicate' : 'duplicates'} · all {pulls.length} cards are in your collection
           </p>
           <div className="summary__actions">
-            <button type="button" className="btn btn--primary" onClick={another}>Open another</button>
+            <button type="button" className="btn btn--primary" onClick={another} disabled={left < 1}>
+              {left > 0 ? `Open another (${left} left)` : 'No packs left'}
+            </button>
+            {left < 1 && <a className="btn btn--ghost" href="#shop">Buy packs</a>}
             <a className="btn btn--ghost" href="#collection">View collection</a>
           </div>
         </div>

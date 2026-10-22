@@ -4,38 +4,44 @@ import { HoloSwitches } from './card/HoloSwitches.tsx';
 import { AccountButton } from './net/AccountButton.tsx';
 import { Inspector, type InspectTarget } from './card/Inspector.tsx';
 import { useCardDb } from './data/useCardDb.ts';
-import { CardsView } from './views/CardsView.tsx';
-import { CollectionView } from './views/CollectionView.tsx';
+import { CollectionHub, type CollectionTab } from './views/CollectionHub.tsx';
+import { HomeView } from './views/HomeView.tsx';
 import { PacksView } from './views/PacksView.tsx';
 import { RulesView } from './views/RulesView.tsx';
-import { ShowcaseView } from './views/ShowcaseView.tsx';
 
 // The play table brings the engine with it: loaded only when opened.
 const PlayView = lazy(() => import('./play/PlayView.tsx').then((m) => ({ default: m.PlayView })));
 
 const ROUTES = [
-  { id: 'packs', label: 'Open packs', short: 'Packs' },
+  { id: 'home', label: 'Home', short: 'Home' },
   { id: 'collection', label: 'Collection', short: 'Collection' },
-  { id: 'showcase', label: 'Showcase', short: 'Showcase' },
+  { id: 'shop', label: 'Shop', short: 'Shop' },
   { id: 'play', label: 'Play', short: 'Play' },
-  { id: 'cards', label: 'Card database', short: 'Cards' },
   { id: 'rules', label: 'Rules', short: 'Rules' },
 ] as const;
 type Route = (typeof ROUTES)[number]['id'];
 
-function routeFromHash(): Route {
-  const id = location.hash.replace(/^#\/?/, '').split('/')[0];
-  return (ROUTES.find((r) => r.id === id)?.id ?? 'packs') as Route;
-}
+interface Where { route: Route; tab: CollectionTab }
 
+/** Older addresses keep working: #packs is the shop, #showcase and #cards
+    live in the collection. */
+function whereFromHash(): Where {
+  const [id, sub] = location.hash.replace(/^#\/?/, '').split('/');
+  if (id === 'packs') return { route: 'shop', tab: 'cards' };
+  if (id === 'showcase') return { route: 'collection', tab: 'showcase' };
+  if (id === 'cards') return { route: 'collection', tab: 'all' };
+  const route = (ROUTES.find((r) => r.id === id)?.id ?? 'home') as Route;
+  return { route, tab: route === 'collection' && (sub === 'showcase' || sub === 'all') ? sub : 'cards' };
+}
 
 export function App() {
   const state = useCardDb();
-  const [route, setRoute] = useState<Route>(routeFromHash);
+  const [where, setWhere] = useState<Where>(whereFromHash);
+  const route = where.route;
   const [inspect, setInspect] = useState<InspectTarget | null>(null);
 
   useEffect(() => {
-    const on = () => setRoute(routeFromHash());
+    const on = () => setWhere(whereFromHash());
     window.addEventListener('hashchange', on);
     return () => window.removeEventListener('hashchange', on);
   }, []);
@@ -52,7 +58,7 @@ export function App() {
     <div className="app">
       <FoilDefs />
       <header className="top">
-        <a className="brand" href="#packs">
+        <a className="brand" href="#home">
           <span className="brand__mark" aria-hidden>◆</span>
           <span className="brand__name">Riftbound <em>Simulator</em></span>
         </a>
@@ -78,15 +84,14 @@ export function App() {
         )}
         {state.status === 'ready' && (
           <>
-            {route === 'packs' && <PacksView db={state.db} onInspect={onInspect} />}
-            {route === 'collection' && <CollectionView db={state.db} onInspect={onInspect} />}
-            {route === 'showcase' && <ShowcaseView db={state.db} onInspect={onInspect} />}
+            {route === 'home' && <HomeView db={state.db} />}
+            {route === 'shop' && <PacksView db={state.db} onInspect={onInspect} />}
+            {route === 'collection' && <CollectionHub db={state.db} tab={where.tab} onInspect={onInspect} />}
             {route === 'play' && (
               <Suspense fallback={<p className="status">Setting up the table…</p>}>
                 <PlayView db={state.db} />
               </Suspense>
             )}
-            {route === 'cards' && <CardsView db={state.db} onInspect={onInspect} />}
             {route === 'rules' && <RulesView />}
           </>
         )}

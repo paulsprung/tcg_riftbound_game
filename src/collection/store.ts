@@ -22,12 +22,24 @@ export interface CollectionState {
   /** Graded copies, newest first. A graded copy is no longer raw. */
   slabs: Slab[];
   showcase: ShowcaseItem[];
+  /** Coins to spend in the shop. */
+  coins: number;
+  /** Unopened booster packs, by set. */
+  packs: Record<string, number>;
+  /** The starter set chosen at the start, once. */
+  starter: string | null;
+  /** When the daily coins were last taken (ms), 0 for never. */
+  dailyAt: number;
 }
+
+export const PACK_PRICE = 100;
+export const DAILY_COINS = 50;
+const DAY = 86_400_000;
 
 export const SHOWCASE_SIZE = 12;
 
 const KEY = 'riftbound-sim:collection:v1';
-const empty = (): CollectionState => ({ cards: {}, packsOpened: {}, slabs: [], showcase: [] });
+const empty = (): CollectionState => ({ cards: {}, packsOpened: {}, slabs: [], showcase: [], coins: 0, packs: {}, starter: null, dailyAt: 0 });
 
 const sameItem = (a: ShowcaseItem, b: ShowcaseItem) =>
   a.kind === 'slab' ? b.kind === 'slab' && a.cert === b.cert
@@ -103,6 +115,43 @@ export const collection = {
     commit({ ...state, showcase });
   },
   isDisplayed: (item: ShowcaseItem) => state.showcase.some((i) => sameItem(i, item)),
+  /** Buy unopened packs with coins; false when there are not enough. */
+  buyPack(setId: string, n = 1): boolean {
+    const cost = PACK_PRICE * n;
+    if (n < 1 || state.coins < cost) return false;
+    commit({ ...state, coins: state.coins - cost, packs: { ...state.packs, [setId]: (state.packs[setId] ?? 0) + n } });
+    return true;
+  },
+  /** Take one unopened pack out of the inventory to open it. */
+  takePack(setId: string): boolean {
+    const have = state.packs[setId] ?? 0;
+    if (have < 1) return false;
+    commit({ ...state, packs: { ...state.packs, [setId]: have - 1 } });
+    return true;
+  },
+  /** Coins from a reward (the daily one, later matches and the tutorial). */
+  addCoins(n: number) { commit({ ...state, coins: state.coins + n }); },
+  /** The daily coins, once every 24 hours. Returns the coins, or 0 if not yet. */
+  claimDaily(now = Date.now()): number {
+    if (now - state.dailyAt < DAY) return 0;
+    commit({ ...state, coins: state.coins + DAILY_COINS, dailyAt: now });
+    return DAILY_COINS;
+  },
+  /** When the daily coins can be taken next (ms), 0 if now. */
+  dailyIn(now = Date.now()): number { return Math.max(0, state.dailyAt + DAY - now); },
+  /** The starter set: its cards, packs and coins, once. */
+  grantStarter(id: string, cards: Record<string, number>, packs: Record<string, number>, coins: number): boolean {
+    if (state.starter) return false;
+    const next = { ...state.cards };
+    for (const [cardId, n] of Object.entries(cards)) {
+      const o = next[cardId] ?? { normal: 0, foil: 0 };
+      next[cardId] = { ...o, normal: o.normal + n };
+    }
+    const inv = { ...state.packs };
+    for (const [setId, n] of Object.entries(packs)) inv[setId] = (inv[setId] ?? 0) + n;
+    commit({ ...state, cards: next, packs: inv, coins: state.coins + coins, starter: id });
+    return true;
+  },
   reset() { commit(empty()); },
 };
 

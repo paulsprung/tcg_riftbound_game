@@ -85,7 +85,7 @@ export function Picker({ db, title, mode, onPickRaw, onPickSlab, onClose }: Prop
             {tab === 'raw' && raw.length === 0 ? (
               <>
                 <p>{mode === 'grade' ? 'No raw cards to grade yet.' : 'Every raw card you own is already on show.'}</p>
-                <a className="btn btn--primary" href="#packs" onClick={onClose}>Open a pack</a>
+                <a className="btn btn--primary" href="#shop" onClick={onClose}>Open a pack</a>
               </>
             ) : tab === 'slabs' && slabs.length === 0 ? (
               <p className="muted">No slabs to add. Grade a card first.</p>

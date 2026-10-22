@@ -170,7 +170,11 @@ async function main() {
     define: { 'import.meta.env.VITE_PREVIEW': JSON.stringify('1') },
     // The page is one file: the foil textures referenced from holo.css are
     // inlined as data: URIs, since the assets folder is not published.
-    build: { outDir: out, emptyOutDir: false, assetsInlineLimit: 4 * 1024 * 1024 },
+    // (and the lazily loaded game engine goes into it as well)
+    build: {
+      outDir: out, emptyOutDir: false, assetsInlineLimit: 4 * 1024 * 1024,
+      rollupOptions: { output: { inlineDynamicImports: true } },
+    },
   });
 
   const html = await readFile(resolve(out, 'index.html'), 'utf8');

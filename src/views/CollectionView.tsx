@@ -85,7 +85,7 @@ export function CollectionView({ db, onInspect }: { db: CardDb; onInspect: (t: I
       {show === 'owned' && stats.unique === 0 ? (
         <div className="empty">
           <p>No cards from this set yet.</p>
-          <a className="btn btn--primary" href="#packs">Open a pack</a>
+          <a className="btn btn--primary" href="#shop">Open a pack</a>
         </div>
       ) : (
         <CardGrid
