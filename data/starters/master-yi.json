@@ -1,0 +1,94 @@
+{
+ "id": "master-yi",
+ "name": "Proving Grounds: Master Yi",
+ "set": "ogs",
+ "booster": "ogn",
+ "legend": "Master Yi, Wuju Bladesman",
+ "championOptions": [
+  "Master Yi, Meditative",
+  "Master Yi, Honed"
+ ],
+ "chosenChampion": "Master Yi, Honed",
+ "main": [
+  {
+   "name": "En Garde",
+   "n": 3
+  },
+  {
+   "name": "Meditation",
+   "n": 3
+  },
+  {
+   "name": "Playful Phantom",
+   "n": 3
+  },
+  {
+   "name": "Stalwart Poro",
+   "n": 3
+  },
+  {
+   "name": "Wielder of Water",
+   "n": 3
+  },
+  {
+   "name": "Cannon Barrage",
+   "n": 3
+  },
+  {
+   "name": "Confront",
+   "n": 2
+  },
+  {
+   "name": "Mobilize",
+   "n": 3
+  },
+  {
+   "name": "Stormclaw Ursine",
+   "n": 3
+  },
+  {
+   "name": "Mountain Drake",
+   "n": 2
+  },
+  {
+   "name": "Master Yi, Meditative",
+   "n": 2
+  },
+  {
+   "name": "Zephyr Sage",
+   "n": 3
+  },
+  {
+   "name": "Gentlemen's Duel",
+   "n": 3
+  },
+  {
+   "name": "Master Yi, Honed",
+   "n": 2
+  },
+  {
+   "name": "Highlander",
+   "n": 2
+  }
+ ],
+ "runes": [
+  {
+   "name": "Calm Rune",
+   "n": 6
+  },
+  {
+   "name": "Body Rune",
+   "n": 6
+  }
+ ],
+ "battlefields": [
+  "Fortified Position"
+ ],
+ "tokens": [],
+ "sources": [
+  "https://riftbound.gg/riftbound-starter-premade-champion-decks/ (deck: master-yi-proving-grounds-deck)",
+  "https://riftbound.gg/origins-proving-grounds/",
+  "https://www.eneba.com/hub/?p=56690"
+ ],
+ "notes": "Source lists 1 legend + 40 main + 12 runes + 1 battlefield = 54 cards (no 3 battlefields; Proving Grounds is for 2-4 player guided play, battlefield count per deck unverified against the printed box insert). championOptions: both same-champion copies are in the 40; chosenChampion is a pick (source title art / either valid). Only one source (riftbound.gg deck embeds via api.dotgg.gg) could be fetched; riftmana/piltover/playriftbound blocked or without lists. Eneba/TCGplayer article confirms the 24 exclusive OGS cards per deck, all matching. Signature cards (Tibbers, Decisive Strike, Final Spark, Highlander) counted in main."
+}

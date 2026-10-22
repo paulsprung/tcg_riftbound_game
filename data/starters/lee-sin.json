@@ -1,0 +1,104 @@
+{
+ "id": "lee-sin",
+ "name": "Origins Champion Deck: Lee Sin",
+ "set": "ogn",
+ "booster": "ogn",
+ "legend": "Lee Sin, Blind Monk",
+ "championOptions": null,
+ "chosenChampion": "Lee Sin, Centered",
+ "main": [
+  {
+   "name": "Charm",
+   "n": 2
+  },
+  {
+   "name": "Stalwart Poro",
+   "n": 3
+  },
+  {
+   "name": "Stand United",
+   "n": 2
+  },
+  {
+   "name": "Wielder of Water",
+   "n": 3
+  },
+  {
+   "name": "Discipline",
+   "n": 3
+  },
+  {
+   "name": "Mask of Foresight",
+   "n": 1
+  },
+  {
+   "name": "Wizened Elder",
+   "n": 3
+  },
+  {
+   "name": "Bilgewater Bully",
+   "n": 2
+  },
+  {
+   "name": "Challenge",
+   "n": 3
+  },
+  {
+   "name": "First Mate",
+   "n": 3
+  },
+  {
+   "name": "Pakaa Cub",
+   "n": 2
+  },
+  {
+   "name": "Pit Rookie",
+   "n": 3
+  },
+  {
+   "name": "Stormclaw Ursine",
+   "n": 2
+  },
+  {
+   "name": "Mountain Drake",
+   "n": 2
+  },
+  {
+   "name": "Wildclaw Shaman",
+   "n": 3
+  },
+  {
+   "name": "Lee Sin, Centered",
+   "n": 1
+  },
+  {
+   "name": "Mistfall",
+   "n": 1
+  },
+  {
+   "name": "Udyr, Wildman",
+   "n": 1
+  }
+ ],
+ "runes": [
+  {
+   "name": "Calm Rune",
+   "n": 6
+  },
+  {
+   "name": "Body Rune",
+   "n": 6
+  }
+ ],
+ "battlefields": [
+  "Grove of the God-Willow",
+  "Monastery of Hirana",
+  "Targon's Peak"
+ ],
+ "tokens": [],
+ "sources": [
+  "https://riftbound.gg/riftbound-starter-premade-champion-decks/ (deck: lee-sin-premade-origins-champion-deck)",
+  "https://merch.riotgames.com/product/riftbound-origins-champion-deck-jinx"
+ ],
+ "notes": "Single source for card counts (riftbound.gg deck embed data via api.dotgg.gg, 56 cards: 1+40+12+3). Product pages (Riot merch) confirm 56 cards, 3 rares, booster, playmat. No Champion Options on Origins decks; chosenChampion is the legend's champion copy in the 40."
+}

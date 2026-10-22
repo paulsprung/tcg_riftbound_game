@@ -34,8 +34,9 @@ function Starters({ db }: { db: CardDb }) {
     <section className="starters">
       <h2>Choose your starter deck</h2>
       <p className="muted">
-        Every official starter deck: 56 cards (legend, 40 main deck cards, 12 runes, 3 battlefields), ready to play,
-        and the booster pack that comes in its box. You pick one to begin; the rest you can win and collect.
+        Every official starter deck, ready to play: legend, 40 main deck cards, 12 runes and 3 battlefields (56 cards;
+        the Proving Grounds decks come with 1 battlefield), plus the booster pack from its box. You pick one to
+        begin; the rest you can win and collect.
       </p>
       {!starters && !error && <p className="muted">Loading the decks…</p>}
       {error && <p className="muted">{error}</p>}

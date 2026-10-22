@@ -1,0 +1,113 @@
+{
+ "id": "rumble",
+ "name": "Spiritforged Champion Deck: Rumble",
+ "set": "sfd",
+ "booster": "sfd",
+ "legend": "Rumble, Mechanized Menace",
+ "championOptions": [
+  "Rumble, Hotheaded",
+  "Rumble, Scrapper"
+ ],
+ "chosenChampion": "Rumble, Hotheaded",
+ "main": [
+  {
+   "name": "Dangerous Duo",
+   "n": 3
+  },
+  {
+   "name": "Void Seeker",
+   "n": 3
+  },
+  {
+   "name": "Consult the Past",
+   "n": 2
+  },
+  {
+   "name": "Stupefy",
+   "n": 2
+  },
+  {
+   "name": "Singularity",
+   "n": 1
+  },
+  {
+   "name": "Gem Jammer",
+   "n": 3
+  },
+  {
+   "name": "Assembly Rig",
+   "n": 1
+  },
+  {
+   "name": "Ferrous Forerunner",
+   "n": 2
+  },
+  {
+   "name": "Long Sword",
+   "n": 1
+  },
+  {
+   "name": "Rumble, Hotheaded",
+   "n": 2
+  },
+  {
+   "name": "Bubble Bot",
+   "n": 3
+  },
+  {
+   "name": "Forecaster",
+   "n": 3
+  },
+  {
+   "name": "Frigid Touch",
+   "n": 2
+  },
+  {
+   "name": "Plundering Poro",
+   "n": 3
+  },
+  {
+   "name": "Wages of Pain",
+   "n": 2
+  },
+  {
+   "name": "Breakneck Mech",
+   "n": 2
+  },
+  {
+   "name": "Production Surge",
+   "n": 3
+  },
+  {
+   "name": "Rumble, Scrapper",
+   "n": 1
+  },
+  {
+   "name": "Danger Zone",
+   "n": 1
+  }
+ ],
+ "runes": [
+  {
+   "name": "Fury Rune",
+   "n": 6
+  },
+  {
+   "name": "Mind Rune",
+   "n": 6
+  }
+ ],
+ "battlefields": [
+  "Minefield",
+  "Ravenbloom Conservatory",
+  "Treasure Hoard"
+ ],
+ "tokens": [
+  "Mech"
+ ],
+ "sources": [
+  "https://riftbound.gg/spiritforged-rumble-fiora-champion-starter-decklists/",
+  "https://api.dotgg.gg/cgfw/getdeck?game=riftbound&slug=spiritforged-rumble-champion-deck"
+ ],
+ "notes": "Chosen champion among the listed options is an assumption (sources do not say which is pre-selected). tokens are inferred from card text of included cards (box token contents not verified). Counts from riftbound.gg embedded deck data (dotgg API)."
+}

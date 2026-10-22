@@ -1,0 +1,94 @@
+{
+ "id": "annie",
+ "name": "Proving Grounds: Annie",
+ "set": "ogs",
+ "booster": "ogn",
+ "legend": "Annie, Dark Child",
+ "championOptions": [
+  "Annie, Fiery",
+  "Annie, Stubborn"
+ ],
+ "chosenChampion": "Annie, Fiery",
+ "main": [
+  {
+   "name": "Disintegrate",
+   "n": 3
+  },
+  {
+   "name": "Pouty Poro",
+   "n": 2
+  },
+  {
+   "name": "Gust",
+   "n": 3
+  },
+  {
+   "name": "Morbid Return",
+   "n": 3
+  },
+  {
+   "name": "Mystic Poro",
+   "n": 3
+  },
+  {
+   "name": "Sai Scout",
+   "n": 3
+  },
+  {
+   "name": "Sneaky Deckhand",
+   "n": 3
+  },
+  {
+   "name": "Traveling Merchant",
+   "n": 3
+  },
+  {
+   "name": "Maddened Marauder",
+   "n": 3
+  },
+  {
+   "name": "Annie, Fiery",
+   "n": 2
+  },
+  {
+   "name": "Firestorm",
+   "n": 3
+  },
+  {
+   "name": "Incinerate",
+   "n": 3
+  },
+  {
+   "name": "Annie, Stubborn",
+   "n": 2
+  },
+  {
+   "name": "Flash",
+   "n": 2
+  },
+  {
+   "name": "Tibbers",
+   "n": 2
+  }
+ ],
+ "runes": [
+  {
+   "name": "Fury Rune",
+   "n": 6
+  },
+  {
+   "name": "Chaos Rune",
+   "n": 6
+  }
+ ],
+ "battlefields": [
+  "Void Gate"
+ ],
+ "tokens": [],
+ "sources": [
+  "https://riftbound.gg/riftbound-starter-premade-champion-decks/ (deck: annie-proving-grounds-deck-nkw8v)",
+  "https://riftbound.gg/origins-proving-grounds/",
+  "https://www.eneba.com/hub/?p=56690"
+ ],
+ "notes": "Source lists 1 legend + 40 main + 12 runes + 1 battlefield = 54 cards (no 3 battlefields; Proving Grounds is for 2-4 player guided play, battlefield count per deck unverified against the printed box insert). championOptions: both same-champion copies are in the 40; chosenChampion is a pick (source title art / either valid). Only one source (riftbound.gg deck embeds via api.dotgg.gg) could be fetched; riftmana/piltover/playriftbound blocked or without lists. Eneba/TCGplayer article confirms the 24 exclusive OGS cards per deck, all matching. Signature cards (Tibbers, Decisive Strike, Final Spark, Highlander) counted in main."
+}

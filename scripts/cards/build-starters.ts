@@ -42,7 +42,8 @@ for (const f of (await readdir(dir)).filter((x) => x.endsWith('.json')).sort()) 
   const count = (l: { n: number }[]) => l.reduce((a, e) => a + e.n, 0);
   if (count(main) !== 40) problems.push(`${d}: ${count(main)} main deck cards, not 40`);
   if (count(runes) !== 12) problems.push(`${d}: ${count(runes)} runes, not 12`);
-  if (bf.length !== 3) problems.push(`${d}: ${bf.length} battlefields, not 3`);
+  // the Proving Grounds decks come with 1 battlefield (guided 2-4 player play)
+  if (bf.length !== 3 && !(s.set === 'ogs' && bf.length === 1)) problems.push(`${d}: ${bf.length} battlefields, not 3`);
   out.push({
     id: s.id, product: s.name, set: s.set, booster: s.booster,
     tokens: s.tokens ?? [], sources: s.sources ?? [], notes: s.notes ?? '',

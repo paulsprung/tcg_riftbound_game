@@ -1,0 +1,117 @@
+{
+ "id": "fiora",
+ "name": "Spiritforged Champion Deck: Fiora",
+ "set": "sfd",
+ "booster": "sfd",
+ "legend": "Fiora, Grand Duelist",
+ "championOptions": [
+  "Fiora, Peerless",
+  "Fiora, Worthy"
+ ],
+ "chosenChampion": "Fiora, Peerless",
+ "main": [
+  {
+   "name": "Pit Rookie",
+   "n": 2
+  },
+  {
+   "name": "Vengeance",
+   "n": 2
+  },
+  {
+   "name": "Dauntless Vanguard",
+   "n": 2
+  },
+  {
+   "name": "Doran's Blade",
+   "n": 3
+  },
+  {
+   "name": "Punch First",
+   "n": 2
+  },
+  {
+   "name": "Veteran Poro",
+   "n": 2
+  },
+  {
+   "name": "Jaull-Fish",
+   "n": 2
+  },
+  {
+   "name": "Show of Strength",
+   "n": 2
+  },
+  {
+   "name": "Strike Down",
+   "n": 3
+  },
+  {
+   "name": "Warmog's Armor",
+   "n": 3
+  },
+  {
+   "name": "Fiora, Peerless",
+   "n": 2
+  },
+  {
+   "name": "Lucian, Merciless",
+   "n": 2
+  },
+  {
+   "name": "Yone, Blademaster",
+   "n": 1
+  },
+  {
+   "name": "Laurent Duelist",
+   "n": 2
+  },
+  {
+   "name": "Royal Guard",
+   "n": 2
+  },
+  {
+   "name": "B.F. Sword",
+   "n": 3
+  },
+  {
+   "name": "Unsung Hero",
+   "n": 2
+  },
+  {
+   "name": "Sacred Shears",
+   "n": 1
+  },
+  {
+   "name": "Fiora, Worthy",
+   "n": 1
+  },
+  {
+   "name": "Riposte",
+   "n": 1
+  }
+ ],
+ "runes": [
+  {
+   "name": "Body Rune",
+   "n": 6
+  },
+  {
+   "name": "Order Rune",
+   "n": 6
+  }
+ ],
+ "battlefields": [
+  "Ornn's Forge",
+  "Sunken Temple",
+  "Veiled Temple"
+ ],
+ "tokens": [
+  "Sand Soldier"
+ ],
+ "sources": [
+  "https://riftbound.gg/spiritforged-rumble-fiora-champion-starter-decklists/",
+  "https://api.dotgg.gg/cgfw/getdeck?game=riftbound&slug=spiritforged-fiora-champion-deck"
+ ],
+ "notes": "Chosen champion among the listed options is an assumption (sources do not say which is pre-selected). tokens are inferred from card text of included cards (box token contents not verified). Counts from riftbound.gg embedded deck data (dotgg API)."
+}

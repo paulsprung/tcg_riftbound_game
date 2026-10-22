@@ -1,0 +1,94 @@
+{
+ "id": "lux",
+ "name": "Proving Grounds: Lux",
+ "set": "ogs",
+ "booster": "ogn",
+ "legend": "Lux, Lady of Luminosity",
+ "championOptions": [
+  "Lux, Illuminated",
+  "Lux, Crownguard"
+ ],
+ "chosenChampion": "Lux, Crownguard",
+ "main": [
+  {
+   "name": "Eager Apprentice",
+   "n": 2
+  },
+  {
+   "name": "Falling Comet",
+   "n": 3
+  },
+  {
+   "name": "Lecturing Yordle",
+   "n": 3
+  },
+  {
+   "name": "Mega-Mech",
+   "n": 2
+  },
+  {
+   "name": "Stupefy",
+   "n": 3
+  },
+  {
+   "name": "Ravenbloom Student",
+   "n": 3
+  },
+  {
+   "name": "Singularity",
+   "n": 3
+  },
+  {
+   "name": "Back to Back",
+   "n": 3
+  },
+  {
+   "name": "Daring Poro",
+   "n": 3
+  },
+  {
+   "name": "Vanguard Sergeant",
+   "n": 3
+  },
+  {
+   "name": "Lux, Illuminated",
+   "n": 2
+  },
+  {
+   "name": "Blast of Power",
+   "n": 3
+  },
+  {
+   "name": "Lux, Crownguard",
+   "n": 2
+  },
+  {
+   "name": "Vanguard Attendant",
+   "n": 3
+  },
+  {
+   "name": "Final Spark",
+   "n": 2
+  }
+ ],
+ "runes": [
+  {
+   "name": "Mind Rune",
+   "n": 6
+  },
+  {
+   "name": "Order Rune",
+   "n": 6
+  }
+ ],
+ "battlefields": [
+  "Startipped Peak"
+ ],
+ "tokens": [],
+ "sources": [
+  "https://riftbound.gg/riftbound-starter-premade-champion-decks/ (deck: lux-proving-grounds-deck)",
+  "https://riftbound.gg/origins-proving-grounds/",
+  "https://www.eneba.com/hub/?p=56690"
+ ],
+ "notes": "Source lists 1 legend + 40 main + 12 runes + 1 battlefield = 54 cards (no 3 battlefields; Proving Grounds is for 2-4 player guided play, battlefield count per deck unverified against the printed box insert). championOptions: both same-champion copies are in the 40; chosenChampion is a pick (source title art / either valid). Only one source (riftbound.gg deck embeds via api.dotgg.gg) could be fetched; riftmana/piltover/playriftbound blocked or without lists. Eneba/TCGplayer article confirms the 24 exclusive OGS cards per deck, all matching. Signature cards (Tibbers, Decisive Strike, Final Spark, Highlander) counted in main."
+}

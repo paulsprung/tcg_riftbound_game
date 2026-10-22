@@ -1,0 +1,133 @@
+{
+ "id": "vi",
+ "name": "Unleashed Champion Deck: Vi",
+ "set": "unl",
+ "booster": "unl",
+ "legend": "Vi, Piltover Enforcer",
+ "championOptions": [
+  "Vi, Destructive",
+  "Vi, Hotheaded",
+  "Vi, Peacekeeper"
+ ],
+ "chosenChampion": "Vi, Peacekeeper",
+ "main": [
+  {
+   "name": "Vi, Destructive",
+   "n": 1
+  },
+  {
+   "name": "Serrated Dirk",
+   "n": 2
+  },
+  {
+   "name": "Arena Kingpin",
+   "n": 1
+  },
+  {
+   "name": "Inferna",
+   "n": 3
+  },
+  {
+   "name": "Sharkling",
+   "n": 2
+  },
+  {
+   "name": "Towering Pairofant",
+   "n": 2
+  },
+  {
+   "name": "Upstage Comedy",
+   "n": 1
+  },
+  {
+   "name": "Vault Breaker",
+   "n": 2
+  },
+  {
+   "name": "Lord Broadmane",
+   "n": 2
+  },
+  {
+   "name": "Right of Conquest",
+   "n": 2
+  },
+  {
+   "name": "Square Up",
+   "n": 2
+  },
+  {
+   "name": "Yeti Brawler",
+   "n": 2
+  },
+  {
+   "name": "Rengar, Unseen",
+   "n": 1
+  },
+  {
+   "name": "Xerath, Freed",
+   "n": 1
+  },
+  {
+   "name": "Vi, Hotheaded",
+   "n": 1
+  },
+  {
+   "name": "Carrion Dredger",
+   "n": 2
+  },
+  {
+   "name": "Crimson Pigeons",
+   "n": 2
+  },
+  {
+   "name": "Loyal Poro",
+   "n": 2
+  },
+  {
+   "name": "Soul Harvest",
+   "n": 1
+  },
+  {
+   "name": "Divining Shells",
+   "n": 2
+  },
+  {
+   "name": "Mageseeker Investigator",
+   "n": 2
+  },
+  {
+   "name": "Tactical Retreat",
+   "n": 1
+  },
+  {
+   "name": "Vi, Peacekeeper",
+   "n": 2
+  },
+  {
+   "name": "Hextech Gauntlets",
+   "n": 1
+  }
+ ],
+ "runes": [
+  {
+   "name": "Fury Rune",
+   "n": 6
+  },
+  {
+   "name": "Order Rune",
+   "n": 6
+  }
+ ],
+ "battlefields": [
+  "Star Spring",
+  "Trapping Grounds",
+  "Valley of Idols"
+ ],
+ "tokens": [],
+ "sources": [
+  "https://riftbound.gg/unleashed-vi-vex-champion-starter-decklists/",
+  "https://api.dotgg.gg/cgfw/getdeck?game=riftbound&slug=unleashed-vi-champion-deck",
+  "https://starcitygames.com/riftbound-league-of-legends-tcg-unleashed-champion-deck-vi-sld-rift-std-unl-en-vi/"
+ ],
+ "notes": "Chosen champion among the listed options is an assumption (sources do not say which is pre-selected). tokens are inferred from card text of included cards (box token contents not verified). Counts from riftbound.gg embedded deck data (dotgg API). Cross-checked against Star City Games list: identical."
+}

@@ -1,0 +1,94 @@
+{
+ "id": "garen",
+ "name": "Proving Grounds: Garen",
+ "set": "ogs",
+ "booster": "ogn",
+ "legend": "Garen, Might of Demacia",
+ "championOptions": [
+  "Garen, Rugged",
+  "Garen, Commander"
+ ],
+ "chosenChampion": "Garen, Commander",
+ "main": [
+  {
+   "name": "Confront",
+   "n": 3
+  },
+  {
+   "name": "Crackshot Corsair",
+   "n": 3
+  },
+  {
+   "name": "Dune Drake",
+   "n": 2
+  },
+  {
+   "name": "First Mate",
+   "n": 3
+  },
+  {
+   "name": "Back to Back",
+   "n": 3
+  },
+  {
+   "name": "Daring Poro",
+   "n": 3
+  },
+  {
+   "name": "Faithful Manufactor",
+   "n": 3
+  },
+  {
+   "name": "Petty Officer",
+   "n": 2
+  },
+  {
+   "name": "Vanguard Sergeant",
+   "n": 3
+  },
+  {
+   "name": "Noxian Drummer",
+   "n": 3
+  },
+  {
+   "name": "Garen, Rugged",
+   "n": 2
+  },
+  {
+   "name": "Garen, Commander",
+   "n": 2
+  },
+  {
+   "name": "Recruit the Vanguard",
+   "n": 3
+  },
+  {
+   "name": "Vanguard Attendant",
+   "n": 3
+  },
+  {
+   "name": "Decisive Strike",
+   "n": 2
+  }
+ ],
+ "runes": [
+  {
+   "name": "Body Rune",
+   "n": 6
+  },
+  {
+   "name": "Order Rune",
+   "n": 6
+  }
+ ],
+ "battlefields": [
+  "Trifarian War Camp"
+ ],
+ "tokens": [],
+ "sources": [
+  "https://riftbound.gg/riftbound-starter-premade-champion-decks/ (deck: garen-proving-grounds-deck)",
+  "https://riftbound.gg/origins-proving-grounds/",
+  "https://www.eneba.com/hub/?p=56690"
+ ],
+ "notes": "Source lists 1 legend + 40 main + 12 runes + 1 battlefield = 54 cards (no 3 battlefields; Proving Grounds is for 2-4 player guided play, battlefield count per deck unverified against the printed box insert). championOptions: both same-champion copies are in the 40; chosenChampion is a pick (source title art / either valid). Only one source (riftbound.gg deck embeds via api.dotgg.gg) could be fetched; riftmana/piltover/playriftbound blocked or without lists. Eneba/TCGplayer article confirms the 24 exclusive OGS cards per deck, all matching. Signature cards (Tibbers, Decisive Strike, Final Spark, Highlander) counted in main."
+}

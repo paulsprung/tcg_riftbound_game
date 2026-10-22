@@ -1,0 +1,134 @@
+{
+ "id": "vex",
+ "name": "Unleashed Champion Deck: Vex",
+ "set": "unl",
+ "booster": "unl",
+ "legend": "Vex, Gloomist",
+ "championOptions": [
+  "Vex, Apathetic",
+  "Vex, Cheerless",
+  "Vex, Mocking"
+ ],
+ "chosenChampion": "Vex, Apathetic",
+ "main": [
+  {
+   "name": "Vex, Apathetic",
+   "n": 1
+  },
+  {
+   "name": "Vex, Cheerless",
+   "n": 1
+  },
+  {
+   "name": "Vex, Mocking",
+   "n": 2
+  },
+  {
+   "name": "Mutated Mouser",
+   "n": 2
+  },
+  {
+   "name": "Monch",
+   "n": 1
+  },
+  {
+   "name": "Existential Dread",
+   "n": 2
+  },
+  {
+   "name": "Allay, Eager Admirer",
+   "n": 2
+  },
+  {
+   "name": "Back Off",
+   "n": 3
+  },
+  {
+   "name": "Enthusiastic Promoter",
+   "n": 1
+  },
+  {
+   "name": "Trevor Snoozebottom",
+   "n": 2
+  },
+  {
+   "name": "Blast Cone",
+   "n": 2
+  },
+  {
+   "name": "Megatusk",
+   "n": 1
+  },
+  {
+   "name": "Evelynn, Entrancing",
+   "n": 1
+  },
+  {
+   "name": "Nami, Headstrong",
+   "n": 1
+  },
+  {
+   "name": "Iascylla",
+   "n": 1
+  },
+  {
+   "name": "Shadow",
+   "n": 1
+  },
+  {
+   "name": "Scryer's Bloom",
+   "n": 1
+  },
+  {
+   "name": "Soul Sword",
+   "n": 2
+  },
+  {
+   "name": "Mister Root",
+   "n": 2
+  },
+  {
+   "name": "Skyward Strike",
+   "n": 2
+  },
+  {
+   "name": "Combat Experience",
+   "n": 2
+  },
+  {
+   "name": "Herald of Spring",
+   "n": 2
+  },
+  {
+   "name": "Wuju Apprentice",
+   "n": 3
+  },
+  {
+   "name": "Mosstomper",
+   "n": 2
+  }
+ ],
+ "runes": [
+  {
+   "name": "Calm Rune",
+   "n": 6
+  },
+  {
+   "name": "Chaos Rune",
+   "n": 6
+  }
+ ],
+ "battlefields": [
+  "Amateur Recital",
+  "Gardens of Becoming",
+  "Ripper's Bay"
+ ],
+ "tokens": [
+  "Sprite"
+ ],
+ "sources": [
+  "https://starcitygames.com/riftbound-league-of-legends-tcg-unleashed-champion-deck-vex-sld-rift-std-unl-en-vex/",
+  "https://riftbound.gg/unleashed-vi-vex-champion-starter-decklists/"
+ ],
+ "notes": "Chosen champion among the listed options is an assumption (sources do not say which is pre-selected). tokens are inferred from card text of included cards (box token contents not verified). Decklist from a single retailer source (Star City Games); riftbound.gg embed for Vex was not retrievable. SCG spells \"Evelyn, Entrancing\" as oracle \"Evelynn, Entrancing\"."
+}

@@ -1,0 +1,104 @@
+{
+ "id": "jinx",
+ "name": "Origins Champion Deck: Jinx",
+ "set": "ogn",
+ "booster": "ogn",
+ "legend": "Jinx, Loose Cannon",
+ "championOptions": null,
+ "chosenChampion": "Jinx, Demolitionist",
+ "main": [
+  {
+   "name": "Blazing Scorcher",
+   "n": 2
+  },
+  {
+   "name": "Brazen Buccaneer",
+   "n": 3
+  },
+  {
+   "name": "Chemtech Enforcer",
+   "n": 3
+  },
+  {
+   "name": "Flame Chompers",
+   "n": 3
+  },
+  {
+   "name": "Get Excited!",
+   "n": 2
+  },
+  {
+   "name": "Magma Wurm",
+   "n": 1
+  },
+  {
+   "name": "Raging Soul",
+   "n": 3
+  },
+  {
+   "name": "Void Seeker",
+   "n": 2
+  },
+  {
+   "name": "Jinx, Demolitionist",
+   "n": 1
+  },
+  {
+   "name": "Vi, Destructive",
+   "n": 1
+  },
+  {
+   "name": "Cemetery Attendant",
+   "n": 2
+  },
+  {
+   "name": "Fight or Flight",
+   "n": 3
+  },
+  {
+   "name": "Gust",
+   "n": 3
+  },
+  {
+   "name": "Undercover Agent",
+   "n": 2
+  },
+  {
+   "name": "Fading Memories",
+   "n": 2
+  },
+  {
+   "name": "Scrapheap",
+   "n": 3
+  },
+  {
+   "name": "Traveling Merchant",
+   "n": 3
+  },
+  {
+   "name": "Rhasa the Sunderer",
+   "n": 1
+  }
+ ],
+ "runes": [
+  {
+   "name": "Fury Rune",
+   "n": 6
+  },
+  {
+   "name": "Chaos Rune",
+   "n": 6
+  }
+ ],
+ "battlefields": [
+  "Reaver's Row",
+  "Targon's Peak",
+  "Zaun Warrens"
+ ],
+ "tokens": [],
+ "sources": [
+  "https://riftbound.gg/riftbound-starter-premade-champion-decks/ (deck: jinx-premade-origins-champion-deck)",
+  "https://merch.riotgames.com/product/riftbound-origins-champion-deck-jinx"
+ ],
+ "notes": "Single source for card counts (riftbound.gg deck embed data via api.dotgg.gg, 56 cards: 1+40+12+3). Product pages (Riot merch) confirm 56 cards, 3 rares, booster, playmat. No Champion Options on Origins decks; chosenChampion is the legend's champion copy in the 40."
+}

@@ -1,1 +1,1232 @@
-[]
+[
+ {
+  "id": "annie",
+  "product": "Proving Grounds: Annie",
+  "set": "ogs",
+  "booster": "ogn",
+  "tokens": [],
+  "sources": [
+   "https://riftbound.gg/riftbound-starter-premade-champion-decks/ (deck: annie-proving-grounds-deck-nkw8v)",
+   "https://riftbound.gg/origins-proving-grounds/",
+   "https://www.eneba.com/hub/?p=56690"
+  ],
+  "notes": "Source lists 1 legend + 40 main + 12 runes + 1 battlefield = 54 cards (no 3 battlefields; Proving Grounds is for 2-4 player guided play, battlefield count per deck unverified against the printed box insert). championOptions: both same-champion copies are in the 40; chosenChampion is a pick (source title art / either valid). Only one source (riftbound.gg deck embeds via api.dotgg.gg) could be fetched; riftmana/piltover/playriftbound blocked or without lists. Eneba/TCGplayer article confirms the 24 exclusive OGS cards per deck, all matching. Signature cards (Tibbers, Decisive Strike, Final Spark, Highlander) counted in main.",
+  "deck": {
+   "name": "Proving Grounds: Annie",
+   "source": "precon",
+   "legend": "annie-dark-child",
+   "championOptions": [
+    "annie-fiery",
+    "annie-stubborn"
+   ],
+   "chosenChampion": "annie-fiery",
+   "main": [
+    {
+     "def": "disintegrate",
+     "n": 3
+    },
+    {
+     "def": "pouty-poro",
+     "n": 2
+    },
+    {
+     "def": "gust",
+     "n": 3
+    },
+    {
+     "def": "morbid-return",
+     "n": 3
+    },
+    {
+     "def": "mystic-poro",
+     "n": 3
+    },
+    {
+     "def": "sai-scout",
+     "n": 3
+    },
+    {
+     "def": "sneaky-deckhand",
+     "n": 3
+    },
+    {
+     "def": "traveling-merchant",
+     "n": 3
+    },
+    {
+     "def": "maddened-marauder",
+     "n": 3
+    },
+    {
+     "def": "annie-fiery",
+     "n": 2
+    },
+    {
+     "def": "firestorm",
+     "n": 3
+    },
+    {
+     "def": "incinerate",
+     "n": 3
+    },
+    {
+     "def": "annie-stubborn",
+     "n": 2
+    },
+    {
+     "def": "flash",
+     "n": 2
+    },
+    {
+     "def": "tibbers",
+     "n": 2
+    }
+   ],
+   "runes": [
+    {
+     "def": "fury-rune",
+     "n": 6
+    },
+    {
+     "def": "chaos-rune",
+     "n": 6
+    }
+   ],
+   "battlefields": [
+    "void-gate"
+   ]
+  }
+ },
+ {
+  "id": "fiora",
+  "product": "Spiritforged Champion Deck: Fiora",
+  "set": "sfd",
+  "booster": "sfd",
+  "tokens": [
+   "Sand Soldier"
+  ],
+  "sources": [
+   "https://riftbound.gg/spiritforged-rumble-fiora-champion-starter-decklists/",
+   "https://api.dotgg.gg/cgfw/getdeck?game=riftbound&slug=spiritforged-fiora-champion-deck"
+  ],
+  "notes": "Chosen champion among the listed options is an assumption (sources do not say which is pre-selected). tokens are inferred from card text of included cards (box token contents not verified). Counts from riftbound.gg embedded deck data (dotgg API).",
+  "deck": {
+   "name": "Spiritforged Champion Deck: Fiora",
+   "source": "precon",
+   "legend": "fiora-grand-duelist",
+   "championOptions": [
+    "fiora-peerless",
+    "fiora-worthy"
+   ],
+   "chosenChampion": "fiora-peerless",
+   "main": [
+    {
+     "def": "pit-rookie",
+     "n": 2
+    },
+    {
+     "def": "vengeance",
+     "n": 2
+    },
+    {
+     "def": "dauntless-vanguard",
+     "n": 2
+    },
+    {
+     "def": "dorans-blade",
+     "n": 3
+    },
+    {
+     "def": "punch-first",
+     "n": 2
+    },
+    {
+     "def": "veteran-poro",
+     "n": 2
+    },
+    {
+     "def": "jaull-fish",
+     "n": 2
+    },
+    {
+     "def": "show-of-strength",
+     "n": 2
+    },
+    {
+     "def": "strike-down",
+     "n": 3
+    },
+    {
+     "def": "warmogs-armor",
+     "n": 3
+    },
+    {
+     "def": "fiora-peerless",
+     "n": 2
+    },
+    {
+     "def": "lucian-merciless",
+     "n": 2
+    },
+    {
+     "def": "yone-blademaster",
+     "n": 1
+    },
+    {
+     "def": "laurent-duelist",
+     "n": 2
+    },
+    {
+     "def": "royal-guard",
+     "n": 2
+    },
+    {
+     "def": "b-f-sword",
+     "n": 3
+    },
+    {
+     "def": "unsung-hero",
+     "n": 2
+    },
+    {
+     "def": "sacred-shears",
+     "n": 1
+    },
+    {
+     "def": "fiora-worthy",
+     "n": 1
+    },
+    {
+     "def": "riposte",
+     "n": 1
+    }
+   ],
+   "runes": [
+    {
+     "def": "body-rune",
+     "n": 6
+    },
+    {
+     "def": "order-rune",
+     "n": 6
+    }
+   ],
+   "battlefields": [
+    "ornns-forge",
+    "sunken-temple",
+    "veiled-temple"
+   ]
+  }
+ },
+ {
+  "id": "garen",
+  "product": "Proving Grounds: Garen",
+  "set": "ogs",
+  "booster": "ogn",
+  "tokens": [],
+  "sources": [
+   "https://riftbound.gg/riftbound-starter-premade-champion-decks/ (deck: garen-proving-grounds-deck)",
+   "https://riftbound.gg/origins-proving-grounds/",
+   "https://www.eneba.com/hub/?p=56690"
+  ],
+  "notes": "Source lists 1 legend + 40 main + 12 runes + 1 battlefield = 54 cards (no 3 battlefields; Proving Grounds is for 2-4 player guided play, battlefield count per deck unverified against the printed box insert). championOptions: both same-champion copies are in the 40; chosenChampion is a pick (source title art / either valid). Only one source (riftbound.gg deck embeds via api.dotgg.gg) could be fetched; riftmana/piltover/playriftbound blocked or without lists. Eneba/TCGplayer article confirms the 24 exclusive OGS cards per deck, all matching. Signature cards (Tibbers, Decisive Strike, Final Spark, Highlander) counted in main.",
+  "deck": {
+   "name": "Proving Grounds: Garen",
+   "source": "precon",
+   "legend": "garen-might-of-demacia",
+   "championOptions": [
+    "garen-rugged",
+    "garen-commander"
+   ],
+   "chosenChampion": "garen-commander",
+   "main": [
+    {
+     "def": "confront",
+     "n": 3
+    },
+    {
+     "def": "crackshot-corsair",
+     "n": 3
+    },
+    {
+     "def": "dune-drake",
+     "n": 2
+    },
+    {
+     "def": "first-mate",
+     "n": 3
+    },
+    {
+     "def": "back-to-back",
+     "n": 3
+    },
+    {
+     "def": "daring-poro",
+     "n": 3
+    },
+    {
+     "def": "faithful-manufactor",
+     "n": 3
+    },
+    {
+     "def": "petty-officer",
+     "n": 2
+    },
+    {
+     "def": "vanguard-sergeant",
+     "n": 3
+    },
+    {
+     "def": "noxian-drummer",
+     "n": 3
+    },
+    {
+     "def": "garen-rugged",
+     "n": 2
+    },
+    {
+     "def": "garen-commander",
+     "n": 2
+    },
+    {
+     "def": "recruit-the-vanguard",
+     "n": 3
+    },
+    {
+     "def": "vanguard-attendant",
+     "n": 3
+    },
+    {
+     "def": "decisive-strike",
+     "n": 2
+    }
+   ],
+   "runes": [
+    {
+     "def": "body-rune",
+     "n": 6
+    },
+    {
+     "def": "order-rune",
+     "n": 6
+    }
+   ],
+   "battlefields": [
+    "trifarian-war-camp"
+   ]
+  }
+ },
+ {
+  "id": "jinx",
+  "product": "Origins Champion Deck: Jinx",
+  "set": "ogn",
+  "booster": "ogn",
+  "tokens": [],
+  "sources": [
+   "https://riftbound.gg/riftbound-starter-premade-champion-decks/ (deck: jinx-premade-origins-champion-deck)",
+   "https://merch.riotgames.com/product/riftbound-origins-champion-deck-jinx"
+  ],
+  "notes": "Single source for card counts (riftbound.gg deck embed data via api.dotgg.gg, 56 cards: 1+40+12+3). Product pages (Riot merch) confirm 56 cards, 3 rares, booster, playmat. No Champion Options on Origins decks; chosenChampion is the legend's champion copy in the 40.",
+  "deck": {
+   "name": "Origins Champion Deck: Jinx",
+   "source": "precon",
+   "legend": "jinx-loose-cannon",
+   "chosenChampion": "jinx-demolitionist",
+   "main": [
+    {
+     "def": "blazing-scorcher",
+     "n": 2
+    },
+    {
+     "def": "brazen-buccaneer",
+     "n": 3
+    },
+    {
+     "def": "chemtech-enforcer",
+     "n": 3
+    },
+    {
+     "def": "flame-chompers",
+     "n": 3
+    },
+    {
+     "def": "get-excited",
+     "n": 2
+    },
+    {
+     "def": "magma-wurm",
+     "n": 1
+    },
+    {
+     "def": "raging-soul",
+     "n": 3
+    },
+    {
+     "def": "void-seeker",
+     "n": 2
+    },
+    {
+     "def": "jinx-demolitionist",
+     "n": 1
+    },
+    {
+     "def": "vi-destructive",
+     "n": 1
+    },
+    {
+     "def": "cemetery-attendant",
+     "n": 2
+    },
+    {
+     "def": "fight-or-flight",
+     "n": 3
+    },
+    {
+     "def": "gust",
+     "n": 3
+    },
+    {
+     "def": "undercover-agent",
+     "n": 2
+    },
+    {
+     "def": "fading-memories",
+     "n": 2
+    },
+    {
+     "def": "scrapheap",
+     "n": 3
+    },
+    {
+     "def": "traveling-merchant",
+     "n": 3
+    },
+    {
+     "def": "rhasa-the-sunderer",
+     "n": 1
+    }
+   ],
+   "runes": [
+    {
+     "def": "fury-rune",
+     "n": 6
+    },
+    {
+     "def": "chaos-rune",
+     "n": 6
+    }
+   ],
+   "battlefields": [
+    "reavers-row",
+    "targons-peak",
+    "zaun-warrens"
+   ]
+  }
+ },
+ {
+  "id": "lee-sin",
+  "product": "Origins Champion Deck: Lee Sin",
+  "set": "ogn",
+  "booster": "ogn",
+  "tokens": [],
+  "sources": [
+   "https://riftbound.gg/riftbound-starter-premade-champion-decks/ (deck: lee-sin-premade-origins-champion-deck)",
+   "https://merch.riotgames.com/product/riftbound-origins-champion-deck-jinx"
+  ],
+  "notes": "Single source for card counts (riftbound.gg deck embed data via api.dotgg.gg, 56 cards: 1+40+12+3). Product pages (Riot merch) confirm 56 cards, 3 rares, booster, playmat. No Champion Options on Origins decks; chosenChampion is the legend's champion copy in the 40.",
+  "deck": {
+   "name": "Origins Champion Deck: Lee Sin",
+   "source": "precon",
+   "legend": "lee-sin-blind-monk",
+   "chosenChampion": "lee-sin-centered",
+   "main": [
+    {
+     "def": "charm",
+     "n": 2
+    },
+    {
+     "def": "stalwart-poro",
+     "n": 3
+    },
+    {
+     "def": "stand-united",
+     "n": 2
+    },
+    {
+     "def": "wielder-of-water",
+     "n": 3
+    },
+    {
+     "def": "discipline",
+     "n": 3
+    },
+    {
+     "def": "mask-of-foresight",
+     "n": 1
+    },
+    {
+     "def": "wizened-elder",
+     "n": 3
+    },
+    {
+     "def": "bilgewater-bully",
+     "n": 2
+    },
+    {
+     "def": "challenge",
+     "n": 3
+    },
+    {
+     "def": "first-mate",
+     "n": 3
+    },
+    {
+     "def": "pakaa-cub",
+     "n": 2
+    },
+    {
+     "def": "pit-rookie",
+     "n": 3
+    },
+    {
+     "def": "stormclaw-ursine",
+     "n": 2
+    },
+    {
+     "def": "mountain-drake",
+     "n": 2
+    },
+    {
+     "def": "wildclaw-shaman",
+     "n": 3
+    },
+    {
+     "def": "lee-sin-centered",
+     "n": 1
+    },
+    {
+     "def": "mistfall",
+     "n": 1
+    },
+    {
+     "def": "udyr-wildman",
+     "n": 1
+    }
+   ],
+   "runes": [
+    {
+     "def": "calm-rune",
+     "n": 6
+    },
+    {
+     "def": "body-rune",
+     "n": 6
+    }
+   ],
+   "battlefields": [
+    "grove-of-the-god-willow",
+    "monastery-of-hirana",
+    "targons-peak"
+   ]
+  }
+ },
+ {
+  "id": "lux",
+  "product": "Proving Grounds: Lux",
+  "set": "ogs",
+  "booster": "ogn",
+  "tokens": [],
+  "sources": [
+   "https://riftbound.gg/riftbound-starter-premade-champion-decks/ (deck: lux-proving-grounds-deck)",
+   "https://riftbound.gg/origins-proving-grounds/",
+   "https://www.eneba.com/hub/?p=56690"
+  ],
+  "notes": "Source lists 1 legend + 40 main + 12 runes + 1 battlefield = 54 cards (no 3 battlefields; Proving Grounds is for 2-4 player guided play, battlefield count per deck unverified against the printed box insert). championOptions: both same-champion copies are in the 40; chosenChampion is a pick (source title art / either valid). Only one source (riftbound.gg deck embeds via api.dotgg.gg) could be fetched; riftmana/piltover/playriftbound blocked or without lists. Eneba/TCGplayer article confirms the 24 exclusive OGS cards per deck, all matching. Signature cards (Tibbers, Decisive Strike, Final Spark, Highlander) counted in main.",
+  "deck": {
+   "name": "Proving Grounds: Lux",
+   "source": "precon",
+   "legend": "lux-lady-of-luminosity",
+   "championOptions": [
+    "lux-illuminated",
+    "lux-crownguard"
+   ],
+   "chosenChampion": "lux-crownguard",
+   "main": [
+    {
+     "def": "eager-apprentice",
+     "n": 2
+    },
+    {
+     "def": "falling-comet",
+     "n": 3
+    },
+    {
+     "def": "lecturing-yordle",
+     "n": 3
+    },
+    {
+     "def": "mega-mech",
+     "n": 2
+    },
+    {
+     "def": "stupefy",
+     "n": 3
+    },
+    {
+     "def": "ravenbloom-student",
+     "n": 3
+    },
+    {
+     "def": "singularity",
+     "n": 3
+    },
+    {
+     "def": "back-to-back",
+     "n": 3
+    },
+    {
+     "def": "daring-poro",
+     "n": 3
+    },
+    {
+     "def": "vanguard-sergeant",
+     "n": 3
+    },
+    {
+     "def": "lux-illuminated",
+     "n": 2
+    },
+    {
+     "def": "blast-of-power",
+     "n": 3
+    },
+    {
+     "def": "lux-crownguard",
+     "n": 2
+    },
+    {
+     "def": "vanguard-attendant",
+     "n": 3
+    },
+    {
+     "def": "final-spark",
+     "n": 2
+    }
+   ],
+   "runes": [
+    {
+     "def": "mind-rune",
+     "n": 6
+    },
+    {
+     "def": "order-rune",
+     "n": 6
+    }
+   ],
+   "battlefields": [
+    "startipped-peak"
+   ]
+  }
+ },
+ {
+  "id": "master-yi",
+  "product": "Proving Grounds: Master Yi",
+  "set": "ogs",
+  "booster": "ogn",
+  "tokens": [],
+  "sources": [
+   "https://riftbound.gg/riftbound-starter-premade-champion-decks/ (deck: master-yi-proving-grounds-deck)",
+   "https://riftbound.gg/origins-proving-grounds/",
+   "https://www.eneba.com/hub/?p=56690"
+  ],
+  "notes": "Source lists 1 legend + 40 main + 12 runes + 1 battlefield = 54 cards (no 3 battlefields; Proving Grounds is for 2-4 player guided play, battlefield count per deck unverified against the printed box insert). championOptions: both same-champion copies are in the 40; chosenChampion is a pick (source title art / either valid). Only one source (riftbound.gg deck embeds via api.dotgg.gg) could be fetched; riftmana/piltover/playriftbound blocked or without lists. Eneba/TCGplayer article confirms the 24 exclusive OGS cards per deck, all matching. Signature cards (Tibbers, Decisive Strike, Final Spark, Highlander) counted in main.",
+  "deck": {
+   "name": "Proving Grounds: Master Yi",
+   "source": "precon",
+   "legend": "master-yi-wuju-bladesman",
+   "championOptions": [
+    "master-yi-meditative",
+    "master-yi-honed"
+   ],
+   "chosenChampion": "master-yi-honed",
+   "main": [
+    {
+     "def": "en-garde",
+     "n": 3
+    },
+    {
+     "def": "meditation",
+     "n": 3
+    },
+    {
+     "def": "playful-phantom",
+     "n": 3
+    },
+    {
+     "def": "stalwart-poro",
+     "n": 3
+    },
+    {
+     "def": "wielder-of-water",
+     "n": 3
+    },
+    {
+     "def": "cannon-barrage",
+     "n": 3
+    },
+    {
+     "def": "confront",
+     "n": 2
+    },
+    {
+     "def": "mobilize",
+     "n": 3
+    },
+    {
+     "def": "stormclaw-ursine",
+     "n": 3
+    },
+    {
+     "def": "mountain-drake",
+     "n": 2
+    },
+    {
+     "def": "master-yi-meditative",
+     "n": 2
+    },
+    {
+     "def": "zephyr-sage",
+     "n": 3
+    },
+    {
+     "def": "gentlemens-duel",
+     "n": 3
+    },
+    {
+     "def": "master-yi-honed",
+     "n": 2
+    },
+    {
+     "def": "highlander",
+     "n": 2
+    }
+   ],
+   "runes": [
+    {
+     "def": "calm-rune",
+     "n": 6
+    },
+    {
+     "def": "body-rune",
+     "n": 6
+    }
+   ],
+   "battlefields": [
+    "fortified-position"
+   ]
+  }
+ },
+ {
+  "id": "rumble",
+  "product": "Spiritforged Champion Deck: Rumble",
+  "set": "sfd",
+  "booster": "sfd",
+  "tokens": [
+   "Mech"
+  ],
+  "sources": [
+   "https://riftbound.gg/spiritforged-rumble-fiora-champion-starter-decklists/",
+   "https://api.dotgg.gg/cgfw/getdeck?game=riftbound&slug=spiritforged-rumble-champion-deck"
+  ],
+  "notes": "Chosen champion among the listed options is an assumption (sources do not say which is pre-selected). tokens are inferred from card text of included cards (box token contents not verified). Counts from riftbound.gg embedded deck data (dotgg API).",
+  "deck": {
+   "name": "Spiritforged Champion Deck: Rumble",
+   "source": "precon",
+   "legend": "rumble-mechanized-menace",
+   "championOptions": [
+    "rumble-hotheaded",
+    "rumble-scrapper"
+   ],
+   "chosenChampion": "rumble-hotheaded",
+   "main": [
+    {
+     "def": "dangerous-duo",
+     "n": 3
+    },
+    {
+     "def": "void-seeker",
+     "n": 3
+    },
+    {
+     "def": "consult-the-past",
+     "n": 2
+    },
+    {
+     "def": "stupefy",
+     "n": 2
+    },
+    {
+     "def": "singularity",
+     "n": 1
+    },
+    {
+     "def": "gem-jammer",
+     "n": 3
+    },
+    {
+     "def": "assembly-rig",
+     "n": 1
+    },
+    {
+     "def": "ferrous-forerunner",
+     "n": 2
+    },
+    {
+     "def": "long-sword",
+     "n": 1
+    },
+    {
+     "def": "rumble-hotheaded",
+     "n": 2
+    },
+    {
+     "def": "bubble-bot",
+     "n": 3
+    },
+    {
+     "def": "forecaster",
+     "n": 3
+    },
+    {
+     "def": "frigid-touch",
+     "n": 2
+    },
+    {
+     "def": "plundering-poro",
+     "n": 3
+    },
+    {
+     "def": "wages-of-pain",
+     "n": 2
+    },
+    {
+     "def": "breakneck-mech",
+     "n": 2
+    },
+    {
+     "def": "production-surge",
+     "n": 3
+    },
+    {
+     "def": "rumble-scrapper",
+     "n": 1
+    },
+    {
+     "def": "danger-zone",
+     "n": 1
+    }
+   ],
+   "runes": [
+    {
+     "def": "fury-rune",
+     "n": 6
+    },
+    {
+     "def": "mind-rune",
+     "n": 6
+    }
+   ],
+   "battlefields": [
+    "minefield",
+    "ravenbloom-conservatory",
+    "treasure-hoard"
+   ]
+  }
+ },
+ {
+  "id": "vex",
+  "product": "Unleashed Champion Deck: Vex",
+  "set": "unl",
+  "booster": "unl",
+  "tokens": [
+   "Sprite"
+  ],
+  "sources": [
+   "https://starcitygames.com/riftbound-league-of-legends-tcg-unleashed-champion-deck-vex-sld-rift-std-unl-en-vex/",
+   "https://riftbound.gg/unleashed-vi-vex-champion-starter-decklists/"
+  ],
+  "notes": "Chosen champion among the listed options is an assumption (sources do not say which is pre-selected). tokens are inferred from card text of included cards (box token contents not verified). Decklist from a single retailer source (Star City Games); riftbound.gg embed for Vex was not retrievable. SCG spells \"Evelyn, Entrancing\" as oracle \"Evelynn, Entrancing\".",
+  "deck": {
+   "name": "Unleashed Champion Deck: Vex",
+   "source": "precon",
+   "legend": "vex-gloomist",
+   "championOptions": [
+    "vex-apathetic",
+    "vex-cheerless",
+    "vex-mocking"
+   ],
+   "chosenChampion": "vex-apathetic",
+   "main": [
+    {
+     "def": "vex-apathetic",
+     "n": 1
+    },
+    {
+     "def": "vex-cheerless",
+     "n": 1
+    },
+    {
+     "def": "vex-mocking",
+     "n": 2
+    },
+    {
+     "def": "mutated-mouser",
+     "n": 2
+    },
+    {
+     "def": "monch",
+     "n": 1
+    },
+    {
+     "def": "existential-dread",
+     "n": 2
+    },
+    {
+     "def": "allay-eager-admirer",
+     "n": 2
+    },
+    {
+     "def": "back-off",
+     "n": 3
+    },
+    {
+     "def": "enthusiastic-promoter",
+     "n": 1
+    },
+    {
+     "def": "trevor-snoozebottom",
+     "n": 2
+    },
+    {
+     "def": "blast-cone",
+     "n": 2
+    },
+    {
+     "def": "megatusk",
+     "n": 1
+    },
+    {
+     "def": "evelynn-entrancing",
+     "n": 1
+    },
+    {
+     "def": "nami-headstrong",
+     "n": 1
+    },
+    {
+     "def": "iascylla",
+     "n": 1
+    },
+    {
+     "def": "shadow",
+     "n": 1
+    },
+    {
+     "def": "scryers-bloom",
+     "n": 1
+    },
+    {
+     "def": "soul-sword",
+     "n": 2
+    },
+    {
+     "def": "mister-root",
+     "n": 2
+    },
+    {
+     "def": "skyward-strike",
+     "n": 2
+    },
+    {
+     "def": "combat-experience",
+     "n": 2
+    },
+    {
+     "def": "herald-of-spring",
+     "n": 2
+    },
+    {
+     "def": "wuju-apprentice",
+     "n": 3
+    },
+    {
+     "def": "mosstomper",
+     "n": 2
+    }
+   ],
+   "runes": [
+    {
+     "def": "calm-rune",
+     "n": 6
+    },
+    {
+     "def": "chaos-rune",
+     "n": 6
+    }
+   ],
+   "battlefields": [
+    "amateur-recital",
+    "gardens-of-becoming",
+    "rippers-bay"
+   ]
+  }
+ },
+ {
+  "id": "vi",
+  "product": "Unleashed Champion Deck: Vi",
+  "set": "unl",
+  "booster": "unl",
+  "tokens": [],
+  "sources": [
+   "https://riftbound.gg/unleashed-vi-vex-champion-starter-decklists/",
+   "https://api.dotgg.gg/cgfw/getdeck?game=riftbound&slug=unleashed-vi-champion-deck",
+   "https://starcitygames.com/riftbound-league-of-legends-tcg-unleashed-champion-deck-vi-sld-rift-std-unl-en-vi/"
+  ],
+  "notes": "Chosen champion among the listed options is an assumption (sources do not say which is pre-selected). tokens are inferred from card text of included cards (box token contents not verified). Counts from riftbound.gg embedded deck data (dotgg API). Cross-checked against Star City Games list: identical.",
+  "deck": {
+   "name": "Unleashed Champion Deck: Vi",
+   "source": "precon",
+   "legend": "vi-piltover-enforcer",
+   "championOptions": [
+    "vi-destructive",
+    "vi-hotheaded",
+    "vi-peacekeeper"
+   ],
+   "chosenChampion": "vi-peacekeeper",
+   "main": [
+    {
+     "def": "vi-destructive",
+     "n": 1
+    },
+    {
+     "def": "serrated-dirk",
+     "n": 2
+    },
+    {
+     "def": "arena-kingpin",
+     "n": 1
+    },
+    {
+     "def": "inferna",
+     "n": 3
+    },
+    {
+     "def": "sharkling",
+     "n": 2
+    },
+    {
+     "def": "towering-pairofant",
+     "n": 2
+    },
+    {
+     "def": "upstage-comedy",
+     "n": 1
+    },
+    {
+     "def": "vault-breaker",
+     "n": 2
+    },
+    {
+     "def": "lord-broadmane",
+     "n": 2
+    },
+    {
+     "def": "right-of-conquest",
+     "n": 2
+    },
+    {
+     "def": "square-up",
+     "n": 2
+    },
+    {
+     "def": "yeti-brawler",
+     "n": 2
+    },
+    {
+     "def": "rengar-unseen",
+     "n": 1
+    },
+    {
+     "def": "xerath-freed",
+     "n": 1
+    },
+    {
+     "def": "vi-hotheaded",
+     "n": 1
+    },
+    {
+     "def": "carrion-dredger",
+     "n": 2
+    },
+    {
+     "def": "crimson-pigeons",
+     "n": 2
+    },
+    {
+     "def": "loyal-poro",
+     "n": 2
+    },
+    {
+     "def": "soul-harvest",
+     "n": 1
+    },
+    {
+     "def": "divining-shells",
+     "n": 2
+    },
+    {
+     "def": "mageseeker-investigator",
+     "n": 2
+    },
+    {
+     "def": "tactical-retreat",
+     "n": 1
+    },
+    {
+     "def": "vi-peacekeeper",
+     "n": 2
+    },
+    {
+     "def": "hextech-gauntlets",
+     "n": 1
+    }
+   ],
+   "runes": [
+    {
+     "def": "fury-rune",
+     "n": 6
+    },
+    {
+     "def": "order-rune",
+     "n": 6
+    }
+   ],
+   "battlefields": [
+    "star-spring",
+    "trapping-grounds",
+    "valley-of-idols"
+   ]
+  }
+ },
+ {
+  "id": "viktor",
+  "product": "Origins Champion Deck: Viktor",
+  "set": "ogn",
+  "booster": "ogn",
+  "tokens": [],
+  "sources": [
+   "https://riftbound.gg/riftbound-starter-premade-champion-decks/ (deck: viktor-premade-origins-champion-deck)",
+   "https://merch.riotgames.com/product/riftbound-origins-champion-deck-jinx"
+  ],
+  "notes": "Single source for card counts (riftbound.gg deck embed data via api.dotgg.gg, 56 cards: 1+40+12+3). Product pages (Riot merch) confirm 56 cards, 3 rares, booster, playmat. No Champion Options on Origins decks; chosenChampion is the legend's champion copy in the 40.",
+  "deck": {
+   "name": "Origins Champion Deck: Viktor",
+   "source": "precon",
+   "legend": "viktor-herald-of-the-arcane",
+   "chosenChampion": "viktor-innovator",
+   "main": [
+    {
+     "def": "consult-the-past",
+     "n": 2
+    },
+    {
+     "def": "eager-apprentice",
+     "n": 3
+    },
+    {
+     "def": "jeweled-colossus",
+     "n": 2
+    },
+    {
+     "def": "orb-of-regret",
+     "n": 2
+    },
+    {
+     "def": "smoke-screen",
+     "n": 2
+    },
+    {
+     "def": "sprite-call",
+     "n": 2
+    },
+    {
+     "def": "stupefy",
+     "n": 2
+    },
+    {
+     "def": "mushroom-pouch",
+     "n": 2
+    },
+    {
+     "def": "ravenbloom-student",
+     "n": 3
+    },
+    {
+     "def": "heimerdinger-inventor",
+     "n": 1
+    },
+    {
+     "def": "viktor-innovator",
+     "n": 1
+    },
+    {
+     "def": "wraith-of-echoes",
+     "n": 1
+    },
+    {
+     "def": "back-to-back",
+     "n": 2
+    },
+    {
+     "def": "cruel-patron",
+     "n": 3
+    },
+    {
+     "def": "cull-the-weak",
+     "n": 3
+    },
+    {
+     "def": "hidden-blade",
+     "n": 2
+    },
+    {
+     "def": "soaring-scout",
+     "n": 3
+    },
+    {
+     "def": "noxian-drummer",
+     "n": 3
+    },
+    {
+     "def": "grand-strategem",
+     "n": 1
+    }
+   ],
+   "runes": [
+    {
+     "def": "mind-rune",
+     "n": 6
+    },
+    {
+     "def": "order-rune",
+     "n": 6
+    }
+   ],
+   "battlefields": [
+    "altar-to-unity",
+    "the-grand-plaza",
+    "trifarian-war-camp"
+   ]
+  }
+ }
+]
