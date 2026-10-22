@@ -46,6 +46,7 @@ export {
   BATTLEFIELDS_PER_DECK, isLegalDeck, isUnmodifiedPrecon, RUNES_PER_DECK, validateDeck,
 } from './decks/validate.ts';
 export { EVELYNN_PRECON, PRECONS, SERAPHINE_PRECON } from './decks/precons.ts';
+export { PRODUCTS, STARTERS, type Starter } from './decks/starters.ts';
 
 export type { EngineOptions, GameSetup, ModeConfig, RulesConfig } from './config.ts';
 export type { DeckEntry, DeckList } from './decks/decklist.ts';

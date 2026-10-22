@@ -2,67 +2,66 @@ import { useEffect, useMemo, useState } from 'react';
 import { HoloCard } from '../card/HoloCard.tsx';
 import { collection, DAILY_COINS, useCollection } from '../collection/store.ts';
 import type { CardDb } from '../data/types.ts';
-import { STARTER_COINS, STARTER_PACKS, STARTERS, starterContents, type StarterInfo } from '../economy/starter.ts';
+import { loadStarters, type StarterChoice } from '../economy/starter.ts';
 import { useSession } from '../net/session.ts';
 
 const hhmm = (ms: number) => `${Math.floor(ms / 3_600_000)} h ${Math.ceil((ms % 3_600_000) / 60_000)} min`;
 
+const PRODUCT_ORDER = ['ogs', 'ogn', 'sfd', 'unl', 'rad'];
+
 function Starters({ db }: { db: CardDb }) {
-  const [art, setArt] = useState<Record<string, string | null>>({});
+  const [starters, setStarters] = useState<StarterChoice[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
     let alive = true;
-    (async () => {
-      const out: Record<string, string | null> = {};
-      for (const s of STARTERS) out[s.id] = (await starterContents(s.id, db)).legendCard;
-      if (alive) setArt(out);
-    })().catch(() => undefined);
+    loadStarters(db).then((s) => { if (alive) setStarters(s); }).catch(() => { if (alive) setError('Could not load the starter decks. Reload the page.'); });
     return () => { alive = false; };
   }, [db]);
 
-  const pick = async (id: StarterInfo['id']) => {
-    setBusy(id); setError('');
-    try {
-      const { cards } = await starterContents(id, db);
-      collection.grantStarter(id, cards, STARTER_PACKS, STARTER_COINS);
-    } catch {
-      setError('Could not load the starter set. Try again.');
-    }
+  const pick = (s: StarterChoice) => {
+    setBusy(s.id);
+    collection.grantStarter(s.id, s.cards, { [s.booster]: 1 }, 0);
     setBusy(null);
   };
 
+  const groups = PRODUCT_ORDER
+    .map((set) => ({ set, items: (starters ?? []).filter((s) => s.set === set) }))
+    .filter((g) => g.items.length > 0);
+
   return (
     <section className="starters">
-      <h2>Choose your starter set</h2>
+      <h2>Choose your starter deck</h2>
       <p className="muted">
-        A ready-to-play deck with its legend, runes and battlefields, plus {Object.values(STARTER_PACKS).reduce((a, b) => a + b, 0)} Radiance
-        booster packs and {STARTER_COINS} coins to start your collection.
+        Every official starter deck: 56 cards (legend, 40 main deck cards, 12 runes, 3 battlefields), ready to play,
+        and the booster pack that comes in its box. You pick one to begin; the rest you can win and collect.
       </p>
-      <div className="starters__grid">
-        {STARTERS.map((s) => {
-          const card = db.cards.find((c) => c.id === art[s.id]);
-          return (
-            <article key={s.id} className="starter">
-              <div className="starter__card">
-                {card ? <HoloCard card={card} finish="none" width="100%" imageWidth={360} /> : <div className="starter__ph" />}
-              </div>
-              <h3>{s.title}</h3>
-              <p className="muted">{s.blurb}</p>
-              <ul className="starter__list">
-                <li>40-card deck, 12 runes, 3 battlefields</li>
-                <li>{Object.values(STARTER_PACKS).reduce((a, b) => a + b, 0)} Radiance booster packs</li>
-                <li>{STARTER_COINS} coins</li>
-              </ul>
-              <button type="button" className="btn btn--primary" disabled={busy !== null} onClick={() => { void pick(s.id); }}>
-                {busy === s.id ? 'Opening the box…' : `Take the ${s.title}`}
-              </button>
-            </article>
-          );
-        })}
-      </div>
+      {!starters && !error && <p className="muted">Loading the decks…</p>}
       {error && <p className="muted">{error}</p>}
+      {groups.map((g) => (
+        <div key={g.set} className="starters__group">
+          <h3 className="starters__product">{g.items[0].product}</h3>
+          <div className="starters__grid">
+            {g.items.map((s) => {
+              const card = db.cards.find((c) => c.id === s.legendCard);
+              return (
+                <article key={s.id} className="starter">
+                  <div className="starter__card">
+                    {card ? <HoloCard card={card} finish="none" width="100%" imageWidth={360} /> : <div className="starter__ph" />}
+                  </div>
+                  <h4>{s.title}</h4>
+                  <p className="muted">{s.blurb}</p>
+                  <p className="muted small">{s.size} cards + 1 {s.booster.toUpperCase()} booster</p>
+                  <button type="button" className="btn btn--primary btn--small" disabled={busy !== null} onClick={() => pick(s)}>
+                    Take this deck
+                  </button>
+                </article>
+              );
+            })}
+          </div>
+        </div>
+      ))}
     </section>
   );
 }

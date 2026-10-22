@@ -13,7 +13,8 @@
     "build:preview": "tsx scripts/build-preview.ts",
     "build-oracle": "tsx scripts/cards/build-oracle.ts",
     "build:server": "tsx scripts/build-server.ts",
-    "start": "node dist-server/main.mjs"
+    "start": "node dist-server/main.mjs",
+    "build-starters": "tsx scripts/cards/build-starters.ts"
   },
   "dependencies": {
     "pg": "^8.23.1",
