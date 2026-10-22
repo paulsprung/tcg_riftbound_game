@@ -33,6 +33,7 @@ import type { GameState } from '../state/types.ts';
 import { startResolve } from '../dsl/interp.ts';
 import { activatable, activateFrame, triggerFrame } from '../play/playAbility.ts';
 import { costOf, limitedPlayFrame, playableCards, playFrame } from '../play/playCard.ts';
+import { cheapestCost } from '../play/cost.ts';
 import { cardTiming } from '../rules/timing.ts';
 import { nextPlayer } from '../rules/board.ts';
 import { nextCombatStep } from '../rules/combat.ts';
@@ -80,7 +81,7 @@ defineLoop((s, x) => {
 export function priorityOptions(s: GameState, window: PriorityFrame['window']): Option[] {
   const p = s.turn.priority!;
   const out: Option[] = playableCards(s, p, window).map((id) => {
-    const c = costOf(s, id);
+    const c = cheapestCost(s, id, p, costOf(s, id));                 // what it could cost now (§4.6 cheap stage)
     const t = cardTiming(s.objects[id].def);
     return { key: K.play(id), refs: [{ obj: id }], meta: { cost: { energy: c.energy, power: c.power, other: [] },
       timing: window === 'main' ? 'default' as const : t.reaction && window === 'chain' ? 'reaction' as const

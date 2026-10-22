@@ -12,7 +12,7 @@ import type { ModeAst, ProgAst, SlotAst } from '../dsl/ast.ts';
 import { K, parseKey, type Option } from '../core/decisions.ts';
 import { answer, ask, type RunCtx, type StepOut } from '../core/frames.ts';
 import { setField } from '../state/mut.ts';
-import type { ChainItem, Frame, GameState, ObjId, PlayerId } from '../state/types.ts';
+import type { ChainItem, Frame, GameState, ObjId, PlayerId, TargetRef } from '../state/types.ts';
 import { slotCandidates, slotMax, slotMin, targetRef } from '../rules/targets.ts';
 
 /** The slots an item chooses: its program's own, then each chosen mode's,
@@ -52,6 +52,12 @@ export interface ChooseOpts {
   onImpossible: () => StepOut;
   /** For the prompt: the card or ability. */
   what: string;
+  /** Whether the cost stays payable with this target chosen (a Deflect
+      target adds [A] [809.1.c]); targets that make it unpayable are not
+      offered (§4.6). */
+  affordable?: (t: TargetRef) => boolean;
+  /** The [A]s a target adds (OptionMeta.deflect). */
+  deflect?: (t: TargetRef) => number;
 }
 
 /**
@@ -89,7 +95,9 @@ export function chooseNext(s: GameState, f: Frame, x: RunCtx, it: ChainItem, pro
   for (const slot of slotsOf(prog, ex.modes)) {
     if (it.play.choices.asPlayed[doneKey(slot.id)] === true) continue;
     const chosen = (ex.targets[slot.id] ?? []).map((t) => (t.k === 'obj' ? t.id : -1));
-    const cands = slotCandidates(s, slot, c).filter((id) => !chosen.includes(id));
+    const others = (slot.distinctFrom ?? []).flatMap((sl) => (ex.targets[sl] ?? []).map((t) => (t.k === 'obj' ? t.id : -1)));
+    const cands = slotCandidates(s, slot, c).filter((id) => !chosen.includes(id) && !others.includes(id)
+      && (!o.affordable || o.affordable(targetRef(s, id))));
     const enough = chosen.length >= slotMin(slot);
     if (chosen.length >= slotMax(slot) || (enough && cands.length === 0)) {
       setField(s, it.play.choices.asPlayed, doneKey(slot.id), true);
@@ -97,7 +105,10 @@ export function chooseNext(s: GameState, f: Frame, x: RunCtx, it: ChainItem, pro
     }
     if (!enough && cands.length === 0) return o.onImpossible();
     if (key === undefined) {
-      const options: Option[] = cands.map((id: ObjId) => ({ key: K.t(id), refs: [{ obj: id }] }));
+      const options: Option[] = cands.map((id: ObjId) => {
+        const d = o.deflect?.(targetRef(s, id)) ?? 0;
+        return { key: K.t(id), refs: [{ obj: id }], ...(d > 0 ? { meta: { deflect: d } } : {}) };
+      });
       if (enough) options.push({ key: K.done });
       return ask(s, f, x, {
         player: it.controller, kind: 'target',

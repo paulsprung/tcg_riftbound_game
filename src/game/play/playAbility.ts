@@ -34,6 +34,7 @@ import { stillLegal } from '../rules/targets.ts';
 import { abilityTiming, timingOk, windowAllows, type Window } from '../rules/timing.ts';
 import { choicesPossible, chooseNext, slotsOf } from './choices.ts';
 import { payStep } from './pay.ts';
+import { deflectFor } from './cost.ts';
 import { resourceCost } from './playCard.ts';
 import { findCard } from '../cards/oracle.ts';
 
@@ -143,7 +144,7 @@ const STEPS: StepTable<AbilityFrame> = [
       return 'continue';
     }
     const r = chooseNext(s, f, x, it, a.effect, {
-      back: backOk(s, f), onBack: () => rollback(s, f, x, 'back'),
+      back: backOk(s, f), onBack: () => rollback(s, f, x, 'back'), deflect: (t) => deflectFor(s, t, it.controller),
       onImpossible: () => (a.kind === 'triggered' ? removeTrigger(s, f, x, 'noTargets') : rollback(s, f, x, 'illegal')),
       what: a.id,
     });
@@ -157,8 +158,12 @@ const STEPS: StepTable<AbilityFrame> = [
     const it = itemOf(s, f);
     const a = abilityOf(s, f);
     const c = a.cost ? resourceCost(a.cost, domainsOf(s, it.source!)) : { energy: 0, power: [] };
-    setField(s, it.play, 'cost', { energy: c.energy, power: c.power, other: a.cost?.exhaustSelf ? ['exhaustSelf'] : [],
-      components: [] });
+    // Deflect: [A] per time it chooses an opponent's Deflect object [809.1.c], [356.2.a.2].
+    const deflect = Object.values(it.play.choices.executions[0].targets).flat()
+      .reduce((n, t) => n + deflectFor(s, t, it.controller), 0);
+    const power = [...c.power, ...Array.from({ length: deflect }, () => ({ k: 'any' as const }))];
+    setField(s, it.play, 'cost', { energy: c.energy, power, other: a.cost && 'exhaustSelf' in a.cost && a.cost.exhaustSelf
+      ? ['exhaustSelf'] : [], components: [] });
     setField(s, it.play, 'step', 3);
     return next(f);
   },

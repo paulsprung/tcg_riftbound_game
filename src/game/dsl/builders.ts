@@ -117,7 +117,8 @@ export const activated = (cost: CostAst, effect: ProgAst, o: { timing?: 'action'
 export const prog = (body: InstrAst[], choose?: SlotAst[]): ProgAst => (choose ? { choose, body } : { body });
 export const mode = (label: string, body: InstrAst[], choose?: SlotAst[]): ModeAst =>
   (choose ? { label, choose, body } : { label, body });
-export const slot = (id: string, sel: SelAst | SelAst[], o: { min?: number; max?: number; harm?: boolean } = {}): SlotAst =>
+export const slot = (id: string, sel: SelAst | SelAst[], o: { min?: number; max?: number; harm?: boolean;
+  distinctFrom?: string[] } = {}): SlotAst =>
   ({ id, sel: Array.isArray(sel) ? sel : [sel], ...o });
 export const unitSel = (o: Omit<SelAst, 'k'> = {}): SelAst => ({ k: 'unit', ...o });
 export const gearSel = (o: Omit<SelAst, 'k'> = {}): SelAst => ({ k: 'gear', ...o });

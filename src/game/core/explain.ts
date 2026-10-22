@@ -10,6 +10,7 @@ import type { ObjId } from '../state/types.ts';
 import { activatedOf, canActivate } from '../play/playAbility.ts';
 import { choicesPossible } from '../play/choices.ts';
 import { costOf, playable, playLocations, resourceCost } from '../play/playCard.ts';
+import { cheapestCost } from '../play/cost.ts';
 import { isType } from '../rules/chars.ts';
 import { paymentPlans } from '../rules/resources.ts';
 import { cardTiming, windowAllows, type Window } from '../rules/timing.ts';
@@ -35,12 +36,14 @@ export function explainUnavailable(v: PlayerView, obj: ObjId): Reason[] {
   const w: Window = prio ?? 'main';
   const fromHand = s.players[me].hand.includes(obj) || s.players[me].champion === obj;
   if (fromHand) {
-    if (!playable(s, obj)) out.push(r('This spell isn\'t playable yet: its text is not implemented.', '§9.1'));
+    if (!playable(s, obj)) out.push(r('This spell isn\'t playable: its text is not implemented.', '§9.1'));
     else if (!windowAllows(w, cardTiming(o.def))) {
       out.push(w === 'chain' ? r('Only cards with [Reaction] can be played on a chain.', '309.1.a')
         : r('Only cards with [Action] or [Reaction] can be played in a showdown.', '308.1.a'));
     }
-    if (paymentPlans(s, me, costOf(s, obj), { limit: 1 }).length === 0) out.push(r('You can\'t pay its cost.', '203.3'));
+    if (paymentPlans(s, me, cheapestCost(s, obj, me, costOf(s, obj)), { limit: 1 }).length === 0) {
+      out.push(r('You can\'t pay its cost.', '203.3'));
+    }
     if (isType(o, 'spell') && !choicesPossible(s, cardDef(o.def)?.spell, { controller: me, source: null })) {
       out.push(r('It has no legal targets now.', '355.16'));
     }

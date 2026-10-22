@@ -1,5 +1,5 @@
 import {
-  effectMight, findCard, TOKENS, type ChainItem, type DefId, type GameObject, type ObjId, type Phase, type PlayerId,
+  findCard, TOKENS, viewKeywords, viewMight, type ChainItem, type DefId, type GameObject, type ObjId, type Phase, type PlayerId,
   type PlayerView, type RunePool, type Step, type Stub, type TokenId,
 } from '../../game/index.ts';
 
@@ -25,8 +25,10 @@ export interface CardSlot {
   rune: boolean;
   /** Damage marked [142]; 0 off the board. */
   damage: number;
-  /** A unit's Might: printed, buffs, "+N this turn" effects; null for others. */
+  /** A unit's Might after the layers (statics, buffs, effects); null for others. */
   might: number | null;
+  /** Its keywords with values, on the board (Tank, Shield 2, Deflect …). */
+  keywords?: Record<string, number>;
   /** Stunned this turn [424]. */
   stunned?: boolean;
   /** In a combat [466.2.c.3]. */
@@ -119,11 +121,14 @@ export function slotOf(v: PlayerView, id: ObjId, isRune: (def: DefId) => boolean
   const token = Object.hasOwn(TOKENS, o.def) ? TOKENS[o.def as TokenId] : undefined;
   const c = findCard(o.def);
   const unit = token ? token.type === 'unit' : c?.types.includes('unit') ?? false;
+  const onBoard = o.zone.z === 'base' || o.zone.z === 'bf';
+  const kws = onBoard ? viewKeywords(v, id) as Record<string, number> : {};
   return {
     id, def: o.def, printing: o.printing, owner: o.owner, exhausted: o.exhausted, rune: isRune(o.def),
     damage: o.damage.reduce((n, d) => n + d.amount, 0),
-    might: unit ? (token?.might ?? c?.might ?? 0) + o.buffs + effectMight(v.effects, id) : null,
+    might: unit ? (onBoard ? viewMight(v, id) ?? 0 : token?.might ?? c?.might ?? 0) : null,
     designation: o.designation, ...(o.stunned ? { stunned: true } : {}),
+    ...(Object.keys(kws).length > 0 ? { keywords: kws } : {}),
   };
 }
 
@@ -175,7 +180,11 @@ export function boardOf(v: PlayerView, isRune: (def: DefId) => boolean = () => f
     chain: v.chain.filter((it) => !it.isAdd).map((it): ChainEntry => {
       const id = it.obj ?? it.source;
       const o = id === undefined ? undefined : v.objects[id];
-      const def = o && 'def' in o ? o.def : it.ability ? it.ability.slice(0, it.ability.indexOf('#')) : null;
+      const delayed = it.ability?.startsWith('eff:') ? v.delayed.find((d) => `eff:${d.id}#0` === it.ability) : undefined;
+      const from = delayed?.info.from;
+      const def = o && 'def' in o ? o.def : typeof from === 'string' ? from
+        : it.ability && !it.ability.startsWith('eff:') ? it.ability.slice(0, it.ability.indexOf('#'))
+          : it.sourceLki?.def ?? null;
       const what = it.kind === 'triggered' ? 'trigger' : it.kind === 'activated' ? 'ability' : it.kind === 'token' ? 'token'
         : (def && findCard(def)?.types[0]) ?? 'card';
       return { item: it.id, def, kind: it.kind, what, ability: it.ability ?? null, controller: it.controller, status: it.status,

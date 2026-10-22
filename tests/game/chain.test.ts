@@ -29,8 +29,8 @@ describe('the chain: finalize, priority, resolve [337–340]', () => {
     const g = start(21);
     runes(g, 0, ready('mind', 10));
     runes(g, 1, ready('mind', 7));
-    const theirs = put(g, 'hunting-dog', 1, base(1));
-    const mine = put(g, 'hunting-dog', 0, base(0));
+    const theirs = put(g, 'shipyard-skulker', 1, base(1));
+    const mine = put(g, 'shipyard-skulker', 0, base(0));
     const nova = inHand(g, 'supernova', 0);
     const moon = inHand(g, 'moonlight-affliction', 1);
     reask(g);
@@ -70,7 +70,7 @@ describe('the chain: finalize, priority, resolve [337–340]', () => {
   it('[359.3.e.6–7] [359.3.e.5] a target that died before resolution: that instruction is ignored, the rest executes', () => {
     const g = start(22);
     runes(g, 0, ready('mind', 17));
-    const x = put(g, 'hunting-dog', 1, base(1), { damage: 1 });
+    const x = put(g, 'shipyard-skulker', 1, base(1), { damage: 1 });
     const nova = inHand(g, 'supernova', 0);
     const moon = inHand(g, 'moonlight-affliction', 0);
     reask(g);
@@ -90,7 +90,7 @@ describe('the chain: finalize, priority, resolve [337–340]', () => {
   it('[358.4] [309.1.a] only Reactions join a chain; default-timing cards wait for an Open state', () => {
     const g = start(23);
     runes(g, 0, ready('mind', 20));
-    const x = put(g, 'hunting-dog', 1, base(1));
+    const x = put(g, 'shipyard-skulker', 1, base(1));
     const nova = inHand(g, 'supernova', 0);
     const nova2 = inHand(g, 'supernova', 0);
     const note = inHand(g, 'high-note', 0);
@@ -106,8 +106,8 @@ describe('the chain: finalize, priority, resolve [337–340]', () => {
   it('[358.5] back on a target choice undoes the spell exactly', () => {
     const g = start(24);
     runes(g, 0, ready('mind', 10));
-    const x = put(g, 'hunting-dog', 1, base(1));
-    const y = put(g, 'hunting-dog', 0, base(0));
+    const x = put(g, 'shipyard-skulker', 1, base(1));
+    const y = put(g, 'shipyard-skulker', 0, base(0));
     const nova = inHand(g, 'supernova', 0);
     reask(g);
     act(g, `play:${nova}`);
@@ -135,8 +135,8 @@ describe('showdowns: Focus and Reactions [345–348]', () => {
   it('[308.1.a] [340.2.a] [348] a Reaction in a showdown; when its chain empties, Focus passes on', () => {
     const g = start(26);
     runes(g, 0, ready('mind', 6));
-    const mover = put(g, 'hunting-dog', 0, base(0));
-    const x = put(g, 'hunting-dog', 1, base(1));
+    const mover = put(g, 'shipyard-skulker', 0, base(0));
+    const x = put(g, 'shipyard-skulker', 1, base(1));
     const note = inHand(g, 'high-note', 0);
     const nova = inHand(g, 'supernova', 0);
     reask(g);
@@ -159,8 +159,8 @@ describe('showdowns: Focus and Reactions [345–348]', () => {
   it('[348] playing in a showdown resets the Focus passes; [340.2.a] Focus moves on after the spell', () => {
     const g = start(27);
     runes(g, 0, ready('mind', 6));
-    const mover = put(g, 'hunting-dog', 0, base(0));
-    const x = put(g, 'hunting-dog', 1, base(1));
+    const mover = put(g, 'shipyard-skulker', 0, base(0));
+    const x = put(g, 'shipyard-skulker', 1, base(1));
     const note = inHand(g, 'high-note', 0);
     reask(g);
     act(g, 'move'); if (keys(g).includes(`u:${mover}`)) { act(g, `u:${mover}`); act(g, 'done'); }
@@ -172,7 +172,7 @@ describe('showdowns: Focus and Reactions [345–348]', () => {
     expect(g.s.turn.chainOrigin).toBe('card');
     act(g, 'pass'); act(g, 'pass');                                  // High Note resolves
     const exhausted = [...g.s.players[0].base, ...g.s.bfs.flatMap((b) => b.here)]
-      .filter((id) => g.s.objects[id].controller === 0 && g.s.objects[id].exhausted && g.s.objects[id].def === 'hunting-dog');
+      .filter((id) => g.s.objects[id].controller === 0 && g.s.objects[id].exhausted && g.s.objects[id].def === 'shipyard-skulker');
     expect(mightOf(g.s, x)).toBe(3 - exhausted.length);              // X read at resolution [479.4.b]
     expect(g.s.chain).toEqual([]);
     expect(g.s.turn.focus).toBe(1);                                  // [340.2.a]
@@ -185,7 +185,7 @@ describe('showdowns: Focus and Reactions [345–348]', () => {
   it('[317.2.c] "this turn" Might effects expire in the ending cleanup', () => {
     const g = start(28);
     runes(g, 0, ready('mind', 7));
-    const x = put(g, 'hunting-dog', 1, base(1));
+    const x = put(g, 'shipyard-skulker', 1, base(1));
     const moon = inHand(g, 'moonlight-affliction', 0);
     reask(g);
     cast(g, moon, x);

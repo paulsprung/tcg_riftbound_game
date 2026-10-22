@@ -13,7 +13,7 @@
 
 export { createGame } from './core/create.ts';
 export { choose, concede } from './core/run.ts';
-export { knows, observe, viewFor } from './core/view.ts';
+export { knows, observe, viewFor, viewKeywords, viewMight } from './core/view.ts';
 export { cloneState, hashState } from './state/clone.ts';
 export { replay, RecordMismatchError } from './record.ts';
 

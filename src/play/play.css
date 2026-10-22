@@ -234,6 +234,11 @@ ul.play__error { padding-left: 30px; }
   background: rgba(10, 8, 18, .92); border: 1px solid var(--line); font: 700 11px/1.4 var(--font-ui); text-align: center;
 }
 .tcard__might.is-hurt { border-color: #e0475f; color: #ffb3bb; }
+.tcard__kw {
+  position: absolute; left: -4px; bottom: -6px; max-width: calc(100% + 8px); padding: 0 5px; border-radius: 99px;
+  background: rgba(10, 8, 18, .92); border: 1px solid var(--line); font: 600 9px/1.5 var(--font-ui); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
 .tcard__role {
   position: absolute; left: 50%; top: -9px; translate: -50% 0; padding: 0 6px; border-radius: 99px;
   font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;

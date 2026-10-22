@@ -100,6 +100,23 @@ export function promptText(d: Pick<Decision, 'kind' | 'prompt'>, names: Names = 
     case 'assignNext': return `Assign your ${d.prompt.left} combat damage: choose the next enemy unit (lethal damage, in order).`;
     case 'assignExcess': return `Every enemy unit has lethal damage: place the remaining ${d.prompt.left}.`;
     case 'assignTier': return 'This unit has Tank and Backline: which counts for your assignment?';
+    case 'showOff': return `${names(card)}: Show Off? Reveal a card from your hand or pick a friendly card on the board.`;
+    case 'optionalCost': {
+      const ab = defOf(d.prompt.ability);
+      return ab === card ? `${names(card)}: pay its optional additional cost (it then costs less)?`
+        : `${names(card)}: use ${names(ab)}'s additional cost to make it cheaper?`;
+    }
+    case 'costObject': {
+      const n = typeof d.prompt.n === 'number' ? d.prompt.n : 1;
+      const chosen = typeof d.prompt.chosen === 'number' ? d.prompt.chosen : 0;
+      const verb = d.prompt.what === 'kill' ? 'kill' : 'exhaust';
+      return `${names(card)}: choose ${n > 1 ? `${n - chosen} more units` : 'a unit'} to ${verb} as part of its cost.`;
+    }
+    case 'applyReplacement': {
+      const tok = typeof d.prompt.token === 'string' ? names(d.prompt.token) : 'a token';
+      const instead = typeof d.prompt.with === 'string' ? names(d.prompt.with) : 'another token';
+      return `${names(defOf(d.prompt.ability))}: play a ${instead} instead of the ${tok}?`;
+    }
     default: return `Choose (${d.kind})`;
   }
 }
@@ -123,7 +140,12 @@ function buttonLabel(d: Decision, key: string, draft: readonly string[], names: 
   if (k?.head === 'next') return `${name} first`;
   if (k?.head === 'keep') return `Keep ${name} on top`;
   if (k?.head === 'recycle') return `Recycle ${name}`;
+  if (k?.head === 'pick' && d.kind === 'showOff') return `Show off ${name}`;
+  if (k?.head === 'pick' && d.kind === 'costObject') return `${d.prompt.what === 'kill' ? 'Kill' : 'Exhaust'} ${name}`;
   if (k?.head === 'pick') return d.prompt.t === 'discard' ? `Discard ${name}` : `Draw ${name}`;
+  if (d.kind === 'showOff' && key === 'no') return 'Don\'t show off';
+  if (d.kind === 'optionalCost') return key === 'yes' ? 'Pay it' : 'Don\'t';
+  if (d.kind === 'applyReplacement') return key === 'yes' ? 'Instead' : 'Keep it';
   if (k?.head === 't') return name;
   return META_LABEL[key] ?? key;
 }

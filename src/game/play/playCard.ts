@@ -13,12 +13,18 @@
  *          (putOnChain), and the master loop's F row starts this frame at
  *          step 2 once the instructing item has resolved [354.3]
  *   S2     a limited play: snapshot as step 2 begins (Spec D §8.5)
- *   2      choices [355]: a unit's location (its controller's base or a
- *          battlefield they control [355.2.a]), Deploy gear's battlefield
- *          [830.1.b], a spell's modes [355.3] and targets [355.5]
- *   3      the total cost [356]: the printed cost, or what the instructing
- *          effect says ("for [Y]", tokens: nothing [185.3.a.1])
- *   4      payment [357] (play/pay.ts); declining undoes the play [445.2.a]
+ *   2      choices [355]: Show Off [832.1.c] and optional additional costs
+ *          [355.1.a] (play/cost.ts), a unit's location (its controller's
+ *          base or a battlefield they control [355.2.a]), Deploy gear's
+ *          battlefield [830.1.b], a token's replacements once its location
+ *          is known (abilities/replacements.ts) [370.1.c], a spell's modes
+ *          [355.3] and targets [355.5]
+ *   3      the total cost [356] (play/cost.ts): the printed cost, or what
+ *          the instructing effect says ("for [Y]", tokens: nothing
+ *          [185.3.a.1]), Deflect, the additional costs and the discounts
+ *   4      payment [357] (play/pay.ts): the objects of non-standard costs,
+ *          Energy and Power, then the costs' actions [357.2]; declining
+ *          undoes the play [445.2.a]
  *   5      legality [358]: choices still legal, timing [358.4]
  *   6      finalize [359]: a permanent leaves the chain at once and enters
  *          the board [337.2], [359.2] (a unit exhausted at its location, gear
@@ -35,19 +41,26 @@ import { cardDef } from '../cards/registry.ts';
 import { findCard } from '../cards/oracle.ts';
 import { K, parseKey, type Option } from '../core/decisions.ts';
 import { emit, emitZone, knowers } from '../core/events.ts';
-import { answer, ask, awaitTasks, defineSteps, next, type FrameOf, type RunCtx, type StepTable } from '../core/frames.ts';
-import type { CostAst } from '../dsl/ast.ts';
+import { allMask } from '../state/ids.ts';
+import { tokenReplacements } from '../abilities/replacements.ts';
+import {
+  answer, ask, awaitTasks, defineSteps, next, type FrameOf, type RunCtx, type StepOut, type StepTable,
+} from '../core/frames.ts';
+import type { CostAst, NonStdCostAst } from '../dsl/ast.ts';
 import {
   append, createObject, deleteObject, mint, moveObject, restoreSnapshot, setField, setSnap2, snapshotState,
 } from '../state/mut.ts';
 import { Z } from '../state/zones.ts';
 import type {
-  ChainItem, Domain, Frame, GameState, ItemId, Json, Loc, ObjId, PlayedRecord, PlayerId, PowerReq, TokenId,
+  ChainItem, Domain, Frame, GameState, ItemId, Json, Loc, ObjId, PlayedRecord, PlayerId, PowerReq, TargetRef, TokenId,
 } from '../state/types.ts';
 import { fire } from '../abilities/triggers.ts';
-import { applyContested } from '../rules/actions.ts';
+import { applyContested, exhaust, kill } from '../rules/actions.ts';
 import { addItem, finalizeItem, itemById, playContext, removeItem } from '../rules/chain.ts';
-import { energyCostOf, hasKeyword, isType, typesOf } from '../rules/chars.ts';
+import { energyCostOf, hasKeyword, isType, snapshotOf, typesOf } from '../rules/chars.ts';
+import {
+  cardShowOff, cheapestCost, costCandidates, costOffers, deflectFor, optionalOffers, showOffCandidates, totalCost,
+} from './cost.ts';
 import { paymentPlans, type ResourceCost } from '../rules/resources.ts';
 import { stillLegal } from '../rules/targets.ts';
 import { cardTiming, timingOk, windowAllows, type Window } from '../rules/timing.ts';
@@ -140,7 +153,7 @@ export function playableCards(s: GameState, p: PlayerId, w: Window = 'main'): Ob
   return from.filter((id) => {
     const o = s.objects[id];
     if (!playable(s, id) || !windowAllows(w, cardTiming(o.def))) return false;
-    if (paymentPlans(s, p, costOf(s, id), { limit: 1 }).length === 0) return false;
+    if (paymentPlans(s, p, cheapestCost(s, id, p, costOf(s, id)), { limit: 1 }).length === 0) return false;
     if (isType(o, 'spell')) return choicesPossible(s, cardDef(o.def)!.spell, { controller: p, source: null });
     return playLocations(s, id, p).length > 0;
   });
@@ -235,6 +248,168 @@ function rollbackLimited(s: GameState, f: PlayFrame, x: RunCtx, reason: 'back' |
 
 const spellProg = (s: GameState, it: ChainItem) => cardDef(s.objects[it.obj!].def)?.spell;
 
+
+// ---- step 2 and 4 helpers: Show Off, optional costs, replacements, cost objects ----
+
+/** The Energy and Power base cost of the item's card [356.1]. */
+const baseCost = (s: GameState, it: ChainItem): ResourceCost => overridesOf(it).cost ?? costOf(s, it.obj!);
+
+const chosenOptional = (it: ChainItem) => Object.entries(it.play.choices.optionalCosts).filter(([, v]) => v).map(([k]) => k);
+
+const chosenTargets = (it: ChainItem): TargetRef[] => Object.values(it.play.choices.executions[0].targets).flat();
+
+/** The total cost of the item as chosen so far [356]. */
+function playCost(s: GameState, it: ChainItem, extra: TargetRef[] = []): ResourceCost {
+  const o = s.objects[it.obj!];
+  return totalCost(s, { def: o.def, types: typesOf(o), p: it.controller, base: baseCost(s, it), chosen: chosenOptional(it),
+    targets: [...chosenTargets(it), ...extra] });
+}
+
+/** Whether choosing this target still leaves a cost the player can pay:
+    a Deflect target adds [A] [809.1.c] (§4.6: options that can finish). */
+function affordable(s: GameState, it: ChainItem, t: TargetRef): boolean {
+  if (deflectFor(s, t, it.controller) === 0) return true;
+  return paymentPlans(s, it.controller, playCost(s, it, [t]), { limit: 1 }).length > 0;
+}
+
+/** [832.1.c]: reveal a card from hand or pick a friendly one, or neither.
+    Always asked, so that whether it is asked tells nothing about the hand. */
+function showOffStep(s: GameState, f: PlayFrame, x: RunCtx, it: ChainItem) {
+  const o = s.objects[f.obj];
+  const key = answer(f);
+  if (key === K.back) return rollback(s, f, x, 'back');
+  const cands = showOffCandidates(s, it);
+  if (key === undefined) {
+    const options: Option[] = [...cands.map((c) => ({ key: K.pick(c.obj), refs: [{ obj: c.obj }] })), { key: K.no }];
+    return ask(s, f, x, {
+      player: it.controller, kind: 'showOff', prompt: { t: 'showOff', card: o.def }, ctx: { item: it.id, source: f.obj,
+        rule: '832.1.c' }, options, privateOptions: true, back: backOk(s, f), mustAsk: true,
+    });
+  }
+  if (key !== K.no) {
+    const id = parseKey(key)!.obj!;
+    const c = cands.find((z) => z.obj === id)!;
+    setField(s, it.play.facts, 'showOff', [{ source: `${o.def}#kw:showOff`, picks: [snapshotOf(s, id)], fromHand: [c.fromHand] }]);
+    if (c.fromHand) {                                                // revealed from hand; a board pick is not [832]
+      setField(s, s.objects[id], 'knownBy', allMask(s.players.length));
+      emit(s, x, { k: 'reveal', objs: [id], to: allMask(s.players.length), rule: '832.1.c' });
+      f.revealed = true;                                             // nobody can unsee it: no more back (§4.4)
+    }
+  }
+  setField(s, it.play.choices.asPlayed, 'showOff', true);
+  return 'continue';
+}
+
+/** [355.1.a]: whether to pay an optional additional cost. When only one
+    answer leaves a cost the player can pay, it is taken (§4.6). */
+function optionalCostStep(s: GameState, f: PlayFrame, x: RunCtx, it: ChainItem, off: { key: string; a: { id: string } }) {
+  const key = answer(f);
+  if (key === K.back) return rollback(s, f, x, 'back');
+  if (key === undefined) {
+    const o = s.objects[f.obj];
+    const can = (yes: boolean) => paymentPlans(s, it.controller, totalCost(s, { def: o.def, types: typesOf(o), p: it.controller,
+      base: baseCost(s, it), chosen: [...chosenOptional(it), ...(yes ? [off.key] : [])] }), { limit: 1 }).length > 0;
+    const yes = can(true), no = can(false);
+    if (yes !== no) {
+      setField(s, it.play.choices.optionalCosts, off.key, yes);
+      return 'continue';
+    }
+    return ask(s, f, x, {
+      player: it.controller, kind: 'optionalCost', prompt: { t: 'optionalCost', card: o.def, ability: off.a.id },
+      ctx: { item: it.id, source: f.obj, rule: '355.1.a' }, options: [{ key: K.yes }, { key: K.no }], privateOptions: false,
+      back: backOk(s, f),
+    });
+  }
+  setField(s, it.play.choices.optionalCosts, off.key, key === K.yes);
+  return 'continue';
+}
+
+/** [370.1.c], [371.2]: a replacement of the token's play, once its location
+    is known. Applying it replaces the token on the chain by the other one
+    at the same location; applied or declined, it is in the lineage now
+    [370.2], [371.2.b]. */
+function replacementStep(s: GameState, f: PlayFrame, x: RunCtx, it: ChainItem) {
+  const offs = tokenReplacements(s, it);
+  if (offs.length === 0) {
+    setField(s, it.play.choices.asPlayed, 'replaced', true);
+    return 'continue';
+  }
+  const off = offs[0];
+  const who = s.objects[off.source].controller!;
+  const key = off.a.may ? answer(f) : K.yes;
+  if (key === undefined) {
+    return ask(s, f, x, {
+      player: who, kind: 'applyReplacement', prompt: { t: 'applyReplacement', ability: off.a.id, token: s.objects[f.obj].def,
+        with: off.a.instead.playToken }, ctx: { item: it.id, source: off.source, rule: '371.2' },
+      options: [{ key: K.yes }, { key: K.no }], privateOptions: false,
+    });
+  }
+  const lineage = [...((it.play.choices.asPlayed.lineage ?? []) as string[]), off.a.id];
+  setField(s, it.play.choices.asPlayed, 'lineage', lineage);
+  if (key !== K.yes) return 'continue';
+  const old = s.objects[f.obj];
+  const zone = structuredClone(old.zone);
+  deleteObject(s, old.id);
+  const obj = createObject(s, { def: off.a.instead.playToken, printing: null, owner: old.owner, zone, token: true,
+    controller: old.controller }).id;
+  setField(s, it, 'obj', obj);
+  f.obj = obj;
+  emit(s, x, { k: 'replaced', source: off.source, event: `playToken:${old.def}`, rule: '369.1' });
+  return 'continue';
+}
+
+/** A non-standard cost as step 3 recorded it in TotalCost.other. */
+interface NonStd { key: string; src: ObjId | null; pay: NonStdCostAst }
+
+/** [357.2]: the objects a non-standard cost exhausts or kills, chosen by
+    the player as step 4 begins (Spec D OQ-5), one per decision. */
+function costObjectStep(s: GameState, f: PlayFrame, x: RunCtx, it: ChainItem, c: NonStd): 'complete' | StepOut {
+  for (const what of ['exhaust', 'kill'] as const) {
+    const need = c.pay[what];
+    if (!need) continue;
+    const slot = `cost:${c.key}:${what}`;
+    const picked = (it.play.choices.asPlayed[slot] ?? []) as number[];
+    if (picked.length >= need.n) continue;
+    const cands = costCandidates(s, need.sel, it.controller, c.src, what === 'exhaust').filter((id) => !picked.includes(id));
+    if (picked.length + cands.length < need.n) return rollback(s, f, x, 'illegal');   // [203.3]
+    if (picked.length + cands.length === need.n) {                   // no choice to make
+      setField(s, it.play.choices.asPlayed, slot, [...picked, ...cands]);
+      return 'continue';
+    }
+    const key = answer(f);
+    if (key === K.back) return rollback(s, f, x, 'back');
+    if (key === undefined) {
+      return ask(s, f, x, {
+        player: it.controller, kind: 'costObject', prompt: { t: 'costObject', card: s.objects[f.obj].def, what, n: need.n,
+          chosen: picked.length }, ctx: { item: it.id, source: f.obj, rule: '357.2' },
+        options: cands.map((id) => ({ key: K.pick(id), refs: [{ obj: id }] })), privateOptions: false, back: backOk(s, f),
+        batch: `cost:item${it.id}:${what}`,
+      });
+    }
+    setField(s, it.play.choices.asPlayed, slot, [...picked, parseKey(key)!.obj!]);
+    return 'continue';
+  }
+  return 'complete';
+}
+
+/** Performs a non-standard cost's actions [357.2]: one Exhaust action on
+    the source and the chosen objects [415.4], one Kill action. False when
+    it can no longer be paid in full [203.3]. */
+function payNonStd(s: GameState, x: RunCtx, it: ChainItem, c: NonStd): boolean {
+  const p = it.controller;
+  const ex = (it.play.choices.asPlayed[`cost:${c.key}:exhaust`] ?? []) as number[];
+  const kl = (it.play.choices.asPlayed[`cost:${c.key}:kill`] ?? []) as number[];
+  const toExhaust = [...(c.pay.exhaustSelf && c.src !== null ? [c.src] : []), ...ex];
+  if (toExhaust.some((id) => !s.objects[id] || s.objects[id].exhausted)) return false;
+  if (kl.some((id) => !s.objects[id] || !['base', 'bf'].includes(s.objects[id].zone.z))) return false;
+  const snaps = [...toExhaust, ...kl].map((id) => snapshotOf(s, id));
+  if (toExhaust.length > 0) exhaust(s, x, p, toExhaust, '357.2', true);
+  if (kl.length > 0) kill(s, x, kl, { rule: '357.2', inCombat: () => false });
+  append(s, it.play.paid, { what: c.key, replaced: false, objs: snaps, energy: 0, power: 0 });
+  setField(s, it.play.facts.costObjects, c.key, snaps);
+  return true;
+}
+
 const STEPS: StepTable<PlayFrame> = [
   // Step 1 [354], with S0 taken first (fix F1).
   (s, f, x) => {
@@ -264,11 +439,16 @@ const STEPS: StepTable<PlayFrame> = [
     return next(f);
   },
 
-  // Step 2 [355]: location, then modes and targets.
+  // Step 2 [355]: Show Off and optional costs [355.1], location, a token's
+  // replacements, then modes and targets.
   (s, f, x) => {
     const it = itemOf(s, f);
     const o = s.objects[f.obj];
     const spell = isType(o, 'spell');
+    const asPlayed = it.play.choices.asPlayed;
+    if (cardShowOff(o.def) && asPlayed.showOff !== true) return showOffStep(s, f, x, it);
+    const open = optionalOffers(s, o.def, typesOf(o), it.controller).filter((c) => it.play.choices.optionalCosts[c.key] === undefined);
+    if (open.length > 0) return optionalCostStep(s, f, x, it, open[0]);
     if (!spell && !it.play.choices.location) {
       const fixed = overridesOf(it).at;
       if (fixed) {
@@ -291,10 +471,11 @@ const STEPS: StepTable<PlayFrame> = [
       setField(s, it.play.choices, 'location', loc);
       return 'continue';
     }
+    if (it.kind === 'token' && asPlayed.replaced !== true) return replacementStep(s, f, x, it);
     if (spell) {
       const r = chooseNext(s, f, x, it, spellProg(s, it), {
         back: backOk(s, f), onBack: () => rollback(s, f, x, 'back'), onImpossible: () => rollback(s, f, x, 'illegal'),
-        what: o.def,
+        what: o.def, affordable: (t) => affordable(s, it, t), deflect: (t) => deflectFor(s, t, it.controller),
       });
       if (r !== 'complete') return r;
     }
@@ -305,15 +486,26 @@ const STEPS: StepTable<PlayFrame> = [
   // Step 3 [356]: the total cost.
   (s, f) => {
     const it = itemOf(s, f);
-    const c = overridesOf(it).cost ?? costOf(s, f.obj);
-    setField(s, it.play, 'cost', { energy: c.energy, power: c.power, other: [], components: [] });
+    const o = s.objects[f.obj];
+    const c = playCost(s, it);
+    const chosen = chosenOptional(it);
+    const other = costOffers(s, o.def, typesOf(o), it.controller)
+      .filter((off) => off.a.pay && (!off.a.optional || chosen.includes(off.key)))
+      .map((off) => ({ key: off.key, src: off.src, pay: off.a.pay! }) as unknown as Json);
+    setField(s, it.play, 'cost', { energy: c.energy, power: c.power, other, components: [] });
     setField(s, it.play, 'step', 3);
     return next(f);
   },
 
-  // Step 4 [357]: payment, or decline [445.2.a].
+  // Step 4 [357]: the objects of non-standard costs, then Energy and Power,
+  // or decline [445.2.a]; then the non-standard costs' actions [357.2].
   (s, f, x) => {
     const it = itemOf(s, f);
+    const other = (it.play.cost!.other ?? []) as unknown as NonStd[];
+    for (const c of other) {
+      const r = costObjectStep(s, f, x, it, c);
+      if (r !== 'complete') return r;
+    }
     const cost: ResourceCost = { energy: it.play.cost!.energy, power: it.play.cost!.power };
     const r = payStep(s, f, x, {
       payer: it.controller, cost, what: s.objects[f.obj].def, item: it.id, source: f.obj, back: backOk(s, f),
@@ -327,6 +519,8 @@ const STEPS: StepTable<PlayFrame> = [
       setField(s, it.play.facts, 'powerSpent', r.power);
       setField(s, s.log.powerSpent, it.controller, s.log.powerSpent[it.controller] + r.power);
     }
+    for (const c of other) if (!payNonStd(s, x, it, c)) return rollback(s, f, x, 'illegal');   // impossible now [203.3]
+    for (const key of chosenOptional(it)) append(s, it.play.facts.paidOptional, key);   // decided = paid [356.4.f.1]
     return next(f);
   },
 

@@ -9,7 +9,7 @@ import {
 } from '../../src/game/index.ts';
 import { stableJson } from '../../src/game/state/clone.ts';
 import { checkInvariants, checkViews } from '../../src/game/state/invariants.ts';
-import { append } from '../../src/game/state/mut.ts';
+import { append, pushFrame } from '../../src/game/state/mut.ts';
 import { duel, playOut, positions, randomPicker, scripted, type PlayedOut } from './helpers/play.ts';
 import { fold, perturb, shapeOf, tableOf } from './helpers/views.ts';
 
@@ -79,9 +79,18 @@ describe('§14.5 #1: views show identities only where the viewer knows them', ()
 
   it('refuses states whose ObjId paths it doesn\'t know yet, rather than leak through them', () => {
     const s = createGame(duel(3)).state;
-    append(s, s.delayed, { id: 1, controller: 0, createdBy: null, createdTurn: 0, ability: null,
-      window: { at: 'endOfTurn' }, info: {} });
+    pushFrame(s, { f: 'hide', by: 0, obj: null, bf: null, pc: 0, snap: null });
     expect(() => viewFor(s, 0)).toThrow(NotImplementedError);
+  });
+
+  it('[391] carries delayed abilities: their info is aliased like any other ObjId path', () => {
+    const s = createGame(duel(3)).state;
+    const hidden = s.players[1].deck[0];
+    append(s, s.delayed, { id: 1, controller: 0, createdBy: null, createdTurn: 0, ability: null,
+      window: { at: 'endOfTurn' }, info: { objs: [hidden] } });
+    const v = viewFor(s, 0);
+    expect(v.delayed).toHaveLength(1);
+    expect((v.delayed[0].info as { objs: number[] }).objs[0]).toBeLessThan(0);   // an alias, never the real id
   });
 });
 

@@ -15,7 +15,9 @@ import { SERAPHINE } from './helpers/decks.ts';
  *
  * Since M1.2 the games cast spells (on the chain, as Reactions in
  * showdowns), place and resolve triggers, play tokens and make limited
- * plays; the tally at the end checks that they did. The 200 games run in
+ * plays; since M1.3 they show off, pay non-standard costs, replace token
+ * plays, trigger delayed abilities and Deathknells and grant keywords. The
+ * tally at the end checks that they did. The 200 games run in
  * four batches so no single test holds the worker for minutes.
  */
 
@@ -39,6 +41,7 @@ function playRandom(seed: number): Played {
     const key = real[Math.floor(step.value * real.length)].key;
     answers.push({ d: d.id, k: key, by: d.player });
     if (d.kind === 'priority' && key.startsWith('play:') && d.prompt.window !== 'main') count('reaction');
+    if (d.kind === 'showOff' && key !== 'no') count('showOff');
     const out = choose(s, { decision: d.id, key }, { inPlace: true });
     s = out.state;
     for (const e of out.events) {
@@ -47,6 +50,11 @@ function playRandom(seed: number): Played {
       if (e.k === 'outcome') count('resolvedInstruction');
       if (e.k === 'rollback') count('rollback');
       if (e.k === 'played' && e.def === 'meticulous-restorationist') count('fromTrash');
+      if ((e.k === 'exhaust' || e.k === 'kill') && e.rule === '357.2') count('nonStdCost');
+      if (e.k === 'replaced') count('replaced');
+      if (e.k === 'chainPush' && e.kind === 'triggered' && e.source === undefined) count('delayed');
+      if (e.k === 'played' && e.def === 'bird') count('deathknell');
+      if (e.k === 'keywordsChanged') count('grant');
     }
     const n = answers.length;
     const fails = checkInvariants(s, { json: n % 20 === 0 });
@@ -88,8 +96,10 @@ describe('§14.7 fuzzing: random Seraphine mirrors', () => {
     expect(winners[1]).toBeGreaterThan(GAMES / 5);
     expect(turns / GAMES).toBeLessThan(60);
     // The games went through the chain's machinery (M1.2).
-    for (const k of ['reaction', 'trigger', 'token', 'resolvedInstruction', 'rollback', 'fromTrash']) {
+    for (const k of ['reaction', 'trigger', 'token', 'resolvedInstruction', 'rollback', 'fromTrash', 'showOff', 'nonStdCost',
+      'replaced', 'delayed', 'deathknell', 'grant']) {
       expect(seen[k] ?? 0, k).toBeGreaterThan(GAMES / 10);
     }
+    console.log('fuzz tally', JSON.stringify(seen));
   });
 });

@@ -63,10 +63,10 @@ describe('the chain on the table', () => {
     const g = start(53);
     runes(g, 0, []);
     const nova = inHand(g, 'supernova');
-    const display = inHand(g, 'rousing-display');
+    const seeker = inHand(g, 'void-seeker');                         // a spell of another deck, not defined
     reask(g);
     const v = viewFor(g.s, 0);
     expect(explainUnavailable(v, nova).map((r) => r.rule)).toContain('203.3');
-    expect(explainUnavailable(v, display).map((r) => r.rule)).toContain('§9.1');   // its text isn't in yet
+    expect(explainUnavailable(v, seeker).map((r) => r.rule)).toContain('§9.1');   // its text isn't in
   });
 });

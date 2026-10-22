@@ -25,7 +25,6 @@
  */
 import { abilitiesOf, cardDef } from '../cards/registry.ts';
 import type { CostAbilityAst, NonStdCostAst, SelAst } from '../dsl/ast.ts';
-import { isBoard } from '../state/zones.ts';
 import type { CardType, ChainItem, GameState, ObjId, PlayerId, PowerReq, TargetRef } from '../state/types.ts';
 import { energyCostOf, isType, keywordOf, typesOf } from '../rules/chars.ts';
 import type { ResourceCost } from '../rules/resources.ts';
@@ -42,8 +41,10 @@ export interface CostOffer { key: string; a: CostAbilityAst; src: ObjId | null }
 export function costOffers(s: GameState, def: string, types: CardType[], p: PlayerId): CostOffer[] {
   const out: CostOffer[] = [];
   for (const a of abilitiesOf(def)) if (a.kind === 'cost' && !a.grant) out.push({ key: a.id, a, src: null });
-  for (const o of Object.values(s.objects)) {
-    if (o.controller !== p || !isBoard(o.zone.z) || o.zone.z === 'facedown') continue;
+  const board = [...s.players.flatMap((pl) => [...pl.legend, ...pl.base]), ...s.bfs.flatMap((b) => [b.obj, ...b.here])];
+  for (const id of board) {
+    const o = s.objects[id];
+    if (!o || o.controller !== p) continue;
     for (const a of abilitiesOf(o.def)) {
       if (a.kind !== 'cost' || !a.grant || !a.grant.types.some((t) => types.includes(t))) continue;
       out.push({ key: `${a.id}@${o.id}`, a, src: o.id });

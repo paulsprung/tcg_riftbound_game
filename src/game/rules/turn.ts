@@ -33,6 +33,7 @@ import type { GameState, Phase, PhaseTaskId, Step, Task } from '../state/types.t
 import { channelRunes, drawCards, emptyPools, ready } from './actions.ts';
 import { channelCount, drawCount, turnOrder } from './defaults.ts';
 import { score } from './scoring.ts';
+import { fire } from '../abilities/triggers.ts';
 import { defineTask, enqueue } from './tasks.ts';
 
 type X = { present: boolean };
@@ -138,13 +139,13 @@ defineTask('awaken.readyAll', [(s, _f, x) => {
   return 'done';
 }]);
 
-/** [315.2.a]: "at the start of your Beginning Phase" effects. Card
-    abilities of this kind arrive with the cards that have them (none of the
-    cards defined so far does), so none trigger; the count of
-    Beginning Phases begun ("first Beginning Phase", [190.6.b]) is kept. */
-defineTask('beginning.startEffects', [(s) => {
+/** [315.2.a]: "at the start of your Beginning Phase" effects trigger
+    (phase triggers, abilities/triggers.ts); the count of Beginning Phases
+    begun ("first Beginning Phase", [190.6.b]) is kept. */
+defineTask('beginning.startEffects', [(s, _f, x) => {
   const p = s.turn.player;
   setField(s, s.history.beginningPhasesStarted, p, s.history.beginningPhasesStarted[p] + 1);
+  fire(s, x, { e: 'phase', at: 'beginning', p });
   return 'done';
 }]);
 
@@ -195,10 +196,16 @@ defineTask('main.emptyPools', [(s, _f, x) => {
   return 'done';
 }]);
 
-/** [316.4] and [317.1.a]: "at the start of the Main Phase" and "at the end of
-    the turn" effects; none of the cards defined so far has one. */
-defineTask('main.startEffects', [() => 'done']);
-defineTask('ending.endOfTurnEffects', [() => 'done']);
+/** [316.4] and [317.1.a]: "at the start of your Main Phase" and "at the end
+    of your turn" effects trigger. */
+defineTask('main.startEffects', [(s, _f, x) => {
+  fire(s, x, { e: 'phase', at: 'mainStart', p: s.turn.player });
+  return 'done';
+}]);
+defineTask('ending.endOfTurnEffects', [(s, _f, x) => {
+  fire(s, x, { e: 'phase', at: 'endOfTurn', p: s.turn.player });
+  return 'done';
+}]);
 
 /**
  * [317.2.e–f]: if any chain item was finalized or resolved during the

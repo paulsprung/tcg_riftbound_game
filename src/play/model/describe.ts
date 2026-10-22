@@ -151,6 +151,7 @@ export function describeAll(events: readonly ObservedEvent[], c: DescribeCtx): L
       }
       case 'chainPush': {
         if (e.kind !== 'triggered' && e.kind !== 'activated') break;
+        if (e.kind === 'triggered' && e.source === undefined) { add(e, 'A delayed ability triggers.', 'game'); break; }
         const src = e.source === undefined ? null : c.objOf(e.source)?.def ?? known[e.source] ?? null;
         if (!src || src.endsWith('-rune')) break;                     // rune Add abilities: told by the payment
         add(e, e.kind === 'triggered' ? `${c.nameOf(src)}'s ability triggers.` : `${c.nameOf(src)}'s ability is activated.`,
@@ -217,6 +218,23 @@ export function describeAll(events: readonly ObservedEvent[], c: DescribeCtx): L
       case 'points': add(e, `${subject(e.p)} ${e.p === c.me ? 'have' : 'has'} ${e.total} point${e.total === 1 ? '' : 's'}.`, who(e.p)); break;
       case 'burnOut': add(e, `${subject(e.p)} burn${e.p === c.me ? '' : 's'} out: the trash is shuffled back.`, who(e.p)); break;
       case 'rollback': add(e, e.reason === 'illegal' ? 'The play fails and is undone.' : 'The play is taken back.', 'me'); break;
+      case 'reveal': {
+        const names = e.objs.map((id) => unitName(id).replace(/^a unit$/, 'a card'));
+        add(e, `A card is revealed: ${listOf(names)}.`, 'game');
+        break;
+      }
+      case 'replaced': {
+        const src = unitName(e.source);
+        const what = e.event.startsWith('playToken:') ? `a ${c.nameOf(e.event.slice(10))} token` : 'it';
+        add(e, `${src}: something else happens instead of ${what}.`, 'game');
+        break;
+      }
+      case 'keywordsChanged': {
+        const last = out[out.length - 1];
+        if (last?.rule === e.rule && last.seq === e.seq - 1 && last.text.includes('keywords')) break;
+        add(e, `${unitName(e.obj)}'s keywords change this turn.`, 'game');
+        break;
+      }
       default: break;                 // zone moves are told by their summaries; decisions by the prompt
     }
   }

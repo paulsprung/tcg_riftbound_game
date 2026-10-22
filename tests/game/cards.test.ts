@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { abilitiesOf, abilityById, allDefs, defsHash } from '../../src/game/cards/registry.ts';
+import { abilitiesOf, abilityById, allDefs, cardDef, defsHash } from '../../src/game/cards/registry.ts';
 import { oracleCard } from '../../src/game/cards/oracle.ts';
 import { createGame } from '../../src/game/index.ts';
 import { SERAPHINE } from './helpers/decks.ts';
@@ -23,12 +23,17 @@ describe('card definitions', () => {
     expect(abilitiesOf('seraphine-inspiring').map((a) => a.id)).toContain('seraphine-inspiring#kw:disarm');   // [831.1.d]
   });
 
-  it('the Seraphine deck\'s spells with definitions are the ones M1.2 can execute', () => {
-    const spells = allDefs().filter((d) => d.spell).map((d) => d.id).sort();
-    expect(spells).toEqual(['burn-away', 'encore', 'high-note', 'moonlight-affliction', 'raucous-anthem', 'supernova']);
-    const inDeck = SERAPHINE.main.map((e) => e.def);
-    for (const d of allDefs()) if (d.id !== 'pitiless-stalker' && !d.id.includes('-sanctum') && !d.id.includes('monastery')
-      && !d.id.includes('valley')) expect(inDeck, d.id).toContain(d.id);
+  it('[§13.2] every card of the Seraphine deck has a definition, nothing of it missing', () => {
+    const deck = [SERAPHINE.legend, ...SERAPHINE.main.map((e) => e.def), ...SERAPHINE.battlefields];
+    expect(new Set(deck).size).toBe(28);                            // the 28 entries of §13.2
+    for (const def of deck) {
+      const d = cardDef(def);
+      expect(d, def).toBeDefined();
+      expect(d!.missing, def).toBeUndefined();
+      if (oracleCard(def).types.includes('spell')) expect(d!.spell, def).toBeDefined();
+    }
+    const others = allDefs().map((d) => d.id).filter((id) => !deck.includes(id)).sort();
+    expect(others).toEqual(['deathgrip', 'hidden-blade', 'pitiless-stalker', 'sona-harmonious']);   // for the engine tests
   });
 
   it('[§4.9] a game records the hash of the definitions in effect', () => {

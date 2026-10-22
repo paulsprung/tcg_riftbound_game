@@ -1,7 +1,7 @@
 import { parseKey, type DecisionKind, type Option, type PlayerView } from '../../game/index.ts';
 
 /*
- * The computer opponent of M1.1–M1.2: a simple heuristic over the options the
+ * The computer opponent of M1.1–M1.3: a simple heuristic over the options the
  * engine lists, until the real AI arrives (§11, M1.4). Like the real AI it
  * is given only its own view, and it never answers with a UI-only option.
  *
@@ -15,6 +15,8 @@ import { parseKey, type DecisionKind, type Option, type PlayerView } from '../..
  *              choices: the first option
  *   moves      take every unit it can, then a battlefield it doesn't hold
  *   payment    plan 0, the engine's best; never decline
+ *   costs      take optional costs (cheaper), show off the first card it
+ *              may, apply replacements; a cost's units: tokens first
  *   setup      play first; keep the opening hand
  *   the rest   a random real option
  *
@@ -66,7 +68,13 @@ export function botAnswer(v: PlayerView, random: () => number): string {
       if (want.length > 0) return pick(want, random).key;
       return has('done') ? 'done' : pick(ts.length > 0 ? ts : real, random).key;
     }
-    case 'may': return 'yes';
+    case 'may': case 'optionalCost': case 'applyReplacement': return has('yes') ? 'yes' : real[0].key;
+    case 'showOff': return heads('pick')[0]?.key ?? 'no';
+    case 'costObject': {
+      const picks = heads('pick');
+      const tok = picks.find((o) => { const ob = v.objects[parseKey(o.key)!.obj!]; return ob !== undefined && 'token' in ob && ob.token; });
+      return (tok ?? picks[0] ?? real[0]).key;
+    }
     case 'orderTriggers': case 'pickCard': return real[0].key;
     case 'predict': return pick(real, random).key;
     case 'addAbility': return has('done') ? 'done' : 'decline';

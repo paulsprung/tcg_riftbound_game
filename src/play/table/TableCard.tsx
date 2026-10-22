@@ -35,6 +35,14 @@ export interface TableCardProps {
   onAct?: (slot: CardSlot) => void;
 }
 
+/** The board keywords worth a chip: Tank, Shield X, Assault X, Deflect X. */
+const KW_LABEL: Record<string, string> = { tank: 'Tank', shield: 'Shield', assault: 'Assault', deflect: 'Deflect' };
+function kwText(slot: CardSlot): string {
+  const k = slot.keywords ?? {};
+  return Object.keys(KW_LABEL).filter((kw) => (k[kw] ?? 0) > 0)
+    .map((kw) => (kw === 'tank' ? KW_LABEL[kw] : `${KW_LABEL[kw]} ${k[kw]}`)).join(' · ');
+}
+
 export const TableCard = memo(function TableCard({
   slot, cards, size, landscape = false, selectable, selected, dimmed, tilt = false, onTap, label, onAct,
 }: TableCardProps) {
@@ -77,6 +85,7 @@ export const TableCard = memo(function TableCard({
         </span>
       )}
       {slot.stunned && <span className="tcard__stun">Stunned</span>}
+      {kwText(slot) && <span className="tcard__kw" title="Keywords now (printed or given)">{kwText(slot)}</span>}
       {slot.designation && <span className={`tcard__role tcard__role--${slot.designation}`}>{slot.designation}</span>}
     </div>
   );

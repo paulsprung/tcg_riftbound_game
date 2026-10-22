@@ -91,7 +91,11 @@ function meets(s: GameState, w: TriggerAst, ev: TriggerEvent, o: GameObject | nu
   const instances: { p: PlayerId | null; info: Record<string, Json> }[] = [];
   switch (w.on) {
     case 'played':
-      if (o && ev.e === 'played' && ev.obj === o.id) instances.push({ p: ev.p, info: { p: ev.p, subject: o.id } });
+      if (o && ev.e === 'played' && ev.obj === o.id) {
+        // What it showed off as it was played, for "its Power cost" [832.1.d].
+        const shown = o.played?.showOff.flatMap((r) => r.picks)[0];
+        instances.push({ p: ev.p, info: { p: ev.p, subject: o.id, shownPower: shown?.chars.cost?.power.length ?? 0 } });
+      }
       break;
     case 'cardPlayed': {
       if (ev.e !== 'played') break;

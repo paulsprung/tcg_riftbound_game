@@ -124,6 +124,8 @@ export interface SlotAst {
   max?: number;
   /** A hint for agents and the UI: choosing an enemy here helps. */
   harm?: boolean;
+  /** "another": not an object these slots chose. */
+  distinctFrom?: string[];
 }
 
 export interface SelAst {

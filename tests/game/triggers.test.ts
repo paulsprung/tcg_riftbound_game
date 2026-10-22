@@ -174,16 +174,16 @@ describe('triggered abilities [382–389]', () => {
     const g = start(38);
     bfDef(g, 0, 'black-rose-sanctum');
     control(g, 0, 1);
-    const a = put(g, 'hunting-dog', 1, bf(0), { damage: 3 });
-    const b = put(g, 'hunting-dog', 1, bf(0), { damage: 3 });
-    put(g, 'hunting-dog', 1, bf(0));
+    const a = put(g, 'shipyard-skulker', 1, bf(0), { damage: 3 });
+    const b = put(g, 'shipyard-skulker', 1, bf(0), { damage: 3 });
+    put(g, 'shipyard-skulker', 1, bf(0));
     reask(g);                                                        // the cleanup kills both at once
     expect(g.s.objects[a] ?? g.s.objects[b]).toBeUndefined();
     expect(g.s.chain).toMatchObject([{ kind: 'triggered', controller: 1, ability: 'black-rose-sanctum#0' }]);
     expect(g.s.pending).toMatchObject({ kind: 'priority', player: 1 });   // its controller holds priority [337.4]
     passBoth(g);
     expect(defsAt(g, g.s.players[1].base)).toContain('recruit');
-    const c = g.s.bfs[0].here.find((id) => g.s.objects[id].def === 'hunting-dog')!;
+    const c = g.s.bfs[0].here.find((id) => g.s.objects[id].def === 'shipyard-skulker')!;
     setField(g.s, g.s.objects[c], 'damage', [{ amount: 5, by: null, sources: [], combat: false, group: 0 }]);
     reask(g);
     expect(g.s.chain).toEqual([]);                                   // not the first time this turn
@@ -192,8 +192,8 @@ describe('triggered abilities [382–389]', () => {
   it('[383.3.d.1] simultaneous triggers of both players: the Turn Player\'s go on first, so they resolve last', () => {
     const g = start(45);
     bfDef(g, 0, 'black-rose-sanctum');
-    const a = put(g, 'hunting-dog', 0, bf(0), { damage: 3 });
-    const b = put(g, 'hunting-dog', 1, bf(0), { damage: 3 });
+    const a = put(g, 'shipyard-skulker', 0, bf(0), { damage: 3 });
+    const b = put(g, 'shipyard-skulker', 1, bf(0), { damage: 3 });
     reask(g);                                                        // one Kill action, both die
     expect(g.s.objects[a] ?? g.s.objects[b]).toBeUndefined();
     expect(g.s.chain.map((i) => [i.ability, i.controller])).toEqual([['black-rose-sanctum#0', 0], ['black-rose-sanctum#0', 1]]);
@@ -230,7 +230,7 @@ describe('triggered abilities [382–389]', () => {
   it('[383.4.e] [831] Disarm: when it attacks, an enemy unit there gets -2 this turn', () => {
     const g = start(40);
     const sera = put(g, 'seraphine-inspiring', 0, base(0));
-    const d = put(g, 'hunting-dog', 1, bf(0));
+    const d = put(g, 'shipyard-skulker', 1, bf(0));
     control(g, 0, 1);
     reask(g);
     act(g, 'move');

@@ -271,7 +271,8 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
       const id = mint(s, 'eff');
       append(s, s.delayed, { id, controller: p, createdBy: it.id, createdTurn: s.turn.n,
         ability: { ...ins.ability, id: `eff:${id}#0` } as unknown as Json,
-        window: { during: 'thisTurn', uses: ins.uses }, info: {} });
+        window: { during: 'thisTurn', uses: ins.uses },
+        info: it.obj !== undefined && s.objects[it.obj] ? { from: s.objects[it.obj].def } : {} });   // its card, to name it
       return ok;
     }
     case 'draws': {

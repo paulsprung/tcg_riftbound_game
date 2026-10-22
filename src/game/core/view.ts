@@ -14,7 +14,8 @@
  * Hidden (M2), reveals and looks with M1 (§7.5).
  */
 import { hasBit } from '../state/ids.ts';
-import type { GameObject, GameState, ObjId, PlayerId, Zone } from '../state/types.ts';
+import type { GameObject, GameState, KeywordId, ObjId, PlayerId, Zone } from '../state/types.ts';
+import { derive, IMPLEMENTED_KEYWORDS } from '../layers/derive.ts';
 import type { DecisionStub } from './decisions.ts';
 import { EngineError } from './errors.ts';
 import type { GameEvent } from './events.ts';
@@ -116,4 +117,17 @@ export function blankFill(v: PlayerView): GameState {
   const objects: Record<ObjId, GameObject> = {};
   for (const o of Object.values(rest.objects)) objects[o.id] = 'def' in o ? o : placeholderFor(o);
   return { ...rest, objects } as GameState;
+}
+
+/** A unit's Might as a view shows it, after the layers (§6.7): every object
+    on the board is known to every player, so this reads nothing hidden.
+    Null for objects without Might. */
+export function viewMight(v: PlayerView, id: ObjId): number | null {
+  return derive(v as unknown as GameState, id).might;
+}
+
+/** An object's keywords as a view shows it, with their values (layer 3). */
+export function viewKeywords(v: PlayerView, id: ObjId): Partial<Record<KeywordId, number>> {
+  const d = derive(v as unknown as GameState, id).keywords;
+  return Object.fromEntries(Object.entries(d).filter(([k]) => IMPLEMENTED_KEYWORDS.includes(k as KeywordId)));
 }

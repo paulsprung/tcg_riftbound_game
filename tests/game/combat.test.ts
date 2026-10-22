@@ -98,11 +98,11 @@ describe('Spec G §13: combat', () => {
   });
 
   it('[815] [826] [467.2.c.6] Tank units first, Backline units last', () => {
-    const { g, d } = attack(7, ['heimerdinger-academy-instructor'], ['enthusiastic-promoter', 'hunting-dog',
-      'steadfast-outrider']);
+    const { g, d } = attack(7, ['the-empyrean'], ['enthusiastic-promoter', 'shipyard-skulker', 'steadfast-outrider']);
     passShowdown(g);                                                 // each tier has one unit: no choice to make
     const hit = (id: number) => evs(g, 'deal').find((e) => e.to === id)?.n;
-    expect([hit(d[2]), hit(d[1]), hit(d[0])]).toEqual([3, 2, undefined]);   // Tank 3, then 2 to the plain unit
+    // Tank 5 (3 + 2: two other friendly units there [478]), then 3 to the plain unit, the Backline unit last.
+    expect([hit(d[2]), hit(d[1]), hit(d[0])]).toEqual([5, 3, undefined]);
   });
 
   it('[467.2.c.4] [467.2.c.10] excess once every unit has lethal: one unit takes it all; several, the player places it', () => {
