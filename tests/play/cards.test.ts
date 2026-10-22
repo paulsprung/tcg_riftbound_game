@@ -73,6 +73,19 @@ describe('the rest of the Seraphine deck on the table', () => {
     expect(a.objects[dog]?.keys).toEqual([`pick:${dog}`]);
   });
 
+  it('a battlefield target (For Demacia!) is its lane\'s card, clickable', () => {
+    const g = start(64);
+    quiet(g);
+    runes(g, 0, ready('order', 3));
+    const demacia = inHand(g, 'for-demacia');
+    reask(g);
+    act(g, `play:${demacia}`);
+    const v = viewFor(g.s, 0);
+    const a = affordances(v, v.pending, [], v.pending, names);
+    expect(a.prompt).toMatch(/For Demacia!: choose a battlefield/);
+    expect(a.objects[v.bfs[0].obj]?.keys).toEqual([`t:${v.bfs[0].obj}`]);
+  });
+
   it('asks whether Heimerdinger replaces a token, in words', () => {
     const g = start(63);
     quiet(g);

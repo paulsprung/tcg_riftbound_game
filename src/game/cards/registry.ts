@@ -20,7 +20,8 @@ import type { AbilityAst, CardDef, KeywordAst, TriggeredAst } from '../dsl/ast.t
 import { hashString, stableJson } from '../state/clone.ts';
 import type { DefId, GameState, Json, KeywordId } from '../state/types.ts';
 import { OTHER_DEFS, SERAPHINE_DEFS } from './defs/seraphine.ts';
-import { findCard, printedKeywords } from './oracle.ts';
+import { findCard, ORACLE, printedKeywords } from './oracle.ts';
+import { IMPLEMENTED_KEYWORDS } from '../layers/derive.ts';
 
 const DEFS: Record<DefId, CardDef> = {};
 for (const d of [...SERAPHINE_DEFS, ...OTHER_DEFS]) DEFS[d.id] = d;
@@ -89,4 +90,30 @@ export const hasTriggers = (def: DefId) => abilitiesOf(def).some((a) => a.kind =
 /** The hash of the definitions in effect (GameState.defsHash). */
 export function defsHash(): string {
   return hashString(stableJson({ definitions: allDefs() as unknown as Json }));
+}
+
+/** How far the definitions cover the oracle (§9.7): every card is one of
+    'defined' (a definition, nothing missing), 'partial' (a definition
+    listing parts it doesn't implement), 'vanilla' (no rules text, so
+    nothing to define; basic runes' Add abilities are rules [164.2]),
+    'keywords' (only keyword lines whose rules the engine implements, e.g.
+    "[Tank]") or 'undefined'. */
+export type Coverage = 'defined' | 'partial' | 'vanilla' | 'keywords' | 'undefined';
+
+export function coverageOf(def: DefId): Coverage {
+  const d = cardDef(def);
+  if (d) return d.missing && d.missing.length > 0 ? 'partial' : 'defined';
+  const c = findCard(def);
+  if (!c || c.rules.trim() === '' || c.types.includes('rune')) return 'vanilla';
+  const lines = c.rules.split('\n');
+  const kwOnly = lines.every((_, i) => {
+    const l = c.keywords.find((k) => k.line === i);
+    return l !== undefined && !l.body && l.keywords.every((k) => IMPLEMENTED_KEYWORDS.includes(k.kw) && !k.joined);
+  });
+  return kwOnly ? 'keywords' : 'undefined';
+}
+
+/** The coverage of every oracle card, by id. */
+export function coverageReport(): { id: DefId; types: string[]; sets: string[]; coverage: Coverage }[] {
+  return ORACLE.cards.map((c) => ({ id: c.id, types: c.types, sets: c.sets, coverage: coverageOf(c.id) }));
 }

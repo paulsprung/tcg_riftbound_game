@@ -30,7 +30,7 @@ export function Lane({ lane, me, cards, onZoom, acts, kind }: {
     <section className="lane" aria-label={`Battlefield ${lane.bf + 1}`} data-active={lane.showdown || lane.combat}>
       <Units slots={lane.theirs} cards={cards} onZoom={onZoom} empty="No opposing units" acts={acts} />
       <div className="lane__bf" data-control={ring}>
-        <TableCard slot={lane.card} cards={cards} size="xl" landscape onTap={onZoom} />
+        <TableCard slot={lane.card} cards={cards} size="xl" landscape onTap={onZoom} onAct={actOn(acts, lane.card)} />
         <p className="lane__caption">
           <span>{lane.owner === me ? 'Your battlefield' : "Opponent's battlefield"}</span>
           <span className="muted">{control}</span>

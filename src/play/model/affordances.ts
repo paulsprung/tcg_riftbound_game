@@ -174,6 +174,11 @@ export function affordances(
     return out;
   }
   if (d.player !== view.me) throw new Error(`decision ${d.id} is P${d.player}'s, not the viewer's`);
+  const bfObjs = view.bfs.map((b) => b.obj);
+  const targets = d.options.filter((o) => o.key.startsWith('t:'));
+  if (d.kind === 'target' && targets.length > 0 && targets.every((o) => bfObjs.includes(parseKey(o.key)?.obj ?? NaN))) {
+    out.prompt = `${names(defOf(d.prompt.card))}: choose a battlefield (click its card).`;
+  }
   for (const o of d.options) {
     const k = parseKey(o.key);
     if (!k) continue;

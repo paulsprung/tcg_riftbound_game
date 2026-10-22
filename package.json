@@ -14,7 +14,8 @@
     "build-oracle": "tsx scripts/cards/build-oracle.ts",
     "build:server": "tsx scripts/build-server.ts",
     "start": "node dist-server/main.mjs",
-    "build-starters": "tsx scripts/cards/build-starters.ts"
+    "build-starters": "tsx scripts/cards/build-starters.ts",
+    "card-coverage": "tsx scripts/cards/coverage.ts"
   },
   "dependencies": {
     "pg": "^8.23.1",

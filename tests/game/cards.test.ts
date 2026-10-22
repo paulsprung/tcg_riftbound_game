@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { abilitiesOf, abilityById, allDefs, cardDef, defsHash } from '../../src/game/cards/registry.ts';
-import { oracleCard } from '../../src/game/cards/oracle.ts';
+import {
+  abilitiesOf, abilityById, allDefs, cardDef, coverageOf, coverageReport, defsHash,
+} from '../../src/game/cards/registry.ts';
+import { ORACLE, oracleCard } from '../../src/game/cards/oracle.ts';
 import { createGame } from '../../src/game/index.ts';
 import { SERAPHINE } from './helpers/decks.ts';
 
@@ -34,6 +36,15 @@ describe('card definitions', () => {
     }
     const others = allDefs().map((d) => d.id).filter((id) => !deck.includes(id)).sort();
     expect(others).toEqual(['deathgrip', 'hidden-blade', 'pitiless-stalker', 'sona-harmonious']);   // for the engine tests
+  });
+
+  it('[§9.7] the coverage report covers every oracle card; the Seraphine deck is fully executable', () => {
+    const rows = coverageReport();
+    expect(rows.length).toBe(ORACLE.cards.length);
+    const deck = [SERAPHINE.legend, ...SERAPHINE.main.map((e) => e.def), ...SERAPHINE.battlefields];
+    for (const def of deck) expect(['defined', 'vanilla', 'keywords'], def).toContain(coverageOf(def));
+    expect(coverageOf('hidden-blade')).toBe('partial');
+    expect(coverageOf('shipyard-skulker')).toBe('vanilla');
   });
 
   it('[§4.9] a game records the hash of the definitions in effect', () => {
