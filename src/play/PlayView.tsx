@@ -10,6 +10,8 @@ import { cardIndex } from './model/cards.ts';
 import { gameSetup } from './model/setup.ts';
 import { getSettings, PACE_FACTOR, setSettings, usePlaySettings, type OpponentChoice } from './settings.ts';
 import { DEFAULT_CHOICE, DeckSetup, type DeckSetupChoice } from './setup/DeckSetup.tsx';
+import { TutorialView } from './tutorial/TutorialView.tsx';
+import { useCollection } from '../collection/store.ts';
 import './play.css';
 
 /*
@@ -58,8 +60,9 @@ function saveTo(store: SaveStore, seats: [Seat, Seat]) {
   };
 }
 
-export function PlayView({ db }: { db: CardDb }) {
+export function PlayView({ db, tutorial = false }: { db: CardDb; tutorial?: boolean }) {
   const cards = useMemo(() => cardIndex(db), [db]);
+  const own = useCollection();
   const settings = usePlaySettings();
   const store = useMemo(() => localStore(), []);
   const [choice, setChoice] = useState<DeckSetupChoice>({ ...DEFAULT_CHOICE, opponent: getSettings().opponent });
@@ -116,11 +119,24 @@ export function PlayView({ db }: { db: CardDb }) {
     }
   };
 
+  if (tutorial) return <TutorialView db={db} cards={cards} onExit={() => { location.hash = 'play'; }} />;
+
   if (!game) {
     return (
-      <DeckSetup cards={cards} db={db} initial={choice} error={error} onStart={start}
+      <>
+        {!own.tutorialDone && (
+          <div className="tutorial-offer">
+            <div>
+              <strong>New to Riftbound? Play the tutorial</strong>
+              <span className="muted"> A short guided match. Finish it for 5 free booster packs, one from each set.</span>
+            </div>
+            <a className="btn btn--primary btn--small" href="#play/tutorial">Play the tutorial</a>
+          </div>
+        )}
+        <DeckSetup cards={cards} db={db} initial={choice} error={error} onStart={start}
         saved={saved && resumable(saved) ? saved : null} onResume={resume}
         onDiscard={() => { store.clear(); setSaved(null); }} />
+      </>
     );
   }
   const seats = game.host.seats;

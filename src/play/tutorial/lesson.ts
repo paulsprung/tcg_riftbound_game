@@ -2,7 +2,7 @@ import {
   DUEL, parseKey, type DeckList, type Decision, type DefId, type GameSetup, type ObjId, type PlayerId, type PlayerView,
 } from '../../game/index.ts';
 import { BUILT_IN_DECKS } from '../host/decks.ts';
-import type { Seat } from '../host/GameHost.ts';
+import { GameHost, type HostOptions, type Seat } from '../host/GameHost.ts';
 import { withPrintings, type CardIndex } from '../model/cards.ts';
 import type { Coach, CoachContext, CoachHighlight, CoachStep } from './coach.ts';
 
@@ -153,6 +153,14 @@ export function opponentAnswer(v: PlayerView): string | null {
 
 export function opponentSeat(): Seat {
   return { k: 'script', answer: opponentAnswer, name: OPPONENT_NAME };
+}
+
+/** The tutorial's game: the human keeps the stacked opening hand at once
+    (no mulligan to explain), the opponent is scripted. Never autosaved. */
+export function tutorialHost(ix: CardIndex | undefined, o: Omit<HostOptions, 'setup' | 'seats'> = {}): GameHost {
+  const h = new GameHost({ ...o, setup: tutorialSetup(ix), seats: [{ k: 'human' }, opponentSeat()] });
+  if (h.getSnapshot().view.pending?.kind === 'mulligan') h.commit(['done']);
+  return h;
 }
 
 // ---- the coach ----

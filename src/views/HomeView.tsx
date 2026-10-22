@@ -86,6 +86,18 @@ export function HomeView({ db }: { db: CardDb }) {
 
       {!own.starter && <Starters db={db} />}
 
+      {own.starter && !own.tutorialDone && (
+        <section className="tutorial-step" aria-labelledby="tutorial-step-title">
+          <p className="tutorial-step__kicker small">Next step</p>
+          <h2 id="tutorial-step-title">Play the tutorial</h2>
+          <p className="muted">
+            Your deck is ready. A short guided match teaches the basics: runes, units, battlefields, combat, spells
+            and scoring. Finish it (or skip it) to get <b>5 booster packs</b>, one from each set.
+          </p>
+          <a className="btn btn--primary" href="#play/tutorial">Play the tutorial</a>
+        </section>
+      )}
+
       {own.starter && (
         <>
           <div className="home__stats">
@@ -94,7 +106,7 @@ export function HomeView({ db }: { db: CardDb }) {
             <div><b>{cards}</b><span className="muted"> cards</span></div>
           </div>
           <div className="home__actions">
-            <a className="btn btn--primary" href="#shop">{unopened > 0 ? 'Open packs' : 'Shop'}</a>
+            <a className={`btn ${own.tutorialDone ? 'btn--primary' : 'btn--ghost'}`} href="#shop">{unopened > 0 ? 'Open packs' : 'Shop'}</a>
             <a className="btn btn--ghost" href="#play">Play</a>
             <a className="btn btn--ghost" href="#collection">Collection</a>
           </div>

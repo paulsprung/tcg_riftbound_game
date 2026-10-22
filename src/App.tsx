@@ -21,17 +21,18 @@ const ROUTES = [
 ] as const;
 type Route = (typeof ROUTES)[number]['id'];
 
-interface Where { route: Route; tab: CollectionTab }
+interface Where { route: Route; tab: CollectionTab; tutorial: boolean }
 
 /** Older addresses keep working: #packs is the shop, #showcase and #cards
     live in the collection. */
 function whereFromHash(): Where {
   const [id, sub] = location.hash.replace(/^#\/?/, '').split('/');
-  if (id === 'packs') return { route: 'shop', tab: 'cards' };
-  if (id === 'showcase') return { route: 'collection', tab: 'showcase' };
-  if (id === 'cards') return { route: 'collection', tab: 'all' };
+  if (id === 'packs') return { route: 'shop', tab: 'cards', tutorial: false };
+  if (id === 'showcase') return { route: 'collection', tab: 'showcase', tutorial: false };
+  if (id === 'cards') return { route: 'collection', tab: 'all', tutorial: false };
   const route = (ROUTES.find((r) => r.id === id)?.id ?? 'home') as Route;
-  return { route, tab: route === 'collection' && (sub === 'showcase' || sub === 'all') ? sub : 'cards' };
+  return { route, tab: route === 'collection' && (sub === 'showcase' || sub === 'all') ? sub : 'cards',
+    tutorial: route === 'play' && sub === 'tutorial' };
 }
 
 export function App() {
@@ -89,7 +90,7 @@ export function App() {
             {route === 'collection' && <CollectionHub db={state.db} tab={where.tab} onInspect={onInspect} />}
             {route === 'play' && (
               <Suspense fallback={<p className="status">Setting up the table…</p>}>
-                <PlayView db={state.db} />
+                <PlayView key={where.tutorial ? 'tutorial' : 'play'} db={state.db} tutorial={where.tutorial} />
               </Suspense>
             )}
             {route === 'rules' && <RulesView />}

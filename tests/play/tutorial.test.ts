@@ -7,7 +7,7 @@ import { GameHost, type Clock } from '../../src/play/host/GameHost.ts';
 import { suggestKey } from '../../src/play/model/assign.ts';
 import { cardIndex } from '../../src/play/model/cards.ts';
 import {
-  createTutorialCoach, HUMAN, LESSON_STEPS, opponentSeat, TUTORIAL_SCORE, tutorialSetup, type TutorialCoach,
+  createTutorialCoach, HUMAN, LESSON_STEPS, TUTORIAL_SCORE, tutorialHost, type TutorialCoach,
 } from '../../src/play/tutorial/lesson.ts';
 
 const db: CardDb = JSON.parse(readFileSync(new URL('../../public/data/cards.json', import.meta.url), 'utf8'));
@@ -20,7 +20,7 @@ function rand(seed: number) {
 }
 
 export function newTutorialHost() {
-  return new GameHost({ setup: tutorialSetup(ix), seats: [{ k: 'human' }, opponentSeat()], clock: now, check: true });
+  return tutorialHost(ix, { clock: now, check: true });
 }
 
 /** A human who does what the coach says: Next on explanations, the first
@@ -71,6 +71,17 @@ describe('the tutorial match', () => {
     for (const id of LESSON_STEPS) expect(seen).toContain(id);
     expect([null, 'finish-attack']).toContain(coach.at);
     expect(runs[1].h.record()).toEqual(h.record());
+    expect(viewFor(replay(h.record()).state, HUMAN)).toEqual(v);
+  });
+});
+
+describe('the stacked setup (GameSetup.stack)', () => {
+  it('deals the lesson\'s opening hand, the human keeps it, the record replays', () => {
+    const h = newTutorialHost();
+    const v = h.getSnapshot().view;
+    const hand = v.players[HUMAN].hand.map((id) => (v.objects[id] as { def: string }).def).sort();
+    expect(hand).toEqual(['faithful-manufactor', 'high-note', 'hunting-dog', 'strigian-oracle']);
+    expect(v.pending?.player).not.toBe(HUMAN);                  // the mulligan was kept for them
     expect(viewFor(replay(h.record()).state, HUMAN)).toEqual(v);
   });
 });
