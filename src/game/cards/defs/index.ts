@@ -8,5 +8,9 @@ import { RAD_DEFS } from './rad.ts';
 import { OGS_DEFS } from './ogs.ts';
 import { SFD_DEFS } from './sfd.ts';
 import { UNL_DEFS } from './unl.ts';
+import { OGN_SET_DEFS } from './ogn-set.ts';
 
 export const STARTER_DEFS: CardDef[] = [...OGS_DEFS, ...OGN_DEFS, ...SFD_DEFS, ...UNL_DEFS, ...RAD_DEFS];
+
+/** The definitions of the sets' other cards (all cards executable). */
+export const SET_DEFS: CardDef[] = [...OGN_SET_DEFS];

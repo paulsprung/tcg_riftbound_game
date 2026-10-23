@@ -26,7 +26,7 @@ import type { AbilityAst, CardDef, CostAst, KeywordAst, PowerReqAst, TriggeredAs
 import { hashString, stableJson } from '../state/clone.ts';
 import type { DefId, GameState, Json, KeywordId, PowerReq, TokenId } from '../state/types.ts';
 import { OTHER_DEFS, SERAPHINE_DEFS } from './defs/seraphine.ts';
-import { STARTER_DEFS } from './defs/index.ts';
+import { SET_DEFS, STARTER_DEFS } from './defs/index.ts';
 import { findCard, ORACLE, printedKeywords, type OracleCost } from './oracle.ts';
 import { TOKENS } from './tokens.ts';
 
@@ -39,7 +39,7 @@ const TOKEN_DEFS: CardDef[] = [
 ];
 
 const DEFS: Record<DefId, CardDef> = {};
-for (const d of [...SERAPHINE_DEFS, ...OTHER_DEFS, ...STARTER_DEFS, ...TOKEN_DEFS]) {
+for (const d of [...SERAPHINE_DEFS, ...OTHER_DEFS, ...STARTER_DEFS, ...SET_DEFS, ...TOKEN_DEFS]) {
   if (Object.hasOwn(DEFS, d.id)) throw new Error(`card definition '${d.id}' is defined twice`);
   DEFS[d.id] = d;
 }
