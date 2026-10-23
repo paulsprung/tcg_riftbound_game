@@ -19,3 +19,9 @@ Reference screenshots: `ui-ref/riftatlas-table.webp` (target), `ui-ref/pay-butto
   right rail with turn/log, selected card preview and an action button (Resolve / End turn),
   hand fanned at the bottom, floating Energy/Power counters, deck/trash piles in corners.
 - Arrows/lines from a spell to its target while it's on the chain.
+
+## Play tab like the League client (user request 2026-10-23)
+- Mode picker: **Ranked**, **Unranked**, **Custom** (private lobby, all cards available), vs Computer, Tutorial.
+- Goal: real online play between players (server-authoritative engine, matchmaking, ranked rating).
+- Tutorial opponent: a **random other starter deck** (today it is fixed: Garen, or Lux if you own Garen).
+- Custom decks from the deck builder must be playable → needs all cards defined in the engine first.
