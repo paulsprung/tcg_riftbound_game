@@ -1,3 +1,4 @@
+import { SET_DEFS } from '../../src/game/cards/defs/index.ts';
 import { describe, expect, it } from 'vitest';
 import {
   abilitiesOf, abilityById, allDefs, cardDef, coverageOf, coverageReport, defsHash,
@@ -35,7 +36,8 @@ describe('card definitions', () => {
       if (oracleCard(def).types.includes('spell')) expect(d!.spell, def).toBeDefined();
     }
     const starters = new Set(STARTERS.flatMap((st) => deckDefs(st.deck)));
-    const others = allDefs().map((d) => d.id).filter((id) => !deck.includes(id) && !starters.has(id)).sort();
+    const sets = new Set(SET_DEFS.map((d) => d.id));
+    const others = allDefs().map((d) => d.id).filter((id) => !deck.includes(id) && !starters.has(id) && !sets.has(id)).sort();
     expect(others).toEqual(['deathgrip', 'sona-harmonious']);        // for the engine tests
   });
 
