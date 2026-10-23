@@ -63,7 +63,8 @@ function fromPool(pool: RunePool, cost: ResourceCost, spell = false): { spend: P
   const extra = Math.min(restrictedEnergy(pool, spell), cost.energy - plain);
   const spend: PoolSpend = { energy: plain + extra, power: {}, universal: 0, restricted: extra > 0 ? [extra] : [] };
   const left = { ...pool.power };
-  let universal = pool.universal;
+  let universal = pool.universal + (spell ? pool.restricted.reduce((n, r) => n + (r.kind === 'universal'
+    && r.onlyFor === 'spells' ? r.amount : 0), 0) : 0);
   const rest: PowerReq[] = [];
   for (const req of cost.power.slice().sort(byWidth)) {
     const d = DOMAINS.find((dd) => left[dd] > 0 && accepts(req, dd));

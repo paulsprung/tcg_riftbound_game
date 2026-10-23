@@ -12,6 +12,7 @@ import type { CondAst, RefAst } from '../dsl/ast.ts';
 import { locOf } from '../state/zones.ts';
 import type { ChainItem, GameState, Json, ObjId, Outcome, PlayedRecord, PlayerId, Snapshot } from '../state/types.ts';
 import { cmp, predOk, selectAll } from './targets.ts';
+import { victoryScore } from './defaults.ts';
 
 export interface CondCtx {
   controller: PlayerId;
@@ -86,7 +87,9 @@ export function evalCond(s: GameState, c: CondAst, x: CondCtx): boolean {
       let n = 0;
       switch (c.what) {
         case 'discarded': n = s.log.discards[p]; break;
-        case 'unitDied': n = s.log.deaths.filter((d) => d.snap.chars.types.includes('unit')).length; break;
+        case 'unitDied': n = s.log.deaths.filter((d) => d.snap.chars.types.includes('unit') && (c.rel === undefined
+          || (c.rel === 'friendly' ? d.snap.controller === p : d.snap.controller !== null && d.snap.controller !== p))).length; break;
+        case 'played': n = s.log.played.filter((r) => r.p === p && r.isCard && typed(r.types)).length; break;
         case 'playedToBf': n = s.log.played.filter((r) => r.p === p && r.to?.z === 'bf' && typed(r.types)).length; break;
         case 'finalized': n = s.log.finalized.filter((r) => r.p === p && r.isCard && typed(r.types)).length; break;
       }
@@ -95,6 +98,12 @@ export function evalCond(s: GameState, c: CondAst, x: CondCtx): boolean {
     case 'excess': return (s.combat?.excess[x.controller] ?? 0) >= c.n;
     case 'info': return JSON.stringify(x.info?.[c.key] ?? null) === JSON.stringify(c.eq);
     case 'handSize': return cmp(s.players[x.controller].hand.length, c.op, c.n);
+    case 'opponentNearWin': return s.players.some((pl) => pl.id !== x.controller && pl.points >= victoryScore(s) - c.within);
+    case 'firstBeginning': {
+      const p = typeof x.info?.p === 'number' ? x.info.p : x.controller;
+      return s.history.beginningPhasesStarted[p] === 1;
+    }
+    case 'full': return x.outcomes?.[`id:${c.instr}`]?.o === 'executed';
     case 'lki': {
       const l = x.lki;
       if (!l) return false;

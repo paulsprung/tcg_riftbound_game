@@ -189,6 +189,9 @@ export const pred = {
   attacking: { p: 'designation', d: 'attacker' } as PredAst,
   defending: { p: 'designation', d: 'defender' } as PredAst,
   attackingWithOther: { p: 'attackingWithOther' } as PredAst,
+  damaged: { p: 'damaged' } as PredAst,
+  powerCost: (op: '<' | '<=' | '=' | '>=' | '>', n: number): PredAst => ({ p: 'powerCost', op, n }),
+  energyCostVsPoints: (op: '<' | '<=' | '=' | '>=' | '>'): PredAst => ({ p: 'energyCostVsPoints', op }),
   tag: (tag: string): PredAst => ({ p: 'tag', tag }),
   type: (...any: import('../state/types.ts').CardType[]): PredAst => ({ p: 'type', any }),
   keyword: (kw: KeywordId): PredAst => ({ p: 'keyword', kw }),
@@ -210,8 +213,11 @@ export const cond = {
   paid: (ability: string): CondAst => ({ c: 'paid', ability }),
   is: (r: RefAst, p: PredAst): CondAst => ({ c: 'is', ref: r, pred: p }),
   self: (p: PredAst): CondAst => ({ c: 'is', ref: 'self', pred: p }),
-  thisTurn: (what: 'discarded' | 'unitDied' | 'playedToBf' | 'finalized', o: { types?: import('../state/types.ts').CardType[];
-    op?: '<' | '<=' | '=' | '>=' | '>'; n?: number } = {}): CondAst => ({ c: 'thisTurn', what, ...o }),
+  thisTurn: (what: 'discarded' | 'unitDied' | 'playedToBf' | 'finalized' | 'played', o: { types?: import('../state/types.ts').CardType[];
+    op?: '<' | '<=' | '=' | '>=' | '>'; n?: number; rel?: 'friendly' | 'enemy' } = {}): CondAst => ({ c: 'thisTurn', what, ...o }),
+  opponentNearWin: (within = 3): CondAst => ({ c: 'opponentNearWin', within }),
+  firstBeginning: { c: 'firstBeginning' } as CondAst,
+  full: (instr: string): CondAst => ({ c: 'full', instr }),
   excess: (n: number): CondAst => ({ c: 'excess', n }),
   info: (key: string, eq: import('../state/types.ts').Json): CondAst => ({ c: 'info', key, eq }),
   handSize: (op: '<' | '<=' | '=' | '>=' | '>', n: number): CondAst => ({ c: 'handSize', op, n }),
@@ -270,6 +276,9 @@ export const channel = (n: number, o: { exhausted?: true } = {}): InstrAst => ({
 export const playSelf = (cost: CostAst): InstrAst => ({ op: 'playSelf', cost });
 export const playCard = (what: RefAst, energyLess?: ValueAst): InstrAst =>
   (energyLess === undefined ? { op: 'playCard', what } : { op: 'playCard', what, energyLess });
+/** "play it, ignoring its Energy cost" ('energy') or "ignoring its cost" ('all') [420.3.b]. */
+export const playFree = (what: RefAst, free: 'energy' | 'all' = 'all', o: Omit<Extract<InstrAst, { op: 'playCard' }>, 'op' | 'what' | 'free'> = {}): InstrAst =>
+  ({ op: 'playCard', what, free, ...o });
 export const move = (what: RefAst | SelAst, to: MoveToAst): InstrAst => ({ op: 'move', what, to });
 export const returnToHand = (what: RefAst): InstrAst => ({ op: 'returnToHand', what });
 export const recycle = (what: RefAst): InstrAst => ({ op: 'recycle', what });

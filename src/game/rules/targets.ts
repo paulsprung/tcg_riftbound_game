@@ -13,6 +13,7 @@ import type { LocSelAst, PredAst, SelAst, SlotAst } from '../dsl/ast.ts';
 import { locOf } from '../state/zones.ts';
 import type { GameState, Loc, ObjId, PlayerId, TargetRef } from '../state/types.ts';
 import { energyCostOf, hasKeyword, isType, mightOf, tagsOf } from './chars.ts';
+import { findCard } from '../cards/oracle.ts';
 
 export interface SelCtx {
   controller: PlayerId; source: ObjId | null;
@@ -128,6 +129,9 @@ export function predOk(s: GameState, p: PredAst, id: ObjId, c: SelCtx): boolean 
       const bf = s.bfs.findIndex((b) => b.obj === id);
       return bf >= 0 && unitsHere(s, bf).length > 0;
     }
+    case 'damaged': return o.damage.length > 0;
+    case 'powerCost': return cmp(findCard(o.def)?.cost?.power.length ?? 0, p.op, p.n);
+    case 'energyCostVsPoints': return cmp(energyCostOf(o), p.op, s.players[c.controller].points);
     case 'notSubject': return c.subject === undefined || c.subject === null || id !== c.subject;
     case 'not': return !predOk(s, p.of, id, c);
   }

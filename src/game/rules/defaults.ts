@@ -24,7 +24,9 @@ export function turnOrder(s: GameState): PlayerId[] {
 
 /** Points needed to win: the mode's, 8 in a Duel [487.3], [194.3]. */
 export function victoryScore(s: GameState): number {
-  return s.mode.victoryScore;
+  let n = s.mode.victoryScore;
+  for (const { spec } of staticsFor(s, null, 'victoryScore')) n += spec.n;   // Aspirant's Climb
+  return n;
 }
 
 /** Cards in an opening hand [116]. */

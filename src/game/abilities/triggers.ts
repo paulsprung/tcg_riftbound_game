@@ -128,6 +128,7 @@ function meets(s: GameState, w: TriggerAst, ev: TriggerEvent, o: GameObject | nu
       if (w.what?.card && !ev.isCard) break;                       // a token is not a card [052]
       if (w.what?.minEnergy !== undefined && (!ev.isCard || ev.energy < w.what.minEnergy)) break;
       if (w.what?.fromFacedown && ev.from !== 'facedown') break;
+      if (w.what?.other && o && ev.obj === o.id) break;
       if (w.to === 'here' && (!o || !sameLoc(ev.to, here))) break;
       if (w.firstPerPlayer) {                                        // [383.1.b]
         const k = key(ev.p);
@@ -243,7 +244,8 @@ function meets(s: GameState, w: TriggerAst, ev: TriggerEvent, o: GameObject | nu
         const friendly = p === ev.by;
         if (w.on === 'buffed' ? !friendly : friendly || p === null) continue;
         const at = s.objects[id] ? locOf(s.objects[id]) : null;
-        if (w.on === 'stunned' && at?.z !== 'bf') continue;
+        if (w.on === 'stunned' && w.at === 'battlefield' && at?.z !== 'bf') continue;
+        if (w.on === 'stunned' && w.once && instances.length > 0) continue;   // "one or more": once per action
         instances.push({ p: ev.by, info: { subject: id, ...(at?.z === 'bf' ? { bf: at.bf } : {}) } });
       }
       break;

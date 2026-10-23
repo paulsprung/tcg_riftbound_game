@@ -54,6 +54,7 @@ export function costOffers(s: GameState, def: string, types: CardType[], p: Play
     if (o.attachedTo !== null) continue;
     for (const a of abilitiesOf(o.def)) {
       if (a.kind !== 'cost' || !a.grant || !a.grant.types.some((t) => types.includes(t))) continue;
+      if (a.grant.tag && !(findCard(def)?.tags ?? []).includes(a.grant.tag)) continue;
       const whose = a.grant.whose ?? 'you';
       const ctl = o.controller;
       if (ctl === null || (whose === 'you' && ctl !== p) || (whose === 'enemy' && ctl === p)) continue;

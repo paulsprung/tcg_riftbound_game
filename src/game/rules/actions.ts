@@ -196,8 +196,13 @@ export function payFromPool(s: GameState, x: X, p: PlayerId, energy: number, pow
   }
   for (const req of power.slice().sort(byWidth)) {
     const d = poolDomainFor(pool, req);
-    if (d) setField(s, pool.power, d, pool.power[d] - 1);
-    else setField(s, pool, 'universal', pool.universal - 1);
+    if (d) { setField(s, pool.power, d, pool.power[d] - 1); continue; }
+    // [A] only for spells (Kai'Sa, Daughter of the Void) before unrestricted [A].
+    const r = spell ? pool.restricted.findIndex((x) => x.kind === 'universal' && x.onlyFor === 'spells' && x.amount > 0) : -1;
+    if (r >= 0) {
+      setField(s, pool, 'restricted', pool.restricted.map((x, i) => (i === r ? { ...x, amount: x.amount - 1 } : x))
+        .filter((x) => x.amount > 0));
+    } else setField(s, pool, 'universal', pool.universal - 1);
   }
   emit(s, x, { k: 'pool', p, pool: copyJson(pool), rule });
 }
@@ -595,7 +600,8 @@ export function spendXp(s: GameState, x: X, p: PlayerId, n: number, rule: string
 export function addSpecial(s: GameState, x: X, p: PlayerId, o: { energy?: number; universal?: number; onlyFor?: 'spells';
   source: string }, rule: string) {
   const pool = s.players[p].pool;
-  if (o.universal) setField(s, pool, 'universal', pool.universal + o.universal);
+  if (o.universal && o.onlyFor) append(s, pool.restricted, { amount: o.universal, kind: 'universal', onlyFor: o.onlyFor, source: o.source });
+  else if (o.universal) setField(s, pool, 'universal', pool.universal + o.universal);
   if (o.energy) {
     if (o.onlyFor) append(s, pool.restricted, { amount: o.energy, kind: 'energy', onlyFor: o.onlyFor, source: o.source });
     else setField(s, pool, 'energy', pool.energy + o.energy);

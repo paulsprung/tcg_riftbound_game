@@ -81,7 +81,9 @@ export type AbilityAst = { id: string; activeIn?: ZoneScope; limit?: LimitAst;
   /** A cost ability [356]: an additional cost, optional or not, and what
       paying it changes; or a discount. On a card it applies as that card is
       played [366.2.a]; `grant` gives it to other cards you play [356.2]. */
-  | { kind: 'cost'; grant?: { types: CardType[]; whose?: 'you' | 'enemy' | 'any' }; optional?: true; pay?: NonStdCostAst;
+  | { kind: 'cost'; grant?: { types: CardType[]; whose?: 'you' | 'enemy' | 'any';
+      /** Only cards with this tag ("Your Dragons"). */
+      tag?: string }; optional?: true; pay?: NonStdCostAst;
       /** An additional cost in resources ("You may pay [G] as an additional cost", Accelerate's [1][C]) [356.2]. */
       add?: CostAst;
       discount?: DiscountAst;
@@ -122,7 +124,9 @@ export type StaticAst =
   /** Mageseeker Investigator: moving more than one unit here at once costs [A] each beyond the first. */
   | { s: 'moveTax' }
   /** "This enters exhausted" (gear) [359.2.d]. */
-  | { s: 'entersExhausted' };
+  | { s: 'entersExhausted' }
+  /** "Increase the points needed to win the game by 1" (Aspirant's Climb) [194.3]. */
+  | { s: 'victoryScore'; n: number };
 
 /** The events replacements of the deck change: playing a token [440.2.c]. */
 export interface ReplaceEventAst { ev: 'playToken'; by: 'you'; type: CardType }
@@ -166,7 +170,15 @@ export type CondAst =
   | { c: 'is'; ref: RefAst; pred: PredAst }
   /** The turn so far [TurnLog]: you discarded, a unit died, you played a
       unit or gear to a battlefield, you finalized a card of these types. */
-  | { c: 'thisTurn'; what: 'discarded' | 'unitDied' | 'playedToBf' | 'finalized'; types?: CardType[]; op?: Cmp; n?: number }
+  | { c: 'thisTurn'; what: 'discarded' | 'unitDied' | 'playedToBf' | 'finalized' | 'played'; types?: CardType[]; op?: Cmp; n?: number;
+      /** unitDied: only units of this relation to the controller ("an enemy unit has died"). */
+      rel?: 'friendly' | 'enemy' }
+  /** "If an opponent's score is within N points of the Victory Score". */
+  | { c: 'opponentNearWin'; within: number }
+  /** The trigger's player ('p' of the info) is in their first Beginning Phase [190.6.b]. */
+  | { c: 'firstBeginning' }
+  /** An earlier instruction did all it said (Catalyst of Aeons: "if you couldn't channel 2"). */
+  | { c: 'full'; instr: string }
   | { c: 'excess'; n: number }                                                 // "if you assigned N or more excess damage"
   /** A fact the trigger condition captured (info), compared [359.3.f.3]. */
   | { c: 'info'; key: string; eq: Json }
@@ -228,7 +240,13 @@ export type Cmp = '<' | '<=' | '=' | '>=' | '>';
 export type PredAst =
   | { p: 'might' | 'energyCost'; op: Cmp; n: number }
   | { p: 'exhausted' | 'ready' | 'token' | 'nonToken' | 'buffed' | 'stunned' | 'mighty' | 'equipped' | 'attached'
-      | 'movedThisTurn' | 'alone' | 'oneOnOne' | 'inCombat' | 'open' | 'occupied' | 'notSubject' | 'attackingWithOther' }
+      | 'movedThisTurn' | 'alone' | 'oneOnOne' | 'inCombat' | 'open' | 'occupied' | 'notSubject' | 'attackingWithOther'
+      /** Has damage marked [142]. */
+      | 'damaged' }
+  /** The Power symbols of a card's cost (Defy: "no more than [A]"). */
+  | { p: 'powerCost'; op: Cmp; n: number }
+  /** Energy cost compared with the controller's points (Kai'Sa, Evolutionary). */
+  | { p: 'energyCostVsPoints'; op: Cmp }
   | { p: 'type'; any: CardType[] }
   | { p: 'tag'; tag: string }
   | { p: 'designation'; d: 'attacker' | 'defender' }
@@ -282,7 +300,9 @@ export type InstrAst = { id?: string; link?: string } & (
   | { op: 'playSelf'; cost: CostAst }                                            // a limited play of the source [420.3]
   /** Plays a card an instruction names [420.3]: from a trash, its Energy cost
       reduced ("Reduce its Energy cost by …"). */
-  | { op: 'playCard'; what: RefAst; energyLess?: ValueAst }
+  | { op: 'playCard'; what: RefAst; energyLess?: ValueAst;
+      /** "ignoring its Energy cost" / "ignoring its cost" [420.3.b]. */
+      free?: 'energy' | 'all' }
   | { op: 'baseMight'; n: ValueAst; to: RefAst | SelAst; until: Until }          // layer 2 [479.2]
   | { op: 'grant'; kw: KeywordAst; to: RefAst | SelAst; until: Until }           // layer 3 [479.3]
   | { op: 'if'; cond: CondAst; then: InstrAst[]; else?: InstrAst[] }             // [359.3.e]
@@ -329,7 +349,9 @@ export type Until = 'thisTurn' | 'thisCombat' | 'permanent';
 export type TriggerAst =
   | { on: 'played'; who: 'self' }                                                // a Play Effect [383.4.a]
   | { on: 'cardPlayed'; by: 'you' | 'anyPlayer' | 'opponent';
-      what?: { types?: CardType[]; minEnergy?: number; card?: true; fromFacedown?: true };
+      what?: { types?: CardType[]; minEnergy?: number; card?: true; fromFacedown?: true;
+        /** "another unit": not the source itself. */
+        other?: true };
       to?: 'here';                                                               // [420.4.a]; card: not a token [052]
       /** "For each player, the first time they …" [383.1.b]. */
       firstPerPlayer?: true }
@@ -352,7 +374,9 @@ export type TriggerAst =
   | { on: 'discarded'; who: 'self' }                                             // [423]: from the trash
   | { on: 'returnedToHand'; at: 'here' }                                         // a unit here returned to a hand
   | { on: 'buffed'; who: 'friendly' }                                            // you buff a friendly unit [427]
-  | { on: 'stunned'; who: 'enemy'; at: 'battlefield' }                           // you stun an enemy unit [424]
+  | { on: 'stunned'; who: 'enemy'; at: 'battlefield' | 'any';
+      /** "one or more": one instance per Stun action. */
+      once?: true }                                                              // you stun an enemy unit [424]
   | { on: 'becomesMighty'; who: 'friendly' }                                     // [709]
   | { on: 'hid'; at: 'here' };                                                   // you hide a card here [422]
 

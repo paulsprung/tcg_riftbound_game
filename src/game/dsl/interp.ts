@@ -426,7 +426,10 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
     }
     case 'burn': burn(s, x, p, ins.n, '441'); return ok;
     case 'mill': return mill(s, x, p, ins.n, '108.2').length > 0 ? ok : negated;
-    case 'channel': return channelRunes(s, x, p, ins.n, '431', ins.exhausted === true) > 0 ? ok : negated;
+    case 'channel': {
+      const n = channelRunes(s, x, p, ins.n, '431', ins.exhausted === true);
+      return n >= ins.n ? ok : n > 0 ? { o: 'partial' } : negated;
+    }
     case 'look': {
       const top = s.players[p].deck.slice(0, ins.n);
       look(s, x, p, top, '425');
@@ -527,9 +530,9 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
       const id = r.objs.find((o) => s.objects[o].zone.z === 'trash');
       if (id === undefined) return negated;
       const cost = costOf(s, id);
-      const less = ins.energyLess === undefined ? 0 : val(ins.energyLess);
+      const less = ins.free ? cost.energy : ins.energyLess === undefined ? 0 : val(ins.energyLess);
       putOnChain(s, x, { obj: id, controller: p, by: { item: it.id, instr: st.key },
-        overrides: { cost: { energy: Math.max(0, cost.energy - less), power: cost.power } } });
+        overrides: { cost: { energy: Math.max(0, cost.energy - less), power: ins.free === 'all' ? [] : cost.power } } });
       return ok;
     }
     case 'move': {
