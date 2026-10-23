@@ -29,6 +29,9 @@ import { paymentPlans } from './resources.ts';
 import { turnState } from './board.ts';
 import { facedownCapacity } from './defaults.ts';
 import { requestCleanup } from './tasks.ts';
+import { staticsFor } from '../layers/derive.ts';
+import { playerEffects, resourceCost } from '../play/playCard.ts';
+import type { ResourceCost } from './resources.ts';
 
 type HideFrame = FrameOf<'hide'>;
 
@@ -51,9 +54,17 @@ export function hideable(s: GameState, p: PlayerId): ObjId[] {
   const st = turnState(s);
   if (st !== 'NeutralOpen' && !(st === 'ShowdownOpen' && s.rules.hideInShowdownOpen)) return [];
   if (hideSpots(s, p).length === 0) return [];
-  if (paymentPlans(s, p, { energy: 0, power: [{ k: 'any' }] }, { limit: 1 }).length === 0) return [];
+  if (!hideCosts(s, p).some((c) => paymentPlans(s, p, c, { limit: 1 }).length > 0)) return [];
   const pl = s.players[p];
   return [...pl.hand, ...(pl.champion === null ? [] : [pl.champion])].filter((id) => hasPrintedKeyword(s.objects[id].def, 'hidden'));
+}
+
+/** What hiding may cost p: [A] [811.1.b], Teemo's "[1] instead of [A]", or nothing ("ignoring costs this turn"). */
+export function hideCosts(s: GameState, p: PlayerId): ResourceCost[] {
+  if (playerEffects(s, p, 'hideFree').length > 0) return [{ energy: 0, power: [] }];
+  const out: ResourceCost[] = [{ energy: 0, power: [{ k: 'any' }] }];
+  for (const { st, spec } of staticsFor(s, null, 'hideFor')) if (st.ctl === p) out.push(resourceCost(spec.cost, []));
+  return out;
 }
 
 const STEPS: StepTable<HideFrame> = [
@@ -75,9 +86,21 @@ const STEPS: StepTable<HideFrame> = [
     f.bf = (parseKey(key)!.loc as { bf: number }).bf;
     return next(f);
   },
-  // pc 1: pay [A], then hide [811.1.b].
+  // pc 1: pay [A] (or an alternative), then hide [811.1.b].
   (s, f, x) => {
-    const r = payStep(s, f, x, { payer: f.by, cost: { energy: 0, power: [{ k: 'any' }] }, what: 'hide', back: true,
+    const costs = hideCosts(s, f.by).filter((c) => paymentPlans(s, f.by, c, { limit: 1 }).length > 0);
+    if (f.alt === undefined) {
+      if (costs.length > 1) {
+        const key = answer(f);
+        if (key === undefined) {
+          return ask(s, f, x, { player: f.by, kind: 'altCost', prompt: { t: 'hideCost', n: costs.length }, ctx: { source: f.obj,
+            rule: '811.1.b' }, options: costs.map((_, i) => ({ key: K.alt(i) })), privateOptions: false });
+        }
+        f.alt = parseKey(key)!.n!;
+      } else f.alt = 0;
+    }
+    const cost = costs[f.alt] ?? costs[0] ?? { energy: 0, power: [{ k: 'any' as const }] };
+    const r = payStep(s, f, x, { payer: f.by, cost, what: 'hide', back: true,
       onBack: () => 'done', onDecline: () => 'done', rule: '811.1.b' });
     if (typeof r === 'string') return r;
     const bf = f.bf!;

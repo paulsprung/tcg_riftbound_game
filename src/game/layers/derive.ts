@@ -123,7 +123,7 @@ export function staticApplies(s: GameState, st: StaticInst, spec: { to?: SelAst 
 }
 
 /** Statics about an object: "I have …" or "… have …" (a `to` selector). */
-const TARGETED: readonly StaticAst['s'][] = ['might', 'keyword', 'entersReady', 'grantAbility'];
+const TARGETED: readonly StaticAst['s'][] = ['might', 'keyword', 'entersReady', 'grantAbility', 'maxBuffs'];
 
 /** The statics of a kind that apply to an object now (for the kinds that
     are about objects), or every active one of that kind whose condition
@@ -184,7 +184,9 @@ function core(s: GameState, o: GameObject, withStatics: boolean): Derived {
   }
   const onBoard = o.zone.z === 'base' || o.zone.z === 'bf' || o.zone.z === 'legend';
   if (withStatics && onBoard) {
-    for (const { spec } of staticsFor(s, o.id, 'keyword')) keywords[spec.kw.kw] = (keywords[spec.kw.kw] ?? 0) + (spec.kw.value ?? 1);
+    const statics = staticsFor(s, o.id, 'keyword');
+    for (const { spec } of statics) if (!spec.ifNot) keywords[spec.kw.kw] = (keywords[spec.kw.kw] ?? 0) + (spec.kw.value ?? 1);
+    for (const { spec } of statics) if (spec.ifNot && !keywords[spec.kw.kw]) keywords[spec.kw.kw] = spec.kw.value ?? 1;   // "if they didn't already"
   }
   if (base === null) return { might: null, baseMight: null, keywords };
   delta += o.buffs * buffValueOf(s, o);                              // one per buff [703]
@@ -206,8 +208,14 @@ export function derive(s: GameState, id: ObjId): Derived {
   const d = core(s, o, true);
   const onBoard = o.zone.z === 'base' || o.zone.z === 'bf';
   if (d.might !== null && onBoard) {
-    for (const { st, spec } of staticsFor(s, id, 'might')) {
-      d.might += Math.max(0, value(s, spec.n, st.host, st.ctl));    // an increase by a negative amount is +0 [479.4.c]
+    const ms = staticsFor(s, id, 'might');
+    for (const { st, spec } of ms) {
+      if (!spec.dec) d.might += Math.max(0, value(s, spec.n, st.host, st.ctl));   // an increase by a negative amount is +0 [479.4.c]
+    }
+    for (const { st, spec } of ms) {                                 // decreases, "to a minimum of N [M]"
+      if (!spec.dec) continue;
+      const n = Math.max(0, value(s, spec.n, st.host, st.ctl));
+      d.might -= spec.floor === undefined ? n : Math.min(n, Math.max(0, d.might - spec.floor));
     }
   }
   m.busy.delete(id);

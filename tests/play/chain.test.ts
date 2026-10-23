@@ -63,7 +63,7 @@ describe('the chain on the table', () => {
     const g = start(53);
     runes(g, 0, []);
     const nova = inHand(g, 'supernova');
-    const seeker = inHand(g, 'acceptable-losses');                   // a spell no deck here has, not defined
+    const seeker = inHand(g, 'cataclysmic-duel');                    // a spell not defined yet (VEN; replace once it is)
     reask(g);
     const v = viewFor(g.s, 0);
     expect(explainUnavailable(v, nova).map((r) => r.rule)).toContain('203.3');

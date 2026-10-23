@@ -38,24 +38,27 @@ import type {
   ChainItem, Env, GameState, Json, Loc, ObjId, Outcome, PlayerId, PowerReq, TargetRef,
 } from '../state/types.ts';
 import type { InstrAst, MoveToAst, ProgAst, RefAst, SelAst, SlotAst, ValueAst } from './ast.ts';
-import { fire } from '../abilities/triggers.ts';
+import { collect, fire, placeAll } from '../abilities/triggers.ts';
 import {
   addEffect, addMight, addSpecial, attach, banish, buffUnits, burn, cantMove, channelRunes, deal, detach, discard, drawCard,
-  drawCards, gainPoints, gainXp, kill, look, mill, moveUnits, ready, recycleCards, recyclePermanent, returnToHand, spendBuffs,
-  stunUnits, toZone,
+  drawCards, exhaust, gainPoints, gainXp, heal, kill, look, mill, moveUnits, ready, recall, recycleCards, recyclePermanent, recycleRune, returnToHand,
+  spendBuffs, stunUnits, toZone,
 } from '../rules/actions.ts';
 import { itemById, markFepr, removeItem } from '../rules/chain.ts';
 import { energyCostOf, keywordOf, mightOf, snapshotOf, tagsOf, typesOf } from '../rules/chars.ts';
 import { evalCond, type CondCtx } from '../rules/conditions.ts';
 import { mint } from '../state/mut.ts';
-import { hereOf, sameLoc, selectAll, stillLegal, type SelCtx } from '../rules/targets.ts';
+import { hereOf, matches, predOk, sameLoc, selectAll, slotLocsOf, stillLegal, type SelCtx } from '../rules/targets.ts';
 import { requestCleanup } from '../rules/tasks.ts';
 import { costOf, putOnChain, resourceCost } from '../play/playCard.ts';
 import { payStep } from '../play/pay.ts';
+import { noMoveToBase } from '../rules/move.ts';
 import { findCard } from '../cards/oracle.ts';
 import { staticsFor } from '../layers/derive.ts';
 import { opponentsOf, turnOrderFromTurnPlayer, unitsAt } from '../rules/board.ts';
-import type { ResourceCost } from '../rules/resources.ts';
+import { goldsOf, type ResourceCost } from '../rules/resources.ts';
+import { copyJson } from '../state/clone.ts';
+import { chooseNext } from '../play/choices.ts';
 
 type ResolveFrame = FrameOf<'resolve'>;
 type X = { present: boolean };
@@ -63,7 +66,13 @@ type X = { present: boolean };
 /** One instruction of an item, with the key its outcome is recorded under.
     `guard`: a branch of an `if` or a `may`, executed only when it was taken.
     `exec`: the execution it belongs to (0, then one per paid Repeat [820]). */
-interface Step { key: string; instr: InstrAst; slots: SlotAst[]; exec: number; guard?: { key: string; branch: 'then' | 'else' } }
+interface Step { key: string; instr: InstrAst; slots: SlotAst[]; exec: number; guard?: { key: string; branch: string };
+  /** The player a "for each player" step is executed as. */
+  as?: PlayerId }
+
+/** Players in turn order from p, or from the one after p [MP]. */
+const orderFrom = (n: number, p: PlayerId, next: boolean): PlayerId[] =>
+  Array.from({ length: n }, (_, i) => ((p + i + (next ? 1 : 0)) % n) as PlayerId);
 
 /** The program an item executes as it resolves: a spell's text, an
     ability's effect. */
@@ -77,16 +86,27 @@ export function programOf(s: GameState, it: ChainItem): ProgAst | undefined {
 }
 
 /** An instruction list as steps; an `if`'s and a `may`'s branches follow it, guarded. */
-function flatten(body: InstrAst[], prefix: string, slots: SlotAst[], exec: number, guard?: Step['guard']): Step[] {
+interface Who { n: number; controller: PlayerId; as?: PlayerId }
+
+function flatten(body: InstrAst[], prefix: string, slots: SlotAst[], exec: number, guard: Step['guard'] | undefined, who: Who): Step[] {
   const out: Step[] = [];
   body.forEach((instr, i) => {
     const key = `${prefix}${i}`;
-    out.push({ key, instr, slots, exec, ...(guard ? { guard } : {}) });
+    out.push({ key, instr, slots, exec, ...(guard ? { guard } : {}), ...(who.as !== undefined ? { as: who.as } : {}) });
     if (instr.op === 'if') {
-      out.push(...flatten(instr.then, `${key}.t`, slots, exec, { key, branch: 'then' }));
-      out.push(...flatten(instr.else ?? [], `${key}.e`, slots, exec, { key, branch: 'else' }));
+      out.push(...flatten(instr.then, `${key}.t`, slots, exec, { key, branch: 'then' }, who));
+      out.push(...flatten(instr.else ?? [], `${key}.e`, slots, exec, { key, branch: 'else' }, who));
     }
-    if (instr.op === 'may') out.push(...flatten(instr.then, `${key}.t`, slots, exec, { key, branch: 'then' }));
+    if (instr.op === 'may') out.push(...flatten(instr.then, `${key}.t`, slots, exec, { key, branch: 'then' }, who));
+    if (instr.op === 'choiceBy') {
+      instr.modes.forEach((m, mi) => out.push(...flatten(m.body, `${key}.m${mi}.`, slots, exec, { key, branch: `m${mi}` }, who)));
+    }
+    if (instr.op === 'forEach') {
+      const me = who.as ?? who.controller;
+      const order = orderFrom(who.n, me, instr.from === 'next').filter((q) => instr.who === 'each' || q !== me);
+      // Each player's steps are guarded by the forEach itself (taken once it executes).
+      for (const q of order) out.push(...flatten(instr.body, `${key}.p${q}.`, slots, exec, guard, { ...who, as: q }));
+    }
   });
   return out;
 }
@@ -98,12 +118,13 @@ function stepsOf(s: GameState, it: ChainItem): Step[] {
   if (!prog) return [];
   const own = prog.choose ?? [];
   const out: Step[] = [];
+  const who: Who = { n: s.players.length, controller: it.controller };
   it.play.choices.executions.forEach((ex, e) => {
     const pre = e === 0 ? '' : `x${e}.`;
-    out.push(...flatten(prog.body, `${pre}b`, own, e));
+    out.push(...flatten(prog.body, `${pre}b`, own, e, undefined, who));
     (prog.modes?.of ?? []).forEach((m, mi) => {
       if (!ex.modes.includes(mi)) return;
-      out.push(...flatten(m.body, `${pre}m${mi}.`, [...own, ...(m.choose ?? [])], e));
+      out.push(...flatten(m.body, `${pre}m${mi}.`, [...own, ...(m.choose ?? [])], e, undefined, who));
     });
   });
   return out;
@@ -111,14 +132,7 @@ function stepsOf(s: GameState, it: ChainItem): Step[] {
 
 /** Where the battlefields the item's slots chose are ("friendly units there"). */
 function slotLocs(s: GameState, it: ChainItem, exec = 0): Record<string, Loc | null> {
-  const out: Record<string, Loc | null> = {};
-  for (const [slot, ts] of Object.entries(it.play.choices.executions[exec]?.targets ?? {})) {
-    const t = ts[0];
-    if (t?.k !== 'obj') continue;
-    const bf = s.bfs.findIndex((b) => b.obj === t.id);
-    out[slot] = bf >= 0 ? { z: 'bf', bf } : null;
-  }
-  return out;
+  return slotLocsOf(s, it.play.choices.executions[exec]);
 }
 
 /** What the item's conditions read: its controller, its source, the facts of
@@ -147,7 +161,8 @@ const objsOf = (v: Json | undefined): ObjId[] =>
 /** Binds a name for the rest of the resolution ("them", "the other"); the
     frame's own bookkeeping, not a change to the game. */
 function bind(f: ResolveFrame, name: string, objs: ObjId[]) {
-  f.env.bound = { ...f.env.bound, [name]: { objs } };
+  const key = f.env.as === undefined ? name : `${name}#p${f.env.as}`;
+  f.env.bound = { ...f.env.bound, [key]: { objs } };
 }
 
 const targetsOf = (it: ChainItem, st: Step, slot: string): TargetRef[] =>
@@ -169,9 +184,34 @@ function resolveRef(s: GameState, it: ChainItem, env: Env, r: RefAst | SelAst, s
     const legal = chosen.filter((t) => stillLegal(s, t, slot, c)).map((t) => (t as { id: ObjId }).id);
     return legal.length === 0 ? { objs: [], ignored: { o: 'ignored', why: 'targets' } } : { objs: legal };
   }
-  if ('bound' in r) return { objs: objsOf(env.bound[r.bound]).filter((id) => s.objects[id]) };
+  if ('bound' in r) return { objs: boundObjs(env, r.bound).filter((id) => s.objects[id]) };
+  if ('now' in r) {
+    const id = nowOf(s, it, env, r.now, st, c);
+    return id !== null ? { objs: [id] } : { objs: [], ignored: { o: 'ignored', why: 'nullInfo' } };
+  }
   const v = 'info' in r ? it.trigger?.[r.info] : it.trigger?.subject;
   return typeof v === 'number' && s.objects[v] ? { objs: [v] } : { objs: [], ignored: { o: 'ignored', why: 'nullInfo' } };
+}
+
+/** The objects a name is bound to: its own binding, else every player's of a "for each player" block. */
+export function boundObjs(env: Env, name: string): ObjId[] {
+  if (env.as !== undefined && env.bound[`${name}#p${env.as}`] !== undefined) return objsOf(env.bound[`${name}#p${env.as}`]);
+  if (env.bound[name] !== undefined) return objsOf(env.bound[name]);
+  return Object.keys(env.bound).filter((k) => k.startsWith(`${name}#p`)).flatMap((k) => objsOf(env.bound[k]));
+}
+
+/** The card an object was, wherever it is now [124]: the one object with its card identity. */
+function nowOf(s: GameState, it: ChainItem, env: Env, r: RefAst, st: Step, c: SelCtx): ObjId | null {
+  let card: number | undefined;
+  if (r === 'self') card = (env.self !== null ? s.objects[env.self]?.card : undefined) ?? it.sourceLki?.card;
+  else {
+    const id = firstOf(s, it, env, r, st, c);
+    if (id === null) return null;
+    card = s.objects[id]?.card ?? it.play.lookBack[id]?.card;
+  }
+  if (card === undefined) return null;
+  const o = Object.values(s.objects).find((x) => x.card === card && !x.token);
+  return o ? o.id : null;
 }
 
 /** The object a reference names at all, legal or not, live or looked back. */
@@ -180,7 +220,7 @@ function firstOf(s: GameState, it: ChainItem, env: Env, r: RefAst, st: Step, c: 
     const t = targetsOf(it, st, r.slot)[0];
     return t?.k === 'obj' ? t.id : null;
   }
-  if (typeof r === 'object' && 'bound' in r) return objsOf(env.bound[r.bound])[0] ?? null;   // even if it moved since
+  if (typeof r === 'object' && 'bound' in r) return boundObjs(env, r.bound)[0] ?? null;   // even if it moved since
   return resolveRef(s, it, env, r, st, c).objs[0] ?? null;
 }
 
@@ -215,6 +255,16 @@ function value(s: GameState, it: ChainItem, env: Env, v: ValueAst, st: Step, c: 
       return it.sourceLki?.chars.keywords[v.kw]?.value ?? 1;
     }
     case 'sum': return (v.of as ValueAst[]).reduce((n: number, w) => n + value(s, it, env, w, st, c), 0);
+    case 'points': return s.players[c.controller].points;
+    case 'excess': return s.combat?.excess[c.controller] ?? 0;
+    case 'playedThisTurn': return s.log.played.filter((r) => r.p === c.controller && r.isCard).length;
+    case 'diff': return Math.max(0, value(s, it, env, v.a, st, c) - value(s, it, env, v.b, st, c));
+    case 'maxMight': return Math.max(0, ...selectAll(s, v.of, c).map((id) => mightOf(s, id)));
+    case 'countBound': return boundObjs(env, v.name).length;
+    case 'x': {
+      const b = env.bound[v.name] as { n?: number } | undefined;
+      return typeof b?.n === 'number' ? b.n : 0;
+    }
   }
 }
 
@@ -243,6 +293,7 @@ function bonusDamage(s: GameState, it: ChainItem, target: ObjId): number {
     }
     n += spec.n;
   }
+  n += typeof it.play.choices.asPlayed.bonusDamage === 'number' ? it.play.choices.asPlayed.bonusDamage : 0;   // Ravenborn Tome
   return Math.max(0, n);
 }
 
@@ -260,7 +311,13 @@ defineSteps('resolve', (s, f, x) => {
   }
   const eventBf = typeof it.trigger?.bf === 'number' ? it.trigger.bf : null;
   const subject = typeof it.trigger?.subject === 'number' ? it.trigger.subject : null;
-  const c: SelCtx = { controller: it.controller, source: it.source ?? null, slotLoc: slotLocs(s, it, st.exec), eventBf, subject };
+  if (f.env.as !== st.as) {                                          // the player this step is executed as
+    const env = { ...f.env };
+    if (st.as === undefined) delete env.as; else env.as = st.as;
+    f.env = env;
+  }
+  const c: SelCtx = { controller: st.as ?? it.controller, source: it.source ?? null, slotLoc: slotLocs(s, it, st.exec), eventBf, subject,
+    lkiHere: it.sourceLki?.loc ?? null };
   const got = takeRet(f);
   // A linked instruction is ignored when the one it is linked to was [359.3.e.14.a].
   const linkedTo = st.instr.link === undefined ? undefined : it.outcomes[`id:${st.instr.link}`];
@@ -280,7 +337,13 @@ function moveDest(s: GameState, it: ChainItem, st: Step, id: ObjId, to: MoveToAs
     const h = hereOf(s, it.source ?? null);
     return h && h.z === 'bf' ? h : null;
   }
+  if (to === 'eventTo') {
+    const l = it.trigger?.to as Loc | undefined;
+    return l && typeof l === 'object' ? (l.z === 'base' ? { z: 'base', p: s.objects[id].controller ?? s.objects[id].owner } : l) : null;
+  }
   if ('dest' in to) return it.play.choices.executions[st.exec]?.dests[to.dest] ?? null;
+  if ('slotBf' in to) return slotLocs(s, it, st.exec)[to.slotBf] ?? null;
+  if ('locOf' in to) return null;                                    // resolved by the caller (needs the env)
   const bf = it.trigger?.[to.info];
   return typeof bf === 'number' && bf >= 0 ? { z: 'bf', bf } : null;
 }
@@ -305,7 +368,7 @@ function weaponmasterCost(s: GameState, gear: ObjId, unit: ObjId): ResourceCost 
 function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c: SelCtx, got: Json | undefined):
   Outcome | 'asked' {
   const ins = st.instr;
-  const p = it.controller;
+  const p = st.as ?? it.controller;
   const ok: Outcome = { o: 'executed' };
   const negated: Outcome = { o: 'negated', why: 'impossible' };
   const attribution = [...(it.obj !== undefined ? [it.obj] : []), ...(it.source !== undefined ? [it.source] : [])];
@@ -322,15 +385,23 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
       const target = ins.op === 'deal' || ins.op === 'might' ? ins.to : ins.what;
       const r = ref(target);
       if (r.ignored) return r.ignored;
+      if (ins.op === 'banish') {                                     // from the board or any other zone [428]
+        const objs = r.objs.filter((id) => s.objects[id] && s.objects[id].zone.z !== 'banish' && s.objects[id].zone.z !== 'chain');
+        if (objs.length === 0) return negated;
+        lookBack(s, it, objs.filter((id) => onBoard(s, id)));
+        const out = banish(s, x, objs, '428');
+        if (ins.id !== undefined) bind(f, ins.id, out);              // "banish it, then play it"
+        return ok;
+      }
       const objs = r.objs.filter((id) => onBoard(s, id));
       if (objs.length === 0) return negated;
       if (ins.op === 'deal') {
         const n = val((ins as Extract<InstrAst, { op: 'deal' }>).n);
         if (n <= 0) return negated;                                  // no Deal, no bonus [715.4]
         deal(s, x, objs.map((to) => ({ to, n: n + bonusDamage(s, it, to) })), { sources: attribution, by: p, combat: false,
-          rule: '418', item: it.id });
-      } else if (ins.op === 'banish') { lookBack(s, it, objs); banish(s, x, objs, '428'); }
-      else if (ins.op === 'kill') { lookBack(s, it, objs); kill(s, x, objs, { rule: '429', inCombat: () => false }); }
+          rule: '418', item: it.id, spell: it.kind === 'card' });
+      }
+      else if (ins.op === 'kill') { lookBack(s, it, objs); kill(s, x, objs, { rule: '429', inCombat: () => false, by: p, spell: it.kind === 'card' }); }
       else if (ins.op === 'stun') return stunUnits(s, x, objs, '424', p).length > 0 ? ok : { o: 'negated', why: 'noop' };
       else if (ins.op === 'buff') return buffUnits(s, x, objs, '427', p).length > 0 ? ok : { o: 'negated', why: 'noop' };
       else {
@@ -398,6 +469,7 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
         for (const q of opponentsOf(s, p)) drawCards(s, x, q, ins.n, '414');
         return ok;
       }
+      if (ins.who === 'caster') { drawCards(s, x, it.controller, ins.n, '414'); return ok; }
       const r = ins.who.controllerOf;
       const t = typeof r === 'object' && 'slot' in r ? targetsOf(it, st, r.slot)[0] : undefined;
       if (t?.k !== 'obj') return { o: 'ignored', why: 'nullInfo' };
@@ -409,12 +481,65 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
     case 'ready': {
       const r = ref(ins.what);
       if (r.ignored) return r.ignored;
-      ready(s, x, r.objs, '416');
+      // "Spells and abilities can't ready enemy units and gear" (Mageseeker Warden).
+      const objs = r.objs.filter((id) => !staticsFor(s, null, 'noReadyByEffects').some(({ st: w, spec }) =>
+        matches(s, spec.to, id, { controller: w.ctl, source: w.host })));
+      ready(s, x, objs, '416', p);
       return ok;
+    }
+    case 'exhaust': {
+      const r = ref(ins.what);
+      if (r.ignored) return r.ignored;
+      const objs = r.objs.filter((id) => (onBoard(s, id) || s.objects[id].zone.z === 'legend') && !s.objects[id].exhausted);
+      if (objs.length === 0) return negated;
+      exhaust(s, x, p, objs, '415', false);
+      return ok;
+    }
+    case 'recall': {
+      const r = ref(ins.what);
+      if (r.ignored) return r.ignored;
+      const objs = r.objs.filter((id) => onBoard(s, id));
+      if (objs.length === 0) return negated;
+      recall(s, x, objs, '457');
+      return ok;
+    }
+    case 'gainControl': {
+      const r = ref(ins.what);
+      if (r.ignored) return r.ignored;
+      const to = (id: ObjId) => (ins.toOwner ? s.objects[id].owner : p);
+      const objs = r.objs.filter((id) => onBoard(s, id) && s.objects[id].controller !== to(id));
+      if (objs.length === 0) return negated;
+      for (const id of objs) {
+        const q = to(id);
+        setField(s, s.objects[id], 'controller', q);
+        emit(s, x, { k: 'controlChanged', obj: id, p: q, rule: '479.2.a' });
+      }
+      if (ins.id !== undefined) bind(f, ins.id, objs);              // "take control of it and recall it"
+      requestCleanup(s);
+      return ok;
+    }
+    case 'extraTurn':
+      setField(s, s.turn, 'queue', [{ player: p, additional: true }, ...s.turn.queue]);   // [734], [738]
+      return ok;
+    case 'banishThis':
+      if (it.kind !== 'card') return negated;
+      setField(s, it, 'onLeaveChain', 'banish');
+      return ok;
+    case 'choose': {
+      const not = (ins.notSlots ?? []).flatMap((sl) => targetsOf(it, st, sl).flatMap((t) => (t.k === 'obj' ? [t.id] : [])));
+      const cands = [...new Set(ins.sel.flatMap((sel) => selectAll(s, sel, c)))].filter((id) => !not.includes(id));
+      if (got === undefined) {
+        if (cands.length === 0) { bind(f, ins.bind, []); return negated; }
+        if (cands.length <= ins.min && ins.min === ins.max) { bind(f, ins.bind, cands); return ok; }
+        return choice('choose', { objs: cands, min: ins.min, max: ins.max, who: p, sum: ins.sumMightMax ?? null });
+      }
+      const picked = objsOf(got);
+      bind(f, ins.bind, picked);
+      return picked.length > 0 ? ok : { o: 'negated', why: 'declined' };
     }
     case 'draw': {
       if (ins.from) {
-        const ids = objsOf(f.env.bound[(ins.from as { bound: string }).bound]).filter((id) => s.objects[id]?.zone.z === 'deck');
+        const ids = boundObjs(f.env, (ins.from as { bound: string }).bound).filter((id) => s.objects[id]?.zone.z === 'deck');
         if (ids.length === 0) return negated;
         for (const id of ids) drawCard(s, x, p, id, '414.1');
         return ok;
@@ -427,21 +552,25 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
     case 'burn': burn(s, x, p, ins.n, '441'); return ok;
     case 'mill': return mill(s, x, p, ins.n, '108.2').length > 0 ? ok : negated;
     case 'channel': {
-      const n = channelRunes(s, x, p, ins.n, '431', ins.exhausted === true);
-      return n >= ins.n ? ok : n > 0 ? { o: 'partial' } : negated;
+      const want = val(ins.n);
+      if (want <= 0) return negated;
+      const n = channelRunes(s, x, ins.caster ? it.controller : p, want, '431', ins.exhausted === true);
+      return n >= want ? ok : n > 0 ? { o: 'partial' } : negated;
     }
     case 'look': {
       const top = s.players[p].deck.slice(0, ins.n);
       look(s, x, p, top, '425');
       bind(f, ins.bind, top);
+      if (top.length > 0) fire(s, x, { e: 'seen', p, objs: top });     // Nocturne, Horrifying
       return top.length > 0 ? ok : negated;
     }
     case 'revealTop': {                                              // [425]: everyone sees it
-      const top = s.players[p].deck.slice(0, 1);
+      const top = s.players[p].deck.slice(0, ins.n ?? 1);
       if (top.length === 0) return negated;
-      setField(s, s.objects[top[0]], 'knownBy', allMask(s.players.length));
+      for (const id of top) setField(s, s.objects[id], 'knownBy', allMask(s.players.length));
       emit(s, x, { k: 'reveal', objs: top, to: allMask(s.players.length), rule: '425' });
       bind(f, ins.bind, top);
+      fire(s, x, { e: 'seen', p, objs: top, reveal: true });
       return ok;
     }
     case 'toHand': {
@@ -457,7 +586,17 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
       return ok;
     }
     case 'pick': {
-      const from = objsOf(f.env.bound[ins.from]).filter((id) => s.objects[id]);
+      const mightMax = ins.mightMax === undefined ? undefined : val(ins.mightMax);
+      const from = boundObjs(f.env, ins.from).filter((id) => s.objects[id] && (ins.where ?? []).every((w) => predOk(s, w, id, c))
+        && (mightMax === undefined || mightOf(s, id) <= mightMax));
+      if (ins.min !== undefined && ins.min < ins.n) {                // "you may …": none is an answer
+        if (got === undefined) {
+          if (from.length === 0) { bind(f, ins.bind, []); return negated; }
+          return choice('choose', { objs: from, min: ins.min, max: ins.n, who: p, sum: null });
+        }
+        bind(f, ins.bind, objsOf(got));
+        return objsOf(got).length > 0 ? ok : { o: 'negated', why: 'declined' };
+      }
       if (from.length <= ins.n) {
         bind(f, ins.bind, from);
         return from.length > 0 ? ok : negated;
@@ -467,10 +606,14 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
       return ok;
     }
     case 'recycleRest': {
-      const minus = objsOf(f.env.bound[ins.minus]);
-      const rest = objsOf(f.env.bound[ins.from]).filter((id) => !minus.includes(id) && s.objects[id]?.zone.z === 'deck');
+      const minus = boundObjs(f.env, ins.minus);
+      const rest = boundObjs(f.env, ins.from).filter((id) => !minus.includes(id) && s.objects[id]?.zone.z === 'deck');
       if (rest.length === 0) return negated;
-      recycleCards(s, x, p, rest, '417');
+      const owners = rest.map((id) => s.objects[id].owner);
+      for (const q of s.players) {                                   // each to its owner's deck [417.1]
+        const mine = rest.filter((_, i) => owners[i] === q.id);
+        if (mine.length > 0) recycleCards(s, x, q.id, mine, '417');
+      }
       return ok;
     }
     case 'discard': {
@@ -490,6 +633,7 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
       if (top.length === 0) return negated;                          // no Burn Out [437.4.a]
       if (got === undefined) {
         look(s, x, p, top, '437.1');
+        fire(s, x, { e: 'seen', p, objs: top });
         return choice('predict', { objs: top, who: p });
       }
       const recycled = objsOf(got);
@@ -498,7 +642,8 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
     }
     case 'playToken': {
       let at: Loc | undefined;
-      if (ins.at === 'yourBase') at = { z: 'base', p };
+      const q = ins.caster ? it.controller : p;
+      if (ins.at === 'yourBase') at = { z: 'base', p: q };
       else if (ins.at === 'here') {
         const h = hereOf(s, it.source ?? null);
         if (!h) return { o: 'ignored', why: 'nullInfo' };            // "here" is gone [359.3.e.12]
@@ -510,9 +655,12 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
       } else if (playedFromFacedown !== null && isUnitToken(ins.token)) {
         at = { z: 'bf', bf: playedFromFacedown };                   // [811.1.d.5]
       }
-      for (let n = 0; n < ins.n; n++) {
-        putOnChain(s, x, { obj: { token: ins.token, owner: p }, controller: p, by: { item: it.id, instr: st.key },
-          overrides: { ...(at ? { at } : {}), ...(ins.ready ? { ready: true } : {}), ...(ins.exhausted ? { exhausted: true } : {}) } });
+      const count = val(ins.n);
+      if (count <= 0) return negated;
+      for (let n = 0; n < count; n++) {
+        const rdy = ins.ready || (ins.readyFirst !== undefined && n < ins.readyFirst);
+        putOnChain(s, x, { obj: { token: ins.token, owner: q }, controller: q, by: { item: it.id, instr: st.key },
+          overrides: { ...(at ? { at } : {}), ...(rdy ? { ready: true } : {}), ...(ins.exhausted ? { exhausted: true } : {}) } });
       }
       return ok;
     }
@@ -527,12 +675,22 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
     case 'playCard': {
       const r = ref(ins.what);
       if (r.ignored) return r.ignored;
-      const id = r.objs.find((o) => s.objects[o].zone.z === 'trash');
+      const id = r.objs.find((o) => ['trash', 'hand', 'banish', 'deck'].includes(s.objects[o].zone.z));
       if (id === undefined) return negated;
-      const cost = costOf(s, id);
+      const o = s.objects[id];
+      const printed = costOf(s, id);
+      const cost = ins.cost ? resourceCost(ins.cost, findCard(o.def)?.domains ?? []) : printed;
       const less = ins.free ? cost.energy : ins.energyLess === undefined ? 0 : val(ins.energyLess);
-      putOnChain(s, x, { obj: id, controller: p, by: { item: it.id, instr: st.key },
-        overrides: { cost: { energy: Math.max(0, cost.energy - less), power: ins.free === 'all' ? [] : cost.power } } });
+      let at: Loc | undefined;
+      const who = ins.by === 'owner' ? o.owner : p;
+      if (typesOf(o).includes('unit') && ins.at === 'here') {
+        const h = hereOf(s, it.source ?? null);
+        if (h) at = h;
+      } else if (typesOf(o).includes('unit') && ins.at === 'base') at = { z: 'base', p: who };
+      const played = putOnChain(s, x, { obj: id, controller: who, by: { item: it.id, instr: st.key },
+        overrides: { cost: { energy: Math.max(0, cost.energy - less), power: ins.free === 'all' ? [] : cost.power }, ...(at ? { at } : {}) } });
+      const onChain = itemById(s, played.id);
+      if (ins.leaveChain && onChain) setField(s, onChain, 'onLeaveChain', ins.leaveChain);
       return ok;
     }
     case 'move': {
@@ -540,10 +698,13 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
       if (r.ignored) return r.ignored;
       const units = r.objs.filter((id) => onBoard(s, id) && !cantMove(s, id));
       const groups = new Map<string, { to: Loc; units: ObjId[] }>();
+      const target = typeof ins.to === 'object' && 'locOf' in ins.to ? firstOf(s, it, f.env, ins.to.locOf, st, c) : null;
       for (const id of units) {
-        const to = moveDest(s, it, st, id, ins.to);
+        const to = typeof ins.to === 'object' && 'locOf' in ins.to
+          ? (target !== null && s.objects[target] ? locOf(s.objects[target]) : null) : moveDest(s, it, st, id, ins.to);
         const at = locOf(s.objects[id])!;
         if (!to || sameLoc(to, at)) continue;                        // not a valid destination [355.4.a]
+        if (to.z === 'base' && at.z === 'bf' && noMoveToBase(s, at.bf)) continue;   // Vilemaw's Lair
         const k = JSON.stringify(to);
         if (!groups.has(k)) groups.set(k, { to, units: [] });
         groups.get(k)!.units.push(id);
@@ -555,12 +716,16 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
     case 'returnToHand': case 'recycle': {
       const r = ref(ins.what);
       if (r.ignored) return r.ignored;
-      const deck = r.objs.filter((id) => s.objects[id].zone.z === 'deck');
-      if (ins.op === 'recycle' && deck.length > 0) {                // a revealed card back to the bottom [417]
-        recycleCards(s, x, p, deck, '417');
+      const deck = r.objs.filter((id) => s.objects[id].zone.z === 'deck' || (ins.op === 'recycle' && s.objects[id].zone.z === 'hand'));
+      if (ins.op === 'recycle' && deck.length > 0) {                // a revealed card (or one in a hand) to the bottom [417]
+        const owners = deck.map((id) => s.objects[id].owner);
+        for (const q of s.players) {
+          const mine = deck.filter((_, i) => owners[i] === q.id);
+          if (mine.length > 0) recycleCards(s, x, q.id, mine, '417');
+        }
         return ok;
       }
-      const objs = r.objs.filter((id) => onBoard(s, id) || s.objects[id].zone.z === 'trash');
+      const objs = r.objs.filter((id) => onBoard(s, id) || ['trash', 'facedown', 'champion'].includes(s.objects[id].zone.z));
       if (objs.length === 0) return negated;
       lookBack(s, it, objs.filter((id) => onBoard(s, id)));
       if (ins.op === 'returnToHand') returnToHand(s, x, objs, '428');
@@ -597,15 +762,24 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
       return ok;
     }
     case 'add':
-      addSpecial(s, x, p, { energy: ins.energy, universal: ins.power, onlyFor: ins.onlyFor,
+      addSpecial(s, x, p, { energy: ins.energy, universal: ins.power, onlyFor: ins.onlyFor, ...(ins.domain ? { domain: ins.domain } : {}),
         source: it.source !== undefined ? s.objects[it.source]?.def ?? '' : '' }, '430');
       return ok;
     case 'win':
       endGame(s, x, { winner: p, reason: 'effect', rule: '195', turn: s.turn.n });
       return ok;
     case 'points':
-      gainPoints(s, x, p, ins.n, 'effect', '194.1');
+      if (ins.who === 'opponent') for (const q of opponentsOf(s, p)) gainPoints(s, x, q, ins.n, 'effect', '194.1');
+      else gainPoints(s, x, p, ins.n, 'effect', '194.1');
       return ok;
+    case 'heal': {
+      const r = ref(ins.what);
+      if (r.ignored) return r.ignored;
+      const objs = r.objs.filter((id) => onBoard(s, id) && s.objects[id].damage.length > 0);
+      if (objs.length === 0) return negated;
+      heal(s, x, objs, '419');
+      return ok;
+    }
     case 'attach': {
       const a = ref(ins.what), b = ref(ins.to);
       if (a.ignored) return a.ignored;
@@ -627,7 +801,13 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
       return detach(s, x, g, '436') ? ok : negated;
     }
     case 'spendBuff': {
-      const cands = selectAll(s, ins.from, c).filter((id) => s.objects[id].buffs > 0);
+      const from = ins.from;
+      if (typeof from === 'string' || !('k' in from)) {               // a bound set: each of them spends its buff
+        const r = ref(from);
+        if (r.ignored) return r.ignored;
+        return spendBuffs(s, x, r.objs.filter((id) => onBoard(s, id)), '702.2.b').length > 0 ? ok : negated;
+      }
+      const cands = selectAll(s, from, c).filter((id) => s.objects[id].buffs > 0);
       if (cands.length === 0) return negated;
       if (cands.length > 1 && got === undefined) return choice('pick', { objs: cands, n: 1, who: p, t: 'spendBuff' });
       const u = cands.length === 1 ? cands[0] : objsOf(got)[0];
@@ -661,21 +841,191 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
       } else if (!(got as { paid?: boolean }).paid) return { o: 'negated', why: 'declined' };
       return attach(s, x, gear, me, '821.1.c') ? ok : negated;      // can't: it stays where it is [821.1.c.5]
     }
-    case 'playerEffect':
-      append(s, s.effects, { id: mint(s, 'eff'), ts: mint(s, 'ts'), controller: p, source: it.source ?? it.obj ?? null,
-        item: it.id, rule: '479', layer: 4, affects: { player: p }, spec: ins.spec as unknown as Json, until: ins.until });
+    case 'playerEffect': {
+      const whom = ins.who === 'opponents' ? opponentsOf(s, p) : ins.who === 'all' ? s.players.map((q) => q.id) : [p];
+      for (const q of whom) {
+        append(s, s.effects, { id: mint(s, 'eff'), ts: mint(s, 'ts'), controller: p, source: it.source ?? it.obj ?? null,
+          item: it.id, rule: '479', layer: 4, affects: { player: q }, spec: ins.spec as unknown as Json, until: ins.until });
+      }
       requestCleanup(s);
       return ok;
+    }
+    case 'forEach': return ok;                                       // its steps follow, one block per player
+    case 'choiceBy': {
+      if (got === undefined) {
+        let who: PlayerId | null = p;
+        if (ins.who !== 'self') {
+          const id = firstOf(s, it, f.env, ins.who.controllerOf, st, c);
+          who = id === null ? null : s.objects[id] && onBoard(s, id) ? s.objects[id].controller : it.play.lookBack[id]?.controller ?? null;
+        }
+        if (who === null) return { o: 'ignored', why: 'nullInfo' };
+        return choice('mode', { who, item: it.id, labels: ins.modes.map((m) => m.label) });
+      }
+      f.env.bound = { ...f.env.bound, [`if:${st.key}`]: `m${(got as { n: number }).n}` };
+      return ok;
+    }
+    case 'revealHand': {
+      const objs = opponentsOf(s, p).flatMap((q) => s.players[q].hand);
+      if (objs.length === 0) return negated;
+      for (const id of objs) setField(s, s.objects[id], 'knownBy', allMask(s.players.length));
+      emit(s, x, { k: 'reveal', objs: objs.slice(), to: allMask(s.players.length), rule: '425' });
+      return ok;
+    }
+    case 'discardCards': {
+      const r = ref(ins.what);
+      if (r.ignored) return r.ignored;
+      const objs = r.objs.filter((id) => s.objects[id].zone.z === 'hand');
+      if (objs.length === 0) return negated;
+      const owners = objs.map((id) => s.objects[id].owner);
+      for (const q of s.players) {
+        const mine = objs.filter((_, i) => owners[i] === q.id);
+        if (mine.length > 0) discard(s, x, q.id, mine, '423');
+      }
+      return ok;
+    }
+    case 'discardHand': {
+      const hand = s.players[p].hand.slice();
+      if (hand.length === 0) return negated;
+      discard(s, x, p, hand, '423');
+      return ok;
+    }
+    case 'revealUntil': {                                            // [425]
+      const deck = s.players[p].deck;
+      const shown: ObjId[] = [];
+      let found: ObjId | null = null;
+      for (const id of deck) {
+        shown.push(id);
+        if (ins.types.some((t) => typesOf(s.objects[id]).includes(t))) { found = id; break; }
+      }
+      if (shown.length === 0) return negated;
+      for (const id of shown) setField(s, s.objects[id], 'knownBy', allMask(s.players.length));
+      emit(s, x, { k: 'reveal', objs: shown.slice(), to: allMask(s.players.length), rule: '425' });
+      bind(f, ins.bind, found === null ? [] : [found]);
+      bind(f, ins.rest, shown.filter((id) => id !== found));
+      fire(s, x, { e: 'seen', p, objs: shown.slice(0, 1) });
+      return found === null ? { o: 'partial' } : ok;
+    }
+    case 'revealRune': {
+      const top = s.players[p].runeDeck[0];
+      if (top === undefined) return negated;
+      const domains = findCard(s.objects[top].def)?.domains ?? [];
+      setField(s, s.objects[top], 'knownBy', allMask(s.players.length));
+      emit(s, x, { k: 'reveal', objs: [top], to: allMask(s.players.length), rule: '425' });
+      recycleRune(s, x, top, '417');
+      f.env.bound = { ...f.env.bound, [ins.bind]: { domains } };
+      return ok;
+    }
+    case 'payX': {                                                   // "Pay any amount of [A]"
+      if (got === undefined) {
+        // As much Power as p could make: ready runes, the pool's Power, Gold (a payment that fails pays nothing).
+        const pool = s.players[p].pool;
+        const max = Math.min(12, s.players[p].base.filter((id) => s.objects[id].def.endsWith('-rune')).length
+          + pool.universal + Object.values(pool.power).reduce((a, b) => a + b, 0) + goldsOf(s, p).length);
+        if (max === 0) { f.env.bound = { ...f.env.bound, [ins.bind]: { n: 0 } }; return negated; }
+        return choice('number', { who: p, max, item: it.id });
+      }
+      const g = got as { n?: number; paid?: boolean };
+      if (g.n !== undefined) {
+        f.env.bound = { ...f.env.bound, [ins.bind]: { n: g.n } };
+        if (g.n === 0) return { o: 'negated', why: 'declined' };
+        return choice('pay', { who: p, item: it.id, energy: 0, power: Array.from({ length: g.n }, () => ({ k: 'any' })) as unknown as Json });
+      }
+      if (!g.paid) { f.env.bound = { ...f.env.bound, [ins.bind]: { n: 0 } }; return { o: 'negated', why: 'declined' }; }
+      return ok;
+    }
+    case 'dealSplit': {
+      const objs = selectAll(s, ins.to, c);
+      if (objs.length === 0) return negated;
+      if (got === undefined) {
+        if (objs.length === 1) return dealHits(s, x, it, [{ to: objs[0], n: ins.n }], p) ? ok : negated;
+        return choice('split', { objs, n: ins.n, who: p });
+      }
+      const picks = objsOf(got);
+      const hits = [...new Set(picks)].map((to) => ({ to, n: picks.filter((y) => y === to).length }));
+      return dealHits(s, x, it, hits.filter((h) => s.objects[h.to] && onBoard(s, h.to)), p) ? ok : negated;
+    }
+    case 'recycleAllBut': {
+      const keep = new Set(ins.keep.flatMap((k) => boundObjs({ ...f.env, as: undefined }, k)));
+      const all = [...new Set(ins.sel.flatMap((sel) => selectAll(s, sel, { ...c, controller: it.controller })))].filter((id) => !keep.has(id));
+      if (all.length === 0) return negated;
+      const hand = all.filter((id) => s.objects[id].zone.z === 'hand');
+      for (const id of all) if (s.objects[id] && onBoard(s, id)) recyclePermanent(s, x, id, '417');
+      for (const q of s.players) {
+        const mine = hand.filter((id) => s.objects[id]?.owner === q.id && s.objects[id].zone.z === 'hand');
+        if (mine.length > 0) recycleCards(s, x, q.id, mine, '417');
+      }
+      return ok;
+    }
+    case 'retarget': {
+      const r = ref(ins.what);
+      if (r.ignored) return r.ignored;
+      const target = s.chain.find((i) => i.obj !== undefined && r.objs.includes(i.obj));
+      if (!target) return negated;
+      if (got === undefined) {
+        setField(s, target, 'controller', p);                         // "Gain control of a spell"
+        emit(s, x, { k: 'controlChanged', obj: target.obj!, p, rule: '479.2.a' });
+        return choice('retarget', { item: target.id, who: p, pc: 0 });
+      }
+      return ok;
+    }
+    case 'swap': {
+      const a = ref(ins.a), b = ref(ins.b);
+      if (a.ignored) return a.ignored;
+      if (b.ignored) return b.ignored;
+      const ua = a.objs.find((id) => onBoard(s, id)), ub = b.objs.find((id) => onBoard(s, id));
+      if (ua === undefined || ub === undefined) return negated;
+      const la = locOf(s.objects[ua])!, lb = locOf(s.objects[ub])!;
+      if (sameLoc(la, lb)) return negated;
+      const toA = (l: Loc, u: ObjId): Loc => (l.z === 'base' ? { z: 'base', p: s.objects[u].controller ?? s.objects[u].owner } : l);
+      moveUnits(s, x, [ua], toA(lb, ua), { by: p, standard: false, rule: '421' });
+      moveUnits(s, x, [ub], toA(la, ub), { by: p, standard: false, rule: '421' });
+      return ok;
+    }
+    case 'returnChampion': {
+      const pl = s.players[p];
+      if (pl.champion !== null) return negated;
+      const id = pl.trash.find((t) => findCard(s.objects[t].def)?.name === pl.chosenChampionName || s.objects[t].def === pl.chosenChampionName);
+      if (id === undefined) return negated;
+      const from = s.objects[id].zone;
+      const before = knowers(s, [id]);
+      const obj = moveObject(s, id, Z.champion(p));
+      emitZone(s, x, { obj, prev: id, from, to: Z.champion(p), why: 'returnChampion', rule: '108.3', before });
+      return ok;
+    }
+    case 'activateConquer': {                                        // [383.4.g]
+      const h = hereOf(s, it.source ?? null);
+      if (!h || h.z !== 'bf') return negated;
+      const found = collect(s, { e: 'scored', p, bf: h.bf, how: 'conquer' }).filter((t) => {
+        const o = t.source === null ? undefined : s.objects[t.source];
+        const at = o ? locOf(o) : null;
+        return !!o && isUnitObj(o.def) && at?.z === 'bf' && at.bf === h.bf;
+      });
+      if (found.length === 0) return negated;
+      placeAll(s, x, found.map((t) => ({ ...t, synthetic: true })), 'turnOrder');
+      return ok;
+    }
     case 'replaceDeath': case 'cantMove': {
       const r = ref(ins.what);
       if (r.ignored) return r.ignored;
       const objs = r.objs.filter((id) => onBoard(s, id));
       if (objs.length === 0) return negated;
-      addEffect(s, x, objs, { s: ins.op }, effOpts(ins.op === 'replaceDeath' ? '367' : '421'));
+      addEffect(s, x, objs, ins.op === 'replaceDeath' && ins.cost ? { s: 'replaceDeath', cost: ins.cost as unknown as Json }
+        : { s: ins.op }, effOpts(ins.op === 'replaceDeath' ? '367' : '421'));
       return ok;
     }
   }
 }
+
+/** A Deal of chosen amounts by the item ("split among"), as one action [418]. */
+function dealHits(s: GameState, x: X, it: ChainItem, hits: { to: ObjId; n: number }[], p: PlayerId): boolean {
+  if (hits.length === 0) return false;
+  const attribution = [...(it.obj !== undefined ? [it.obj] : []), ...(it.source !== undefined ? [it.source] : [])];
+  deal(s, x, hits.map((h) => ({ to: h.to, n: h.n + bonusDamage(s, it, h.to) })), { sources: attribution, by: p, combat: false,
+    rule: '418', item: it.id, spell: it.kind === 'card' });
+  return true;
+}
+
+const isUnitObj = (def: string) => (findCard(def)?.types ?? []).includes('unit') || isUnitToken(def);
 
 const isUnitToken = (t: string) => ['recruit', 'sprite', 'sandSoldier', 'mech', 'bird', 'reflection', 'tentacle', 'shadowClone']
   .includes(t);
@@ -695,7 +1045,8 @@ function finishResolve(s: GameState, x: X, f: ResolveFrame): StepOut {
     if (it.kind === 'card') {
       const card = s.objects[it.obj!];
       const types = typesOf(card);
-      toZone(s, x, card.id, Z.trash(it.owner), { why: 'resolved', rule: '359.3.d' });
+      const to = it.onLeaveChain === 'banish' ? Z.banish(it.owner) : it.onLeaveChain === 'recycle' ? Z.deck(it.owner) : Z.trash(it.owner);
+      toZone(s, x, card.id, to, { why: 'resolved', rule: '359.3.d', ...(to.z === 'deck' ? { pos: 'bottom' as const } : {}) });
       emit(s, x, { k: 'played', item: it.id, def: card.def, p: it.controller, rule: '420.4.a' });
       append(s, s.log.played, { p: it.controller, card: card.card, def: card.def, isCard: true, types, from: it.play.origin.z,
         energySpent: it.play.facts.energySpent, powerSpent: it.play.facts.powerSpent, countered: false });
@@ -742,6 +1093,83 @@ defineSteps('instr', (s, f, x) => {
       onBack: () => ret(s, f, { paid: false }), onDecline: () => ret(s, f, { paid: false }), rule: '740.4.a' });
     if (typeof r === 'string') return r;
     return ret(s, f, { paid: true });
+  }
+  if (f.op === 'mode') {                                             // a player picks one of the modes (choiceBy)
+    const l = f.locals as { who: PlayerId; item: number; labels: string[] };
+    const key = answer(f);
+    if (key !== undefined) return ret(s, f, { n: parseKey(key)!.n! });
+    return ask(s, f, x, { player: l.who, kind: 'mode', prompt: { t: 'mode', pick: 1, chosen: [], labels: l.labels },
+      ctx: { item: l.item, rule: '355.3' }, options: l.labels.map((_, i) => ({ key: K.mode(i) })), privateOptions: false, mustAsk: true });
+  }
+  if (f.op === 'number') {                                           // "any amount": 0 … max
+    const l = f.locals as { who: PlayerId; max: number; item: number };
+    const key = answer(f);
+    if (key !== undefined) return ret(s, f, { n: parseKey(key)!.n! });
+    return ask(s, f, x, { player: l.who, kind: 'number', prompt: { t: 'number', max: l.max }, ctx: { item: l.item, rule: '740.4.a' },
+      options: Array.from({ length: l.max + 1 }, (_, i) => ({ key: K.n(i) })), privateOptions: false, mustAsk: true });
+  }
+  if (f.op === 'split') {                                            // one point of damage at a time
+    const l = f.locals as unknown as { objs: ObjId[]; n: number; who: PlayerId; picks?: ObjId[] };
+    const picks = l.picks ?? [];
+    const key = answer(f);
+    if (key !== undefined) {
+      const next = [...picks, parseKey(key)!.obj!];
+      if (next.length >= l.n) return ret(s, f, { objs: next });
+      f.locals = { ...l, picks: next } as unknown as Json;
+      return 'continue';
+    }
+    const live = l.objs.filter((id) => s.objects[id]);
+    if (live.length === 0) return ret(s, f, { objs: picks });
+    return ask(s, f, x, { player: l.who, kind: 'split', prompt: { t: 'split', left: l.n - picks.length, total: l.n },
+      ctx: { rule: '418' }, options: live.map((id) => ({ key: K.x(id), refs: [{ obj: id }], meta: { amount: 1 } })),
+      privateOptions: false, batch: `split:p${l.who}` });
+  }
+  if (f.op === 'retarget') {                                         // "You may make new choices for it"
+    const l = f.locals as { item: number; who: PlayerId; pc: number; old?: Json };
+    const target = itemById(s, l.item);
+    if (!target) return ret(s, f, {});
+    if (l.pc === 0) {
+      const key = answer(f);
+      if (key === undefined) {
+        return ask(s, f, x, { player: l.who, kind: 'may', prompt: { t: 'newChoices' }, ctx: { item: l.item, rule: '359.3.e' },
+          options: [{ key: K.yes }, { key: K.no }], privateOptions: false });
+      }
+      if (key !== K.yes) return ret(s, f, {});
+      const old = copyJson(target.play.choices) as unknown as Json;
+      const ex = target.play.choices.executions[0];
+      setField(s, ex, 'targets', {});
+      setField(s, ex, 'dests', {});
+      const asPlayed = { ...target.play.choices.asPlayed };
+      for (const k of Object.keys(asPlayed)) if (k.startsWith('slot:')) delete asPlayed[k];
+      setField(s, target.play.choices, 'asPlayed', asPlayed);
+      f.locals = { ...l, pc: 1, old };
+      return 'continue';
+    }
+    const restore = () => { setField(s, target.play, 'choices', l.old as unknown as typeof target.play.choices); return ret(s, f, {}); };
+    const r = chooseNext(s, f, x, target, programOf(s, target), { back: false, onBack: restore, onImpossible: restore,
+      what: s.objects[target.obj ?? -1]?.def ?? 'spell' });
+    return r === 'complete' ? ret(s, f, {}) : r;
+  }
+  if (f.op === 'choose') {                                           // any number between min and max, one pick at a time
+    const l = f.locals as unknown as { objs: ObjId[]; min: number; max: number; who: PlayerId; sum: number | null; chosen?: ObjId[] };
+    const chosen = l.chosen ?? [];
+    const key = answer(f);
+    if (key === K.done) return ret(s, f, { objs: chosen });
+    if (key !== undefined) {
+      const next = [...chosen, parseKey(key)!.obj!];
+      if (next.length >= l.max) return ret(s, f, { objs: next });
+      f.locals = { ...l, chosen: next } as unknown as Json;
+      return 'continue';
+    }
+    const total = chosen.reduce((n, id) => n + Math.max(0, mightOf(s, id)), 0);
+    const left = l.objs.filter((id) => s.objects[id] && !chosen.includes(id)
+      && (l.sum === null || total + Math.max(0, mightOf(s, id)) <= l.sum));
+    if (left.length === 0 && chosen.length >= Math.min(l.min, l.objs.length)) return ret(s, f, { objs: chosen });
+    const hidden = left.some((id) => s.objects[id].zone.z === 'hand' || s.objects[id].zone.z === 'deck');
+    const options: Option[] = left.map((id) => ({ key: K.pick(id), refs: [{ obj: id }] }));
+    if (chosen.length >= Math.min(l.min, l.objs.length)) options.push({ key: K.done });
+    return ask(s, f, x, { player: l.who, kind: 'pickCard', prompt: { t: 'choose', n: l.max, min: l.min, chosen: chosen.length },
+      ctx: { rule: '355.18' }, options, privateOptions: hidden, batch: `choose:p${l.who}` });
   }
   if (f.op === 'eachKill') {
     const l = f.locals as { order: PlayerId[]; picks: ObjId[]; i: number };

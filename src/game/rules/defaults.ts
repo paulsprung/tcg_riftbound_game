@@ -74,8 +74,8 @@ export function facedownCapacity(s: GameState, bf: number, p: PlayerId): number 
 }
 
 /** Buff counters a unit may have [702.3]. */
-export function maxBuffs(_s: GameState, _unit: ObjId): number {
-  return 1;
+export function maxBuffs(s: GameState, unit: ObjId): number {
+  return staticsFor(s, unit, 'maxBuffs').length > 0 ? Number.MAX_SAFE_INTEGER : 1;   // "any number of buffs"
 }
 
 /** Might each buff counter gives [703] (Stand United adds one). */

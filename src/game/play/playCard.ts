@@ -61,14 +61,14 @@ import { addItem, finalizeItem, itemById, playContext, removeItem } from '../rul
 import { energyCostOf, hasKeyword, isType, snapshotOf, tagsOf, typesOf } from '../rules/chars.ts';
 import {
   cardShowOff, cheapestCost, costOffers, deflectFor, mandatoryCostsPossible, optionalOffers, powerOf, showOffCandidates,
-  totalCost,
+  totalCost, xMax,
 } from './cost.ts';
 import { chooseCostObjects, performCostObjects } from './costObjects.ts';
 import { keywordsOf } from '../cards/registry.ts';
 import { evalCond } from '../rules/conditions.ts';
 import { staticsFor } from '../layers/derive.ts';
 import { paymentPlans, type ResourceCost } from '../rules/resources.ts';
-import { stillLegal } from '../rules/targets.ts';
+import { slotLocsOf, stillLegal } from '../rules/targets.ts';
 import { cardTiming, timingOk, windowAllows, type Timing, type Window } from '../rules/timing.ts';
 import { requestCleanup } from '../rules/tasks.ts';
 import { choicesPossible, chooseNext, slotsOf } from './choices.ts';
@@ -117,8 +117,22 @@ export function costOf(s: GameState, id: ObjId): ResourceCost {
 /** Where a unit may be played: its controller's base, or a battlefield
     they control [355.2.a]. */
 export function unitLocations(s: GameState, p: PlayerId): Loc[] {
+  if (baseOnly(s, p)) return [{ z: 'base', p }];
   return [{ z: 'base', p }, ...s.bfs.flatMap((b, bf): Loc[] => (b.controller === p ? [{ z: 'bf', bf }] : []))];
 }
+
+/** "Opponents can only play units to their base" (Mageseeker Warden, while it is at a battlefield). */
+/** "Units can't be played here." */
+const noPlayHere = (s: GameState, bf: number) => staticsFor(s, null, 'noPlayHere').some(({ st }) => {
+  const h = s.objects[st.host];
+  return h.zone.z === 'bf' && h.zone.bf === bf;
+});
+
+const baseOnly = (s: GameState, p: PlayerId) => staticsFor(s, null, 'opponentsPlayToBase').some(({ st }) => st.ctl !== p);
+
+/** A player effect on p of this kind ("can't play cards", "the next spell costs [5] less"). */
+export const playerEffects = (s: GameState, p: PlayerId, kind: string) => s.effects.filter((e) =>
+  (e.spec as { s?: string } | null)?.s === kind && 'player' in e.affects && e.affects.player === p);
 
 const hasUnitsAt = (s: GameState, p: PlayerId, bf: number, except: ObjId | null = null) =>
   s.bfs[bf].here.some((u) => u !== except && isType(s.objects[u], 'unit') && s.objects[u].controller === p);
@@ -133,7 +147,7 @@ const printed = (def: string, kw: KeywordId) => keywordsOf(def).some((k) => k.kw
 /** The permissions a card's own text gives to where it is played: "You may
     play me to an open battlefield" [170.11.c], "to an occupied enemy
     battlefield". */
-function ownPlayTo(def: string): ('open' | 'occupiedEnemy')[] {
+function ownPlayTo(def: string): ('open' | 'occupiedEnemy' | 'attacking')[] {
   return (cardDef(def)?.abilities ?? []).flatMap((a) => (a.kind === 'static' && a.spec.s === 'playTo' ? [a.spec.where] : []));
 }
 
@@ -158,15 +172,22 @@ export function playLocations(s: GameState, id: ObjId, p: PlayerId, origin?: Cha
     const out = unitLocations(s, p);
     const add = (l: Loc) => { if (!out.some((m) => m.z === l.z && (m.z === 'base' || m.bf === (l as typeof m).bf))) out.push(l); };
     if (printed(o.def, 'ambush')) ambushLocations(s, p).forEach(add);
-    for (const w of ownPlayTo(o.def)) {
+    const others = staticsFor(s, null, 'othersPlayTo').filter(({ st, spec }) => st.ctl === p && st.host !== id
+      && spec.types.some((t) => typesOf(o).includes(t))).map(({ spec }) => spec.where);
+    for (const w of baseOnly(s, p) ? [] : [...ownPlayTo(o.def), ...others]) {
       s.bfs.forEach((b, bf) => {
         const units = b.here.filter((u) => isType(s.objects[u], 'unit'));
         if (w === 'open' && b.controller === null && units.length === 0) add({ z: 'bf', bf });   // [170.11.c]
         if (w === 'occupiedEnemy' && b.controller !== null && b.controller !== p && units.length > 0) add({ z: 'bf', bf });
+        if (w === 'attacking' && s.combat?.bf === bf && s.combat.attacker === p) add({ z: 'bf', bf });   // "a battlefield you're attacking"
       });
     }
-    if (playAnywhere(s, p, typesOf(o))) s.bfs.forEach((_, bf) => add({ z: 'bf', bf }));
-    return out;
+    if (playAnywhere(s, p, typesOf(o)) && !baseOnly(s, p)) s.bfs.forEach((_, bf) => add({ z: 'bf', bf }));
+    // "Play me only to a battlefield you conquered this turn" (Perched Grimwyrm).
+    if ((cardDef(o.def)?.abilities ?? []).some((a) => a.kind === 'static' && a.spec.s === 'playOnlyToConquered')) {
+      return out.filter((l) => l.z === 'bf' && s.log.scored.some((r) => r.p === p && r.bf === l.bf && r.how === 'conquer'));
+    }
+    return out.filter((l) => l.z !== 'bf' || !noPlayHere(s, l.bf));    // Rockfall Path
   }
   if (isType(o, 'gear')) {
     return hasKeyword(s, id, 'deploy') || printed(o.def, 'deploy') ? s.bfs.map((_, bf): Loc => ({ z: 'bf', bf })) : [{ z: 'base', p }];
@@ -208,9 +229,16 @@ export function domainsNeeded(s: GameState, p: PlayerId, except: ObjId | null = 
  */
 export function playableCards(s: GameState, p: PlayerId, w: Window = 'main'): ObjId[] {
   const pl = s.players[p];
+  if (playerEffects(s, p, 'cantPlay').length > 0) return [];       // "opponents can't play cards this turn"
+  // "Your opponents' [Hidden] cards can't be revealed here" (Noxus Saboteur).
+  const sealed = (bf: number) => staticsFor(s, null, 'noFacedownPlayHere').some(({ st }) => {
+    const h = s.objects[st.host];
+    return st.ctl !== p && h.zone.z === 'bf' && h.zone.bf === bf;
+  });
   const facedown = s.bfs.flatMap((b) => b.facedown).filter((id) => {
     const o = s.objects[id];
-    return o.controller === p && o.facedown !== null && o.facedown.hiddenOnTurn < s.turn.n;   // from the next turn [811.1.b]
+    return o.controller === p && o.facedown !== null && o.facedown.hiddenOnTurn < s.turn.n   // from the next turn [811.1.b]
+      && !sealed(o.facedown.bf);
   });
   const from = [...pl.hand, ...(pl.champion === null ? [] : [pl.champion]), ...facedown];
   return from.filter((id) => {
@@ -330,12 +358,16 @@ const baseCost = (s: GameState, it: ChainItem): ResourceCost => overridesOf(it).
 
 const chosenOptional = (it: ChainItem) => Object.entries(it.play.choices.optionalCosts).filter(([, v]) => v).map(([k]) => k);
 
+/** The numbers chosen for "any number" costs ('x:<key>' in asPlayed). */
+const xsOf = (it: ChainItem): Record<string, number> => Object.fromEntries(Object.entries(it.play.choices.asPlayed)
+  .filter(([k, v]) => k.startsWith('x:') && typeof v === 'number').map(([k, v]) => [k.slice(2), v as number]));
+
 const chosenTargets = (it: ChainItem): TargetRef[] => it.play.choices.executions.flatMap((ex) => Object.values(ex.targets).flat());
 
 /** The total cost of the item as chosen so far [356]. */
 function playCost(s: GameState, it: ChainItem, extra: TargetRef[] = []): ResourceCost {
   const o = s.objects[it.obj!];
-  return totalCost(s, { def: o.def, types: typesOf(o), p: it.controller, base: baseCost(s, it), chosen: chosenOptional(it),
+  return totalCost(s, { def: o.def, types: typesOf(o), p: it.controller, base: baseCost(s, it), chosen: chosenOptional(it), xs: xsOf(it),
     targets: [...chosenTargets(it), ...extra] });
 }
 
@@ -492,6 +524,20 @@ const STEPS: StepTable<PlayFrame> = [
     if (cardShowOff(o.def) && asPlayed.showOff !== true) return showOffStep(s, f, x, it);
     const open = optionalOffers(s, o.def, typesOf(o), it.controller).filter((c) => it.play.choices.optionalCosts[c.key] === undefined);
     if (open.length > 0) return optionalCostStep(s, f, x, it, open[0]);
+    // "You may kill any number of friendly units as an additional cost": how many [355.1.a].
+    const xOff = costOffers(s, o.def, typesOf(o), it.controller).find((c) => c.a.x && asPlayed[`x:${c.key}`] === undefined);
+    if (xOff) {
+      const max = xMax(s, xOff.a.x!, it.controller);
+      const key = answer(f);
+      if (key === K.back) return rollback(s, f, x, 'back');
+      if (max === 0 || key !== undefined) {
+        setField(s, asPlayed, `x:${xOff.key}`, max === 0 ? 0 : parseKey(key!)!.n!);
+        return 'continue';
+      }
+      return ask(s, f, x, { player: it.controller, kind: 'number', prompt: { t: 'costNumber', card: o.def, ability: xOff.a.id, max },
+        ctx: { item: it.id, source: f.obj, rule: '355.1.a' }, options: Array.from({ length: max + 1 }, (_, i) => ({ key: K.n(i) })),
+        privateOptions: false, back: backOk(s, f) });
+    }
     if (!spell && !it.play.choices.location) {
       const fixed = overridesOf(it).at;
       if (fixed) {
@@ -546,9 +592,16 @@ const STEPS: StepTable<PlayFrame> = [
     const o = s.objects[f.obj];
     const c = playCost(s, it);
     const chosen = chosenOptional(it);
+    const xs = xsOf(it);
     const other = costOffers(s, o.def, typesOf(o), it.controller)
       .filter((off) => off.a.pay && (!off.a.optional || chosen.includes(off.key)))
       .map((off) => ({ key: off.key, src: off.src, pay: off.a.pay! }) as unknown as Json);
+    for (const off of costOffers(s, o.def, typesOf(o), it.controller)) {   // the objects of an "any number" cost
+      const n = xs[off.key] ?? 0;
+      if (!off.a.x || n === 0) continue;
+      const pay: NonStdCostAst = off.a.x.kill ? { kill: { sel: off.a.x.kill, n } } : { spendBuff: { sel: off.a.x.spendBuff!, n } };
+      other.push({ key: off.key, src: null, pay } as unknown as Json);
+    }
     void c;
     setField(s, it.play, 'cost', { energy: c.energy, power: c.power, other, components: [] });
     setField(s, it.play, 'step', 3);
@@ -568,7 +621,7 @@ const STEPS: StepTable<PlayFrame> = [
     const r = payStep(s, f, x, {
       payer: it.controller, cost, what: s.objects[f.obj].def, item: it.id, source: f.obj, back: backOk(s, f),
       onBack: () => rollback(s, f, x, 'back'), onDecline: () => rollback(s, f, x, 'declined'), rule: '357',
-      spell: isSpellItem(s, it),
+      spell: isSpellItem(s, it) ? true : isType(s.objects[f.obj], 'gear') ? 'gear' : false,
     });
     if (typeof r === 'string') return r;
     setField(s, it.play, 'step', 4);
@@ -596,8 +649,8 @@ const STEPS: StepTable<PlayFrame> = [
     }
     const prog = spellProg(s, it);
     if (prog) {
-      const c = { controller: it.controller, source: null };
       for (const ex of it.play.choices.executions) {
+        const c = { controller: it.controller, source: null, slotLoc: slotLocsOf(s, ex) };
         for (const slot of slotsOf(prog, ex.modes)) {
           if (slot.dest) continue;
           if ((ex.targets[slot.id] ?? []).some((t) => !stillLegal(s, t, slot, c))) return rollback(s, f, x, 'illegal');
@@ -615,8 +668,27 @@ const STEPS: StepTable<PlayFrame> = [
     const p = it.controller;
     const card = s.objects[f.obj];
     const types = typesOf(card);
+    if (!card.token) {
+      // "The next spell you play this turn costs [5] less / deals 1 Bonus Damage": used up now.
+      for (const e of playerEffects(s, p, 'costLess')) {
+        if (((e.spec as { types?: CardType[] }).types ?? []).some((t) => types.includes(t))) { useEffect(s, e.id); break; }
+      }
+      if (types.includes('spell')) {
+        for (const e of playerEffects(s, p, 'nextSpellBonus')) {
+          const n = (e.spec as { n?: number }).n ?? 1;
+          const had = typeof it.play.choices.asPlayed.bonusDamage === 'number' ? it.play.choices.asPlayed.bonusDamage : 0;
+          setField(s, it.play.choices.asPlayed, 'bonusDamage', had + n);
+          useEffect(s, e.id);
+        }
+      }
+    }
     if (!card.token) append(s, s.log.finalized, { p, card: card.card, isCard: true, types });   // [420.4.b]
     if (types.includes('spell')) {
+      // What the spell chose: the turn log ("chose … this turn") and The Dreaming Tree.
+      const chosen = [...new Set(it.play.choices.executions.flatMap((ex) => Object.values(ex.targets).flat())
+        .flatMap((t) => (t.k === 'obj' && s.objects[t.id] ? [t.id] : [])))];
+      for (const obj of chosen) append(s, s.log.targeted, { item: it.id, by: p, obj, spell: true });
+      if (chosen.length > 0) fire(s, x, { e: 'chosen', p, objs: chosen });
       requestCleanup(s);
       return 'done';                                                 // a spell waits on the chain [359.3]
     }

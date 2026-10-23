@@ -51,6 +51,8 @@ import { isType, snapshotOf } from '../rules/chars.ts';
 import { hereOf } from '../rules/targets.ts';
 import { enqueue } from '../rules/tasks.ts';
 import { copyJson } from '../state/clone.ts';
+import { findCard } from '../cards/oracle.ts';
+import { staticsFor } from '../layers/derive.ts';
 
 type X = { present: boolean };
 
@@ -60,10 +62,16 @@ export type TriggerEvent =
       to?: Loc; from?: ZoneKind }                                    // Played [420.4.a]
   | { e: 'exhausted'; p: PlayerId; objs: ObjId[] }                   // one Exhaust action [415]
   | { e: 'scored'; p: PlayerId; bf: number; how: 'conquer' | 'hold'; wasUncontrolled?: boolean }   // [471]
-  | { e: 'died'; deaths: { snap: Snapshot; at: Loc | null; item?: number | null; alone?: boolean }[] }   // one Kill action [429]
+  | { e: 'died'; deaths: { snap: Snapshot; at: Loc | null; item?: number | null; alone?: boolean; by?: PlayerId | null;
+      spell?: boolean }[] }                                          // one Kill action [429]
+  | { e: 'damaged'; objs: ObjId[] }                                  // one Deal action [418]
+  | { e: 'readied'; objs: ObjId[]; by: PlayerId }                    // readied by a spell or ability [416]
+  | { e: 'chosen'; p: PlayerId; objs: ObjId[] }                      // a spell chose these [355.5]
+  | { e: 'seen'; p: PlayerId; objs: ObjId[]; reveal?: boolean }     // looked at or revealed on top of a Main Deck [425]
+  | { e: 'wonCombat'; p: PlayerId; bf: number; units: ObjId[] }      // [468.3]
   | { e: 'designated'; objs: ObjId[]; d: 'attacker' | 'defender' }   // first time this combat [383.4.e–f]
   | { e: 'phase'; at: 'beginning' | 'mainStart' | 'endOfTurn'; p: PlayerId }   // [315.2.a], [316.4], [317.1.a]
-  | { e: 'moved'; objs: ObjId[]; to: Loc; by: PlayerId | null }      // one Move action [448]
+  | { e: 'moved'; objs: ObjId[]; to: Loc; by: PlayerId | null; from?: Loc[] }   // one Move action [448]
   | { e: 'discarded'; p: PlayerId; objs: ObjId[] }                   // the cards, now in the trash [423]
   | { e: 'returned'; objs: { snap: Snapshot; at: Loc | null }[] }    // returned to a hand from the board
   | { e: 'buffed' | 'stunned'; objs: ObjId[]; by: PlayerId | null }  // [427], [424]
@@ -96,7 +104,7 @@ function sources(s: GameState): { o: GameObject; abilities: TriggeredAst[] }[] {
     if (isBoard(o.zone.z)) {
       const abilities = triggeredOn(s, o);
       if (abilities.length > 0) out.push({ o, abilities });
-    } else if ((o.zone.z === 'trash' || o.zone.z === 'hand') && hasTriggers(o.def)) {
+    } else if ((o.zone.z === 'trash' || o.zone.z === 'hand' || o.zone.z === 'deck') && hasTriggers(o.def)) {
       out.push({ o, abilities: abilitiesOf(o.def).filter((a): a is TriggeredAst => a.kind === 'triggered') });
     }
   }
@@ -129,6 +137,7 @@ function meets(s: GameState, w: TriggerAst, ev: TriggerEvent, o: GameObject | nu
       if (w.what?.minEnergy !== undefined && (!ev.isCard || ev.energy < w.what.minEnergy)) break;
       if (w.what?.fromFacedown && ev.from !== 'facedown') break;
       if (w.what?.other && o && ev.obj === o.id) break;
+      if (w.what?.minPower !== undefined && (!ev.isCard || (findCard(ev.def)?.cost?.power.length ?? 0) < w.what.minPower)) break;
       if (w.to === 'here' && (!o || !sameLoc(ev.to, here))) break;
       if (w.firstPerPlayer) {                                        // [383.1.b]
         const k = key(ev.p);
@@ -151,6 +160,16 @@ function meets(s: GameState, w: TriggerAst, ev: TriggerEvent, o: GameObject | nu
         for (const id of ev.objs) {
           const p = ctlOf(s, id);
           if (p !== null && p === c(p)) instances.push({ p, info: { subject: id } });
+        }
+      } else if (w.who === 'enemy') {                                // "When an enemy unit attacks a battlefield you control"
+        for (const id of ev.objs) {
+          const p = ctlOf(s, id);
+          const me = c(null);
+          const at = s.objects[id] ? locOf(s.objects[id]) : null;
+          if (p === null || me === null || p === me) continue;
+          if (w.at === 'yours' && !(at?.z === 'bf' && (s.bfs[at.bf].controller === me
+            || (s.combat?.bf === at.bf && s.combat.defender === me)))) continue;
+          instances.push({ p: me, info: { subject: id } });
         }
       } else {                                                       // a battlefield's "when you attack / defend here"
         const by: PlayerId[] = [];
@@ -191,10 +210,22 @@ function meets(s: GameState, w: TriggerAst, ev: TriggerEvent, o: GameObject | nu
         if (!d.snap.chars.types.includes('unit')) continue;
         if (w.nonToken && isTokenDef(d.snap.def)) continue;
         const p = d.snap.controller;
+        const me = c(null);
         if (w.who === 'friendlyOther' && (d.snap.id === o.id || p === null || p !== c(p))) continue;
+        if (w.who === 'friendly' && (p === null || p !== me)) continue;
+        if (w.who === 'enemy' && (p === null || p === me)) continue;
+        if (w.buffed && d.snap.buffs === 0) continue;
+        if (w.stunned && !d.snap.stunned) continue;
+        if (w.notTag && d.snap.chars.tags.includes(w.notTag)) continue;
+        if (w.killedBy && (d.by === undefined || d.by === null || d.by !== me || (w.killedBy === 'yourSpell' && !d.spell))) continue;
+        if (w.each) {                                                // one instance per unit
+          if (p !== null) instances.push({ p: me ?? p, info: { p, subjectDef: d.snap.def } });
+          continue;
+        }
         if (p === null || by.includes(p)) continue;                  // one crossing per player per group [383.1.b]
         by.push(p);
       }
+      if (w.each) break;
       for (const p of by) {
         const k = key(p);
         if (w.firstPerPlayer && k !== null) {
@@ -215,8 +246,25 @@ function meets(s: GameState, w: TriggerAst, ev: TriggerEvent, o: GameObject | nu
       break;
     case 'moved':
       if (ev.e !== 'moved') break;
+      if (w.who === 'any' || w.who === 'friendlyOther') {           // "When a unit moves from here", "… from my location"
+        ev.objs.forEach((id, i) => {
+          const from = ev.from?.[i];
+          if (w.from === 'here' && !sameLoc(from, here)) return;
+          if (w.who === 'friendlyOther' && (!o || id === o.id || ctlOf(s, id) !== c(ctlOf(s, id)))) return;
+          instances.push({ p: ctlOf(s, id), info: { subject: id, to: ev.to as unknown as Json } });
+        });
+        break;
+      }
+      if (w.who === 'opponent') {                                    // "When an opponent moves to a battlefield other than mine"
+        const me = c(null);
+        if (ev.by === null || me === null || ev.by === me || ev.to.z !== 'bf') break;
+        if (w.to === 'otherBf' && sameLoc(ev.to, here)) break;
+        instances.push({ p: me, info: { p: ev.by, bf: ev.to.bf } });
+        break;
+      }
       if (w.who === 'self') {
-        if (o && ev.objs.includes(o.id) && (w.to !== 'bf' || ev.to.z === 'bf')) {
+        const fromHere = o ? ev.from?.[ev.objs.indexOf(o.id)] : undefined;
+        if (o && ev.objs.includes(o.id) && (w.to !== 'bf' || ev.to.z === 'bf') && (w.from !== 'bf' || fromHere?.z === 'bf')) {
           instances.push({ p: o.controller, info: { subject: o.id, ...(ev.to.z === 'bf' ? { bf: ev.to.bf } : {}) } });
         }
       } else {
@@ -229,7 +277,9 @@ function meets(s: GameState, w: TriggerAst, ev: TriggerEvent, o: GameObject | nu
       }
       break;
     case 'discarded':
-      if (o && ev.e === 'discarded' && ev.objs.includes(o.id)) instances.push({ p: ev.p, info: { subject: o.id } });
+      if (ev.e !== 'discarded') break;
+      if (w.who === 'you') { if (c(ev.p) === ev.p && ev.objs.length > 0) instances.push({ p: ev.p, info: { p: ev.p } }); }
+      else if (o && ev.objs.includes(o.id)) instances.push({ p: ev.p, info: { subject: o.id } });
       break;
     case 'returnedToHand':
       if (ev.e !== 'returned') break;
@@ -238,6 +288,10 @@ function meets(s: GameState, w: TriggerAst, ev: TriggerEvent, o: GameObject | nu
       }
       break;
     case 'buffed': case 'stunned': {
+      if (w.on === 'buffed' && w.who === 'self') {                   // "When you buff me"
+        if (o && ev.e === 'buffed' && ev.objs.includes(o.id) && ev.by !== null && ev.by === c(ev.by)) instances.push({ p: ev.by, info: { subject: o.id } });
+        break;
+      }
       if (ev.e !== w.on || ev.by === null || c(ev.by) !== ev.by) break;
       for (const id of ev.objs) {
         const p = ctlOf(s, id);
@@ -260,6 +314,41 @@ function meets(s: GameState, w: TriggerAst, ev: TriggerEvent, o: GameObject | nu
     case 'hid':
       if (ev.e === 'hid' && o && sameLoc({ z: 'bf', bf: ev.bf }, here)) instances.push({ p: ev.p, info: { p: ev.p, bf: ev.bf } });
       break;
+    case 'readied':
+      if (ev.e !== 'readied' || c(ev.by) !== ev.by) break;
+      for (const id of ev.objs) {
+        if (ctlOf(s, id) === ev.by && s.objects[id] && isType(s.objects[id], 'unit')) instances.push({ p: ev.by, info: { subject: id } });
+      }
+      break;
+    case 'damaged':
+      if (ev.e !== 'damaged') break;
+      for (const id of ev.objs) {
+        if (w.info !== undefined && dinfo[w.info] !== id) continue;
+        if (s.objects[id] && isType(s.objects[id], 'unit')) instances.push({ p: null, info: { subject: id } });
+      }
+      break;
+    case 'chosenBySpell': {
+      if (ev.e !== 'chosen' || !o) break;
+      const k = key(ev.p);
+      const mine = ev.objs.filter((id) => s.objects[id] && ctlOf(s, id) === ev.p && isType(s.objects[id], 'unit')
+        && sameLoc(locOf(s.objects[id]), here));
+      if (mine.length === 0) break;
+      if (k !== null) {                                              // the first time each turn, per player [383.1.b]
+        const seen = s.usage[k] ?? 0;
+        countUsage(s, k);
+        if (seen > 0) break;
+      }
+      instances.push({ p: ev.p, info: { p: ev.p } });
+      break;
+    }
+    case 'seenOnTop':
+      if (o && ev.e === 'seen' && ev.objs.includes(o.id) && (!w.reveal || ev.reveal)) instances.push({ p: o.owner, info: { subject: o.id } });
+      break;
+    case 'winCombat':
+      if (ev.e !== 'wonCombat') break;
+      if (w.who === 'self' ? !!o && ev.units.includes(o.id) : c(ev.p) === ev.p) instances.push({ p: ev.p, info: { p: ev.p, bf: ev.bf } });
+      break;
+    case 'leaves': break;                                            // self-leave, placed by the zone change [383.2.c.3]
     case 'dies': break;                                              // self-leave: placed by the kill itself [383.2.c.3]
   }
   return instances;
@@ -321,13 +410,17 @@ function delayedActive(s: GameState, d: DelayedAbility): boolean {
  * of its source [808.1.d.2–3]. Its controller is the source's as it died
  * [191.5.b].
  */
-export function placeSelfLeave(s: GameState, x: X, id: ObjId, snap: Snapshot, info: Record<string, Json> = {}) {
+export function placeSelfLeave(s: GameState, x: X, id: ObjId, snap: Snapshot, info: Record<string, Json> = {}, died = true) {
   const o = s.objects[id];
   if (!o) return;
   const found: PendingTrigger[] = [];
+  // "Your [Deathknell] effects trigger an additional time" (Karthus, Eternal).
+  const twice = died && staticsFor(s, null, 'deathknellTwice').some(({ st }) => st.ctl === snap.controller);
   for (const a of triggeredOn(s, o)) {
-    if (a.when.on !== 'dies' || snap.controller === null) continue;
-    found.push({ ability: a.id, source: id, controller: snap.controller, info: { subject: id, ...info }, group: 0, lki: snap });
+    if (!((died && a.when.on === 'dies') || a.when.on === 'leaves') || snap.controller === null) continue;
+    const t: PendingTrigger = { ability: a.id, source: id, controller: snap.controller, info: { subject: id, ...info }, group: 0, lki: snap };
+    found.push(t);
+    if (twice && a.when.on === 'dies') found.push({ ...t, info: { ...t.info, again: true } });
   }
   if (found.length > 0) placeAll(s, x, found, 'turnOrder');
 }

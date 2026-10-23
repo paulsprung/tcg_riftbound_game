@@ -169,7 +169,7 @@ export interface GameObject {
   revealedUntil: RevealWindow | null; // a reveal is a state, not a zone [425.1.a]
   moves: number;                      // moves this turn (Kayn, Yasuo, Windrider); reset at turn start
   mighty?: boolean;                   // Might ≥ 5 at the last cleanup, for "becomes Mighty" [709]; unset until then
-  lastDamage: { item: ItemId | null; sources: ObjId[]; by: PlayerId | null; combat: boolean } | null;
+  lastDamage: { item: ItemId | null; sources: ObjId[]; by: PlayerId | null; combat: boolean; spell?: boolean } | null;
                                       // kill attribution for cleanup kills [429.5.c]; cleared after the next cleanup
   // ---- memory that survives the zone change that created it ----
   played: PlayedRecord | null;        // finalization facts copied from the chain item at step 6 [135.2.b.7]
@@ -437,7 +437,7 @@ export type FrameBody =
   | { f: 'perform'; spec: GameAction; ctx: ActionCtx; pc: number; ev: ProposedEvent[]; used: string[] }   // §6.3
   | { f: 'triggers'; batch: PendingTrigger[]; placed: number[]; pc: number; order: 'turnOrder' | 'combat' }
   | { f: 'move'; by: PlayerId; units: ObjId[]; dest: Loc | null; pc: number; snap: GameState | null }
-  | { f: 'hide'; by: PlayerId; obj: ObjId; bf: number | null; pc: number; snap: GameState | null }
+  | { f: 'hide'; by: PlayerId; obj: ObjId; bf: number | null; pc: number; snap: GameState | null; alt?: number }
   | { f: 'pay'; who: PlayerId; cost: TotalCost; purpose: 'play' | 'applied' | 'instruction'; pc: number }
   | { f: 'assign'; by: PlayerId; order: ObjId[]; tier: Record<ObjId, 'tank' | 'backline'>; pc: number;
       total: number; excess: ObjId[] }                                // [467.2.c]; total and excess: additions
@@ -449,6 +449,7 @@ export interface Env {
   controller: PlayerId;
   bound: Record<string, Json>;                     // 'it', 'that unit', looked-at cards, chosen counts, X
   execution: number;                               // Repeat execution index [820]
+  as?: PlayerId;                                   // the player a "for each player" step is executed as
 }
 
 // ---- Game actions, the pipeline and triggers (§6), declared for M1 ----

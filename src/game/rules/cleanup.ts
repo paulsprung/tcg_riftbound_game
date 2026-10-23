@@ -42,6 +42,7 @@ import { designate, designationFor, openCombat } from './combat.ts';
 import { checkWin } from './scoring.ts';
 import { beginShowdown } from './showdown.ts';
 import { enqueueFront } from './tasks.ts';
+import { staticsFor } from '../layers/derive.ts';
 
 type CleanupFrame = FrameOf<'cleanup'>;
 
@@ -105,7 +106,12 @@ const STEPS: StepTable<CleanupFrame> = [
       heal(s, x, unitsOnBoard(s), '468.1.a.1');                      // every unit, everywhere
       const here = playersWithUnitsAt(s, c.bf);
       setField(s, c, 'tie', here.includes(c.attacker) && here.includes(c.defender));   // [740.3.a]
-      if (unitsOfAt(s, c.defender, c.bf).length > 0) {               // [468.1.a.2]
+      const recallAll = here.includes(c.attacker) && here.includes(c.defender)
+        && staticsFor(s, null, 'tieRecallAll').some(({ st }) => st.ctl === c.attacker);   // Symbol of the Solari
+      if (recallAll) {
+        recall(s, x, unitsAt(s, { z: 'bf', bf: c.bf }), '468.1.a.2');
+        setField(s, c, 'recalled', true);
+      } else if (unitsOfAt(s, c.defender, c.bf).length > 0) {        // [468.1.a.2]
         const attackers = unitsAt(s, { z: 'bf', bf: c.bf }).filter((id) => s.objects[id].designation === 'attacker');
         if (attackers.length > 0) {
           recall(s, x, attackers, '468.1.a.2');

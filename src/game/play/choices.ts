@@ -13,9 +13,9 @@ import { K, parseKey, type Option } from '../core/decisions.ts';
 import { answer, ask, type RunCtx, type StepOut } from '../core/frames.ts';
 import { setField } from '../state/mut.ts';
 import type { ChainItem, Frame, GameState, Loc, ObjId, PlayerId, TargetRef } from '../state/types.ts';
-import { slotCandidates, slotMax, slotMin, targetRef, type SelCtx } from '../rules/targets.ts';
+import { slotCandidates, slotLocsOf, slotMax, slotMin, targetRef, type SelCtx } from '../rules/targets.ts';
 import { evalCond, type CondCtx } from '../rules/conditions.ts';
-import { isType } from '../rules/chars.ts';
+import { isType, mightOf } from '../rules/chars.ts';
 import { locOf } from '../state/zones.ts';
 
 /** The slots an item chooses: its program's own, then each chosen mode's,
@@ -51,6 +51,10 @@ export function candidatesFor(s: GameState, slot: SlotAst, it: ChoiceCtx, c: Sel
 const slotActive = (s: GameState, slot: SlotAst, it: ChoiceCtx) =>
   !slot.if || evalCond(s, slot.if, it.cond ?? { controller: it.controller, source: it.source ?? null });
 
+/** A slot whose candidates depend on what another slot chose ("an enemy unit at the same battlefield"): it can't be
+    judged before that one is chosen. */
+const dependent = (sl: SlotAst) => sl.sel.some((x) => typeof x.at === 'object');
+
 /** Whether a mode can be chosen: every slot it must fill has a candidate
     [355.16]; a mode Udyr chose this turn is gone. */
 export function modeLegal(s: GameState, m: ModeAst, it: ChoiceCtx): boolean {
@@ -58,7 +62,7 @@ export function modeLegal(s: GameState, m: ModeAst, it: ChoiceCtx): boolean {
   return (m.choose ?? []).every((sl) => {
     if (sl.dest) return sl.dest.to !== 'open' || s.bfs.some((b) => b.controller === null    // an open battlefield [170.11.c]
       && !b.here.some((id) => isType(s.objects[id], 'unit')));
-    return !slotActive(s, sl, it) || slotMin(sl) === 0 || candidatesFor(s, sl, it, c).length >= slotMin(sl);
+    return !slotActive(s, sl, it) || slotMin(sl) === 0 || dependent(sl) || candidatesFor(s, sl, it, c).length >= slotMin(sl);
   });
 }
 
@@ -68,7 +72,7 @@ export function modeLegal(s: GameState, m: ModeAst, it: ChoiceCtx): boolean {
 export function choicesPossible(s: GameState, prog: ProgAst | undefined, it: ChoiceCtx): boolean {
   if (!prog) return true;
   const c = { controller: it.controller, source: it.source ?? null };
-  if (!(prog.choose ?? []).every((sl) => sl.dest || !slotActive(s, sl, it) || slotMin(sl) === 0
+  if (!(prog.choose ?? []).every((sl) => sl.dest || !slotActive(s, sl, it) || slotMin(sl) === 0 || dependent(sl)
     || candidatesFor(s, sl, it, c).length >= slotMin(sl))) return false;
   if (prog.modes) return prog.modes.of.filter((m) => modeLegal(s, m, it)).length >= prog.modes.pick;
   return true;
@@ -84,6 +88,11 @@ export function destCandidates(s: GameState, slot: SlotAst, units: ObjId[]): Loc
   const at = locOf(u);
   const out: Loc[] = [];
   const base: Loc = { z: 'base', p: u.controller ?? u.owner };
+  if (d.to === 'toOrFromBase') {                                     // "to or from its base"
+    if (at?.z === 'base') s.bfs.forEach((_, bf) => out.push({ z: 'bf', bf }));
+    else out.push(base);
+    return out;
+  }
   if ((d.to ?? 'any') === 'any' || d.to === 'base') out.push(base);
   if (d.to !== 'base') {
     s.bfs.forEach((b, bf) => {
@@ -132,7 +141,7 @@ export function chooseNext(s: GameState, f: Frame, x: RunCtx, it: ChainItem, pro
   const done = (slot: string) => (e === 0 ? doneKey(slot) : `${doneKey(slot)}#${e}`);
   const cctx: ChoiceCtx = { controller: it.controller, source: it.source ?? null,
     ...(o.restrictBf !== undefined ? { restrictBf: o.restrictBf } : {}), ...(o.cond ? { cond: o.cond } : {}) };
-  const c: SelCtx = { controller: it.controller, source: it.source ?? null,
+  const c: SelCtx = { controller: it.controller, source: it.source ?? null, slotLoc: slotLocsOf(s, ex),
     subject: typeof it.trigger?.subject === 'number' ? it.trigger.subject : null,
     eventBf: typeof it.trigger?.bf === 'number' ? it.trigger.bf : null };
   const usedModes = (o.modesUsed ?? []);
@@ -195,8 +204,10 @@ export function chooseNext(s: GameState, f: Frame, x: RunCtx, it: ChainItem, pro
     }
     const chosen = (ex.targets[slot.id] ?? []).map((t) => (t.k === 'obj' ? t.id : -1));
     const others = (slot.distinctFrom ?? []).flatMap((sl) => (ex.targets[sl] ?? []).map((t) => (t.k === 'obj' ? t.id : -1)));
+    const total = chosen.reduce((n, id) => n + (s.objects[id] ? Math.max(0, mightOf(s, id)) : 0), 0);
     const cands = candidatesFor(s, slot, cctx, c).filter((id) => !chosen.includes(id) && !others.includes(id)
-      && (!o.affordable || o.affordable(targetRef(s, id))));
+      && (!o.affordable || o.affordable(targetRef(s, id)))
+      && (slot.sumMightMax === undefined || total + Math.max(0, mightOf(s, id)) <= slot.sumMightMax));
     const enough = chosen.length >= slotMin(slot);
     if (chosen.length >= slotMax(slot) || (enough && cands.length === 0)) {
       setField(s, it.play.choices.asPlayed, done(slot.id), true);

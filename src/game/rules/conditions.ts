@@ -13,6 +13,7 @@ import { locOf } from '../state/zones.ts';
 import type { ChainItem, GameState, Json, ObjId, Outcome, PlayedRecord, PlayerId, Snapshot } from '../state/types.ts';
 import { cmp, predOk, selectAll } from './targets.ts';
 import { victoryScore } from './defaults.ts';
+import { findCard } from '../cards/oracle.ts';
 
 export interface CondCtx {
   controller: PlayerId;
@@ -37,8 +38,14 @@ export interface CondCtx {
 export const didIt = (o: Outcome | undefined) => o !== undefined && (o.o === 'executed' || o.o === 'partial');
 
 /** The object a reference names for a condition, or null. */
-function refObj(r: RefAst, x: CondCtx): ObjId | null {
+function refObj(s: GameState, r: RefAst, x: CondCtx): ObjId | null {
   if (r === 'self') return x.source;
+  if (typeof r === 'object' && 'now' in r) {                           // the card wherever it is now
+    const id = refObj(s, r.now, x);
+    const card = (id !== null ? s.objects[id]?.card : undefined) ?? (r.now === 'self' ? x.lki?.card ?? x.item?.sourceLki?.card : undefined);
+    const o = card === undefined ? undefined : Object.values(s.objects).find((y) => y.card === card && !y.token);
+    return o ? o.id : null;
+  }
   if ('slot' in r) {
     const t = x.item?.play.choices.executions[0].targets[r.slot]?.[0];
     return t?.k === 'obj' ? t.id : null;
@@ -76,9 +83,9 @@ export function evalCond(s: GameState, c: CondAst, x: CondCtx): boolean {
     case 'playedTo': return x.facts?.to?.z === c.z;
     case 'paid': return (x.facts?.paidOptional ?? []).some((k) => k === c.ability || k.startsWith(`${c.ability}@`));
     case 'is': {
-      const id = refObj(c.ref, x);
+      const id = refObj(s, c.ref, x);
       return id !== null && !!s.objects[id] && predOk(s, c.pred, id, { controller: x.controller, source: x.source,
-        subject: typeof x.info?.subject === 'number' ? x.info.subject : null });
+        subject: typeof x.info?.subject === 'number' ? x.info.subject : null, eventBf: typeof x.info?.bf === 'number' ? x.info.bf : null });
     }
     case 'thisTurn': {
       const p = x.controller;
@@ -89,7 +96,8 @@ export function evalCond(s: GameState, c: CondAst, x: CondCtx): boolean {
         case 'discarded': n = s.log.discards[p]; break;
         case 'unitDied': n = s.log.deaths.filter((d) => d.snap.chars.types.includes('unit') && (c.rel === undefined
           || (c.rel === 'friendly' ? d.snap.controller === p : d.snap.controller !== null && d.snap.controller !== p))).length; break;
-        case 'played': n = s.log.played.filter((r) => r.p === p && r.isCard && typed(r.types)).length; break;
+        case 'played': n = s.log.played.filter((r) => r.p === p && r.isCard && typed(r.types)
+          && (!c.tag || (findCard(r.def)?.tags ?? []).includes(c.tag))).length; break;
         case 'playedToBf': n = s.log.played.filter((r) => r.p === p && r.to?.z === 'bf' && typed(r.types)).length; break;
         case 'finalized': n = s.log.finalized.filter((r) => r.p === p && r.isCard && typed(r.types)).length; break;
       }
@@ -104,6 +112,14 @@ export function evalCond(s: GameState, c: CondAst, x: CondCtx): boolean {
       return s.history.beginningPhasesStarted[p] === 1;
     }
     case 'full': return x.outcomes?.[`id:${c.instr}`]?.o === 'executed';
+    case 'lkiAtBf': return x.lki?.loc?.z === 'bf';
+    case 'controlsSelf': return x.source !== null && s.objects[x.source]?.controller === x.controller;
+    case 'powerSpent': return (s.log.powerSpent[x.controller] ?? 0) >= c.n;
+    case 'nearWin': return s.players[x.controller].points >= victoryScore(s) - c.within;
+    case 'boundDomain': {
+      const b = x.bound?.[c.name] as { domains?: string[] } | undefined;
+      return (b?.domains ?? []).includes(c.d);
+    }
     case 'lki': {
       const l = x.lki;
       if (!l) return false;

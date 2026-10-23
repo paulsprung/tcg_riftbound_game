@@ -41,12 +41,18 @@ export function moveDestinations(s: GameState, id: ObjId): Loc[] {
   const at = locOf(o);
   if (!at || o.controller === null || cantMove(s, id)) return [];
   if (at.z === 'base') return s.bfs.map((_, bf): Loc => ({ z: 'bf', bf }));   // [144.4.a]
-  const out: Loc[] = [{ z: 'base', p: o.controller }];                          // [144.4.b]
+  const out: Loc[] = noMoveToBase(s, at.bf) ? [] : [{ z: 'base', p: o.controller }];   // [144.4.b]; Vilemaw's Lair
   if (hasKeyword(s, id, 'ganking')) {                                            // [144.4.c], [810.1.b]
     s.bfs.forEach((_, bf) => { if (bf !== at.bf) out.push({ z: 'bf', bf }); });
   }
   return out;
 }
+
+/** "Units can't move from here to base" (Vilemaw's Lair). */
+export const noMoveToBase = (s: GameState, bf: number) => staticsFor(s, null, 'noMoveToBase').some(({ st, spec }) => {
+  const h = s.objects[st.host];
+  return spec.anywhere === true || (h.zone.z === 'bf' && h.zone.bf === bf);
+});
 
 /** Mageseeker Investigator: an opponent moving several units here at once
     pays [A] for each unit beyond the first, per instance [204.4]. */

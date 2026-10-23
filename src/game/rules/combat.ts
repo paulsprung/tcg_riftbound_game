@@ -22,7 +22,7 @@
  */
 import { emit } from '../core/events.ts';
 import { call, takeRet } from '../core/frames.ts';
-import { collect, placeAll } from '../abilities/triggers.ts';
+import { collect, fire, placeAll } from '../abilities/triggers.ts';
 import { EngineError } from '../core/errors.ts';
 import { append, setField } from '../state/mut.ts';
 import type { CombatState, GameState, Json, ObjId, PlayerId } from '../state/types.ts';
@@ -212,6 +212,7 @@ defineTask('combat.result', [(s, _f, x) => {
     result[present[0]] = 'won';
     result[present[0] === c.attacker ? c.defender : c.attacker] = 'lost';
     append(s, s.log.combatsWon, { p: present[0], bf: c.bf, units: unitsAt(s, { z: 'bf', bf: c.bf }) });
+    fire(s, x, { e: 'wonCombat', p: present[0], bf: c.bf, units: unitsAt(s, { z: 'bf', bf: c.bf }) });   // "When I win a combat"
   } else if (present.length === 2) {
     setField(s, s.bfs[c.bf].staged, 'showdown', true);
     setField(s, s.bfs[c.bf].staged, 'combat', true);

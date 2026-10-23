@@ -90,14 +90,26 @@ export function nonStdPossible(s: GameState, pay: NonStdCostAst | undefined, src
   if (pay.discard && s.players[p].hand.length < pay.discard) return false;
   if (pay.recycleTrash && trashCandidates(s, p, pay.recycleTrash.types).length < pay.recycleTrash.n) return false;
   if (pay.xp && s.players[p].xp < pay.xp) return false;
+  if (pay.spendBuff && buffCandidates(s, pay.spendBuff.sel, p, src).length < pay.spendBuff.n) return false;
   return true;
+}
+
+/** Units whose buff a "spend a buff" cost may take. */
+export const buffCandidates = (s: GameState, sel: SelAst, p: PlayerId, src: ObjId | null) =>
+  costCandidates(s, sel, p, src, false).filter((id) => s.objects[id].buffs > 0);
+
+/** How many a "kill / spend any number … as an additional cost" may take now. */
+export function xMax(s: GameState, x: NonNullable<CostAbilityAst['x']>, p: PlayerId): number {
+  if (x.kill) return costCandidates(s, x.kill, p, null, false).length;
+  if (x.spendBuff) return buffCandidates(s, x.spendBuff, p, null).length;
+  return 0;
 }
 
 /** The non-standard part of a cost [356.7], or undefined if it has none. */
 export function nonStdOf(c: CostAst | NonStdCostAst | undefined): NonStdCostAst | undefined {
   if (!c) return undefined;
   const out: NonStdCostAst = {};
-  for (const k of ['exhaustSelf', 'killSelf', 'spendBuffSelf', 'exhaust', 'kill', 'discard', 'recycleTrash', 'xp'] as const) {
+  for (const k of ['exhaustSelf', 'killSelf', 'spendBuffSelf', 'exhaust', 'kill', 'discard', 'recycleTrash', 'xp', 'spendBuff'] as const) {
     if (c[k] !== undefined) (out as Record<string, unknown>)[k] = c[k];
   }
   return Object.keys(out).length > 0 ? out : undefined;
@@ -114,6 +126,8 @@ function discountOf(s: GameState, d: DiscountAst, src: ObjId | null, p: PlayerId
     if (typeof v === 'number') return v;
     if (v.v === 'count') return selectAll(s, v.of, { controller: p, source: src }).length;
     if (v.v === 'sum') return v.of.reduce((n: number, w) => n + val(w), 0);
+    if (v.v === 'playedThisTurn') return s.log.played.filter((r) => r.p === p && r.isCard).length;
+    if (v.v === 'maxMight') return Math.max(0, ...selectAll(s, v.of, { controller: p, source: src }).map((id) => mightOf(s, id)));
     return 0;
   };
   return val(d.energy);
@@ -135,7 +149,9 @@ export function powerOf(c: CostAst | undefined, domains: Domain[]): PowerReq[] {
  * estimate for a target not chosen yet).
  */
 export function totalCost(s: GameState, o: { def: string; types: CardType[]; p: PlayerId; base: ResourceCost;
-  chosen: readonly string[]; targets?: readonly TargetRef[]; extraAny?: number }): ResourceCost {
+  chosen: readonly string[]; targets?: readonly TargetRef[]; extraAny?: number;
+  /** How many each "any number" cost ability (CostAbilityAst.x) takes, by its key. */
+  xs?: Record<string, number> }): ResourceCost {
   let energy = o.base.energy;
   let power: PowerReq[] = o.base.power.slice();
   const domains = findCard(o.def)?.domains ?? [];
@@ -149,9 +165,25 @@ export function totalCost(s: GameState, o: { def: string; types: CardType[]; p: 
       power.push(...powerOf(c, domains));
     }
   }
+  for (const e of s.effects) {                                       // "The next spell you play this turn costs [5] less"
+    const spec = e.spec as { s?: string; types?: CardType[]; energy?: number } | null;
+    if (spec?.s !== 'costLess' || !('player' in e.affects) || e.affects.player !== o.p) continue;
+    if (!(spec.types ?? []).some((t) => o.types.includes(t)) || o.def === '') continue;
+    energy -= spec.energy ?? 0;
+    break;
+  }
   for (const off of offers) {                                        // [356.4.d], [356.4.g]
+    if (off.a.x) {                                                   // "Reduce my cost by [Y] for each"
+      const req = powerOf({ power: [off.a.x.lessPower] }, domains)[0];
+      for (let i = 0; i < (o.xs?.[off.key] ?? 0); i++) {
+        const j = power.findIndex((r) => JSON.stringify(r) === JSON.stringify(req));
+        if (j < 0) break;
+        power = power.filter((_, k) => k !== j);
+      }
+    }
     const d = off.a.discount;
     if (!d) continue;
+    if (d.all) { energy = 0; power = []; continue; }                // "ignore this spell's cost"
     const less = discountOf(s, d, off.src, o.p);
     energy = d.min !== undefined ? (energy > d.min ? Math.max(d.min, energy - less) : energy) : energy - less;
     for (let i = 0; i < (d.power ?? 0) && power.length > 0; i++) {
@@ -178,7 +210,9 @@ export function cheapestCost(s: GameState, id: ObjId, p: PlayerId, base: Resourc
   const o = s.objects[id];
   const types = typesOf(o);
   const free = optionalOffers(s, o.def, types, p).filter((x) => x.a.discount && !x.a.add && !x.a.repeat).map((x) => x.key);
-  return totalCost(s, { def: o.def, types, p, base, chosen: free });
+  const xs: Record<string, number> = {};
+  for (const off of costOffers(s, o.def, types, p)) if (off.a.x) xs[off.key] = xMax(s, off.a.x, p);
+  return totalCost(s, { def: o.def, types, p, base, chosen: free, xs });
 }
 
 /** Whether the mandatory non-standard costs of playing a card can be paid

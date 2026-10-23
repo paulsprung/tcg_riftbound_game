@@ -33,7 +33,7 @@ export interface PayOpts {
   what: string;
   item?: ItemId;
   /** A spell's cost: Energy restricted to spells may pay it. */
-  spell?: boolean;
+  spell?: boolean | 'gear';
   source?: ObjId;
   back: boolean;
   onBack: () => StepOut;

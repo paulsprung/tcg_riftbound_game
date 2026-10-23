@@ -11,9 +11,10 @@
  */
 import type { LocSelAst, PredAst, SelAst, SlotAst } from '../dsl/ast.ts';
 import { locOf } from '../state/zones.ts';
-import type { GameState, Loc, ObjId, PlayerId, TargetRef } from '../state/types.ts';
+import type { GameState, Loc, ObjId, PlayerId, TargetRef, TokenId } from '../state/types.ts';
 import { energyCostOf, hasKeyword, isType, mightOf, tagsOf } from './chars.ts';
 import { findCard } from '../cards/oracle.ts';
+import { TOKENS } from '../cards/tokens.ts';
 
 export interface SelCtx {
   controller: PlayerId; source: ObjId | null;
@@ -23,6 +24,8 @@ export interface SelCtx {
   subject?: ObjId | null;
   /** The battlefield the trigger condition named ("at that battlefield"). */
   eventBf?: number | null;
+  /** Where the source was as it left the board ("all units at my battlefield" in a Deathknell). */
+  lkiHere?: Loc | null;
 }
 
 /** Every permanent on the board: in the bases and at the battlefields. */
@@ -53,7 +56,7 @@ function locOk(s: GameState, at: LocSelAst | undefined, loc: Loc, c: SelCtx): bo
     case 'battlefield': return loc.z === 'bf';
     case 'base': return loc.z === 'base';
     case 'here': {
-      const h = hereOf(s, c.source);
+      const h = hereOf(s, c.source) ?? c.lkiHere ?? null;
       return h !== null && sameLoc(h, loc);
     }
     case 'elsewhere': {
@@ -130,6 +133,11 @@ export function predOk(s: GameState, p: PredAst, id: ObjId, c: SelCtx): boolean 
       return bf >= 0 && unitsHere(s, bf).length > 0;
     }
     case 'damaged': return o.damage.length > 0;
+    case 'inZone': return o.zone.z === p.z;
+    case 'rel': return p.rel === 'friendly' ? o.controller === c.controller : o.controller !== null && o.controller !== c.controller;
+    case 'moves': return o.moves === p.n;
+    case 'name': return (findCard(o.def)?.name ?? (Object.hasOwn(TOKENS, o.def) ? TOKENS[o.def as TokenId].name : o.def)) === p.name;
+    case 'atEventBf': return c.eventBf !== undefined && c.eventBf !== null && o.zone.z === 'bf' && o.zone.bf === c.eventBf;
     case 'powerCost': return cmp(findCard(o.def)?.cost?.power.length ?? 0, p.op, p.n);
     case 'energyCostVsPoints': return cmp(energyCostOf(o), p.op, s.players[c.controller].points);
     case 'notSubject': return c.subject === undefined || c.subject === null || id !== c.subject;
@@ -163,6 +171,7 @@ export function matches(s: GameState, sel: SelAst, id: ObjId, c: SelCtx): boolea
   const isBf = s.bfs.some((b) => b.obj === id);
   if (sel.k === 'battlefield' || isBf) {                           // battlefields only where a selector asks for one
     if (sel.k !== 'battlefield' || !isBf) return false;
+    if (sel.other && id === c.source) return false;
     if (sel.rel === 'friendly' && o.controller !== c.controller) return false;
     if (sel.rel === 'enemy' && (o.controller === c.controller || o.controller === null)) return false;
     return (sel.where ?? []).every((p) => predOk(s, p, id, c));
@@ -184,7 +193,8 @@ export function matches(s: GameState, sel: SelAst, id: ObjId, c: SelCtx): boolea
 function pool(s: GameState, sel: SelAst): ObjId[] {
   switch (sel.k) {
     case 'battlefield': return s.bfs.map((b) => b.obj);
-    case 'card': return s.players.flatMap((pl) => (sel.in === 'hand' ? pl.hand : pl.trash));
+    case 'card': return s.players.flatMap((pl) => (sel.in === 'hand' ? pl.hand : sel.in === 'champion'
+      ? (pl.champion === null ? [] : [pl.champion]) : pl.trash));
     case 'spell': return s.chain.flatMap((i) => (i.obj !== undefined ? [i.obj] : []));
     case 'legend': return s.players.flatMap((pl) => pl.legend);
     case 'facedown': return s.bfs.flatMap((b) => b.facedown);
@@ -195,6 +205,22 @@ function pool(s: GameState, sel: SelAst): ObjId[] {
 /** Every object a selector picks now, in board order. */
 export const selectAll = (s: GameState, sel: SelAst, c: SelCtx): ObjId[] =>
   pool(s, sel).filter((id) => matches(s, sel, id, c));
+
+/** Where what the slots chose is ("friendly units there", "an enemy unit at the same battlefield"): a chosen
+    battlefield, a chosen object's location now, a destination. */
+export function slotLocsOf(s: GameState, ex: { targets: Record<string, TargetRef[]>; dests: Record<string, Loc> } | undefined):
+  Record<string, Loc | null> {
+  const out: Record<string, Loc | null> = {};
+  for (const [slot, ts] of Object.entries(ex?.targets ?? {})) {
+    const t = ts[0];
+    if (t?.k !== 'obj') continue;
+    const bf = s.bfs.findIndex((b) => b.obj === t.id);
+    const o = s.objects[t.id];
+    out[slot] = bf >= 0 ? { z: 'bf', bf } : o ? locOf(o) : null;
+  }
+  for (const [slot, l] of Object.entries(ex?.dests ?? {})) out[slot] = l;
+  return out;
+}
 
 /** The legal choices for a target slot [355.8]. */
 export function slotCandidates(s: GameState, slot: SlotAst, c: SelCtx): ObjId[] {
@@ -217,7 +243,9 @@ export function targetRef(s: GameState, id: ObjId): TargetRef {
 export function stillLegal(s: GameState, t: TargetRef, slot: SlotAst, c: SelCtx): boolean {
   if (t.k !== 'obj') return false;
   const o = s.objects[t.id];
-  if (!o || o.zone.z !== t.zone) return false;
+  // A move between locations keeps the object [124] ("Move a friendly unit and ready it").
+  const loc = (z: string) => z === 'base' || z === 'bf';
+  if (!o || (o.zone.z !== t.zone && !(loc(o.zone.z) && loc(t.zone)))) return false;
   return slot.sel.some((sel) => matches(s, sel, t.id, c));
 }
 

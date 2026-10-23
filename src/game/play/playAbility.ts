@@ -25,7 +25,7 @@ import { chooseCostObjects, performCostObjects } from './costObjects.ts';
 import { nonStdOf, nonStdPossible } from './cost.ts';
 import { addSpecial } from '../rules/actions.ts';
 import { countUsage, usageKey } from '../rules/chain.ts';
-import { mightOf } from '../rules/chars.ts';
+import { isType, mightOf } from '../rules/chars.ts';
 import { K } from '../core/decisions.ts';
 import { emit } from '../core/events.ts';
 import { answer, ask, awaitTasks, defineSteps, next, type FrameOf, type RunCtx, type StepTable } from '../core/frames.ts';
@@ -36,7 +36,7 @@ import { countFinalized } from '../abilities/triggers.ts';
 import { addItem, finalizeItem, itemById, playContext, removeItem } from '../rules/chain.ts';
 import { snapshotOf } from '../rules/chars.ts';
 import { paymentPlans } from '../rules/resources.ts';
-import { stillLegal } from '../rules/targets.ts';
+import { slotLocsOf, stillLegal } from '../rules/targets.ts';
 import { abilityTiming, timingOk, windowAllows, type Window } from '../rules/timing.ts';
 import { choicesPossible, chooseNext, slotsOf } from './choices.ts';
 import { payStep } from './pay.ts';
@@ -211,6 +211,7 @@ const STEPS: StepTable<AbilityFrame> = [
       item: it.id, ...(it.source !== undefined ? { source: it.source } : {}), back: backOk(s, f),
       onBack: () => rollback(s, f, x, 'back'),
       onDecline: () => (trig ? removeTrigger(s, f, x, 'unpaid') : rollback(s, f, x, 'declined')), rule: trig ? '405.2' : '405.1',
+      spell: it.source !== undefined && s.objects[it.source] && isType(s.objects[it.source], 'gear') ? 'gear' : false,
     });
     if (typeof r === 'string') return r;
     if (ns && !performCostObjects(s, x, it, f.ability!, it.source ?? null, ns)) {
@@ -226,7 +227,7 @@ const STEPS: StepTable<AbilityFrame> = [
     setField(s, it.play, 'step', 5);
     const a = abilityOf(s, f);
     const ex = it.play.choices.executions[0];
-    const c = { controller: it.controller, source: it.source ?? null };
+    const c = { controller: it.controller, source: it.source ?? null, slotLoc: slotLocsOf(s, ex) };
     const bad = slotsOf(a.effect, ex.modes).some((sl) => (ex.targets[sl.id] ?? []).some((t) => !stillLegal(s, t, sl, c)));
     if (bad || !timingOk(s, it)) return a.kind === 'triggered' ? removeTrigger(s, f, x, 'illegal') : rollback(s, f, x, 'illegal');
     return next(f);
@@ -246,7 +247,7 @@ const STEPS: StepTable<AbilityFrame> = [
       for (const ins of a.effect.body) {
         if (ins.op !== 'add') continue;
         addSpecial(s, x, it.controller, { energy: ins.energy, universal: ins.power, onlyFor: ins.onlyFor,
-          source: s.objects[it.source!]?.def ?? '' }, '430.2');
+          source: s.objects[it.source!]?.def ?? '', ...(ins.domain ? { domain: ins.domain } : {}) }, '430.2');
       }
       removeItem(s, x, it.id);
     }

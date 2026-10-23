@@ -26,12 +26,16 @@ import { clearContested, drawCards, gainPoints, setController } from './actions.
 import { opponentsOf } from './board.ts';
 import { victoryScore } from './defaults.ts';
 import { fire } from '../abilities/triggers.ts';
+import { staticsFor } from '../layers/derive.ts';
 
 type X = { present: boolean };
 
 export function score(s: GameState, x: X, p: PlayerId, bf: number, how: 'conquer' | 'hold', wasUncontrolled = false) {
   const b = s.bfs[bf];
   if (hasBit(b.scoredBy, p)) return;                                  // [472]
+  // "Players can't score here until their third turn" (Forgotten Monument).
+  if (staticsFor(s, null, 'noScoreBefore').some(({ st, spec }) => s.objects[st.host]?.zone.z === 'bf'
+    && (s.objects[st.host].zone as { bf: number }).bf === bf && s.history.turnsTaken[p] < spec.turn)) return;
   setField(s, b, 'scoredBy', b.scoredBy | bit(p));
   const rule = how === 'conquer' ? '471.1' : '471.2';
   const finalPoint = how === 'conquer' && s.players[p].points >= victoryScore(s) - 1;
