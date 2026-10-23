@@ -51,6 +51,8 @@ export function PacksView({ db, onInspect }: { db: CardDb; onInspect: (t: Inspec
       <div className="shop-bar">
         <span><b>{own.coins}</b> <span className="muted">coins</span></span>
         <a className="btn btn--ghost btn--small" href="#home">Daily coins</a>
+        {/* testing aid until coins come from the server */}
+        <button type="button" className="btn btn--ghost btn--small" onClick={() => collection.addCoins(1000)}>+1000 coins (test)</button>
       </div>
       <div className="pack-shelf">
         {sets.map((s) => (
