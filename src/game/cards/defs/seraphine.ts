@@ -203,7 +203,6 @@ export const OTHER_DEFS = [
     kw: [kw.action()],
     choose: [slot('a', unitSel({ at: 'battlefield' }), { harm: true })],
     body: [named('k', kill(ref.slot('a'))), linked('k', draws(2, ref.slot('a')))],
-    missing: ['[Hidden]'],
   }),
   unit('sona-harmonious', 'At the end of your turn, if I\'m at a battlefield, ready up to 4 friendly runes.', {
     abilities: [when({ on: 'phase', at: 'endOfTurn', whose: 'your' }, prog([ready(ref.slot('r'))],

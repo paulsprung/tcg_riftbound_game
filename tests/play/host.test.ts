@@ -18,7 +18,7 @@ import { stageOf } from '../../src/play/model/stage.ts';
 
 const db: CardDb = JSON.parse(readFileSync(new URL('../../public/data/cards.json', import.meta.url), 'utf8'));
 const ix = cardIndex(db);
-const [SERAPHINE, EVELYNN] = BUILT_IN_DECKS.map((b) => b.deck);
+const [SERAPHINE, EVELYNN] = (['seraphine', 'evelynn'] as const).map((id) => BUILT_IN_DECKS.find((b) => b.id === id)!.deck);
 
 /** A clock that runs the bot's answers when told to, not after a delay. */
 function manualClock() {

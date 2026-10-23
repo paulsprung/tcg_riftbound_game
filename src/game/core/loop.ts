@@ -32,9 +32,10 @@ import { pushFrame, setField, takeTask } from '../state/mut.ts';
 import type { GameState } from '../state/types.ts';
 import { startResolve } from '../dsl/interp.ts';
 import { activatable, activateFrame, triggerFrame } from '../play/playAbility.ts';
-import { costOf, limitedPlayFrame, playableCards, playFrame } from '../play/playCard.ts';
+import { costOf, limitedPlayFrame, playableCards, playFrame, timingFrom } from '../play/playCard.ts';
+import { activatedBySub } from '../abilities/objAbilities.ts';
+import { hideable, hideFrame } from '../rules/hide.ts';
 import { cheapestCost } from '../play/cost.ts';
-import { cardTiming } from '../rules/timing.ts';
 import { nextPlayer } from '../rules/board.ts';
 import { nextCombatStep } from '../rules/combat.ts';
 import { canStandardMove, moveFrame } from '../rules/move.ts';
@@ -82,18 +83,17 @@ export function priorityOptions(s: GameState, window: PriorityFrame['window']): 
   const p = s.turn.priority!;
   const out: Option[] = playableCards(s, p, window).map((id) => {
     const c = cheapestCost(s, id, p, costOf(s, id));                 // what it could cost now (§4.6 cheap stage)
-    const t = cardTiming(s.objects[id].def);
+    const t = timingFrom(s, id);
     return { key: K.play(id), refs: [{ obj: id }], meta: { cost: { energy: c.energy, power: c.power, other: [] },
       timing: window === 'main' ? 'default' as const : t.reaction && window === 'chain' ? 'reaction' as const
         : t.action ? 'action' as const : 'reaction' as const } };
   });
-  for (const a of activatable(s, p, window)) {
-    out.push({ key: K.act(a.obj, a.ability.slice(a.ability.indexOf('#') + 1)), refs: [{ obj: a.obj }] });
-  }
+  for (const a of activatable(s, p, window)) out.push({ key: K.act(a.obj, a.sub), refs: [{ obj: a.obj }] });
   if (window !== 'main') {
     out.push({ key: K.pass });
     return out;
   }
+  for (const h of hideable(s, p)) out.push({ key: K.hide(h), refs: [{ obj: h }] });      // [811.1.b]
   if (canStandardMove(s, p)) out.push({ key: K.move });
   out.push({ key: K.end });
   return out;
@@ -122,8 +122,9 @@ defineSteps('priority', [
     }
     const k = parseKey(key)!;
     if (k.head === 'act') {                                                       // [377], [402]
-      return call(s, f, activateFrame(k.obj!, `${s.objects[k.obj!].def}#${k.sub}`));
+      return call(s, f, activateFrame(k.obj!, activatedBySub(s, k.obj!, k.sub!)!.id));
     }
+    if (k.head === 'hide') return call(s, f, hideFrame(s.turn.priority!, k.obj!));   // [422]
     return call(s, f, playFrame(k.obj!));                                         // [420.2]
   },
   () => 'done',

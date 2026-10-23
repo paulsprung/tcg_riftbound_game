@@ -10,23 +10,39 @@ import type { CardIndex } from '../model/cards.ts';
 import { PACE_FACTOR, getSettings, usePlaySettings } from '../settings.ts';
 import type { Coach } from './coach.ts';
 import { createTutorialCoach, OPPONENT_NAME, TUTORIAL_SCORE, tutorialHost, type TutorialCoach } from './lesson.ts';
+import {
+  createStarterCoach, STARTER_OPPONENT_NAME, STARTER_TUTORIAL_SCORE, starterOf, starterTutorialHost, tutorOpponent,
+} from './starterLesson.ts';
 
 /*
- * '#play/tutorial': the guided first match (lesson.ts) and its ending. The
+ * '#play/tutorial': the guided first match and its ending: with the
+ * player's own starter deck (starterLesson.ts) when they chose one, else the
+ * Seraphine lesson (lesson.ts). The
  * game is never autosaved; Restart deals it again from the start. Finishing
  * it (win or lose) or skipping it (after a confirmation) calls
  * collection.completeTutorial(), which grants the five packs only the first
  * time; the reward screen then sends the player to the Shop to open them.
  */
 
-interface Run { host: GameHost; coach: TutorialCoach; n: number }
+interface Run { host: GameHost; coach: TutorialCoach; n: number; subtitle: string }
 
-const newRun = (cards: CardIndex, n: number): Run => ({
-  host: tutorialHost(cards, { pace: PACE_FACTOR[getSettings().pace] }), coach: createTutorialCoach(), n,
-});
+const newRun = (cards: CardIndex, starter: string | null, n: number): Run => {
+  const pace = { pace: PACE_FACTOR[getSettings().pace] };
+  const mine = starterOf(starter);
+  if (!mine) {
+    return { host: tutorialHost(cards, pace), coach: createTutorialCoach(), n,
+      subtitle: `Tutorial · you against ${OPPONENT_NAME} · first to ${TUTORIAL_SCORE} points` };
+  }
+  const short = (name: string) => name.replace(/^[^:]*: /, '').replace(/ (Showdown|Champion) Deck$/, '');
+  return { host: starterTutorialHost(mine, cards, pace), coach: createStarterCoach(), n,
+    subtitle: `Tutorial · your ${short(mine.deck.name)} deck against ${STARTER_OPPONENT_NAME} (${short(tutorOpponent(mine.id).deck.name)}) `
+      + `· first to ${STARTER_TUTORIAL_SCORE} points` };
+};
 
-export function TutorialView({ db, cards, onExit }: { db: CardDb; cards: CardIndex; onExit: () => void }) {
-  const [run, setRun] = useState<Run>(() => newRun(cards, 0));
+export function TutorialView({ db, cards, starter, onExit }: {
+  db: CardDb; cards: CardIndex; starter: string | null; onExit: () => void;
+}) {
+  const [run, setRun] = useState<Run>(() => newRun(cards, starter, 0));
   const [ending, setEnding] = useState<{ granted: boolean; won: boolean | null } | null>(null);
   const [confirmSkip, setConfirmSkip] = useState(false);
   const [, rerender] = useReducer((x: number) => x + 1, 0);
@@ -63,7 +79,7 @@ export function TutorialView({ db, cards, onExit }: { db: CardDb; cards: CardInd
     onNext: (s) => { run.coach.onNext?.(s); rerender(); },
   }), [run]);
 
-  const restart = () => { run.host.stop(); setEnding(null); setConfirmSkip(false); setRun(newRun(cards, run.n + 1)); };
+  const restart = () => { run.host.stop(); setEnding(null); setConfirmSkip(false); setRun(newRun(cards, starter, run.n + 1)); };
   const skip = () => { run.host.stop(); setEnding({ granted: collection.completeTutorial(), won: null }); };
 
   if (ending) return <TutorialReward db={db} granted={ending.granted} won={ending.won} onReplay={restart} onExit={onExit} />;
@@ -83,7 +99,7 @@ export function TutorialView({ db, cards, onExit }: { db: CardDb; cards: CardInd
   return (
     <GameScreen key={run.n} host={run.host} cards={cards} db={db} names={['You', OPPONENT_NAME]} coach={coach}
       onNewGame={restart} onChangeDecks={onExit}
-      tutorial={{ subtitle: `Tutorial · you against ${OPPONENT_NAME} · first to ${TUTORIAL_SCORE} points`, actions }} />
+      tutorial={{ subtitle: run.subtitle, actions }} />
   );
 }
 

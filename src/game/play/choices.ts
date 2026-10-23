@@ -12,8 +12,11 @@ import type { ModeAst, ProgAst, SlotAst } from '../dsl/ast.ts';
 import { K, parseKey, type Option } from '../core/decisions.ts';
 import { answer, ask, type RunCtx, type StepOut } from '../core/frames.ts';
 import { setField } from '../state/mut.ts';
-import type { ChainItem, Frame, GameState, ObjId, PlayerId, TargetRef } from '../state/types.ts';
-import { slotCandidates, slotMax, slotMin, targetRef } from '../rules/targets.ts';
+import type { ChainItem, Frame, GameState, Loc, ObjId, PlayerId, TargetRef } from '../state/types.ts';
+import { slotCandidates, slotMax, slotMin, targetRef, type SelCtx } from '../rules/targets.ts';
+import { evalCond, type CondCtx } from '../rules/conditions.ts';
+import { isType } from '../rules/chars.ts';
+import { locOf } from '../state/zones.ts';
 
 /** The slots an item chooses: its program's own, then each chosen mode's,
     modes in printed order [355.3]. */
@@ -23,23 +26,72 @@ export function slotsOf(prog: ProgAst | undefined, modes: readonly number[]): Sl
   return [...(prog.choose ?? []), ...chosen.flatMap((m) => m.choose ?? [])];
 }
 
+export interface ChoiceCtx { controller: PlayerId; source?: ObjId | null;
+  /** Played from face down: targets at this battlefield [811.1.d.2–3]. */
+  restrictBf?: number;
+  /** For a slot's `if`: the item's facts and outcomes. */
+  cond?: CondCtx }
+
+/** The candidates of a slot as this item may choose them: at the
+    battlefield a card was played from face down, unless the slot is free of
+    that restriction [811.1.d]. */
+export function candidatesFor(s: GameState, slot: SlotAst, it: ChoiceCtx, c: SelCtx): ObjId[] {
+  const all = slotCandidates(s, slot, c);
+  if (it.restrictBf === undefined || slot.freeFromHidden) return all;
+  const bf = it.restrictBf;
+  return all.filter((id) => {
+    const o = s.objects[id];
+    if (s.bfs[bf].obj === id) return true;
+    if (o.zone.z === 'base' || o.zone.z === 'bf') return o.zone.z === 'bf' && o.zone.bf === bf;
+    return true;                                                     // cards in a trash, spells: no location
+  });
+}
+
+/** Whether a slot is chosen at all: a [Level] part's target only while it applies. */
+const slotActive = (s: GameState, slot: SlotAst, it: ChoiceCtx) =>
+  !slot.if || evalCond(s, slot.if, it.cond ?? { controller: it.controller, source: it.source ?? null });
+
 /** Whether a mode can be chosen: every slot it must fill has a candidate
-    [355.16]. */
-export function modeLegal(s: GameState, m: ModeAst, it: { controller: PlayerId; source?: ObjId | null }): boolean {
-  return (m.choose ?? []).every((sl) => slotMin(sl) === 0
-    || slotCandidates(s, sl, { controller: it.controller, source: it.source ?? null }).length >= slotMin(sl));
+    [355.16]; a mode Udyr chose this turn is gone. */
+export function modeLegal(s: GameState, m: ModeAst, it: ChoiceCtx): boolean {
+  const c = { controller: it.controller, source: it.source ?? null };
+  return (m.choose ?? []).every((sl) => {
+    if (sl.dest) return sl.dest.to !== 'open' || s.bfs.some((b) => b.controller === null    // an open battlefield [170.11.c]
+      && !b.here.some((id) => isType(s.objects[id], 'unit')));
+    return !slotActive(s, sl, it) || slotMin(sl) === 0 || candidatesFor(s, sl, it, c).length >= slotMin(sl);
+  });
 }
 
 /** Whether a program's choices can all be made now (the cheap stage of
     §4.6): enough legal modes, and a candidate for every slot that must be
     filled. */
-export function choicesPossible(s: GameState, prog: ProgAst | undefined, it: { controller: PlayerId; source?: ObjId | null }):
-  boolean {
+export function choicesPossible(s: GameState, prog: ProgAst | undefined, it: ChoiceCtx): boolean {
   if (!prog) return true;
   const c = { controller: it.controller, source: it.source ?? null };
-  if (!(prog.choose ?? []).every((sl) => slotMin(sl) === 0 || slotCandidates(s, sl, c).length >= slotMin(sl))) return false;
+  if (!(prog.choose ?? []).every((sl) => sl.dest || !slotActive(s, sl, it) || slotMin(sl) === 0
+    || candidatesFor(s, sl, it, c).length >= slotMin(sl))) return false;
   if (prog.modes) return prog.modes.of.filter((m) => modeLegal(s, m, it)).length >= prog.modes.pick;
   return true;
+}
+
+/** Where the units a destination slot's `of` slot chose may move [355.4.a],
+    [449.2]: any other location (their controller's base, a battlefield), as
+    the slot limits it. */
+export function destCandidates(s: GameState, slot: SlotAst, units: ObjId[]): Loc[] {
+  const d = slot.dest!;
+  const u = units[0] === undefined ? undefined : s.objects[units[0]];
+  if (!u) return [];
+  const at = locOf(u);
+  const out: Loc[] = [];
+  const base: Loc = { z: 'base', p: u.controller ?? u.owner };
+  if ((d.to ?? 'any') === 'any' || d.to === 'base') out.push(base);
+  if (d.to !== 'base') {
+    s.bfs.forEach((b, bf) => {
+      if (d.to === 'open' && (b.controller !== null || b.here.some((id) => isType(s.objects[id], 'unit')))) return;   // [170.11.c]
+      out.push({ z: 'bf', bf });
+    });
+  }
+  return out.filter((l) => !at || !(l.z === at.z && (l.z === 'base' ? l.p === (at as typeof l).p : l.bf === (at as typeof l).bf)));
 }
 
 const doneKey = (slot: string) => `slot:${slot}`;
@@ -58,6 +110,14 @@ export interface ChooseOpts {
   affordable?: (t: TargetRef) => boolean;
   /** The [A]s a target adds (OptionMeta.deflect). */
   deflect?: (t: TargetRef) => number;
+  /** Which execution's choices (0, or a paid Repeat's [820.2]). */
+  exec?: number;
+  /** Played from face down [811.1.d]. */
+  restrictBf?: number;
+  /** What a slot's `if` reads. */
+  cond?: CondCtx;
+  /** Modes already chosen this turn ("Choose one you've not chosen this turn"). */
+  modesUsed?: number[];
 }
 
 /**
@@ -67,14 +127,22 @@ export interface ChooseOpts {
 export function chooseNext(s: GameState, f: Frame, x: RunCtx, it: ChainItem, prog: ProgAst | undefined, o: ChooseOpts):
   StepOut | 'complete' {
   if (!prog) return 'complete';
-  const key = answer(f);
-  if (key === K.back) return o.onBack();
-  const ex = it.play.choices.executions[0];
-  const c = { controller: it.controller, source: it.source ?? null };
+  const e = o.exec ?? 0;
+  const ex = it.play.choices.executions[e];
+  const done = (slot: string) => (e === 0 ? doneKey(slot) : `${doneKey(slot)}#${e}`);
+  const cctx: ChoiceCtx = { controller: it.controller, source: it.source ?? null,
+    ...(o.restrictBf !== undefined ? { restrictBf: o.restrictBf } : {}), ...(o.cond ? { cond: o.cond } : {}) };
+  const c: SelCtx = { controller: it.controller, source: it.source ?? null,
+    subject: typeof it.trigger?.subject === 'number' ? it.trigger.subject : null,
+    eventBf: typeof it.trigger?.bf === 'number' ? it.trigger.bf : null };
+  const usedModes = (o.modesUsed ?? []);
 
   // Modes [355.3].
   if (prog.modes && ex.modes.length < prog.modes.pick) {
-    const open = prog.modes.of.map((m, i) => ({ m, i })).filter(({ m, i }) => !ex.modes.includes(i) && modeLegal(s, m, it));
+    const open = prog.modes.of.map((m, i) => ({ m, i }))
+      .filter(({ m, i }) => !ex.modes.includes(i) && !usedModes.includes(i) && modeLegal(s, m, cctx));
+    const key = answer(f);
+    if (key === K.back) return o.onBack();
     if (open.length < prog.modes.pick - ex.modes.length) return o.onImpossible();
     if (key === undefined) {
       const options: Option[] = open.map(({ i }) => ({ key: K.mode(i) }));
@@ -91,16 +159,47 @@ export function chooseNext(s: GameState, f: Frame, x: RunCtx, it: ChainItem, pro
     return 'continue';
   }
 
-  // Targets, slot by slot [355.5–355.13].
+  // Targets, slot by slot [355.5–355.13]; destinations after the units they
+  // move [355.4]. The answer is taken only by the slot it belongs to (a
+  // later execution's choices may follow in the same step).
+  const key = f.answer;
+  if (key === K.back) { answer(f); return o.onBack(); }
   for (const slot of slotsOf(prog, ex.modes)) {
-    if (it.play.choices.asPlayed[doneKey(slot.id)] === true) continue;
+    if (it.play.choices.asPlayed[done(slot.id)] === true) continue;
+    if (key !== undefined) answer(f);
+    if (!slotActive(s, slot, cctx)) {
+      setField(s, it.play.choices.asPlayed, done(slot.id), true);
+      return 'continue';
+    }
+    if (slot.dest) {
+      const units = (ex.targets[slot.dest.of] ?? []).flatMap((t) => (t.k === 'obj' ? [t.id] : []));
+      const dests = destCandidates(s, slot, units);
+      if (units.length === 0 || dests.length === 0) {
+        if (units.length > 0 && slotMin(slot) > 0) return o.onImpossible();
+        setField(s, it.play.choices.asPlayed, done(slot.id), true);
+        return 'continue';
+      }
+      if (key === undefined) {
+        return ask(s, f, x, {
+          player: it.controller, kind: 'destination', prompt: { t: 'destination', card: o.what, slot: slot.id },
+          ctx: { item: it.id, ...(it.obj !== undefined ? { source: it.obj } : {}), slot: slot.id, rule: '355.4' },
+          options: dests.map((l) => ({ key: l.z === 'base' ? K.locBase : K.locBf(l.bf), refs: [{ loc: l }] })),
+          privateOptions: false, back: o.back,
+        });
+      }
+      const k = parseKey(key)!;
+      const loc = k.loc === 'base' ? dests.find((l) => l.z === 'base')! : { z: 'bf' as const, bf: (k.loc as { bf: number }).bf };
+      setField(s, ex.dests, slot.id, loc);
+      setField(s, it.play.choices.asPlayed, done(slot.id), true);
+      return 'continue';
+    }
     const chosen = (ex.targets[slot.id] ?? []).map((t) => (t.k === 'obj' ? t.id : -1));
     const others = (slot.distinctFrom ?? []).flatMap((sl) => (ex.targets[sl] ?? []).map((t) => (t.k === 'obj' ? t.id : -1)));
-    const cands = slotCandidates(s, slot, c).filter((id) => !chosen.includes(id) && !others.includes(id)
+    const cands = candidatesFor(s, slot, cctx, c).filter((id) => !chosen.includes(id) && !others.includes(id)
       && (!o.affordable || o.affordable(targetRef(s, id))));
     const enough = chosen.length >= slotMin(slot);
     if (chosen.length >= slotMax(slot) || (enough && cands.length === 0)) {
-      setField(s, it.play.choices.asPlayed, doneKey(slot.id), true);
+      setField(s, it.play.choices.asPlayed, done(slot.id), true);
       return 'continue';
     }
     if (!enough && cands.length === 0) return o.onImpossible();
@@ -119,7 +218,7 @@ export function chooseNext(s: GameState, f: Frame, x: RunCtx, it: ChainItem, pro
       });
     }
     if (key === K.done) {
-      setField(s, it.play.choices.asPlayed, doneKey(slot.id), true);
+      setField(s, it.play.choices.asPlayed, done(slot.id), true);
       return 'continue';
     }
     const id = parseKey(key)!.obj!;

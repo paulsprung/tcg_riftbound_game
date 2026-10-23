@@ -102,7 +102,7 @@ function unsupported(s: GameState): string | null {
 
 /** Frames whose fields the walker knows. */
 const FRAMES: readonly Frame['f'][] = ['setup', 'priority', 'cleanup', 'task', 'play', 'move', 'assign', 'ability',
-  'resolve', 'instr', 'triggers', 'pay'];
+  'resolve', 'instr', 'triggers', 'pay', 'hide'];
 
 /**
  * Builds p's view of s (§7.3): a copy in which unknown objects are stubs,
@@ -181,6 +181,10 @@ function redactFrame(f: Frame, p: PlayerId, a: (id: ObjId) => ObjId) {
     f.obj = a(f.obj);
   }
   if (f.f === 'move') f.snap = null;
+  if (f.f === 'hide') {                                              // the card being hidden is its hider's secret
+    f.snap = null;
+    f.obj = a(f.obj);
+  }
   if (f.f === 'ability') {
     f.snap = null;
     if (f.src !== null) f.src = a(f.src);

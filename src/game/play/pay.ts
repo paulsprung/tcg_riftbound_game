@@ -18,7 +18,8 @@ import { answer, ask, defineSteps, ret, takeRet, type FrameOf, type RunCtx, type
 import { pushFrame } from '../state/mut.ts';
 import type { Frame, GameState, ItemId, ObjId, PlayerId } from '../state/types.ts';
 import {
-  activateAdd, executePlan, paymentPlans, payCost, planSummary, poolCovers, runeAbilities, type ResourceCost,
+  activateAdd, activateGold, executePlan, goldsOf, paymentPlans, payCost, planSummary, poolCovers, runeAbilities,
+  type ResourceCost,
 } from '../rules/resources.ts';
 import { domainsNeeded } from './playCard.ts';
 
@@ -30,7 +31,9 @@ export interface PayOpts {
   cost: ResourceCost;
   /** What is being paid for, for the prompt. */
   what: string;
-  item: ItemId;
+  item?: ItemId;
+  /** A spell's cost: Energy restricted to spells may pay it. */
+  spell?: boolean;
   source?: ObjId;
   back: boolean;
   onBack: () => StepOut;
@@ -44,16 +47,16 @@ export function payStep(s: GameState, f: Frame, x: RunCtx, o: PayOpts): StepOut 
   if (cost.energy === 0 && cost.power.length === 0) return { energy: 0, power: 0 };   // [445.1.b]
   const back = takeRet(f);
   if (back === 'declined') return o.onDecline();
-  if (back === 'paid') return payCost(s, x, payer, cost, 'paid rune by rune');
+  if (back === 'paid') return payCost(s, x, payer, cost, 'paid rune by rune', o.spell);
   const key = answer(f);
   if (key === K.back) return o.onBack();
   if (key === K.decline) return o.onDecline();
   if (key === K.manualPay) {
     pushFrame(s, { f: 'pay', who: payer, cost: { energy: cost.energy, power: cost.power, other: [], components: [] },
-      purpose: 'play', pc: 0 });
+      purpose: o.spell ? 'play' : 'applied', pc: 0 });
     return 'continue';
   }
-  const plans = paymentPlans(s, payer, cost, { reserveFor: domainsNeeded(s, payer) });
+  const plans = paymentPlans(s, payer, cost, { reserveFor: domainsNeeded(s, payer), spell: o.spell });
   if (key === undefined) {
     const options: Option[] = plans.map((plan) => ({
       key: plan.key, refs: plan.steps.map((st) => ({ obj: st.obj })), meta: { plan },
@@ -64,11 +67,12 @@ export function payStep(s: GameState, f: Frame, x: RunCtx, o: PayOpts): StepOut 
       player: payer, kind: 'payment',
       prompt: { t: 'payment', card: o.what, energy: cost.energy, power: powerText(cost),
         plans: plans.map((plan) => planSummary(s, plan)) },
-      ctx: { item: o.item, ...(o.source !== undefined ? { source: o.source } : {}), rule: o.rule }, options,
+      ctx: { ...(o.item !== undefined ? { item: o.item } : {}), ...(o.source !== undefined ? { source: o.source } : {}), rule: o.rule },
+      options,
       privateOptions: false, back: o.back,
     });
   }
-  return executePlan(s, x, payer, plans[parseKey(key)!.n!], cost);
+  return executePlan(s, x, payer, plans[parseKey(key)!.n!], cost, o.spell);
 }
 
 type PayFrame = FrameOf<'pay'>;
@@ -81,11 +85,13 @@ defineSteps('pay', [(s, f, x) => {
   if (key === K.decline) return ret(s, f, 'declined');
   if (key !== undefined) {
     const k = parseKey(key)!;
-    activateAdd(s, x, f.who, k.obj!, k.sub === 'exhaust' ? 'exhaust' : 'recycle');
+    if (k.sub === 'gold') activateGold(s, x, f.who, k.obj!);
+    else activateAdd(s, x, f.who, k.obj!, k.sub === 'exhaust' ? 'exhaust' : 'recycle');
     return 'continue';
   }
   const options: Option[] = runeAbilities(s, f.who).map((r) => ({ key: K.act(r.obj, r.ability), refs: [{ obj: r.obj }] }));
-  if (poolCovers(s, f.who, cost)) options.push({ key: K.done });
+  for (const g of goldsOf(s, f.who)) options.push({ key: K.act(g, 'gold'), refs: [{ obj: g }] });
+  if (poolCovers(s, f.who, cost, f.purpose === 'play')) options.push({ key: K.done });
   options.push({ key: K.decline });
   return ask(s, f as PayFrame, x, {
     player: f.who, kind: 'addAbility', prompt: { t: 'addAbility', energy: cost.energy, power: powerText(cost) },

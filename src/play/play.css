@@ -205,7 +205,14 @@ ul.play__error { padding-left: 30px; }
 .play-setup__block h3 { margin: 6px 0 0; font-size: 15px; }
 .play-setup__block p { margin: 0; }
 .play-setup__start { display: grid; gap: 10px; justify-items: start; margin-top: 8px; padding-top: 14px; border-top: 1px solid var(--line); }
-.deck-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+.deck-groups { display: grid; gap: 12px; }
+.deck-group { display: grid; gap: 6px; }
+.deck-group__name { margin: 0; text-transform: uppercase; letter-spacing: .06em; font-size: 11px; }
+.deck-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+.deck-tile--small { padding: 6px; gap: 8px; }
+.deck-tile--small .deck-tile__text .muted.small:last-child { display: none; }
+.chip--owned { margin-left: 6px; font-size: 10px; vertical-align: middle; border-color: var(--accent); color: var(--accent); }
+@media (max-width: 480px) { .deck-tiles { grid-template-columns: minmax(0, 1fr); } }
 .deck-tile {
   display: flex; gap: 12px; align-items: center; text-align: left;
   padding: 10px; border-radius: 12px; cursor: pointer;

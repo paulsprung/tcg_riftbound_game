@@ -17,6 +17,7 @@ import './rules/cleanup.ts';
 import './rules/combat.ts';
 import './rules/assignment.ts';
 import './rules/move.ts';
+import './rules/hide.ts';
 import './abilities/triggers.ts';
 import './play/pay.ts';
 import './play/playCard.ts';

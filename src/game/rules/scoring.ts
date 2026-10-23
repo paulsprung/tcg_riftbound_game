@@ -29,7 +29,7 @@ import { fire } from '../abilities/triggers.ts';
 
 type X = { present: boolean };
 
-export function score(s: GameState, x: X, p: PlayerId, bf: number, how: 'conquer' | 'hold') {
+export function score(s: GameState, x: X, p: PlayerId, bf: number, how: 'conquer' | 'hold', wasUncontrolled = false) {
   const b = s.bfs[bf];
   if (hasBit(b.scoredBy, p)) return;                                  // [472]
   setField(s, b, 'scoredBy', b.scoredBy | bit(p));
@@ -42,7 +42,7 @@ export function score(s: GameState, x: X, p: PlayerId, bf: number, how: 'conquer
   else drawCards(s, x, p, 1, '473.1.b.1');
   // Conquer and hold effects trigger even when the point was replaced by a
   // draw [383.4.c.2.c], [383.4.d.2.c], [473.2].
-  fire(s, x, { e: 'scored', p, bf, how });
+  fire(s, x, { e: 'scored', p, bf, how, wasUncontrolled });
 }
 
 /** Cleanup step 1 [323.1]: ends the game if a player has won. */
@@ -61,7 +61,8 @@ export function checkWin(s: GameState, x: X): boolean {
 /** p establishes control of a battlefield [190.4]: Contested ends
     [190.3.b], and it is a Conquer if p hasn't scored it this turn [471.1.b]. */
 export function establishControl(s: GameState, x: X, bf: number, p: PlayerId, rule: string) {
+  const was = s.bfs[bf].controller === null;                        // "a battlefield that was uncontrolled" (Yone)
   setController(s, x, bf, p, rule);
   clearContested(s, x, bf, '190.3.b');
-  if (!hasBit(s.bfs[bf].scoredBy, p)) score(s, x, p, bf, 'conquer');
+  if (!hasBit(s.bfs[bf].scoredBy, p)) score(s, x, p, bf, 'conquer', was);
 }

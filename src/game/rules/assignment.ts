@@ -149,7 +149,7 @@ const STEPS: StepTable<AssignFrame> = [
       if (row) row.raw++;
       else out.push({ to: id, raw: 1 });
     }
-    return ret(s, f, out.filter((a) => a.raw > 0).map((a) => ({ to: a.to, raw: a.raw })));
+    return ret(s, f, { hits: out.filter((a) => a.raw > 0).map((a) => ({ to: a.to, raw: a.raw })), excess: f.excess.length });
   },
 ];
 

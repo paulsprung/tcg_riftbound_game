@@ -50,7 +50,8 @@ describe('engine boundaries (§2.2)', () => {
 
   it('card definitions import only the effect language', () => {
     const defs = [...under('cards/defs'), ...under('cards/drafts')];
-    expect(defs.filter((i) => i.to === null || !DSL.includes(i.to)).map(show)).toEqual([]);
+    const sibling = (i: Import) => i.to !== null && inside(i.to, join(GAME, 'cards', 'defs'));   // the defs index
+    expect(defs.filter((i) => i.to === null || (!DSL.includes(i.to) && !sibling(i))).map(show)).toEqual([]);
   });
 
   it('src/play reaches the engine only through src/game/index.ts (the AI through its worker)', () => {

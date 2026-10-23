@@ -79,7 +79,7 @@ describe('§14.5 #1: views show identities only where the viewer knows them', ()
 
   it('refuses states whose ObjId paths it doesn\'t know yet, rather than leak through them', () => {
     const s = createGame(duel(3)).state;
-    pushFrame(s, { f: 'hide', by: 0, obj: null, bf: null, pc: 0, snap: null });
+    pushFrame(s, { f: 'custom', handler: 'x', pc: 0, locals: null });
     expect(() => viewFor(s, 0)).toThrow(NotImplementedError);
   });
 

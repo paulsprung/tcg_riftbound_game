@@ -25,7 +25,7 @@ export type DecisionKind =
   | 'addAbility' | 'costObject' | 'may' | 'pickCard' | 'number' | 'split' | 'orderTriggers' | 'applyReplacement'
   | 'orderReplacements' | 'chooseBattlefield' | 'assignNext' | 'assignTier' | 'assignExcess'
   | 'damageReplacementOrder' | 'detachOrder' | 'recycleOrder' | 'predict' | 'name' | 'nthInstance'
-  | 'chooseOpponent' | 'custom';
+  | 'chooseOpponent' | 'destination' | 'hide' | 'custom';
 
 /** Structured prompt text, rendered by the UI: { t: 'chooseTarget',
     card: 'void-seeker', slot: 'a unit at a battlefield' }. */

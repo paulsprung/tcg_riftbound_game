@@ -7,6 +7,7 @@ import {
 } from '../../src/game/index.ts';
 import { ORACLE } from '../../src/game/cards/oracle.ts';
 import { PRECONS } from '../../src/game/decks/precons.ts';
+import { STARTERS } from '../../src/game/decks/starters.ts';
 import { BUILT_IN_DECKS, deckIssues, deckProblems, withChampion } from '../../src/play/host/decks.ts';
 import { affordances, promptText } from '../../src/play/model/affordances.ts';
 import { boardOf } from '../../src/play/model/board.ts';
@@ -27,7 +28,7 @@ import { setupSummary, stageOf } from '../../src/play/model/stage.ts';
 
 const db: CardDb = JSON.parse(readFileSync(new URL('../../public/data/cards.json', import.meta.url), 'utf8'));
 const ix = cardIndex(db);
-const [SERAPHINE, EVELYNN] = BUILT_IN_DECKS.map((b) => b.deck);
+const [SERAPHINE, EVELYNN] = (['seraphine', 'evelynn'] as const).map((id) => BUILT_IN_DECKS.find((b) => b.id === id)!.deck);
 
 const setupFor = (seed: number, order: 'random' | 'first' | 'second' = 'random') =>
   gameSetup({ human: 0, mine: SERAPHINE, theirs: EVELYNN, champion: SERAPHINE.chosenChampion, order, seed }, ix);
@@ -87,15 +88,21 @@ describe('card index (the oracle\'s names, wording and printings)', () => {
   });
 
   it('the built-in decks are the engine\'s precons', () => {
-    expect(BUILT_IN_DECKS.map((b) => [b.id, b.deck])).toEqual(PRECONS.map((p) => [p.id, p.deck]));
-    expect(BUILT_IN_DECKS[0].deck).toBe(PRECONS[0].deck);
+    // every official starter, grouped by product, the Radiance precons among them
+    expect(BUILT_IN_DECKS.map((b) => [b.id, b.deck])).toEqual(STARTERS.map((p) => [p.id, p.deck]));
+    expect(BUILT_IN_DECKS).toHaveLength(13);
+    for (const p of PRECONS) expect(BUILT_IN_DECKS.find((b) => b.id === p.id)!.deck).toBe(p.deck);
   });
 
   it('checks the decks with the engine\'s validator, with the Chosen Champion picked', () => {
-    expect(BUILT_IN_DECKS.map((b) => deckIssues(b.deck))).toEqual([[], []]);
-    for (const { deck } of BUILT_IN_DECKS) {
-      expect(deck.championOptions!.map((c) => deckProblems(deck, c))).toEqual(deck.championOptions!.map(() => []));
+    // only warnings: the Proving Grounds decks' single battlefield, cards banned since a box was printed
+    for (const b of BUILT_IN_DECKS) {
+      expect(deckIssues(b.deck).filter((i) => i.severity !== 'warning'), b.id).toEqual([]);
+      expect(deckProblems(b.deck), b.id).toEqual([]);
+      for (const c of b.deck.championOptions ?? []) expect(deckProblems(b.deck, c), `${b.id} ${c}`).toEqual([]);
     }
+    expect(deckIssues(SERAPHINE)).toEqual([]);
+    expect(deckIssues(BUILT_IN_DECKS.find((b) => b.set === 'ogs')!.deck).map((i) => i.code)).toEqual(['battlefields']);
     expect(deckProblems({ ...SERAPHINE, runes: [] })).toEqual(['the Rune Deck has 0 runes; it needs 12 ([103.4.a])']);
     expect(deckProblems(SERAPHINE, 'heimerdinger-academy-instructor')).toEqual([
       'Heimerdinger, Academy Instructor does not have the Seraphine champion tag ([103.3.a.2])',
@@ -351,5 +358,21 @@ describe('option keys stay parseable', () => {
     const v = viewFor(s, 0);
     const objs = v.pending!.options.map((o) => parseKey(o.key)!.obj).filter((o) => o !== undefined);
     expect(objs.sort()).toEqual([...v.players[0].hand].sort());
+  });
+});
+
+describe('the deck choice (DeckSetup)', () => {
+  it('offers every starter grouped by product, and starts from the one the player owns', async () => {
+    const { DECK_GROUPS } = await import('../../src/play/host/decks.ts');
+    const { choiceFor, DEFAULT_CHOICE } = await import('../../src/play/setup/DeckSetup.tsx');
+    expect(DECK_GROUPS.map((g) => [g.set, g.decks.length])).toEqual([['ogs', 4], ['ogn', 3], ['sfd', 2], ['unl', 2], ['rad', 2]]);
+    expect(choiceFor(null)).toEqual(DEFAULT_CHOICE);
+    expect(choiceFor('not-a-starter')).toEqual(DEFAULT_CHOICE);
+    for (const b of BUILT_IN_DECKS) {
+      const c = choiceFor(b.id);
+      expect(c.mine).toBe(b.id);
+      expect(c.champion).toBe(b.deck.chosenChampion);
+      expect(BUILT_IN_DECKS.find((x) => x.id === c.theirs)!.set).not.toBe(b.set);
+    }
   });
 });

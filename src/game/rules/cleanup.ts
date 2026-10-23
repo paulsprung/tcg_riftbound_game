@@ -30,14 +30,13 @@
  * finds nothing to do changes nothing and the repetition stops.
  */
 import { K, parseKey } from '../core/decisions.ts';
-import { emit, emitZone, knowers } from '../core/events.ts';
+import { emit } from '../core/events.ts';
 import { answer, ask, defineSteps, next, type FrameOf, type StepTable } from '../core/frames.ts';
-import { moveObject, setField, setInCleanup } from '../state/mut.ts';
-import { Z } from '../state/zones.ts';
+import { setField, setInCleanup } from '../state/mut.ts';
 import type { GameState, PlayerId } from '../state/types.ts';
-import { emptyPools, heal, kill, recall, setController, clearContested, applyContested } from './actions.ts';
+import { emptyPools, heal, kill, recall, setController, clearContested, applyContested, trashForeignFacedown } from './actions.ts';
 import { playersWithUnitsAt, turnOrderFromTurnPlayer, turnState, unitsAt, unitsOfAt, unitsOnBoard } from './board.ts';
-import { hasKeyword, isLethal, isType } from './chars.ts';
+import { hasKeyword, isLethal, isType, mightOf } from './chars.ts';
 import { fire } from '../abilities/triggers.ts';
 import { designate, designationFor, openCombat } from './combat.ts';
 import { checkWin } from './scoring.ts';
@@ -159,15 +158,25 @@ const STEPS: StepTable<CleanupFrame> = [
       for (const id of pl.base) if (s.objects[id].controller !== pl.id && s.objects[id].attachedTo === null) stray.push(id);
     }
     recall(s, x, stray, '323.6');
-    s.bfs.forEach((b, bf) => {
-      for (const id of b.facedown.slice()) {
-        const o = s.objects[id];
-        if (o.controller === b.controller) continue;
-        const before = knowers(s, [id]);
-        const obj = moveObject(s, id, Z.trash(o.owner));
-        emitZone(s, x, { obj, prev: id, from: Z.facedown(bf), to: Z.trash(o.owner), why: 'trash', rule: '323.6.a', before });
-      }
-    });
+    s.bfs.forEach((_, bf) => trashForeignFacedown(s, x, bf, '323.6.a'));
+    // Effects on objects that left the board are gone with them [124]; an
+    // object that "becomes Mighty" triggers (Fiora) [709].
+    const live = new Set(Object.keys(s.objects).map(Number));
+    if (s.effects.some((e) => 'objs' in e.affects && e.affects.objs.every((id) => !live.has(id)))) {
+      setField(s, s, 'effects', s.effects.filter((e) => !('objs' in e.affects) || e.affects.objs.some((id) => live.has(id))));
+    }
+    const rose: number[] = [];
+    for (const id of unitsOnBoard(s)) {
+      const now = mightOf(s, id) >= 5;
+      const was = s.objects[id].mighty;
+      if (was === now) continue;
+      setField(s, s.objects[id], 'mighty', now);
+      if (now && was === false) rose.push(id);
+    }
+    if (rose.length > 0) {
+      for (const id of rose) emit(s, x, { k: 'becomeMighty', obj: id, rule: '709' });
+      fire(s, x, { e: 'mighty', objs: rose });
+    }
     return next(f);
   },
 

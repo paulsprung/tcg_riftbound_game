@@ -168,6 +168,7 @@ export interface GameObject {
   facedown: { hiddenOnTurn: number; bf: number; by: PlayerId } | null;   // [811.1.b]
   revealedUntil: RevealWindow | null; // a reveal is a state, not a zone [425.1.a]
   moves: number;                      // moves this turn (Kayn, Yasuo, Windrider); reset at turn start
+  mighty?: boolean;                   // Might ≥ 5 at the last cleanup, for "becomes Mighty" [709]; unset until then
   lastDamage: { item: ItemId | null; sources: ObjId[]; by: PlayerId | null; combat: boolean } | null;
                                       // kill attribution for cleanup kills [429.5.c]; cleared after the next cleanup
   // ---- memory that survives the zone change that created it ----
@@ -436,7 +437,7 @@ export type FrameBody =
   | { f: 'perform'; spec: GameAction; ctx: ActionCtx; pc: number; ev: ProposedEvent[]; used: string[] }   // §6.3
   | { f: 'triggers'; batch: PendingTrigger[]; placed: number[]; pc: number; order: 'turnOrder' | 'combat' }
   | { f: 'move'; by: PlayerId; units: ObjId[]; dest: Loc | null; pc: number; snap: GameState | null }
-  | { f: 'hide'; by: PlayerId; obj: ObjId | null; bf: number | null; pc: number; snap: GameState | null }
+  | { f: 'hide'; by: PlayerId; obj: ObjId; bf: number | null; pc: number; snap: GameState | null }
   | { f: 'pay'; who: PlayerId; cost: TotalCost; purpose: 'play' | 'applied' | 'instruction'; pc: number }
   | { f: 'assign'; by: PlayerId; order: ObjId[]; tier: Record<ObjId, 'tank' | 'backline'>; pc: number;
       total: number; excess: ObjId[] }                                // [467.2.c]; total and excess: additions

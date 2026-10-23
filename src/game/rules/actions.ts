@@ -28,9 +28,10 @@ import { bit } from '../state/ids.ts';
 import { append, deleteObject, mint, moveObject, setField } from '../state/mut.ts';
 import { shuffled, shuffleZone } from '../state/rng.ts';
 import { locOf, Z } from '../state/zones.ts';
-import type { Domain, GameState, Loc, ObjId, PlayerId, PowerReq, RunePool, Zone } from '../state/types.ts';
+import type { Domain, GameObject, GameState, Loc, ObjId, PlayerId, PowerReq, RunePool, Zone } from '../state/types.ts';
 import { opponentsOf } from './board.ts';
-import { snapshotOf } from './chars.ts';
+import { isType, snapshotOf } from './chars.ts';
+import { friendsAt } from './targets.ts';
 import { maxBuffs, victoryScore } from './defaults.ts';
 import { requestCleanup } from './tasks.ts';
 import { copyJson } from '../state/clone.ts';
@@ -179,9 +180,20 @@ export function addToPool(s: GameState, x: X, p: PlayerId, energy: number, power
  * universal Power [163.2.b], [135.2.e.6.c]. The caller made sure the pool
  * covers it (rules/resources.ts). Returns the Power spent per domain.
  */
-export function payFromPool(s: GameState, x: X, p: PlayerId, energy: number, power: PowerReq[], rule: string) {
+export function payFromPool(s: GameState, x: X, p: PlayerId, energy: number, power: PowerReq[], rule: string, spell = false) {
   const pool = s.players[p].pool;
-  setField(s, pool, 'energy', pool.energy - energy);
+  const plain = Math.min(pool.energy, energy);
+  setField(s, pool, 'energy', pool.energy - plain);
+  let rest = energy - plain;                                         // restricted Energy pays the rest [430]
+  if (rest > 0) {
+    const restricted = pool.restricted.map((r) => {
+      if (rest <= 0 || r.kind !== 'energy' || (r.onlyFor === 'spells' && !spell)) return r;
+      const take = Math.min(rest, r.amount);
+      rest -= take;
+      return { ...r, amount: r.amount - take };
+    }).filter((r) => r.amount > 0);
+    setField(s, pool, 'restricted', restricted);
+  }
   for (const req of power.slice().sort(byWidth)) {
     const d = poolDomainFor(pool, req);
     if (d) setField(s, pool.power, d, pool.power[d] - 1);
@@ -220,14 +232,14 @@ export function emptyPools(s: GameState, x: X, rule: string) {
  * the next cleanup [429.5.c].
  */
 export function deal(s: GameState, x: X, hits: { to: ObjId; n: number }[], o: {
-  sources: ObjId[]; by: PlayerId | null; combat: boolean; rule: string;
+  sources: ObjId[]; by: PlayerId | null; combat: boolean; rule: string; item?: number;
 }) {
   const group = newGroup(s);
   for (const h of hits) {
     if (h.n < 1) continue;
     const u = s.objects[h.to];
     append(s, u.damage, { amount: h.n, by: o.by, sources: o.sources, combat: o.combat, group });
-    setField(s, u, 'lastDamage', { item: null, sources: o.sources, by: o.by, combat: o.combat });
+    setField(s, u, 'lastDamage', { item: o.item ?? null, sources: o.sources, by: o.by, combat: o.combat });
     emit(s, x, { k: 'deal', to: h.to, n: h.n, sources: o.sources, combat: o.combat, rule: o.rule, group });
   }
   requestCleanup(s);                                                 // a status change [319.7]
@@ -247,19 +259,33 @@ export function heal(s: GameState, x: X, units: ObjId[], rule: string) {
  * [429.1], [056] as a new object [124]. The turn log keeps what each was as
  * it died (last-known information [383.2.c.3.b]).
  */
-export function kill(s: GameState, x: X, units: ObjId[], o: { rule: string; inCombat: (id: ObjId) => boolean }) {
+export function kill(s: GameState, x: X, units0: ObjId[], o: { rule: string; inCombat: (id: ObjId) => boolean }) {
+  // "The next time it would die this turn, heal it, exhaust it, and recall
+  // it instead" (Highlander, Tactical Retreat): a replacement [367].
+  const units: ObjId[] = [];
+  for (const id of units0) {
+    const e = s.effects.find((f) => (f.spec as { s?: string } | null)?.s === 'replaceDeath' && 'objs' in f.affects
+      && f.affects.objs.includes(id));
+    if (!e || !isType(s.objects[id], 'unit')) { units.push(id); continue; }
+    setField(s, s, 'effects', s.effects.filter((f) => f.id !== e.id));
+    emit(s, x, { k: 'replaced', source: e.source ?? id, event: 'die', rule: '369.1' });
+    heal(s, x, [id], '419');
+    exhaust(s, x, s.objects[id].controller ?? s.objects[id].owner, [id], '415', false);
+    recall(s, x, [id], '457');
+  }
   if (units.length === 0) return;
   const group = newGroup(s);
   emit(s, x, { k: 'kill', objs: units.slice(), rule: o.rule, group });
-  const deaths: { snap: ReturnType<typeof snapshotOf>; at: Loc | null }[] = [];
+  const deaths: { snap: ReturnType<typeof snapshotOf>; at: Loc | null; item: number | null; alone: boolean }[] = [];
   const snaps = units.map((id) => snapshotOf(s, id));               // all at once: they die simultaneously [303.1]
-  units.forEach((id, i) => placeSelfLeave(s, x, id, snaps[i]));     // Deathknell, before the move [808.1.d.2]
+  const alone = units.map((id) => isType(s.objects[id], 'unit') && friendsAt(s, id).length === 0);
+  units.forEach((id, i) => placeSelfLeave(s, x, id, snaps[i], { alone: alone[i] }));   // Deathknell, before the move [808.1.d.2]
   for (const [i, id] of units.entries()) {
     const u = s.objects[id];
-    const snap = snaps[i], at = locOf(u), inCombat = o.inCombat(id);
+    const snap = snaps[i], at = locOf(u), inCombat = o.inCombat(id), item = u.lastDamage?.item ?? null;
     toZone(s, x, id, Z.trash(u.owner), { why: 'kill', rule: o.rule, group });
     append(s, s.log.deaths, { snap, group, inCombat, at });
-    deaths.push({ snap, at });
+    deaths.push({ snap, at, item, alone: alone[i] });
   }
   requestCleanup(s);                                                 // leaving the board [319.6]
   fire(s, x, { e: 'died', deaths });
@@ -274,6 +300,7 @@ export function toZone(s: GameState, x: X, id: ObjId, to: Zone, o: { why: string
   pos?: 'top' | 'bottom' }): ObjId | null {
   const u = s.objects[id];
   const from = copyJson(u.zone);
+  if (locOf(u) !== null) detachAll(s, x, id, '719.5');              // attachments stay on the board [719.5]
   if (u.token && to.z !== 'chain') {
     deleteObject(s, id);
     emit(s, x, { k: 'tokenGone', obj: id, rule: '186.1', group: o.group });
@@ -324,6 +351,7 @@ export function discard(s: GameState, x: X, p: PlayerId, objs: ObjId[], rule: st
   const out = objs.map((id) => toZone(s, x, id, Z.trash(p), { why: 'discard', rule, group })!);
   setField(s, s.log.discards, p, s.log.discards[p] + out.length);
   emit(s, x, { k: 'discard', p, objs: out, rule, group });
+  fire(s, x, { e: 'discarded', p, objs: out });                      // "When you discard me" [423]
 }
 
 /** Draws a given card [414.1]: "draw one of them". */
@@ -364,33 +392,46 @@ export function look(s: GameState, x: X, p: PlayerId, objs: ObjId[], rule: strin
 
 /** Buffs units [427]: one buff counter each, none on a unit that has one
     [427.1.b], [702.3]. Returns the units buffed. */
-export function buffUnits(s: GameState, x: X, units: ObjId[], rule: string): ObjId[] {
+export function buffUnits(s: GameState, x: X, units: ObjId[], rule: string, by: PlayerId | null = null): ObjId[] {
   const done = units.filter((id) => s.objects[id].buffs < maxBuffs(s, id));
   if (done.length === 0) return done;
   for (const id of done) setField(s, s.objects[id], 'buffs', s.objects[id].buffs + 1);
   emit(s, x, { k: 'buff', objs: done, rule });
   requestCleanup(s);                                                 // [319.7]
+  fire(s, x, { e: 'buffed', objs: done, by });                       // "When you buff a friendly unit" (Mistfall)
+  return done;
+}
+
+/** Spends a buff of each unit [702.2.b]. Returns the units that had one. */
+export function spendBuffs(s: GameState, x: X, units: ObjId[], rule: string): ObjId[] {
+  const done = units.filter((id) => s.objects[id].buffs > 0);
+  for (const id of done) setField(s, s.objects[id], 'buffs', s.objects[id].buffs - 1);
+  if (done.length > 0) {
+    emit(s, x, { k: 'spendBuff', objs: done, rule });
+    requestCleanup(s);
+  }
   return done;
 }
 
 /** Stuns units [424]: until the end of the turn [424.1.a.2]. */
-export function stunUnits(s: GameState, x: X, units: ObjId[], rule: string): ObjId[] {
+export function stunUnits(s: GameState, x: X, units: ObjId[], rule: string, by: PlayerId | null = null): ObjId[] {
   const done = units.filter((id) => !s.objects[id].stunned);
   if (done.length === 0) return done;
   for (const id of done) setField(s, s.objects[id], 'stunned', true);
   emit(s, x, { k: 'stun', objs: done, rule });
   requestCleanup(s);
+  fire(s, x, { e: 'stunned', objs: done, by });                      // "When you [Stun] an enemy unit" (Vex, Mocking)
   return done;
 }
 
 /** "+N [M] this turn" on a locked set of units [479.4], its amount fixed now
     [479.4.b]; a negative N lowers it (Might may go below 0 [143.2.c]). */
 export function addMight(s: GameState, x: X, units: ObjId[], n: number, o: { controller: PlayerId; source: ObjId | null;
-  item: number | null; rule: string }) {
+  item: number | null; rule: string; until?: 'thisTurn' | 'thisCombat' | 'permanent' }) {
   if (units.length === 0 || n === 0) return;
   append(s, s.effects, {
     id: mint(s, 'eff'), ts: mint(s, 'ts'), controller: o.controller, source: o.source, item: o.item, rule: o.rule,
-    layer: 4, sub: n > 0 ? 'inc' : 'dec', affects: { objs: units.slice() }, spec: { s: 'might', n }, until: 'thisTurn',
+    layer: 4, sub: n > 0 ? 'inc' : 'dec', affects: { objs: units.slice() }, spec: { s: 'might', n }, until: o.until ?? 'thisTurn',
   });
   for (const id of units) emit(s, x, { k: 'mightChanged', obj: id, from: null, to: null, rule: o.rule });
   requestCleanup(s);                                                 // a Might change can make damage lethal [319.7]
@@ -400,15 +441,16 @@ export function addMight(s: GameState, x: X, units: ObjId[], n: number, o: { con
     [479]: "its base Might becomes N" (layer 2), "give … [Shield 2]" (layer
     3). The objects are fixed now [479.4.b]. */
 export function addEffect(s: GameState, x: X, objs: ObjId[], spec: { s: 'baseMight'; n: number } | { s: 'keyword'; kw: string;
-  value: number }, o: { controller: PlayerId; source: ObjId | null; item: number | null; rule: string }) {
+  value: number } | { s: 'cantMove' } | { s: 'replaceDeath' }, o: { controller: PlayerId; source: ObjId | null; item: number | null;
+  rule: string; until?: 'thisTurn' | 'thisCombat' | 'permanent' }) {
   if (objs.length === 0) return;
   append(s, s.effects, {
     id: mint(s, 'eff'), ts: mint(s, 'ts'), controller: o.controller, source: o.source, item: o.item, rule: o.rule,
-    layer: spec.s === 'baseMight' ? 2 : 3, affects: { objs: objs.slice() }, spec, until: 'thisTurn',
+    layer: spec.s === 'baseMight' ? 2 : 3, affects: { objs: objs.slice() }, spec, until: o.until ?? 'thisTurn',
   });
   for (const id of objs) {
-    emit(s, x, spec.s === 'baseMight' ? { k: 'mightChanged', obj: id, from: null, to: null, rule: o.rule }
-      : { k: 'keywordsChanged', obj: id, rule: o.rule });
+    if (spec.s === 'baseMight') emit(s, x, { k: 'mightChanged', obj: id, from: null, to: null, rule: o.rule });
+    else if (spec.s === 'keyword') emit(s, x, { k: 'keywordsChanged', obj: id, rule: o.rule });
   }
   requestCleanup(s);                                                 // a Might change can make damage lethal [319.7]
 }
@@ -424,10 +466,12 @@ export function addEffect(s: GameState, x: X, objs: ObjId[], spec: { s: 'baseMig
  */
 export function moveUnits(s: GameState, x: X, units: ObjId[], to: Loc, o: { by: PlayerId | null; standard: boolean;
   rule: string }) {
+  if (units.length === 0) return;
   const group = newGroup(s);
   const from = units.map((id) => locOf(s.objects[id])!);
   units.forEach((id, i) => {
     moveObject(s, id, to);
+    carryAttachments(s, id);                                         // not a move for them [719.3.a], [448.1]
     setField(s, s.objects[id], 'moves', s.objects[id].moves + 1);
     append(s, s.log.moves, { obj: id, from: from[i], to, by: o.by, standard: o.standard, group });
   });
@@ -436,13 +480,137 @@ export function moveUnits(s: GameState, x: X, units: ObjId[], to: Loc, o: { by: 
     for (const id of units) applyContested(s, x, to.bf, s.objects[id].controller!);
   }
   requestCleanup(s);
+  fire(s, x, { e: 'moved', objs: units.slice(), to, by: o.by });    // "When I move", "When you move an enemy unit"
+}
+
+/** Whether an effect forbids a unit to move this turn (Vex, Apathetic). */
+export const cantMove = (s: GameState, id: ObjId) => s.effects.some((e) => (e.spec as { s?: string } | null)?.s === 'cantMove'
+  && 'objs' in e.affects && e.affects.objs.includes(id));
+
+/** A unit's attachments go where it goes [719.3]. */
+function carryAttachments(s: GameState, id: ObjId) {
+  const u = s.objects[id];
+  for (const g of Object.values(s.objects)) {
+    if (g.attachedTo !== id || sameZoneLoc(g, u)) continue;
+    moveObject(s, g.id, u.zone);
+  }
+}
+const sameZoneLoc = (a: GameObject, b: GameObject) => JSON.stringify(a.zone) === JSON.stringify(b.zone);
+
+// ---- attachment [435], [436], [716–719] ----
+
+/** Attaches a non-unit to a unit [435]: its location becomes the unit's,
+    not a move [435.4]; a unit can't be attached [435.1.h.1]. */
+export function attach(s: GameState, x: X, obj: ObjId, to: ObjId, rule: string): boolean {
+  const g = s.objects[obj], u = s.objects[to];
+  if (!g || !u || isType(g, 'unit') || !isType(u, 'unit') || g.attachedTo === to) return false;
+  if (locOf(g) === null || locOf(u) === null) return false;
+  if (g.attachedTo !== null) detach(s, x, obj, '435.1.f');
+  setField(s, g, 'attachedTo', to);
+  if (!sameZoneLoc(g, u)) moveObject(s, obj, u.zone);
+  emit(s, x, { k: 'attach', obj, to, equipped: true, rule });
+  requestCleanup(s);                                                 // [319.7]
+  return true;
+}
+
+/** Detaches a card [436]: it stays where it is [436.4]. */
+export function detach(s: GameState, x: X, obj: ObjId, rule: string): boolean {
+  const g = s.objects[obj];
+  if (!g || g.attachedTo === null) return false;
+  setField(s, g, 'attachedTo', null);
+  emit(s, x, { k: 'detach', obj, rule });
+  requestCleanup(s);
+  return true;
+}
+
+/** Every card attached to a unit detaches (the unit leaves the board [719.5]). */
+export function detachAll(s: GameState, x: X, unit: ObjId, rule: string) {
+  for (const g of Object.values(s.objects)) if (g.attachedTo === unit) detach(s, x, g.id, rule);
+}
+
+// ---- more zone changes ----
+
+/** Returns cards to their owners' hands: from the board (a token ceases to
+    exist [186.1]) or from a trash. */
+export function returnToHand(s: GameState, x: X, objs: ObjId[], rule: string): ObjId[] {
+  const group = newGroup(s);
+  const out: ObjId[] = [];
+  const left: { snap: ReturnType<typeof snapshotOf>; at: Loc | null }[] = [];
+  for (const id of objs) {
+    const o = s.objects[id];
+    if (!o) continue;
+    const at = locOf(o);
+    if (at) left.push({ snap: snapshotOf(s, id), at });
+    const n = toZone(s, x, id, Z.hand(o.owner), { why: 'returnToHand', rule, group });
+    if (n !== null) out.push(n);
+  }
+  if (left.length > 0) {
+    requestCleanup(s);                                               // [319.6]
+    fire(s, x, { e: 'returned', objs: left });
+  }
+  return out;
+}
+
+/** Recycles a permanent or a card to its owner's Main Deck [417.1.a]. */
+export function recyclePermanent(s: GameState, x: X, id: ObjId, rule: string): ObjId | null {
+  const o = s.objects[id];
+  const onBoard = locOf(o) !== null;
+  const n = toZone(s, x, id, Z.deck(o.owner), { why: 'recycle', rule, pos: 'bottom' });
+  if (onBoard) requestCleanup(s);
+  if (n !== null) emit(s, x, { k: 'recycle', p: o.owner, objs: [n], rule, vis: knowers(s, [n]) });
+  return n;
+}
+
+/** Puts the top N cards of a Main Deck into the trash, as many as there are (not a Burn [441]). */
+export function mill(s: GameState, x: X, p: PlayerId, n: number, rule: string): ObjId[] {
+  const group = newGroup(s);
+  const out: ObjId[] = [];
+  for (let i = 0; i < n; i++) {
+    const top = s.players[p].deck[0];
+    if (top === undefined) break;
+    out.push(toZone(s, x, top, Z.trash(p), { why: 'mill', rule, group })!);
+  }
+  return out;
+}
+
+/** A player gains XP [730.1]. */
+export function gainXp(s: GameState, x: X, p: PlayerId, n: number, rule: string) {
+  if (n <= 0) return;
+  setField(s, s.players[p], 'xp', s.players[p].xp + n);
+  setField(s, s.log.xpGained, p, (s.log.xpGained[p] ?? 0) + n);
+  emit(s, x, { k: 'xp', p, delta: n, rule });
+  requestCleanup(s);
+}
+
+/** A player spends XP [730.2]; false if they have too little [203.3]. */
+export function spendXp(s: GameState, x: X, p: PlayerId, n: number, rule: string): boolean {
+  if (s.players[p].xp < n) return false;
+  setField(s, s.players[p], 'xp', s.players[p].xp - n);
+  emit(s, x, { k: 'xp', p, delta: -n, rule });
+  requestCleanup(s);
+  return true;
+}
+
+/** Adds universal Power ([A]) or Energy only for spells to a pool [430], [163.2.b]. */
+export function addSpecial(s: GameState, x: X, p: PlayerId, o: { energy?: number; universal?: number; onlyFor?: 'spells';
+  source: string }, rule: string) {
+  const pool = s.players[p].pool;
+  if (o.universal) setField(s, pool, 'universal', pool.universal + o.universal);
+  if (o.energy) {
+    if (o.onlyFor) append(s, pool.restricted, { amount: o.energy, kind: 'energy', onlyFor: o.onlyFor, source: o.source });
+    else setField(s, pool, 'energy', pool.energy + o.energy);
+  }
+  emit(s, x, { k: 'pool', p, pool: copyJson(pool), rule });
 }
 
 /** Recalls permanents to their controller's base [457]: not a move [458],
     damage and status stay [460]. */
 export function recall(s: GameState, x: X, objs: ObjId[], rule: string) {
   if (objs.length === 0) return;
-  for (const id of objs) moveObject(s, id, Z.base(s.objects[id].controller ?? s.objects[id].owner));
+  for (const id of objs) {
+    moveObject(s, id, Z.base(s.objects[id].controller ?? s.objects[id].owner));
+    carryAttachments(s, id);
+  }
   emit(s, x, { k: 'recall', objs: objs.slice(), rule });
   requestCleanup(s);
 }
@@ -475,3 +643,16 @@ export function setController(s: GameState, x: X, bf: number, p: PlayerId | null
 }
 
 const shuffledIds = (s: GameState, ids: ObjId[]) => shuffled(s, ids);
+
+/** Facedown cards at a battlefield whose controller doesn't control it go
+    to their owners' trash, revealed [323.6.a], [468.5.c], [422.4]. */
+export function trashForeignFacedown(s: GameState, x: X, bf: number, rule: string) {
+  const b = s.bfs[bf];
+  for (const id of b.facedown.slice()) {
+    const o = s.objects[id];
+    if (o.controller === b.controller) continue;
+    const before = knowers(s, [id]);
+    const obj = moveObject(s, id, Z.trash(o.owner));
+    emitZone(s, x, { obj, prev: id, from: Z.facedown(bf), to: Z.trash(o.owner), why: 'trash', rule, before });
+  }
+}

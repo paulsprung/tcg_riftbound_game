@@ -26,6 +26,7 @@ import {
 import type { DefId, Domain } from '../state/types.ts';
 import { deckDefs, mainCount, runeCount, type DeckEntry, type DeckList } from './decklist.ts';
 import { PRECONS } from './precons.ts';
+import { STARTERS } from './starters.ts';
 
 export type DeckMode = 'casual' | 'sanctioned' | 'playable';
 
@@ -177,7 +178,13 @@ export function validateDeck(d: DeckList, mode: DeckMode, o: ValidateOptions = {
   }
 
   // ---- battlefields [103.5] ----
-  if (d.battlefields.length !== BATTLEFIELDS_PER_DECK) {
+  // A Proving Grounds starter comes with one battlefield (the box is for
+  // guided play); in a Duel each player's battlefield is that one [487.5].
+  const provingGrounds = d.battlefields.length === 1
+    && isUnmodifiedPrecon(d, STARTERS.filter((st) => st.set === 'ogs').map((st) => st.deck));
+  if (provingGrounds) {
+    add('warning', 'battlefields', '487.5', 'a Proving Grounds starter: one battlefield, played in every Duel');
+  } else if (d.battlefields.length !== BATTLEFIELDS_PER_DECK) {
     error('battlefields', '103.5.a',
       `${d.battlefields.length} battlefields; a Duel deck provides ${BATTLEFIELDS_PER_DECK} [487.4.a]`);
   }
@@ -228,7 +235,8 @@ export function validateDeck(d: DeckList, mode: DeckMode, o: ValidateOptions = {
   const format = o.format === undefined ? 'standard' : o.format;
   if (format !== null) {
     const f = FORMATS[format];
-    const exempt = (o.opl ?? 'low') === 'low' && isUnmodifiedPrecon(d, o.precons ?? PRECONS.map((p) => p.deck));
+    const exempt = (o.opl ?? 'low') === 'low' && isUnmodifiedPrecon(d, o.precons ?? [...PRECONS.map((p) => p.deck),
+      ...STARTERS.map((st) => st.deck)]);
     const used = [d.legend, ...d.main.map((e) => e.def), ...d.runes.map((e) => e.def), ...d.battlefields]
       .filter((def, i, all) => all.indexOf(def) === i);
     for (const def of used) {

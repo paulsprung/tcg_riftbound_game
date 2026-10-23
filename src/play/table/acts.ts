@@ -21,7 +21,7 @@ export function actOn(acts: Acts | undefined, slot: CardSlot): ((s: CardSlot) =>
 }
 
 const LANE_LABEL: Record<string, string> = {
-  moveDest: 'Move here', location: 'Play here', chooseBattlefield: 'Choose',
+  moveDest: 'Move here', location: 'Play here', chooseBattlefield: 'Choose', destination: 'Move here', hideWhere: 'Hide here',
 };
 
 /** The buttons a lane (or the base, 'base') gets. */

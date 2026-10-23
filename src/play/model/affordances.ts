@@ -73,7 +73,9 @@ export function promptText(d: Pick<Decision, 'kind' | 'prompt'>, names: Names = 
     case 'payment': {
       const e = typeof d.prompt.energy === 'number' ? d.prompt.energy : 0;
       const power = Array.isArray(d.prompt.power) ? d.prompt.power.length : 0;
-      return `${card ? `${names(card)}: pay` : 'Pay'} ${e} Energy${power > 0 ? ` and ${power} Power` : ''}: choose how.`;
+      const what = card === 'hide' ? 'Hide it: pay' : card === 'move' ? 'Moving several units there: pay' : card === 'cost' || !card
+        ? 'Pay' : `${names(card)}: pay`;
+      return `${what} ${e} Energy${power > 0 ? ` and ${power} Power` : ''}: choose how.`;
     }
     case 'target': {
       const max = typeof d.prompt.max === 'number' ? d.prompt.max : 1;
@@ -86,11 +88,18 @@ export function promptText(d: Pick<Decision, 'kind' | 'prompt'>, names: Names = 
       const chosen = Array.isArray(d.prompt.chosen) ? d.prompt.chosen.length : 0;
       return `${names(card)}: choose ${pick - chosen} more mode${pick - chosen === 1 ? '' : 's'}.`;
     }
-    case 'may': return `Use ${names(defOf(d.prompt.ability))}'s ability?`;
+    case 'may': return d.prompt.t === 'mayInstr' ? 'You may do this now: do it?' : `Use ${names(defOf(d.prompt.ability))}'s ability?`;
     case 'orderTriggers':
       return 'Several of your abilities trigger at once: choose the one to put on the chain first (it resolves last).';
     case 'predict': return 'Predict: keep the top card of your Main Deck, or recycle it to the bottom.';
-    case 'pickCard': return d.prompt.t === 'discard' ? 'Choose a card to discard.' : 'Choose the card to draw.';
+    case 'pickCard':
+      if (d.prompt.t === 'discard') return 'Choose a card to discard.';
+      if (d.prompt.t === 'spendBuff') return 'Choose a unit to spend its buff.';
+      if (d.prompt.t === 'detach') return 'Choose the Equipment to detach.';
+      if (d.prompt.t === 'killOwn') return 'Choose one of your units to kill.';
+      return 'Choose the card to draw.';
+    case 'destination': return `${names(card)}: choose where it moves.`;
+    case 'hideWhere': return 'Choose the battlefield to hide the card at, face down.';
     case 'addAbility': return 'Pay rune by rune: tap runes to add Energy or Power, then Done.';
     case 'moveUnits': return 'Choose the units to move (all go to the same place), then Done.';
     case 'moveDest': return 'Choose where they move: a battlefield, or back to base.';
@@ -109,8 +118,10 @@ export function promptText(d: Pick<Decision, 'kind' | 'prompt'>, names: Names = 
     case 'costObject': {
       const n = typeof d.prompt.n === 'number' ? d.prompt.n : 1;
       const chosen = typeof d.prompt.chosen === 'number' ? d.prompt.chosen : 0;
-      const verb = d.prompt.what === 'kill' ? 'kill' : 'exhaust';
-      return `${names(card)}: choose ${n > 1 ? `${n - chosen} more units` : 'a unit'} to ${verb} as part of its cost.`;
+      const verb = d.prompt.what === 'kill' ? 'kill' : d.prompt.what === 'discard' ? 'discard' : d.prompt.what === 'recycle'
+        ? 'recycle from your trash' : 'exhaust';
+      const thing = d.prompt.what === 'discard' || d.prompt.what === 'recycle' ? 'card' : 'unit';
+      return `${names(card)}: choose ${n > 1 ? `${n - chosen} more ${thing}s` : `a ${thing}`} to ${verb} as part of its cost.`;
     }
     case 'applyReplacement': {
       const tok = typeof d.prompt.token === 'string' ? names(d.prompt.token) : 'a token';
@@ -141,8 +152,17 @@ function buttonLabel(d: Decision, key: string, draft: readonly string[], names: 
   if (k?.head === 'keep') return `Keep ${name} on top`;
   if (k?.head === 'recycle') return `Recycle ${name}`;
   if (k?.head === 'pick' && d.kind === 'showOff') return `Show off ${name}`;
-  if (k?.head === 'pick' && d.kind === 'costObject') return `${d.prompt.what === 'kill' ? 'Kill' : 'Exhaust'} ${name}`;
-  if (k?.head === 'pick') return d.prompt.t === 'discard' ? `Discard ${name}` : `Draw ${name}`;
+  if (k?.head === 'pick' && d.kind === 'costObject') {
+    const verb = { kill: 'Kill', discard: 'Discard', recycle: 'Recycle' }[String(d.prompt.what)] ?? 'Exhaust';
+    return `${verb} ${name}`;
+  }
+  if (k?.head === 'pick') {
+    const t = String(d.prompt.t);
+    return t === 'discard' ? `Discard ${name}` : t === 'spendBuff' ? `Spend ${name}'s buff` : t === 'detach' ? `Detach ${name}`
+      : t === 'killOwn' ? `Kill ${name}` : `Draw ${name}`;
+  }
+  if (k?.head === 'hide') return `Hide ${name} face down (pay 1 Power)`;
+  if (k?.head === 'act') return `${name}: ${k.sub === 'kwequip' ? 'Equip' : k.sub === 'gold' ? 'Add 1 Power' : 'use ability'}`;
   if (d.kind === 'showOff' && key === 'no') return 'Don\'t show off';
   if (d.kind === 'optionalCost') return key === 'yes' ? 'Pay it' : 'Don\'t';
   if (d.kind === 'applyReplacement') return key === 'yes' ? 'Instead' : 'Keep it';
@@ -183,7 +203,11 @@ export function affordances(
     const k = parseKey(o.key);
     if (!k) continue;
     const obj = k.obj === undefined ? undefined : view.objects[k.obj];
-    if (k.obj !== undefined && (!obj || OFF_TABLE.includes(obj.zone.z))) {
+    // Hiding a card, and a card's second ability, are buttons: tapping the card does its first thing.
+    const second = k.obj !== undefined && (k.head === 'hide' || (k.head === 'act' && (out.objects[k.obj]?.keys.length ?? 0) > 0));
+    if (second) {
+      out.buttons.push({ key: o.key, label: buttonLabel(d, o.key, draft, names, view), commit: [...draft, o.key] });
+    } else if (k.obj !== undefined && (!obj || OFF_TABLE.includes(obj.zone.z))) {
       out.buttons.push({ key: o.key, label: buttonLabel(d, o.key, draft, names, view), commit: [...draft, o.key] });
     } else if (k.obj !== undefined) {
       const prev = out.objects[k.obj];

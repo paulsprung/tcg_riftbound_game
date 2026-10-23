@@ -83,7 +83,14 @@ export function heuristicScores(s: GameState, d: Decision): number[] {
           const c = o.meta?.cost?.energy ?? costOf(s, objOf(o));
           return window === 'main' ? 2 + c * 0.3 : 0.3 + c * 0.05;
         }
-        if (head(o) === 'act') return window === 'main' ? 1.2 : 0.2;
+        if (head(o) === 'act') {
+          // a Gold (or any add-only token) is spent while paying, not on its own
+          const id = objOf(o);
+          if (isToken(s, id) && s.objects[id!]?.def === 'gold') return -0.5;
+          return window === 'main' ? 1.2 : 0.2;
+        }
+        // hiding a card facedown: worth it in the main phase, where a unit stands to protect it
+        if (head(o) === 'hide') return window === 'main' ? 0.7 : 0.1;
         if (o.key === 'move') {
           const units = readyUnits(s, me);
           const total = units.reduce((n, id) => n + Math.max(0, mightOf(s, id)), 0);
@@ -106,6 +113,15 @@ export function heuristicScores(s: GameState, d: Decision): number[] {
         const total = ids.reduce((n, id) => n + Math.max(0, mightOf(s, id)), 0);
         if (k?.loc === 'base') return -0.2;
         if (k?.loc !== undefined) return moveGain(s, me, k.loc.bf, total);
+        return 0;
+      }
+      case 'hideWhere': {
+        const bf = k?.loc !== undefined && k.loc !== 'base' ? k.loc.bf : undefined;
+        return bf === undefined ? 0 : mightAt(s, me, bf);
+      }
+      case 'destination': {
+        // an effect's move: away from the fight for the moved unit's owner is the safe default
+        if (k?.loc === 'base') return 0.1;
         return 0;
       }
       case 'target': {

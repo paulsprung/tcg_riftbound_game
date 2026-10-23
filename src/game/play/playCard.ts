@@ -46,24 +46,30 @@ import { tokenReplacements } from '../abilities/replacements.ts';
 import {
   answer, ask, awaitTasks, defineSteps, next, type FrameOf, type RunCtx, type StepOut, type StepTable,
 } from '../core/frames.ts';
-import type { CostAst, NonStdCostAst } from '../dsl/ast.ts';
+import type { CostAst, NonStdCostAst, SelAst } from '../dsl/ast.ts';
 import {
   append, createObject, deleteObject, mint, moveObject, restoreSnapshot, setField, setSnap2, snapshotState,
 } from '../state/mut.ts';
 import { Z } from '../state/zones.ts';
 import type {
-  ChainItem, Domain, Frame, GameState, ItemId, Json, Loc, ObjId, PlayedRecord, PlayerId, PowerReq, TargetRef, TokenId,
+  CardType, ChainItem, Domain, Frame, GameObject, GameState, ItemId, Json, KeywordId, Loc, ObjId, PlayedRecord, PlayerId,
+  PowerReq, TargetRef, TokenId,
 } from '../state/types.ts';
 import { fire } from '../abilities/triggers.ts';
-import { applyContested, exhaust, kill } from '../rules/actions.ts';
+import { applyContested } from '../rules/actions.ts';
 import { addItem, finalizeItem, itemById, playContext, removeItem } from '../rules/chain.ts';
-import { energyCostOf, hasKeyword, isType, snapshotOf, typesOf } from '../rules/chars.ts';
+import { energyCostOf, hasKeyword, isType, snapshotOf, tagsOf, typesOf } from '../rules/chars.ts';
 import {
-  cardShowOff, cheapestCost, costCandidates, costOffers, deflectFor, optionalOffers, showOffCandidates, totalCost,
+  cardShowOff, cheapestCost, costOffers, deflectFor, mandatoryCostsPossible, optionalOffers, powerOf, showOffCandidates,
+  totalCost,
 } from './cost.ts';
+import { chooseCostObjects, performCostObjects } from './costObjects.ts';
+import { keywordsOf } from '../cards/registry.ts';
+import { evalCond } from '../rules/conditions.ts';
+import { staticsFor } from '../layers/derive.ts';
 import { paymentPlans, type ResourceCost } from '../rules/resources.ts';
 import { stillLegal } from '../rules/targets.ts';
-import { cardTiming, timingOk, windowAllows, type Window } from '../rules/timing.ts';
+import { cardTiming, timingOk, windowAllows, type Timing, type Window } from '../rules/timing.ts';
 import { requestCleanup } from '../rules/tasks.ts';
 import { choicesPossible, chooseNext, slotsOf } from './choices.ts';
 import { payStep } from './pay.ts';
@@ -88,6 +94,9 @@ export interface PlayOverrides {
   cost?: { energy: number; power: PowerReq[] };
   /** The card's ObjId before step 1, so a failed play returns it as it was. */
   origId?: ObjId;
+  /** "Play a ready 3 [M] Sprite", "play a Gold gear token exhausted". */
+  ready?: true;
+  exhausted?: true;
 }
 
 const overridesOf = (it: ChainItem): PlayOverrides => (it.play.instructedBy?.overrides ?? {}) as PlayOverrides;
@@ -95,14 +104,12 @@ const overridesOf = (it: ChainItem): PlayOverrides => (it.play.instructedBy?.ove
 /** A cost of the effect language as resources [131]. 'C' is one of the
     card's domains [135.2.e.6.c]. */
 export function resourceCost(c: CostAst, domains: Domain[]): ResourceCost {
-  const power: PowerReq[] = (c.power ?? []).map((r) => (r === 'A' ? { k: 'any' }
-    : r === 'C' ? (domains.length === 1 ? { k: 'domain', d: domains[0] } : domains.length === 0 ? { k: 'any' }
-      : { k: 'anyOf', ds: domains.slice() }) : { k: 'domain', d: r }));
-  return { energy: c.energy ?? 0, power };
+  return { energy: c.energy ?? 0, power: powerOf(c, domains) };
 }
 
-/** A card's printed cost [131]. */
+/** A card's printed cost [131]; nothing from face down [811.1.b]. */
 export function costOf(s: GameState, id: ObjId): ResourceCost {
+  if (s.objects[id].zone.z === 'facedown') return { energy: 0, power: [] };
   const c = findCard(s.objects[id].def)?.cost;
   return { energy: c?.energy ?? 0, power: c?.power ?? [] };
 }
@@ -113,13 +120,56 @@ export function unitLocations(s: GameState, p: PlayerId): Loc[] {
   return [{ z: 'base', p }, ...s.bfs.flatMap((b, bf): Loc[] => (b.controller === p ? [{ z: 'bf', bf }] : []))];
 }
 
-/** Where a permanent may be played: units as above; Deploy gear to any
-    battlefield and only there [830.1.b.1–2]; other gear to base [359.2.d]. */
-export function playLocations(s: GameState, id: ObjId, p: PlayerId): Loc[] {
+const hasUnitsAt = (s: GameState, p: PlayerId, bf: number, except: ObjId | null = null) =>
+  s.bfs[bf].here.some((u) => u !== except && isType(s.objects[u], 'unit') && s.objects[u].controller === p);
+
+/** Battlefields an Ambush unit may be played to: where p has units [822.1.b]. */
+export const ambushLocations = (s: GameState, p: PlayerId): Loc[] =>
+  s.bfs.flatMap((_, bf): Loc[] => (hasUnitsAt(s, p, bf) ? [{ z: 'bf', bf }] : []));
+
+/** Whether a definition prints a keyword now (a card off the board). */
+const printed = (def: string, kw: KeywordId) => keywordsOf(def).some((k) => k.kw === kw);
+
+/** The permissions a card's own text gives to where it is played: "You may
+    play me to an open battlefield" [170.11.c], "to an occupied enemy
+    battlefield". */
+function ownPlayTo(def: string): ('open' | 'occupiedEnemy')[] {
+  return (cardDef(def)?.abilities ?? []).flatMap((a) => (a.kind === 'static' && a.spec.s === 'playTo' ? [a.spec.where] : []));
+}
+
+/** "The next unit you play this turn … can be played to any battlefield" (Last Caress). */
+const playAnywhere = (s: GameState, p: PlayerId, types: CardType[]) => s.effects.find((e) => {
+  const spec = e.spec as { s?: string; types?: CardType[]; uses?: number } | null;
+  return spec?.s === 'playAnywhere' && 'player' in e.affects && e.affects.player === p && (spec.uses ?? 1) > 0
+    && (spec.types ?? []).some((t) => types.includes(t));
+});
+
+/** Where a permanent may be played: units as above, plus Ambush [822.1.b]
+    and their own permissions; Deploy gear to any battlefield and only there
+    [830.1.b.1–2]; other gear to base [359.2.d]. A card played from face
+    down goes to its battlefield [811.1.d.1]. */
+export function playLocations(s: GameState, id: ObjId, p: PlayerId, origin?: ChainItem['play']['origin']): Loc[] {
   const o = s.objects[id];
-  if (isType(o, 'unit')) return unitLocations(s, p);
+  if (origin?.z === 'facedown') {                                    // [811.1.d.1]; Last Caress: "even from face down"
+    if (isType(o, 'unit') && playAnywhere(s, p, typesOf(o))) return s.bfs.map((_, bf): Loc => ({ z: 'bf', bf }));
+    return isType(o, 'unit') || isType(o, 'gear') ? [{ z: 'bf', bf: origin.bf }] : [];
+  }
+  if (isType(o, 'unit')) {
+    const out = unitLocations(s, p);
+    const add = (l: Loc) => { if (!out.some((m) => m.z === l.z && (m.z === 'base' || m.bf === (l as typeof m).bf))) out.push(l); };
+    if (printed(o.def, 'ambush')) ambushLocations(s, p).forEach(add);
+    for (const w of ownPlayTo(o.def)) {
+      s.bfs.forEach((b, bf) => {
+        const units = b.here.filter((u) => isType(s.objects[u], 'unit'));
+        if (w === 'open' && b.controller === null && units.length === 0) add({ z: 'bf', bf });   // [170.11.c]
+        if (w === 'occupiedEnemy' && b.controller !== null && b.controller !== p && units.length > 0) add({ z: 'bf', bf });
+      });
+    }
+    if (playAnywhere(s, p, typesOf(o))) s.bfs.forEach((_, bf) => add({ z: 'bf', bf }));
+    return out;
+  }
   if (isType(o, 'gear')) {
-    return hasKeyword(s, id, 'deploy') ? s.bfs.map((_, bf): Loc => ({ z: 'bf', bf })) : [{ z: 'base', p }];
+    return hasKeyword(s, id, 'deploy') || printed(o.def, 'deploy') ? s.bfs.map((_, bf): Loc => ({ z: 'bf', bf })) : [{ z: 'base', p }];
   }
   return [];
 }
@@ -130,6 +180,14 @@ export function playable(s: GameState, id: ObjId): boolean {
   const o = s.objects[id];
   if (isType(o, 'unit') || isType(o, 'gear')) return true;
   return isType(o, 'spell') && cardDef(o.def)?.spell !== undefined;
+}
+
+/** A card's timing as it would be played from where it is: from face down
+    it has [Reaction] from the turn after it was hidden [811.1.b]. */
+export function timingFrom(s: GameState, id: ObjId): Timing {
+  const o = s.objects[id];
+  if (o.zone.z === 'facedown') return { action: false, reaction: true };
+  return cardTiming(o.def);
 }
 
 /** The domains the cards in p's hand need Power of, for payment ranking. */
@@ -150,18 +208,31 @@ export function domainsNeeded(s: GameState, p: PlayerId, except: ObjId | null = 
  */
 export function playableCards(s: GameState, p: PlayerId, w: Window = 'main'): ObjId[] {
   const pl = s.players[p];
-  const from = [...pl.hand, ...(pl.champion === null ? [] : [pl.champion])];
+  const facedown = s.bfs.flatMap((b) => b.facedown).filter((id) => {
+    const o = s.objects[id];
+    return o.controller === p && o.facedown !== null && o.facedown.hiddenOnTurn < s.turn.n;   // from the next turn [811.1.b]
+  });
+  const from = [...pl.hand, ...(pl.champion === null ? [] : [pl.champion]), ...facedown];
   return from.filter((id) => {
     const o = s.objects[id];
-    if (!playable(s, id) || !windowAllows(w, cardTiming(o.def))) return false;
-    if (paymentPlans(s, p, cheapestCost(s, id, p, costOf(s, id)), { limit: 1 }).length === 0) return false;
-    if (isType(o, 'spell')) return choicesPossible(s, cardDef(o.def)!.spell, { controller: p, source: null });
-    return playLocations(s, id, p).length > 0;
+    if (!playable(s, id)) return false;
+    // Ambush: [Reaction] while being played to a battlefield where you have units [822.1.b].
+    const ambush = isType(o, 'unit') && printed(o.def, 'ambush') && ambushLocations(s, p).length > 0;
+    if (!windowAllows(w, timingFrom(s, id)) && !(ambush && w !== 'main')) return false;
+    if (paymentPlans(s, p, cheapestCost(s, id, p, costOf(s, id)), { limit: 1, spell: isType(o, 'spell') }).length === 0) return false;
+    if (!mandatoryCostsPossible(s, id, p)) return false;
+    const origin = o.zone.z === 'facedown' ? o.zone : undefined;
+    if (isType(o, 'spell')) {
+      return choicesPossible(s, cardDef(o.def)!.spell, { controller: p, source: null,
+        ...(origin?.z === 'facedown' ? { restrictBf: origin.bf } : {}) });
+    }
+    return playLocations(s, id, p, origin).length > 0;
   });
 }
 
 const itemOf = (s: GameState, f: PlayFrame): ChainItem => itemById(s, f.item!)!;
-const backOk = (s: GameState, f: PlayFrame) => !f.revealed && !f.rngUsed && itemOf(s, f).play.mode === 'discretionary';
+const backOk = (s: GameState, f: PlayFrame) => !f.revealed && !f.rngUsed && itemOf(s, f).play.mode === 'discretionary'
+  && itemOf(s, f).play.origin.z !== 'facedown';
 
 /**
  * Step 1 of a play, for a card an instruction plays or a token it makes
@@ -252,12 +323,14 @@ const spellProg = (s: GameState, it: ChainItem) => cardDef(s.objects[it.obj!].de
 
 // ---- step 2 and 4 helpers: Show Off, optional costs, replacements, cost objects ----
 
-/** The Energy and Power base cost of the item's card [356.1]. */
-const baseCost = (s: GameState, it: ChainItem): ResourceCost => overridesOf(it).cost ?? costOf(s, it.obj!);
+/** The Energy and Power base cost of the item's card [356.1]; from face
+    down, nothing [811.1.b], [356.1.b.1]. */
+const baseCost = (s: GameState, it: ChainItem): ResourceCost => overridesOf(it).cost
+  ?? (it.play.origin.z === 'facedown' ? { energy: 0, power: [] } : costOf(s, it.obj!));
 
 const chosenOptional = (it: ChainItem) => Object.entries(it.play.choices.optionalCosts).filter(([, v]) => v).map(([k]) => k);
 
-const chosenTargets = (it: ChainItem): TargetRef[] => Object.values(it.play.choices.executions[0].targets).flat();
+const chosenTargets = (it: ChainItem): TargetRef[] => it.play.choices.executions.flatMap((ex) => Object.values(ex.targets).flat());
 
 /** The total cost of the item as chosen so far [356]. */
 function playCost(s: GameState, it: ChainItem, extra: TargetRef[] = []): ResourceCost {
@@ -270,8 +343,10 @@ function playCost(s: GameState, it: ChainItem, extra: TargetRef[] = []): Resourc
     a Deflect target adds [A] [809.1.c] (§4.6: options that can finish). */
 function affordable(s: GameState, it: ChainItem, t: TargetRef): boolean {
   if (deflectFor(s, t, it.controller) === 0) return true;
-  return paymentPlans(s, it.controller, playCost(s, it, [t]), { limit: 1 }).length > 0;
+  return paymentPlans(s, it.controller, playCost(s, it, [t]), { limit: 1, spell: isSpellItem(s, it) }).length > 0;
 }
+
+const isSpellItem = (s: GameState, it: ChainItem) => isType(s.objects[it.obj!], 'spell');
 
 /** [832.1.c]: reveal a card from hand or pick a friendly one, or neither.
     Always asked, so that whether it is asked tells nothing about the hand. */
@@ -309,7 +384,8 @@ function optionalCostStep(s: GameState, f: PlayFrame, x: RunCtx, it: ChainItem, 
   if (key === undefined) {
     const o = s.objects[f.obj];
     const can = (yes: boolean) => paymentPlans(s, it.controller, totalCost(s, { def: o.def, types: typesOf(o), p: it.controller,
-      base: baseCost(s, it), chosen: [...chosenOptional(it), ...(yes ? [off.key] : [])] }), { limit: 1 }).length > 0;
+      base: baseCost(s, it), chosen: [...chosenOptional(it), ...(yes ? [off.key] : [])] }), { limit: 1, spell: isSpellItem(s, it) })
+      .length > 0;
     const yes = can(true), no = can(false);
     if (yes !== no) {
       setField(s, it.play.choices.optionalCosts, off.key, yes);
@@ -362,53 +438,19 @@ function replacementStep(s: GameState, f: PlayFrame, x: RunCtx, it: ChainItem) {
 /** A non-standard cost as step 3 recorded it in TotalCost.other. */
 interface NonStd { key: string; src: ObjId | null; pay: NonStdCostAst }
 
-/** [357.2]: the objects a non-standard cost exhausts or kills, chosen by
-    the player as step 4 begins (Spec D OQ-5), one per decision. */
+/** [357.2]: the objects a non-standard cost exhausts, kills, discards or
+    recycles, chosen by the player as step 4 begins (Spec D OQ-5), one per
+    decision. */
 function costObjectStep(s: GameState, f: PlayFrame, x: RunCtx, it: ChainItem, c: NonStd): 'complete' | StepOut {
-  for (const what of ['exhaust', 'kill'] as const) {
-    const need = c.pay[what];
-    if (!need) continue;
-    const slot = `cost:${c.key}:${what}`;
-    const picked = (it.play.choices.asPlayed[slot] ?? []) as number[];
-    if (picked.length >= need.n) continue;
-    const cands = costCandidates(s, need.sel, it.controller, c.src, what === 'exhaust').filter((id) => !picked.includes(id));
-    if (picked.length + cands.length < need.n) return rollback(s, f, x, 'illegal');   // [203.3]
-    if (picked.length + cands.length === need.n) {                   // no choice to make
-      setField(s, it.play.choices.asPlayed, slot, [...picked, ...cands]);
-      return 'continue';
-    }
-    const key = answer(f);
-    if (key === K.back) return rollback(s, f, x, 'back');
-    if (key === undefined) {
-      return ask(s, f, x, {
-        player: it.controller, kind: 'costObject', prompt: { t: 'costObject', card: s.objects[f.obj].def, what, n: need.n,
-          chosen: picked.length }, ctx: { item: it.id, source: f.obj, rule: '357.2' },
-        options: cands.map((id) => ({ key: K.pick(id), refs: [{ obj: id }] })), privateOptions: false, back: backOk(s, f),
-        batch: `cost:item${it.id}:${what}`,
-      });
-    }
-    setField(s, it.play.choices.asPlayed, slot, [...picked, parseKey(key)!.obj!]);
-    return 'continue';
-  }
-  return 'complete';
+  return chooseCostObjects(s, f, x, { item: it, src: c.src, key: c.key, pay: c.pay, what: s.objects[f.obj].def, back: backOk(s, f),
+    onBack: () => rollback(s, f, x, 'back'), onImpossible: () => rollback(s, f, x, 'illegal') });
 }
 
 /** Performs a non-standard cost's actions [357.2]: one Exhaust action on
-    the source and the chosen objects [415.4], one Kill action. False when
-    it can no longer be paid in full [203.3]. */
+    the source and the chosen objects [415.4], one Kill action, the discard,
+    the recycle. False when it can no longer be paid in full [203.3]. */
 function payNonStd(s: GameState, x: RunCtx, it: ChainItem, c: NonStd): boolean {
-  const p = it.controller;
-  const ex = (it.play.choices.asPlayed[`cost:${c.key}:exhaust`] ?? []) as number[];
-  const kl = (it.play.choices.asPlayed[`cost:${c.key}:kill`] ?? []) as number[];
-  const toExhaust = [...(c.pay.exhaustSelf && c.src !== null ? [c.src] : []), ...ex];
-  if (toExhaust.some((id) => !s.objects[id] || s.objects[id].exhausted)) return false;
-  if (kl.some((id) => !s.objects[id] || !['base', 'bf'].includes(s.objects[id].zone.z))) return false;
-  const snaps = [...toExhaust, ...kl].map((id) => snapshotOf(s, id));
-  if (toExhaust.length > 0) exhaust(s, x, p, toExhaust, '357.2', true);
-  if (kl.length > 0) kill(s, x, kl, { rule: '357.2', inCombat: () => false });
-  append(s, it.play.paid, { what: c.key, replaced: false, objs: snaps, energy: 0, power: 0 });
-  setField(s, it.play.facts.costObjects, c.key, snaps);
-  return true;
+  return performCostObjects(s, x, it, c.key, c.src, c.pay);
 }
 
 const STEPS: StepTable<PlayFrame> = [
@@ -458,7 +500,11 @@ const STEPS: StepTable<PlayFrame> = [
       }
       const key = answer(f);
       if (key === K.back) return rollback(s, f, x, 'back');
-      const locs = playLocations(s, f.obj, it.controller);
+      let locs = playLocations(s, f.obj, it.controller, it.play.origin);
+      // Played where only Ambush allows it now: to a battlefield where you have units [822.1.b].
+      if (!timingOk(s, it, { ignoreAmbush: true }) && printed(o.def, 'ambush')) {
+        locs = locs.filter((l) => l.z === 'bf' && hasUnitsAt(s, it.controller, l.bf));
+      }
       if (locs.length === 0) return rollback(s, f, x, 'illegal');
       if (key === undefined) {
         const options: Option[] = locs.map((l) => ({ key: l.z === 'base' ? K.locBase : K.locBf(l.bf), refs: [{ loc: l }] }));
@@ -474,11 +520,21 @@ const STEPS: StepTable<PlayFrame> = [
     }
     if (it.kind === 'token' && asPlayed.replaced !== true) return replacementStep(s, f, x, it);
     if (spell) {
-      const r = chooseNext(s, f, x, it, spellProg(s, it), {
-        back: backOk(s, f), onBack: () => rollback(s, f, x, 'back'), onImpossible: () => rollback(s, f, x, 'illegal'),
-        what: o.def, affordable: (t) => affordable(s, it, t), deflect: (t) => deflectFor(s, t, it.controller),
-      });
-      if (r !== 'complete') return r;
+      const restrictBf = it.play.origin.z === 'facedown' ? it.play.origin.bf : undefined;
+      // One execution more for each Repeat paid, each with its own choices [820.2].
+      const repeats = costOffers(s, o.def, typesOf(o), it.controller).filter((c) => c.a.repeat && chosenOptional(it).includes(c.key));
+      if (it.play.choices.executions.length < 1 + repeats.length) {
+        setField(s, it.play.choices, 'executions', [...it.play.choices.executions, { modes: [], dests: {}, targets: {} }]);
+        return 'continue';
+      }
+      for (let e = 0; e < it.play.choices.executions.length; e++) {
+        const r = chooseNext(s, f, x, it, spellProg(s, it), {
+          back: backOk(s, f), onBack: () => rollback(s, f, x, 'back'), onImpossible: () => rollback(s, f, x, 'illegal'),
+          what: o.def, affordable: (t) => affordable(s, it, t), deflect: (t) => deflectFor(s, t, it.controller), exec: e,
+          ...(restrictBf !== undefined ? { restrictBf } : {}),
+        });
+        if (r !== 'complete') return r;
+      }
     }
     setField(s, it.play, 'step', 2);
     return next(f);
@@ -493,6 +549,7 @@ const STEPS: StepTable<PlayFrame> = [
     const other = costOffers(s, o.def, typesOf(o), it.controller)
       .filter((off) => off.a.pay && (!off.a.optional || chosen.includes(off.key)))
       .map((off) => ({ key: off.key, src: off.src, pay: off.a.pay! }) as unknown as Json);
+    void c;
     setField(s, it.play, 'cost', { energy: c.energy, power: c.power, other, components: [] });
     setField(s, it.play, 'step', 3);
     return next(f);
@@ -511,6 +568,7 @@ const STEPS: StepTable<PlayFrame> = [
     const r = payStep(s, f, x, {
       payer: it.controller, cost, what: s.objects[f.obj].def, item: it.id, source: f.obj, back: backOk(s, f),
       onBack: () => rollback(s, f, x, 'back'), onDecline: () => rollback(s, f, x, 'declined'), rule: '357',
+      spell: isSpellItem(s, it),
     });
     if (typeof r === 'string') return r;
     setField(s, it.play, 'step', 4);
@@ -532,16 +590,18 @@ const STEPS: StepTable<PlayFrame> = [
     setField(s, it.play, 'step', 5);
     const loc = it.play.choices.location;
     if (loc && !overridesOf(it).at) {
-      const ok = playLocations(s, f.obj, it.controller).some((l) => l.z === loc.z
+      const ok = playLocations(s, f.obj, it.controller, it.play.origin).some((l) => l.z === loc.z
         && (l.z === 'base' ? l.p === (loc as typeof l).p : l.bf === (loc as typeof l).bf));
       if (!ok) return rollback(s, f, x, 'illegal');
     }
     const prog = spellProg(s, it);
     if (prog) {
-      const ex = it.play.choices.executions[0];
       const c = { controller: it.controller, source: null };
-      for (const slot of slotsOf(prog, ex.modes)) {
-        if ((ex.targets[slot.id] ?? []).some((t) => !stillLegal(s, t, slot, c))) return rollback(s, f, x, 'illegal');
+      for (const ex of it.play.choices.executions) {
+        for (const slot of slotsOf(prog, ex.modes)) {
+          if (slot.dest) continue;
+          if ((ex.targets[slot.id] ?? []).some((t) => !stillLegal(s, t, slot, c))) return rollback(s, f, x, 'illegal');
+        }
       }
     }
     if (!timingOk(s, it)) return rollback(s, f, x, 'illegal');
@@ -563,13 +623,17 @@ const STEPS: StepTable<PlayFrame> = [
     // A permanent leaves the chain and enters the board at once [337.2], [359.2].
     const loc = it.play.choices.location!;
     const unit = types.includes('unit');
-    const facts: PlayedRecord = { ...it.play.facts, ...(loc.z === 'bf' ? { to: loc } : {}) };
+    const origin = it.play.origin;
+    const facts: PlayedRecord = { ...it.play.facts, ...(loc.z === 'bf' ? { to: loc } : {}),
+      ...(origin.z === 'facedown' ? { fromFacedownAt: origin.bf } : {}) };
     const before = knowers(s, [f.obj]);
     const to = loc.z === 'base' ? Z.base(loc.p) : Z.bf(loc.bf);
-    // A unit enters exhausted [359.2.c], [143.4]; gear ready [359.2.d].
-    const obj = moveObject(s, f.obj, to, { controller: p, exhausted: unit, carry: { played: facts } });
+    // A unit enters exhausted [359.2.c], [143.4]; gear ready [359.2.d];
+    // unless something says otherwise ("I enter ready", Accelerate [805]).
+    const exhausted = enteringExhausted(s, it, f.obj, unit, loc);
+    const obj = moveObject(s, f.obj, to, { controller: p, exhausted, carry: { played: facts } });
     emitZone(s, x, { obj, prev: f.obj, from: { z: 'chain', item: it.id }, to, why: 'enter', rule: '359.2', before });
-    emit(s, x, { k: 'enter', obj, at: loc, exhausted: unit, rule: unit ? '359.2.c' : '359.2.d' });
+    emit(s, x, { k: 'enter', obj, at: loc, exhausted, rule: unit ? '359.2.c' : '359.2.d' });
     emit(s, x, { k: 'played', item: it.id, def: card.def, p, rule: '420.4.a' });
     const energy = card.token ? 0 : energyCostOf(card);
     append(s, s.log.played, {
@@ -580,9 +644,68 @@ const STEPS: StepTable<PlayFrame> = [
     removeItem(s, x, it.id);
     // Played [420.4.a]: its own Play Effects go on the chain after it has
     // entered [383.4.a.2], with the other "when you play" triggers.
-    fire(s, x, { e: 'played', p, obj, def: card.def, isCard: !card.token, types, energy, ...(loc.z === 'bf' ? { to: loc } : {}) });
+    fire(s, x, { e: 'played', p, obj, def: card.def, isCard: !card.token, types, energy, ...(loc.z === 'bf' ? { to: loc } : {}),
+      from: origin.z });
     return 'done';
   },
 ];
 
 defineSteps('play', STEPS);
+
+/** Spends one use of a player effect (Last Caress's permission, Nami's next unit). */
+function useEffect(s: GameState, id: number) {
+  const e = s.effects.find((x) => x.id === id);
+  if (!e) return;
+  const spec = e.spec as { uses?: number };
+  if (spec.uses === undefined) return;
+  if (spec.uses <= 1) setField(s, s, 'effects', s.effects.filter((x) => x.id !== id));
+  else setField(s, s, 'effects', s.effects.map((x) => (x.id === id ? { ...x, spec: { ...spec, uses: spec.uses! - 1 } } : x)));
+}
+
+/** Whether a permanent enters exhausted [359.2.c–d]: a unit does unless it
+    enters ready by its own text ("I enter ready", conditions read now), a
+    friendly static ("Other friendly units enter ready"), a player effect
+    (Confront) or a paid Accelerate [805.2.b]; a gear doesn't unless "This
+    enters exhausted" or the instruction says so. Uses up the effects the
+    play consumed (Last Caress's permission). */
+function enteringExhausted(s: GameState, it: ChainItem, obj: ObjId, unit: boolean, loc: Loc): boolean {
+  const o = s.objects[obj];
+  const p = it.controller;
+  const ov = overridesOf(it);
+  const types = typesOf(o);
+  if (unit) {
+    const any = playAnywhere(s, p, types);
+    if (any) useEffect(s, any.id);
+  }
+  if (ov.exhausted) return true;
+  if (ov.ready) return false;
+  const facts = { ...it.play.facts, ...(loc.z === 'bf' ? { to: loc } : {}) };
+  if (!unit) {
+    return (cardDef(o.def)?.abilities ?? []).some((a) => a.kind === 'static' && a.spec.s === 'entersExhausted');
+  }
+  let ready = facts.paidOptional.some((k) => k.endsWith('#kw:accelerate'));   // [805.2.b]
+  for (const a of cardDef(o.def)?.abilities ?? []) {
+    if (a.kind !== 'static' || a.spec.s !== 'entersReady' || a.spec.to) continue;
+    if (!a.while || evalCond(s, a.while, { controller: p, source: obj, facts })) ready = true;
+  }
+  for (const { spec, st } of staticsFor(s, null, 'entersReady')) {   // Magma Wurm: "Other friendly units enter ready"
+    if (spec.to && st.host !== obj && matchesEntering(s, spec.to, o, p, st.ctl)) ready = true;
+  }
+  for (const e of s.effects) {                                       // Confront: "Units you play this turn enter ready"
+    const spec = e.spec as { s?: string; types?: CardType[]; uses?: number } | null;
+    if (spec?.s !== 'entersReady' || !('player' in e.affects) || e.affects.player !== p) continue;
+    if (!(spec.types ?? []).some((t) => types.includes(t))) continue;
+    ready = true;
+    if (spec.uses !== undefined) useEffect(s, e.id);
+  }
+  return !ready;
+}
+
+/** Whether a card entering the board fits a static's selector (its kind,
+    whose it is, its tags; not where it is, it isn't anywhere yet). */
+function matchesEntering(_s: GameState, sel: SelAst, o: GameObject, p: PlayerId, ctl: PlayerId): boolean {
+  if (sel.k === 'unit' && !isType(o, 'unit')) return false;
+  if (sel.rel === 'friendly' && p !== ctl) return false;
+  if (sel.rel === 'enemy' && p === ctl) return false;
+  return (sel.where ?? []).every((w) => w.p !== 'tag' || tagsOf(o).includes(w.tag));
+}

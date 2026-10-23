@@ -19,7 +19,7 @@ import {
 /** The battlefields as cards without abilities, so their triggers stay out of the way. */
 function quiet(g: Game) {
   setField(g.s, g.s.objects[g.s.bfs[0].obj], 'def', 'abandoned-hall');
-  setField(g.s, g.s.objects[g.s.bfs[1].obj], 'def', 'altar-to-unity');
+  setField(g.s, g.s.objects[g.s.bfs[1].obj], 'def', 'placeholder');
 }
 
 const begin = (seed: number) => {

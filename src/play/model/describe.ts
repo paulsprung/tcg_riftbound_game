@@ -196,6 +196,8 @@ export function describeAll(events: readonly ObservedEvent[], c: DescribeCtx): L
       case 'deal': add(e, `${unitName(e.to)} takes ${e.n} damage.`, 'game'); break;
       case 'zone':
         if (e.why === 'kill') add(e, `${e.def ? c.nameOf(e.def) : 'A unit'} dies.`, 'game');
+        if (e.why === 'returnToHand') add(e, `${e.def ? c.nameOf(e.def) : 'A card'} returns to its owner's hand.`, 'game');
+        if (e.why === 'mill') add(e, `${e.def ? c.nameOf(e.def) : 'A card'} goes from the top of the deck to the trash.`, 'game');
         break;
       case 'combatResult': {
         const r = e.result ?? [];
@@ -229,6 +231,19 @@ export function describeAll(events: readonly ObservedEvent[], c: DescribeCtx): L
         add(e, `${src}: something else happens instead of ${what}.`, 'game');
         break;
       }
+      case 'attach': add(e, `${unitName(e.obj).replace(/^a unit$/, 'An Equipment')} is attached to ${unitName(e.to)}.`, 'game'); break;
+      case 'detach': add(e, `${unitName(e.obj).replace(/^a unit$/, 'An Equipment')} is detached.`, 'game'); break;
+      case 'xp': add(e, `${subject(e.p)} ${e.delta >= 0 ? (e.p === c.me ? 'gain' : 'gains') : (e.p === c.me ? 'spend' : 'spends')} `
+        + `${Math.abs(e.delta)} XP.`, who(e.p)); break;
+      case 'hide': {
+        const o = c.objOf(e.obj ?? -1);
+        const mine = o?.owner === c.me;
+        add(e, `${mine ? 'You hide a card' : 'The opponent hides a card'} face down at ${bfName(e.bf)}.`, mine ? 'me' : 'opponent');
+        break;
+      }
+      case 'counter': add(e, 'A spell is countered.', 'game'); break;
+      case 'spendBuff': add(e, `${listOf(e.objs.map(unitName))} spend${e.objs.length === 1 ? 's' : ''} a buff.`, 'game'); break;
+      case 'becomeMighty': add(e, `${unitName(e.obj)} becomes Mighty.`, 'game'); break;
       case 'keywordsChanged': {
         const last = out[out.length - 1];
         if (last?.rule === e.rule && last.seq === e.seq - 1 && last.text.includes('keywords')) break;

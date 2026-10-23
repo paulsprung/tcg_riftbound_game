@@ -4,12 +4,12 @@ import type { GameRecord } from '../game/index.ts';
 import { GameScreen } from './GameScreen.tsx';
 import { createAi, type AiClient } from './host/aiClient.ts';
 import { localStore, resumable, savedSeat, type SavedGame, type SaveStore } from './host/autosave.ts';
-import { BUILT_IN_DECKS } from './host/decks.ts';
+import { builtInDeck, shortName } from './host/decks.ts';
 import { GameHost, type HostOptions, type SaveInfo, type Seat } from './host/GameHost.ts';
 import { cardIndex } from './model/cards.ts';
 import { gameSetup } from './model/setup.ts';
 import { getSettings, PACE_FACTOR, setSettings, usePlaySettings, type OpponentChoice } from './settings.ts';
-import { DEFAULT_CHOICE, DeckSetup, type DeckSetupChoice } from './setup/DeckSetup.tsx';
+import { choiceFor, DeckSetup, type DeckSetupChoice } from './setup/DeckSetup.tsx';
 import { TutorialView } from './tutorial/TutorialView.tsx';
 import { useCollection } from '../collection/store.ts';
 import './play.css';
@@ -31,7 +31,7 @@ function newSeed(): number {
   return a[0];
 }
 
-const deckOf = (id: DeckSetupChoice['mine']) => BUILT_IN_DECKS.find((b) => b.id === id)!.deck;
+const deckOf = (id: DeckSetupChoice['mine']) => (builtInDeck(id) ?? builtInDeck('seraphine')!).deck;
 
 const LEVEL_NAME = { beginner: 'Beginner', normal: 'Normal' } as const;
 
@@ -53,7 +53,7 @@ function saveTo(store: SaveStore, seats: [Seat, Seat]) {
   if (saved.some((s) => s === null)) return undefined;              // scripted games are never saved
   return (r: GameRecord, at: SaveInfo) => {
     if (at.over) { store.clear(); return; }
-    const title = r.setup.decks.map((d) => d.name.replace(/ Showdown Deck$/, '')).join(' vs ');
+    const title = r.setup.decks.map((d) => shortName(d)).join(' vs ');
     const g: SavedGame = { v: 1, record: r, seats: saved as SavedGame['seats'], savedAt: new Date().toISOString(), title,
       turn: at.turn, points: at.points };
     store.save(g);
@@ -65,7 +65,7 @@ export function PlayView({ db, tutorial = false }: { db: CardDb; tutorial?: bool
   const own = useCollection();
   const settings = usePlaySettings();
   const store = useMemo(() => localStore(), []);
-  const [choice, setChoice] = useState<DeckSetupChoice>({ ...DEFAULT_CHOICE, opponent: getSettings().opponent });
+  const [choice, setChoice] = useState<DeckSetupChoice>(() => ({ ...choiceFor(own.starter), opponent: getSettings().opponent }));
   const [game, setGame] = useState<{ host: GameHost; n: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<SavedGame | null>(() => store.load());
@@ -119,7 +119,7 @@ export function PlayView({ db, tutorial = false }: { db: CardDb; tutorial?: bool
     }
   };
 
-  if (tutorial) return <TutorialView db={db} cards={cards} onExit={() => { location.hash = 'play'; }} />;
+  if (tutorial) return <TutorialView db={db} cards={cards} starter={own.starter} onExit={() => { location.hash = 'play'; }} />;
 
   if (!game) {
     return (
@@ -133,7 +133,7 @@ export function PlayView({ db, tutorial = false }: { db: CardDb; tutorial?: bool
             <a className="btn btn--primary btn--small" href="#play/tutorial">Play the tutorial</a>
           </div>
         )}
-        <DeckSetup cards={cards} db={db} initial={choice} error={error} onStart={start}
+        <DeckSetup cards={cards} db={db} initial={choice} error={error} onStart={start} owned={own.starter}
         saved={saved && resumable(saved) ? saved : null} onResume={resume}
         onDiscard={() => { store.clear(); setSaved(null); }} />
       </>

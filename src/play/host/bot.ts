@@ -44,6 +44,8 @@ export function botAnswer(v: PlayerView, random: () => number): string {
         return plays.reduce((a, b) => (cost(b) > cost(a) ? b : a)).key;
       }
       if (has('move') && random() < 0.75) return 'move';
+      const hides = heads('hide');
+      if (hides.length > 0 && random() < 0.3) return hides[0].key;
       return has('end') ? 'end' : has('pass') ? 'pass' : real[0].key;
     }
     case 'moveUnits': {
@@ -58,6 +60,11 @@ export function botAnswer(v: PlayerView, random: () => number): string {
       return (away.length > 0 ? pick(away, random) : pick(real, random)).key;
     }
     case 'payment': return heads('pay')[0]?.key ?? real[0].key;
+    case 'destination': {
+      // an enemy unit home, one of ours to a battlefield it doesn't hold
+      const away = real.filter((o) => { const loc = parseKey(o.key)?.loc; return loc !== undefined && loc !== 'base'; });
+      return (has('loc:base') && random() < 0.5 ? real.find((o) => o.key === 'loc:base')! : away[0] ?? real[0]).key;
+    }
     case 'target': {
       const ts = heads('t');
       const mine = (o: Option) => {

@@ -22,7 +22,10 @@ import { K, parseKey, type Option } from '../core/decisions.ts';
 import { answer, ask, defineSteps, next, type FrameOf, type StepTable } from '../core/frames.ts';
 import { locOf } from '../state/zones.ts';
 import type { Frame, GameState, Loc, ObjId, PlayerId } from '../state/types.ts';
-import { exhaust, moveUnits } from './actions.ts';
+import { cantMove, exhaust, moveUnits } from './actions.ts';
+import { hasKeyword } from './chars.ts';
+import { staticsFor } from '../layers/derive.ts';
+import { payStep } from '../play/pay.ts';
 import { turnState, unitsOnBoard } from './board.ts';
 
 type MoveFrame = FrameOf<'move'>;
@@ -36,9 +39,25 @@ const locKey = (l: Loc) => (l.z === 'base' ? 'base' : `bf${l.bf}`);
 export function moveDestinations(s: GameState, id: ObjId): Loc[] {
   const o = s.objects[id];
   const at = locOf(o);
-  if (!at || o.controller === null) return [];
+  if (!at || o.controller === null || cantMove(s, id)) return [];
   if (at.z === 'base') return s.bfs.map((_, bf): Loc => ({ z: 'bf', bf }));   // [144.4.a]
-  return [{ z: 'base', p: o.controller }];                                       // [144.4.b]
+  const out: Loc[] = [{ z: 'base', p: o.controller }];                          // [144.4.b]
+  if (hasKeyword(s, id, 'ganking')) {                                            // [144.4.c], [810.1.b]
+    s.bfs.forEach((_, bf) => { if (bf !== at.bf) out.push({ z: 'bf', bf }); });
+  }
+  return out;
+}
+
+/** Mageseeker Investigator: an opponent moving several units here at once
+    pays [A] for each unit beyond the first, per instance [204.4]. */
+export function moveTax(s: GameState, by: PlayerId, units: ObjId[], dest: Loc): number {
+  if (dest.z !== 'bf' || units.length < 2) return 0;
+  let n = 0;
+  for (const { st } of staticsFor(s, null, 'moveTax')) {
+    const h = s.objects[st.host];
+    if (h.zone.z === 'bf' && h.zone.bf === dest.bf && st.ctl !== by) n += units.length - 1;
+  }
+  return n;
 }
 
 /** The destinations every one of these units can reach. */
@@ -96,8 +115,15 @@ const STEPS: StepTable<MoveFrame> = [
     if (!dests.some((l) => locKey(l) === locKey(f.dest!))) throw new Error(`bad destination ${key}`);
     return next(f);
   },
-  // pc 2: pay (one exhaust action [144.3.c]), then move [448], then a cleanup [455].
+  // pc 2: applied costs [204.4], then pay (one exhaust action [144.3.c]),
+  // then move [448], then a cleanup [455].
   (s, f, x) => {
+    const tax = moveTax(s, f.by, f.units, f.dest!);
+    if (tax > 0) {
+      const r = payStep(s, f, x, { payer: f.by, cost: { energy: 0, power: Array.from({ length: tax }, () => ({ k: 'any' as const })) },
+        what: 'move', back: true, onBack: () => 'done', onDecline: () => 'done', rule: '204.4' });
+      if (typeof r === 'string') return r;
+    }
     exhaust(s, x, f.by, f.units, '144.2', true);
     moveUnits(s, x, f.units, f.dest!, { by: f.by, standard: true, rule: '144.3' });
     return 'done';

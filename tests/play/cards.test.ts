@@ -21,7 +21,7 @@ const ix = cardIndex(db);
 const names = (d: string) => nameOf(ix, d);
 const quiet = (g: ReturnType<typeof start>) => {
   setField(g.s, g.s.objects[g.s.bfs[0].obj], 'def', 'abandoned-hall');
-  setField(g.s, g.s.objects[g.s.bfs[1].obj], 'def', 'altar-to-unity');
+  setField(g.s, g.s.objects[g.s.bfs[1].obj], 'def', 'placeholder');
 };
 
 describe('the rest of the Seraphine deck on the table', () => {

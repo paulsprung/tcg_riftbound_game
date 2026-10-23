@@ -6,7 +6,8 @@
  */
 import { findCard } from '../cards/oracle.ts';
 import { TOKENS } from '../cards/tokens.ts';
-import { derive, IMPLEMENTED_KEYWORDS, keywordValue, printedKeywordValues } from '../layers/derive.ts';
+import { IMPLEMENTED_KEYWORDS } from '../cards/registry.ts';
+import { derive, keywordValue, printedKeywordValues } from '../layers/derive.ts';
 import { locOf } from '../state/zones.ts';
 import type { CardType, ContinuousEffect, GameObject, GameState, KeywordId, ObjId, Snapshot, TokenId } from '../state/types.ts';
 import { copyJson } from '../state/clone.ts';
@@ -21,6 +22,13 @@ export function typesOf(o: Pick<GameObject, 'def'>): CardType[] {
 }
 
 export const isType = (o: Pick<GameObject, 'def'>, t: CardType) => typesOf(o).includes(t);
+
+/** An object's tags [133.6]: printed, or its token template's. */
+export function tagsOf(o: Pick<GameObject, 'def'>): string[] {
+  const t = token(o.def);
+  if (t) return t.tags;
+  return findCard(o.def)?.tags ?? [];
+}
 
 /** A unit on the board: at a base or a battlefield [141.1.a.1]. */
 export function isUnitOnBoard(o: GameObject): boolean {

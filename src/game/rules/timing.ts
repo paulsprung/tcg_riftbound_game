@@ -15,17 +15,17 @@
  * instructing effect's permission (RulesConfig.limitedPlaysBypassTiming,
  * Spec C Q5); triggered abilities go on the chain in any state [383.3.c].
  */
-import { abilityById } from '../cards/registry.ts';
+import { abilityById, hasPrintedKeyword } from '../cards/registry.ts';
 import type { ChainItem, DefId, GameState } from '../state/types.ts';
-import { defHasKeyword } from './chars.ts';
+import { defHasKeyword, isType } from './chars.ts';
 
 export type Window = 'main' | 'chain' | 'showdown';
 
 export interface Timing { action: boolean; reaction: boolean }
 
-/** A card's timing keywords [806], [813]. */
+/** A card's timing keywords [806], [813]; Quick-Draw has [Reaction] [819.1.b]. */
 export const cardTiming = (def: DefId): Timing =>
-  ({ action: defHasKeyword(def, 'action'), reaction: defHasKeyword(def, 'reaction') });
+  ({ action: defHasKeyword(def, 'action'), reaction: defHasKeyword(def, 'reaction') || defHasKeyword(def, 'quickDraw') });
 
 /** An activated ability's timing keywords [381], [806.1.c.2], [813.1.c.2]. */
 export function abilityTiming(ability: string): Timing {
@@ -42,10 +42,19 @@ export function windowAllows(w: Window, t: Timing): boolean {
   return t.action || t.reaction;                                     // [308.1.a], [806.1.b–c]
 }
 
-/** Step 5's timing check [358.4], [406], with the item's keywords now. */
-export function timingOk(s: GameState, it: ChainItem): boolean {
+/** Step 5's timing check [358.4], [406], with the item's keywords now. A
+    card played from face down has [Reaction] [811.1.b]; an Ambush unit has
+    it while being played to a battlefield where its controller has units
+    [822.1.b] (`ignoreAmbush`: the timing without that). */
+export function timingOk(s: GameState, it: ChainItem, o: { ignoreAmbush?: boolean } = {}): boolean {
   if (it.kind === 'triggered') return true;                          // [383.3.c]
   const t = it.kind === 'activated' ? abilityTiming(it.ability!) : cardTiming(s.objects[it.obj!].def);
+  if (it.kind === 'card' && it.play.origin.z === 'facedown') t.reaction = true;
+  const loc = it.play.choices.location;
+  if (!o.ignoreAmbush && it.kind === 'card' && loc?.z === 'bf' && hasPrintedKeyword(s.objects[it.obj!].def, 'ambush')
+    && s.bfs[loc.bf].here.some((u) => u !== it.obj && isType(s.objects[u], 'unit') && s.objects[u].controller === it.controller)) {
+    t.reaction = true;
+  }
   if (it.isAdd && t.reaction) return true;                           // [430.3]
   const p = it.play;
   if (p.mode === 'limited') return s.rules.limitedPlaysBypassTiming || t.reaction;   // Spec C Q5, Spec D OQ-1

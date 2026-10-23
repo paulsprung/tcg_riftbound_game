@@ -94,9 +94,11 @@ describe('§11 the computer opponent', () => {
     expect(Number.isFinite(evaluate(after, me))).toBe(true);
   });
 
-  it('Normal beats Beginner in most of 8 seeded games, from either seat', () => {
+  it('Normal beats Beginner in most of 8 seeded games, from either seat', async () => {
     let normalWins = 0;
     for (let seed = 1; seed <= 8; seed++) {
+      // let the worker answer vitest between games (its RPC times out otherwise)
+      await new Promise((r) => setTimeout(r, 0));
       const normalSeat: PlayerId = seed % 2 ? 0 : 1;
       const levels: [AiLevel, AiLevel] = normalSeat === 0 ? ['normal', 'beginner'] : ['beginner', 'normal'];
       const g = aiGame(seed, levels);

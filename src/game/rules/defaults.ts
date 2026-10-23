@@ -12,6 +12,7 @@
  * [142.4.c]).
  */
 import type { GameState, ObjId, PlayerId, TotalCost } from '../state/types.ts';
+import { buffValueOf, staticsFor } from '../layers/derive.ts';
 
 /** The turn order: a repeating cycle from the First Player [115.1]. In a
     Duel the other player follows; [MP] seating goes clockwise [115.1.b]. */
@@ -55,9 +56,19 @@ export function drawCount(_s: GameState, _p: PlayerId): number {
 }
 
 /** Cards a battlefield's Facedown Zone holds for a player [107.3.b]; Bandle
-    Tree and Bushwhack Trap raise it while their conditions hold (M2). */
-export function facedownCapacity(_s: GameState, _bf: number, _p: PlayerId): number {
-  return 1;
+    Tree ("You may hide an additional card here") and Bushwhack Trap ("While
+    you or an ally control this battlefield, that player may hide an
+    additional card here") raise it. */
+export function facedownCapacity(s: GameState, bf: number, p: PlayerId): number {
+  let n = 1;
+  for (const { st, spec } of staticsFor(s, null, 'facedownCapacity')) {
+    const h = s.objects[st.host];
+    const at = h.zone.z === 'bf' ? h.zone.bf : -1;
+    if (at !== bf) continue;
+    if (spec.for === 'controller' && s.bfs[bf].controller !== p) continue;
+    n += spec.n;
+  }
+  return n;
 }
 
 /** Buff counters a unit may have [702.3]. */
@@ -65,9 +76,9 @@ export function maxBuffs(_s: GameState, _unit: ObjId): number {
   return 1;
 }
 
-/** Might each buff counter gives [703]. */
-export function buffValue(_s: GameState, _unit: ObjId): number {
-  return 1;
+/** Might each buff counter gives [703] (Stand United adds one). */
+export function buffValue(s: GameState, unit: ObjId): number {
+  return buffValueOf(s, s.objects[unit]);
 }
 
 /** Times an object may be Empowered at once: it is binary [442.1.c.1]. */

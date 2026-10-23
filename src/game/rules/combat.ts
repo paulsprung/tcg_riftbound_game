@@ -25,8 +25,8 @@ import { call, takeRet } from '../core/frames.ts';
 import { collect, placeAll } from '../abilities/triggers.ts';
 import { EngineError } from '../core/errors.ts';
 import { append, setField } from '../state/mut.ts';
-import type { CombatState, GameState, ObjId, PlayerId } from '../state/types.ts';
-import { deal, setController, clearContested } from './actions.ts';
+import type { CombatState, GameState, Json, ObjId, PlayerId } from '../state/types.ts';
+import { deal, setController, clearContested, trashForeignFacedown } from './actions.ts';
 import { opponentsOf, playersWithUnitsAt, unitsAt } from './board.ts';
 import { combatMight } from './chars.ts';
 import { establishControl } from './scoring.ts';
@@ -162,7 +162,8 @@ defineTask('combat.damage', [
   },
   // The defender assigns after the attacker [467.2.c].
   (s, f) => {
-    f.locals = { a: takeRet(f) ?? [], d: [] };
+    const a = (takeRet(f) ?? { hits: [], excess: 0 }) as unknown as { hits: DamageLocals['a']; excess: number };
+    f.locals = { a: a.hits, d: [], ax: a.excess } as unknown as Json;
     return call(s, f, { f: 'assign', by: s.combat!.defender, order: [], tier: {}, pc: 0,
       total: sideTotal(s, 'defender'), excess: [] });
   },
@@ -171,8 +172,11 @@ defineTask('combat.damage', [
   // unit that added Might is a source (Spec G Q7).
   (s, f, x) => {
     const c = s.combat!;
-    const l = f.locals as unknown as DamageLocals;
-    const d = (takeRet(f) ?? []) as unknown as DamageLocals['d'];
+    const l = f.locals as unknown as DamageLocals & { ax: number };
+    const dr = (takeRet(f) ?? { hits: [], excess: 0 }) as unknown as { hits: DamageLocals['d']; excess: number };
+    const d = dr.hits;
+    // Excess damage each side assigned [467.2.c.4] (Vi, Yeti Brawler, Trapping Grounds).
+    setField(s, c, 'excess', s.players.map((pl) => (pl.id === c.attacker ? l.ax : pl.id === c.defender ? dr.excess : 0)));
     const sources = (side: 'attacker' | 'defender') => designated(s, side).filter((id) => combatMight(s, id) > 0);
     const fromAttackers = sources('attacker'), fromDefenders = sources('defender');
     setField(s, c, 'assigned', [
@@ -234,6 +238,7 @@ defineTask('combat.establishControl', [(s, _f, x) => {
     if (present.length === 1 && b.controller !== present[0]) establishControl(s, x, c.bf, present[0], '468.5');
     clearContested(s, x, c.bf, '468.5.a');
     if (present.length === 0) setController(s, x, c.bf, null, '468.5.b');
+    trashForeignFacedown(s, x, c.bf, '468.5.c');
   }
   setField(s, c, 'next', 'end');
   return 'done';
@@ -246,6 +251,9 @@ defineTask('combat.end', [(s, _f, x) => {
   const had = Object.values(s.objects).filter((o) => o.designation !== null).map((o) => o.id);
   for (const id of had) setField(s, s.objects[id], 'designation', null);
   if (had.length > 0) emit(s, x, { k: 'designate', objs: had, d: null, rule: '468.7.a' });
+  if (s.effects.some((e) => e.until === 'thisCombat')) {            // "this combat" effects expire [468.7]
+    setField(s, s, 'effects', s.effects.filter((e) => e.until !== 'thisCombat'));
+  }
   setField(s, s, 'combat', null);
   setField(s, s, 'showdown', null);
   emit(s, x, { k: 'combatEnd', bf: c.bf, rule: '468.7' });
