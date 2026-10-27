@@ -48,6 +48,10 @@ export function triggeredOn(s: GameState, o: GameObject): TriggeredAst[] {
     out.push(...grantedKeywordAbilities(s, o).filter((a): a is TriggeredAst => a.kind === 'triggered'));
     for (const g of attachmentsOf(s, o.id)) {
       out.push(...abilitiesOf(g.def).filter((a): a is TriggeredAst => a.kind === 'triggered' && a.effectText === true));
+      // Svellsongur: "copy that unit's text to this Equipment's effect text".
+      if (abilitiesOf(g.def).some((a) => a.kind === 'static' && a.spec.s === 'copyHostText')) {
+        out.push(...own(o.def).filter((a): a is TriggeredAst => a.kind === 'triggered'));
+      }
     }
   }
   return out;

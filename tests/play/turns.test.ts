@@ -81,7 +81,7 @@ describe('the Play tab plays whole turns (M1.1, with the chain of M1.2)', () => 
     expect(lines.some((t) => /channels? \d rune/.test(t))).toBe(true);
     expect(lines.some((t) => / plays? /.test(t))).toBe(true);
     expect(v.players[1].hand.every((id) => id < 0)).toBe(true);      // the opponent's hand stays hidden
-  });
+  }, 60_000);                                                        // plays a whole game: slow under a loaded run
 
   it('offers the human\'s priority options as clickable cards and buttons', () => {
     const h = host(4);

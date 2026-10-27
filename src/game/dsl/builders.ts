@@ -147,7 +147,7 @@ export const entersReady = (o: { while?: CondAst } = {}): Ability => ({ kind: 's
 export const replacement = (r: Omit<ReplacementAst, 'id' | 'kind'>): Ability => ({ kind: 'replacement', ...r });
 export const costAbility = (c: Omit<CostAbilityAst, 'id' | 'kind'>): Ability => ({ kind: 'cost', ...c });
 export const activated = (cost: CostAst, effect: ProgAst, o: { timing?: 'action' | 'reaction'; while?: CondAst; isAdd?: true;
-  grantedOnly?: true; modesOncePerTurn?: true } = {}): Ability =>
+  grantedOnly?: true; modesOncePerTurn?: true; limit?: { n: number; per: 'turn' } } = {}): Ability =>
   ({ kind: 'activated', cost, effect, ...o });
 
 // ---- programs, slots, selectors ----
@@ -169,7 +169,7 @@ export const gearSel = (o: Omit<SelAst, 'k'> = {}): SelAst => ({ k: 'gear', ...o
 export const permanentSel = (o: Omit<SelAst, 'k'> = {}): SelAst => ({ k: 'permanent', ...o });
 export const bfSel = (o: Omit<SelAst, 'k'> = {}): SelAst => ({ k: 'battlefield', ...o });
 /** A destination slot for the units another slot chose [355.4]. */
-export const destSlot = (id: string, of: string, to: 'base' | 'bf' | 'open' | 'any' | 'toOrFromBase' = 'any', o: { min?: number } = {}): SlotAst =>
+export const destSlot = (id: string, of: string, to: 'base' | 'bf' | 'open' | 'any' | 'toOrFromBase' | 'withFriends' = 'any', o: { min?: number } = {}): SlotAst =>
   ({ id, sel: [], dest: { of, to }, ...o });
 export const runeSel = (o: Omit<SelAst, 'k'> = {}): SelAst => ({ k: 'rune', ...o });
 export const pred = {
@@ -200,6 +200,7 @@ export const pred = {
   moves: (n: number): PredAst => ({ p: 'moves', n }),
   name: (name: string): PredAst => ({ p: 'name', name }),
   atEventBf: { p: 'atEventBf' } as PredAst,
+  choosesFriendly: { p: 'choosesFriendly' } as PredAst,
   powerCost: (op: '<' | '<=' | '=' | '>=' | '>', n: number): PredAst => ({ p: 'powerCost', op, n }),
   energyCostVsPoints: (op: '<' | '<=' | '=' | '>=' | '>'): PredAst => ({ p: 'energyCostVsPoints', op }),
   tag: (tag: string): PredAst => ({ p: 'tag', tag }),
@@ -234,6 +235,9 @@ export const cond = {
   lki: (p: PredAst): CondAst => ({ c: 'lki', pred: p }),
   lkiAtBf: { c: 'lkiAtBf' } as CondAst,
   controlsSelf: { c: 'controlsSelf' } as CondAst,
+  notFromHand: { c: 'notFromHand' } as CondAst,
+  attachedThisTurn: { c: 'attachedThisTurn' } as CondAst,
+  chosenEnemies: (n: number): CondAst => ({ c: 'chosenEnemies', n }),
   powerSpent: (n: number): CondAst => ({ c: 'powerSpent', n }),
   nearWin: (within = 3): CondAst => ({ c: 'nearWin', within }),
   boundDomain: (name: string, d: import('../state/types.ts').Domain): CondAst => ({ c: 'boundDomain', name, d }),
@@ -261,6 +265,7 @@ export const val = {
   x: (name: string): ValueAst => ({ v: 'x', name }),
   excess: { v: 'excess' } as ValueAst,
   playedThisTurn: { v: 'playedThisTurn' } as ValueAst,
+  holdPoints: { v: 'holdPoints' } as ValueAst,
 };
 
 // ---- instructions ----
@@ -356,7 +361,7 @@ export const discardHand: InstrAst = { op: 'discardHand' };
 export const revealUntil = (types: import('../state/types.ts').CardType[], bind: string, rest: string): InstrAst =>
   ({ op: 'revealUntil', types, bind, rest });
 export const revealRune = (bind: string): InstrAst => ({ op: 'revealRune', bind });
-export const payX = (bind: string): InstrAst => ({ op: 'payX', bind });
+export const payX = (bind: string, kind?: 'energy'): InstrAst => (kind ? { op: 'payX', bind, kind } : { op: 'payX', bind });
 export const dealSplit = (n: number, to: SelAst): InstrAst => ({ op: 'dealSplit', n, to });
 export const recycleAllBut = (sel: SelAst[], keep: string[]): InstrAst => ({ op: 'recycleAllBut', sel, keep });
 export const retarget = (what: RefAst): InstrAst => ({ op: 'retarget', what });

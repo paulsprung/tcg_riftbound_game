@@ -77,6 +77,8 @@ function costOfKeyword(c: OracleCost | undefined): CostAst {
   for (const o of c.other ?? []) {
     const m = /^Discard (\d+)$/.exec(o);
     if (m) out.discard = Number(m[1]);
+    const r = /^Recycle (\d+) cards? from your trash$/i.exec(o);
+    if (r) out.recycleTrash = { n: Number(r[1]) };
   }
   return out;
 }

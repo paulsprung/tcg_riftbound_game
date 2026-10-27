@@ -12,7 +12,7 @@ import { answer, ask, type RunCtx, type StepOut } from '../core/frames.ts';
 import type { NonStdCostAst } from '../dsl/ast.ts';
 import { append, setField } from '../state/mut.ts';
 import type { ChainItem, Frame, GameState, ObjId } from '../state/types.ts';
-import { discard, exhaust, kill, recycleCards, spendBuffs, spendXp } from '../rules/actions.ts';
+import { banish, discard, exhaust, kill, recycleCards, returnToHand, spendBuffs, spendXp } from '../rules/actions.ts';
 import { snapshotOf } from '../rules/chars.ts';
 import { buffCandidates, costCandidates, trashCandidates } from './cost.ts';
 
@@ -21,7 +21,7 @@ export interface CostObjectOpts {
   back: boolean; onBack: () => StepOut; onImpossible: () => StepOut;
 }
 
-type Kind = 'exhaust' | 'kill' | 'discard' | 'recycle' | 'spend';
+type Kind = 'exhaust' | 'kill' | 'discard' | 'recycle' | 'spend' | 'bounce';
 
 /** The candidates and the number to choose for one part of the cost. */
 function part(s: GameState, it: ChainItem, src: ObjId | null, pay: NonStdCostAst, what: Kind): { n: number; cands: ObjId[] } | null {
@@ -31,6 +31,7 @@ function part(s: GameState, it: ChainItem, src: ObjId | null, pay: NonStdCostAst
     case 'kill': return pay.kill ? { n: pay.kill.n, cands: costCandidates(s, pay.kill.sel, p, src, false) } : null;
     case 'discard': return pay.discard ? { n: pay.discard, cands: s.players[p].hand.slice() } : null;
     case 'recycle': return pay.recycleTrash ? { n: pay.recycleTrash.n, cands: trashCandidates(s, p, pay.recycleTrash.types) } : null;
+    case 'bounce': return pay.bounce ? { n: pay.bounce.n, cands: costCandidates(s, pay.bounce.sel, p, src, false) } : null;
     case 'spend': return pay.spendBuff ? { n: pay.spendBuff.n, cands: buffCandidates(s, pay.spendBuff.sel, p, src) } : null;
   }
 }
@@ -38,7 +39,7 @@ function part(s: GameState, it: ChainItem, src: ObjId | null, pay: NonStdCostAst
 /** Asks for the next object of the cost, or 'complete' once all are chosen. */
 export function chooseCostObjects(s: GameState, f: Frame, x: RunCtx, o: CostObjectOpts): 'complete' | StepOut {
   const it = o.item;
-  for (const what of ['exhaust', 'kill', 'discard', 'recycle', 'spend'] as const) {
+  for (const what of ['exhaust', 'kill', 'discard', 'recycle', 'spend', 'bounce'] as const) {
     const need = part(s, it, o.src, o.pay, what);
     if (!need) continue;
     const slot = `cost:${o.key}:${what}`;
@@ -70,7 +71,7 @@ export function chooseCostObjects(s: GameState, f: Frame, x: RunCtx, o: CostObje
 export function performCostObjects(s: GameState, x: RunCtx, it: ChainItem, key: string, src: ObjId | null, pay: NonStdCostAst): boolean {
   const p = it.controller;
   const got = (what: Kind) => (it.play.choices.asPlayed[`cost:${key}:${what}`] ?? []) as number[];
-  const ex = got('exhaust'), kl = got('kill'), dc = got('discard'), rc = got('recycle'), sp = got('spend');
+  const ex = got('exhaust'), kl = got('kill'), dc = got('discard'), rc = got('recycle'), sp = got('spend'), bc = got('bounce');
   const me = src === null ? undefined : s.objects[src];
   const toExhaust = [...(pay.exhaustSelf && src !== null ? [src] : []), ...ex];
   const toKill = [...(pay.killSelf && src !== null ? [src] : []), ...kl];
@@ -84,6 +85,8 @@ export function performCostObjects(s: GameState, x: RunCtx, it: ChainItem, key: 
   if (toExhaust.length > 0) exhaust(s, x, p, toExhaust, '357.2', true);
   if (pay.spendBuffSelf && src !== null) spendBuffs(s, x, [src], '357.2');
   if (sp.length > 0) spendBuffs(s, x, sp, '357.2');
+  if (bc.length > 0) returnToHand(s, x, bc, '357.2');
+  if (pay.banishSelf && src !== null && s.objects[src]) banish(s, x, [src], '357.2');
   if (pay.xp) spendXp(s, x, p, pay.xp, '357.2');
   if (dc.length > 0) discard(s, x, p, dc, '357.2');
   if (rc.length > 0) recycleCards(s, x, p, rc, '357.2');

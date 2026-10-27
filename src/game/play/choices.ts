@@ -16,6 +16,7 @@ import type { ChainItem, Frame, GameState, Loc, ObjId, PlayerId, TargetRef } fro
 import { slotCandidates, slotLocsOf, slotMax, slotMin, targetRef, type SelCtx } from '../rules/targets.ts';
 import { evalCond, type CondCtx } from '../rules/conditions.ts';
 import { isType, mightOf } from '../rules/chars.ts';
+import { staticsFor } from '../layers/derive.ts';
 import { locOf } from '../state/zones.ts';
 
 /** The slots an item chooses: its program's own, then each chosen mode's,
@@ -36,7 +37,9 @@ export interface ChoiceCtx { controller: PlayerId; source?: ObjId | null;
     battlefield a card was played from face down, unless the slot is free of
     that restriction [811.1.d]. */
 export function candidatesFor(s: GameState, slot: SlotAst, it: ChoiceCtx, c: SelCtx): ObjId[] {
-  const all = slotCandidates(s, slot, c);
+  // "I can't be chosen by enemy spells and abilities" (Ruin Runner).
+  const all = slotCandidates(s, slot, c).filter((id) => s.objects[id].controller === it.controller
+    || staticsFor(s, id, 'noEnemyChoose').length === 0);
   if (it.restrictBf === undefined || slot.freeFromHidden) return all;
   const bf = it.restrictBf;
   return all.filter((id) => {
@@ -88,6 +91,13 @@ export function destCandidates(s: GameState, slot: SlotAst, units: ObjId[]): Loc
   const at = locOf(u);
   const out: Loc[] = [];
   const base: Loc = { z: 'base', p: u.controller ?? u.owner };
+  if (d.to === 'withFriends') {                                      // "a location where there's a unit with the same controller"
+    const ctl = u.controller;
+    const has = (ids: ObjId[]) => ids.some((id) => id !== u.id && isType(s.objects[id], 'unit') && s.objects[id].controller === ctl);
+    if (ctl !== null && has(s.players[ctl].base)) out.push(base);
+    s.bfs.forEach((b, bf) => { if (has(b.here)) out.push({ z: 'bf', bf }); });
+    return out.filter((l) => !at || !(l.z === at.z && (l.z === 'base' ? l.p === (at as typeof l).p : l.bf === (at as typeof l).bf)));
+  }
   if (d.to === 'toOrFromBase') {                                     // "to or from its base"
     if (at?.z === 'base') s.bfs.forEach((_, bf) => out.push({ z: 'bf', bf }));
     else out.push(base);

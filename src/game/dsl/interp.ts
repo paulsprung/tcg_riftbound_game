@@ -54,7 +54,7 @@ import { costOf, putOnChain, resourceCost } from '../play/playCard.ts';
 import { payStep } from '../play/pay.ts';
 import { noMoveToBase } from '../rules/move.ts';
 import { findCard } from '../cards/oracle.ts';
-import { staticsFor } from '../layers/derive.ts';
+import { derive, staticsFor } from '../layers/derive.ts';
 import { opponentsOf, turnOrderFromTurnPlayer, unitsAt } from '../rules/board.ts';
 import { goldsOf, type ResourceCost } from '../rules/resources.ts';
 import { copyJson } from '../state/clone.ts';
@@ -260,7 +260,8 @@ function value(s: GameState, it: ChainItem, env: Env, v: ValueAst, st: Step, c: 
     case 'playedThisTurn': return s.log.played.filter((r) => r.p === c.controller && r.isCard).length;
     case 'diff': return Math.max(0, value(s, it, env, v.a, st, c) - value(s, it, env, v.b, st, c));
     case 'maxMight': return Math.max(0, ...selectAll(s, v.of, c).map((id) => mightOf(s, id)));
-    case 'countBound': return boundObjs(env, v.name).length;
+    case 'countBound': return boundObjs(env, v.name).filter((id) => !v.where || (s.objects[id] && v.where.every((w) => predOk(s, w, id, c)))).length;
+    case 'holdPoints': return s.log.points.filter((r) => r.p === c.controller && r.why === 'hold').reduce((n, r) => n + r.n, 0);
     case 'x': {
       const b = env.bound[v.name] as { n?: number } | undefined;
       return typeof b?.n === 'number' ? b.n : 0;
@@ -389,7 +390,7 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
         const objs = r.objs.filter((id) => s.objects[id] && s.objects[id].zone.z !== 'banish' && s.objects[id].zone.z !== 'chain');
         if (objs.length === 0) return negated;
         lookBack(s, it, objs.filter((id) => onBoard(s, id)));
-        const out = banish(s, x, objs, '428');
+        const out = banish(s, x, objs, '428', ins.linkGroup);
         if (ins.id !== undefined) bind(f, ins.id, out);              // "banish it, then play it"
         return ok;
       }
@@ -565,6 +566,17 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
       return top.length > 0 ? ok : negated;
     }
     case 'revealTop': {                                              // [425]: everyone sees it
+      // Void Hatchling: "look at the top card first. You may recycle it. Then reveal those cards."
+      const peek = `peek:${st.key}`;
+      if (f.env.bound[peek] === undefined && staticsFor(s, null, 'peekBeforeReveal').some(({ st: h }) => h.ctl === p)
+        && s.players[p].deck.length > 0) {
+        if (got === undefined) {
+          look(s, x, p, s.players[p].deck.slice(0, 1), '425');
+          return choice('predict', { objs: s.players[p].deck.slice(0, 1), who: p });
+        }
+        recycleCards(s, x, p, objsOf(got), '417');
+        f.env.bound = { ...f.env.bound, [peek]: true };
+      }
       const top = s.players[p].deck.slice(0, ins.n ?? 1);
       if (top.length === 0) return negated;
       for (const id of top) setField(s, s.objects[id], 'knownBy', allMask(s.players.length));
@@ -683,6 +695,8 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
       const less = ins.free ? cost.energy : ins.energyLess === undefined ? 0 : val(ins.energyLess);
       let at: Loc | undefined;
       const who = ins.by === 'owner' ? o.owner : p;
+      const atObj = ins.atRef ? firstOf(s, it, f.env, ins.atRef, st, c) : null;
+      if (atObj !== null && s.objects[atObj] && typesOf(o).includes('unit')) at = locOf(s.objects[atObj]) ?? undefined;
       if (typesOf(o).includes('unit') && ins.at === 'here') {
         const h = hereOf(s, it.source ?? null);
         if (h) at = h;
@@ -786,6 +800,7 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
       if (b.ignored) return b.ignored;
       const g = a.objs[0], u = b.objs[0];
       if (g === undefined || u === undefined) return negated;
+      if (s.objects[g].controller !== s.objects[u].controller) return negated;   // only to a unit with the same controller [435]
       return attach(s, x, g, u, '435') ? ok : negated;
     }
     case 'detach': {
@@ -823,7 +838,14 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
     case 'pay': {
       if (got === undefined) {
         const cost = resourceCost(ins.cost, it.source !== undefined ? findCard(s.objects[it.source]?.def ?? '')?.domains ?? [] : []);
-        return choice('pay', { who: p, item: it.id, energy: cost.energy, power: cost.power as unknown as Json });
+        let who: PlayerId | null = p;
+        if (ins.who) {                                               // "unless its controller pays [2]"
+          const id = firstOf(s, it, f.env, ins.who.controllerOf, st, c);
+          const t = id === null ? undefined : s.chain.find((i) => i.obj === id);
+          who = t ? t.controller : id !== null ? s.objects[id]?.controller ?? null : null;
+          if (who === null) return { o: 'ignored', why: 'nullInfo' };
+        }
+        return choice('pay', { who, item: it.id, energy: cost.energy, power: cost.power as unknown as Json });
       }
       return (got as { paid?: boolean }).paid ? ok : { o: 'negated', why: 'declined' };
     }
@@ -850,7 +872,54 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
       requestCleanup(s);
       return ok;
     }
-    case 'forEach': return ok;                                       // its steps follow, one block per player
+    case 'forEach': return ok;
+    case 'preventNext': case 'putOnTop': {
+      const r = ref(ins.what);
+      if (r.ignored) return r.ignored;
+      if (ins.op === 'putOnTop') {
+        const id = r.objs.find((o) => s.objects[o].zone.z === 'hand');
+        if (id === undefined) return negated;
+        toZone(s, x, id, Z.deck(s.objects[id].owner), { why: 'putOnDeck', rule: '108.4', pos: 'top' });
+        return ok;
+      }
+      const objs = r.objs.filter((id) => onBoard(s, id));
+      if (objs.length === 0) return negated;
+      addEffect(s, x, objs, { s: 'preventNext' }, effOpts('438'));
+      return ok;
+    }
+    case 'grantKeywordsOf': {                                        // "my keywords and +[M] equal to my Might"
+      const from = firstOf(s, it, f.env, ins.from, st, c);
+      const r = ref(ins.to);
+      if (r.ignored) return r.ignored;
+      const to = r.objs.filter((id) => onBoard(s, id));
+      if (from === null || !s.objects[from] || to.length === 0) return negated;
+      for (const [kw, v] of Object.entries(derive(s, from).keywords)) {
+        if (v) addEffect(s, x, to, { s: 'keyword', kw, value: v }, { ...effOpts('479.3'), until: 'thisTurn' });
+      }
+      addMight(s, x, to, Math.max(0, mightOf(s, from)), { ...effOpts('479.4'), until: 'thisTurn' });
+      return ok;
+    }
+    case 'swapMight': {                                              // each gets the other's Might, fixed now
+      const a = firstOf(s, it, f.env, ins.a, st, c), b = firstOf(s, it, f.env, ins.b, st, c);
+      if (a === null || b === null || !s.objects[a] || !s.objects[b] || !onBoard(s, a) || !onBoard(s, b)) return negated;
+      const ma = mightOf(s, a), mb = mightOf(s, b);
+      addMight(s, x, [a], mb - ma, { ...effOpts('479.4'), until: 'thisTurn' });
+      addMight(s, x, [b], ma - mb, { ...effOpts('479.4'), until: 'thisTurn' });
+      return ok;
+    }
+    case 'addX': {
+      const b = f.env.bound[ins.name] as { n?: number } | undefined;
+      const n = typeof b?.n === 'number' ? b.n : 0;
+      if (n <= 0) return negated;
+      addSpecial(s, x, p, ins.as === 'energy' ? { energy: n, source: '' } : { universal: n, source: '' }, '430');
+      return ok;
+    }
+    case 'playLinked': {                                             // "Play all units banished with this, ignoring their costs"
+      const ids = s.players[p].banish.filter((id) => s.objects[id].links.some((l) => l.group === ins.group));
+      if (ids.length === 0) return negated;
+      for (const id of ids) putOnChain(s, x, { obj: id, controller: p, by: { item: it.id, instr: st.key }, overrides: { cost: { energy: 0, power: [] } } });
+      return ok;
+    }                                       // its steps follow, one block per player
     case 'choiceBy': {
       if (got === undefined) {
         let who: PlayerId | null = p;
@@ -919,7 +988,8 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
       if (got === undefined) {
         // As much Power as p could make: ready runes, the pool's Power, Gold (a payment that fails pays nothing).
         const pool = s.players[p].pool;
-        const max = Math.min(12, s.players[p].base.filter((id) => s.objects[id].def.endsWith('-rune')).length
+        const max = ins.kind === 'energy' ? Math.min(12, pool.energy + s.players[p].base.filter((id) => s.objects[id].def.endsWith('-rune')
+          && !s.objects[id].exhausted).length) : Math.min(12, s.players[p].base.filter((id) => s.objects[id].def.endsWith('-rune')).length
           + pool.universal + Object.values(pool.power).reduce((a, b) => a + b, 0) + goldsOf(s, p).length);
         if (max === 0) { f.env.bound = { ...f.env.bound, [ins.bind]: { n: 0 } }; return negated; }
         return choice('number', { who: p, max, item: it.id });
@@ -928,7 +998,8 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
       if (g.n !== undefined) {
         f.env.bound = { ...f.env.bound, [ins.bind]: { n: g.n } };
         if (g.n === 0) return { o: 'negated', why: 'declined' };
-        return choice('pay', { who: p, item: it.id, energy: 0, power: Array.from({ length: g.n }, () => ({ k: 'any' })) as unknown as Json });
+        return choice('pay', { who: p, item: it.id, energy: ins.kind === 'energy' ? g.n : 0,
+          power: (ins.kind === 'energy' ? [] : Array.from({ length: g.n }, () => ({ k: 'any' }))) as unknown as Json });
       }
       if (!g.paid) { f.env.bound = { ...f.env.bound, [ins.bind]: { n: 0 } }; return { o: 'negated', why: 'declined' }; }
       return ok;

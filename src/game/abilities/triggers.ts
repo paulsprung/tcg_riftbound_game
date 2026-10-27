@@ -66,9 +66,13 @@ export type TriggerEvent =
       spell?: boolean }[] }                                          // one Kill action [429]
   | { e: 'damaged'; objs: ObjId[] }                                  // one Deal action [418]
   | { e: 'readied'; objs: ObjId[]; by: PlayerId }                    // readied by a spell or ability [416]
-  | { e: 'chosen'; p: PlayerId; objs: ObjId[] }                      // a spell chose these [355.5]
+  | { e: 'chosen'; p: PlayerId; objs: ObjId[]; spell?: boolean }    // a spell or ability chose these [355.5]
   | { e: 'seen'; p: PlayerId; objs: ObjId[]; reveal?: boolean }     // looked at or revealed on top of a Main Deck [425]
   | { e: 'wonCombat'; p: PlayerId; bf: number; units: ObjId[] }      // [468.3]
+  | { e: 'attached'; obj: ObjId; to: ObjId; by: PlayerId | null }    // [435]
+  | { e: 'recycled'; p: PlayerId; rune: boolean }                    // cards to a Main Deck / a rune [417]
+  | { e: 'buffSpent'; objs: ObjId[] }                                // [702.2.b]
+  | { e: 'gearAbility'; p: PlayerId; source: ObjId }                 // an activated ability of a gear [376]
   | { e: 'designated'; objs: ObjId[]; d: 'attacker' | 'defender' }   // first time this combat [383.4.e–f]
   | { e: 'phase'; at: 'beginning' | 'mainStart' | 'endOfTurn'; p: PlayerId }   // [315.2.a], [316.4], [317.1.a]
   | { e: 'moved'; objs: ObjId[]; to: Loc; by: PlayerId | null; from?: Loc[] }   // one Move action [448]
@@ -184,7 +188,10 @@ function meets(s: GameState, w: TriggerAst, ev: TriggerEvent, o: GameObject | nu
       break;
     }
     case 'conquer': case 'hold': case 'score': {
-      if (!o || ev.e !== 'scored' || (w.on !== 'score' && ev.how !== w.on)) break;
+      // Skyfall of Areion: "My hold effects are also conquer effects, and vice versa."
+      const both = !!o && staticsFor(s, o.id, 'holdIsConquer').length > 0;
+      if (ev.e !== 'scored' || (w.on !== 'score' && ev.how !== w.on && !both)) break;
+      if (!o && w.at === 'here') break;                              // a delayed ability: "When you conquer" only
       if (w.at === 'here' && !sameLoc({ z: 'bf', bf: ev.bf }, here)) break;
       const ctl = c(ev.p);
       if (ctl === null) break;
@@ -327,8 +334,31 @@ function meets(s: GameState, w: TriggerAst, ev: TriggerEvent, o: GameObject | nu
         if (s.objects[id] && isType(s.objects[id], 'unit')) instances.push({ p: null, info: { subject: id } });
       }
       break;
+    case 'chosen':
+      if (ev.e !== 'chosen' || c(ev.p) !== ev.p || (w.spell && !ev.spell)) break;
+      for (const id of ev.objs) {
+        if (!s.objects[id] || !isType(s.objects[id], 'unit')) continue;
+        if (w.who === 'self' ? id !== o?.id : ctlOf(s, id) !== ev.p) continue;
+        instances.push({ p: ev.p, info: { subject: id } });
+      }
+      break;
+    case 'attached':
+      if (o && ev.e === 'attached' && ev.to === o.id && ev.by !== null && c(ev.by) === ev.by) instances.push({ p: ev.by, info: { subject: ev.obj } });
+      break;
+    case 'recycled': case 'runeRecycled':
+      if (ev.e === 'recycled' && ev.rune === (w.on === 'runeRecycled') && c(ev.p) === ev.p) instances.push({ p: ev.p, info: { p: ev.p } });
+      break;
+    case 'buffSpent': {
+      if (ev.e !== 'buffSpent') break;
+      const me = c(null);
+      if (me !== null && ev.objs.some((id) => ctlOf(s, id) === me)) instances.push({ p: me, info: { p: me } });
+      break;
+    }
+    case 'gearAbility':
+      if (ev.e === 'gearAbility' && c(ev.p) === ev.p) instances.push({ p: ev.p, info: { p: ev.p } });
+      break;
     case 'chosenBySpell': {
-      if (ev.e !== 'chosen' || !o) break;
+      if (ev.e !== 'chosen' || !o || !ev.spell) break;
       const k = key(ev.p);
       const mine = ev.objs.filter((id) => s.objects[id] && ctlOf(s, id) === ev.p && isType(s.objects[id], 'unit')
         && sameLoc(locOf(s.objects[id]), here));

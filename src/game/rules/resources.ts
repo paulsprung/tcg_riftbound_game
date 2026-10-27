@@ -27,6 +27,7 @@
 import { BASIC_RUNES } from '../cards/runes.ts';
 import { emit } from '../core/events.ts';
 import { mint } from '../state/mut.ts';
+import { staticsFor } from '../layers/derive.ts';
 import type {
   ChainItem, Domain, GameState, ObjId, PaymentPlan, PlayerId, PoolSpend, PowerReq, RunePool,
 } from '../state/types.ts';
@@ -316,6 +317,9 @@ export function executePlan(s: GameState, x: { present: boolean }, p: PlayerId, 
   return payCost(s, x, p, cost, summary, spell);
 }
 
+/** "Your Gold [Add] an additional [1]" (while its condition holds). */
+export const goldBonus = (s: GameState, p: PlayerId) => staticsFor(s, null, 'goldBonus').some(({ st }) => st.ctl === p);
+
 /** Gold's "[Reaction][>] Kill this, [E]: [Add] [A]." [187.5], as one step of a payment. */
 export function activateGold(s: GameState, x: { present: boolean }, p: PlayerId, gold: ObjId) {
   const item = mint(s, 'item');
@@ -328,6 +332,7 @@ export function activateGold(s: GameState, x: { present: boolean }, p: PlayerId,
   kill(s, x, [gold], { rule: '187.5', inCombat: () => false });
   finalizeItem(s, x, itemById(s, item)!);                            // [430.2]
   addSpecial(s, x, p, { universal: 1, source: 'gold' }, '430');
+  if (goldBonus(s, p)) addSpecial(s, x, p, { energy: 1, source: 'gold' }, '430');   // Renata Glasc, Chem-Baroness
   removeItem(s, x, item);
 }
 

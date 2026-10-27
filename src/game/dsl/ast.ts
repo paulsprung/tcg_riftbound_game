@@ -95,7 +95,9 @@ export type AbilityAst = { id: string; activeIn?: ZoneScope; limit?: LimitAst;
       repeat?: true;
       /** "You may kill any number of friendly units / spend any number of buffs as an additional cost. Reduce my
           cost by [Y] for each": a number chosen as it is played. */
-      x?: { kill?: SelAst; spendBuff?: SelAst; lessPower: PowerReqAst } }
+      x?: { kill?: SelAst; spendBuff?: SelAst; lessPower: PowerReqAst };
+      /** Accelerate given to other cards: paid, the unit enters ready [805.2.b]. */
+      accelerate?: true }
 );
 export type TriggeredAst = Extract<AbilityAst, { kind: 'triggered' }>;
 export type ActivatedAst = Extract<AbilityAst, { kind: 'activated' }>;
@@ -112,6 +114,8 @@ export type StaticAst =
       /** A decrease ("Stunned enemy units here have -8 [M]"), stopping at `floor` ("to a minimum of 1 [M]"). */
       dec?: true; floor?: number }                                             // layer 4 [479.4]
   | { s: 'keyword'; kw: KeywordAst; to?: SelAst;
+      /** The value read now ("[Assault] equal to the number of enemy units here"). */
+      n?: ValueAst;
       /** "if they didn't already": only to objects without the keyword otherwise. */
       ifNot?: true }                                                           // layer 3 [479.3]
   /** "I enter ready" [359.2.c]; with `to`, other units entering (Magma Wurm). */
@@ -150,6 +154,30 @@ export type StaticAst =
   | { s: 'noScoreBefore'; turn: number }
   /** "Play me only to a battlefield you conquered this turn." */
   | { s: 'playOnlyToConquered' }
+  /** "Each Equipment attached to me gives double its base Might bonus." */
+  | { s: 'doubleMightBonus' }
+  /** Guardian Angel: "If I would die, kill this instead. Heal me, exhaust me, and recall me." */
+  | { s: 'saveHost' }
+  /** Soraka: "If another unit you control here would die, if it has less Might than me, … instead." */
+  | { s: 'saveWeakerHere' }
+  /** "My hold effects are also conquer effects, and vice versa." */
+  | { s: 'holdIsConquer' }
+  /** "I can't be chosen by enemy spells and abilities." */
+  | { s: 'noEnemyChoose' }
+  /** "Your Gold [Add] an additional [1]." */
+  | { s: 'goldBonus' }
+  /** "Your tokens enter ready." */
+  | { s: 'tokensEnterReady' }
+  /** "Friendly [Repeat] costs cost [1] less." */
+  | { s: 'repeatLess' }
+  /** "Your Equipment everywhere have [Quick-Draw]": its Reaction timing in hand. */
+  | { s: 'equipmentQuickDraw' }
+  /** Svellsongur: the unit it is attached to has its own text once more. */
+  | { s: 'copyHostText' }
+  /** Void Hatchling: "If you would reveal cards from a deck, look at the top card first. You may recycle it." */
+  | { s: 'peekBeforeReveal' }
+  /** "I am a Mech." */
+  | { s: 'tag'; tag: string; to?: SelAst }
   /** "Opponents can only play units to their base" (while the condition holds). */
   | { s: 'opponentsPlayToBase' }
   /** "Spells and abilities can't ready enemy units and gear." */
@@ -178,13 +206,21 @@ export interface NonStdCostAst {
   killSelf?: true; discard?: number; recycleTrash?: { types?: CardType[]; n: number }; spendBuffSelf?: true; xp?: number;
   /** "spend a buff" of one of these units. */
   spendBuff?: { sel: SelAst; n: number };
+  /** "return a friendly gear to its owner's hand". */
+  bounce?: { sel: SelAst; n: number };
+  /** "Banish this". */
+  banishSelf?: true;
 }
 /** "I cost [2] less" [356.4]: a fixed amount, or one per object a selector
     picks as the cost is determined (locked [356.4.g]); `min`: "to a minimum
     of [1]"; `power`: Power symbols taken off ("[1][A] less"). */
 export interface DiscountAst { energy: ValueAst; min?: number; power?: number;
   /** "ignore this spell's cost": no Energy and no Power. */
-  all?: true }
+  all?: true;
+  /** Energy and Power taken off this many times ("for each point you scored from holding this turn"). */
+  times?: ValueAst;
+  /** Only when the spell chooses the discount's source ("Your spells that choose me"). */
+  ifChoosesSource?: true }
 
 /** Costs [201–206]. Energy and Power are paid from the Rune Pool; "[E]"
     exhausts the source [135.2.e.2]; the other parts are non-standard. */
@@ -230,6 +266,12 @@ export type CondAst =
   | { c: 'lki'; pred: PredAst }
   /** The source was at a battlefield as it left the board ("my battlefield" in a Deathknell). */
   | { c: 'lkiAtBf' }
+  /** "to play from anywhere other than your hand". */
+  | { c: 'notFromHand' }
+  /** The Equipment whose effect text this is was attached this turn. */
+  | { c: 'attachedThisTurn' }
+  /** You chose enemy units and/or gear twice this turn with spells or unit abilities. */
+  | { c: 'chosenEnemies'; n: number }
   /** The source is controlled by the controller ("While you control this battlefield"). */
   | { c: 'controlsSelf' }
   /** Power spent this turn [A][A] or more. */
@@ -262,7 +304,7 @@ export interface SlotAst {
   distinctFrom?: string[];
   /** A destination slot: where the units another slot chose move to [355.4]
       (a location, not a target); `to` limits it. */
-  dest?: { of: string; to?: 'base' | 'bf' | 'open' | 'any' | 'toOrFromBase' };
+  dest?: { of: string; to?: 'base' | 'bf' | 'open' | 'any' | 'toOrFromBase' | 'withFriends' };
   /** Played from face down, targets must be at its battlefield [811.1.d.2–3]
       unless the slot's own restriction makes that impossible: this one. */
   freeFromHidden?: true;
@@ -304,6 +346,10 @@ export type PredAst =
   | { p: 'energyCostVsPoints'; op: Cmp }
   /** Friendly or enemy to the item's controller ("If it was an enemy unit"). */
   | { p: 'rel'; rel: 'friendly' | 'enemy' }
+  /** A spell on the chain that chose a friendly unit or gear. */
+  | { p: 'choosesFriendly' }
+  /** Banished with a link group. */
+  | { p: 'linked'; group: string }
   /** Its name ("Your Sand Soldiers"), a token's included. */
   | { p: 'name'; name: string }
   /** Moved exactly N times this turn ("The third time I move in a turn"). */
@@ -338,13 +384,15 @@ export type ValueAst = number
   /** "the highest Might among units you control". */
   | { v: 'maxMight'; of: SelAst }
   /** How many objects a name is bound to ("for each buff spent"). */
-  | { v: 'countBound'; name: string }
+  | { v: 'countBound'; name: string; where?: PredAst[] }
   /** The amount a payX bound. */
   | { v: 'x'; name: string }
   /** Excess damage the controller assigned in this combat. */
   | { v: 'excess' }
   /** Cards the controller has played this turn. */
   | { v: 'playedThisTurn' }
+  /** Points the controller scored from holding this turn. */
+  | { v: 'holdPoints' }
 /** What an instruction acts on: its source, a chosen slot, a bound name,
     the object the trigger condition named. */
 export type RefAst = 'self' | { slot: string } | { bound: string } | { event: 'subject' } | { info: string }
@@ -376,14 +424,18 @@ export type PlayerEffectAst =
   /** "Prevent all spell and ability damage this turn." */
   | { s: 'preventNonCombat' }
   /** "You can hide cards ignoring costs this turn." */
-  | { s: 'hideFree' };
+  | { s: 'hideFree' }
+  /** "Give the next spell you play this turn [Repeat] equal to its cost." */
+  | { s: 'grantRepeat'; uses: number };
 
 /** `id` names an instruction for "if you do" (CondAst 'did'); `link` makes
     it linked to another, ignored if that one was [359.3.e.14.a]. */
 export type InstrAst = { id?: string; link?: string } & (
   | { op: 'deal'; n: ValueAst; to: RefAst | SelAst }                             // [418]
   | { op: 'draw'; n: ValueAst; from?: RefAst }                                   // [414]; from: "draw one of them" [414.1]
-  | { op: 'banish' | 'kill' | 'stun' | 'buff'; what: RefAst | SelAst }           // [428], [429], [424], [427]
+  | { op: 'banish' | 'kill' | 'stun' | 'buff'; what: RefAst | SelAst;           // [428], [429], [424], [427]
+      /** banish: "banished with this" [395–398], a link group. */
+      linkGroup?: string }
   | { op: 'ready'; what: RefAst | SelAst }                                       // [416]
   | { op: 'burn'; n: number }                                                    // [441]
   | { op: 'might'; n: ValueAst; sign: 1 | -1; to: RefAst | SelAst; until: Until; floor?: number }   // [479.4], locked set
@@ -404,6 +456,8 @@ export type InstrAst = { id?: string; link?: string } & (
   /** Plays a card an instruction names [420.3]: from a trash, its Energy cost
       reduced ("Reduce its Energy cost by …"). */
   | { op: 'playCard'; what: RefAst; energyLess?: ValueAst;
+      /** At the battlefield a referenced object is. */
+      atRef?: RefAst;
       /** "ignoring its Energy cost" / "ignoring its cost" [420.3.b]. */
       free?: 'energy' | 'all';
       /** "for [A]": the cost instead of the printed one. */
@@ -451,7 +505,9 @@ export type InstrAst = { id?: string; link?: string } & (
       all?: true }
   | { op: 'eachPlayerKills'; n: number }                                         // Cull the Weak
   /** A cost within an instruction, paid as it executes or declined [740.4.a]. */
-  | { op: 'pay'; cost: CostAst }
+  | { op: 'pay'; cost: CostAst;
+      /** Paid by a referenced object's controller ("unless its controller pays [2]"). */
+      who?: { controllerOf: RefAst } }
   /** Weaponmaster [821.1.c]: pay that Equipment's Equip cost less [A] to attach it to me. */
   | { op: 'equipToSelf'; what: RefAst }
   | { op: 'playerEffect'; spec: PlayerEffectAst; until: 'thisTurn';
@@ -478,7 +534,7 @@ export type InstrAst = { id?: string; link?: string } & (
   /** Reveal the top rune of your Rune Deck, then recycle it; its domains are bound [425], [417]. */
   | { op: 'revealRune'; bind: string }
   /** "Pay any amount of [A]": a number, then the payment; the amount is bound [740.4.a]. */
-  | { op: 'payX'; bind: string }
+  | { op: 'payX'; bind: string; kind?: 'energy' }
   /** "Deal N damage split among any number of …": one point at a time [418]. */
   | { op: 'dealSplit'; n: number; to: SelAst }
   /** Recycle every object of these selectors but the kept ones (Divine Judgment). */
@@ -491,6 +547,18 @@ export type InstrAst = { id?: string; link?: string } & (
   | { op: 'returnChampion' }
   /** "Activate the conquer effects of units here" [383.4.g]. */
   | { op: 'activateConquer' }
+  /** "The next time that unit would be dealt damage this turn, prevent it." */
+  | { op: 'preventNext'; what: RefAst }
+  /** "Give another friendly unit my keywords" (layer 3, this turn). */
+  | { op: 'grantKeywordsOf'; from: RefAst; to: RefAst }
+  /** "Swap the Might of two units this turn." */
+  | { op: 'swapMight'; a: RefAst; b: RefAst }
+  /** "Put a card from your hand on the top of your Main Deck". */
+  | { op: 'putOnTop'; what: RefAst }
+  /** [Add] the amount a payX bound: Energy or [A]. */
+  | { op: 'addX'; name: string; as: 'energy' | 'power' }
+  /** Play every card in your banishment of a link group, ignoring costs (The Zero Drive). */
+  | { op: 'playLinked'; group: string }
   | { op: 'exhaust'; what: RefAst | SelAst }                                    // [415]
   /** "Take control of it" [479.2.a] (for the rest of the game). */
   | { op: 'gainControl'; what: RefAst;
@@ -557,6 +625,18 @@ export type TriggerAst =
   | { on: 'seenOnTop'; reveal?: true }
   /** "When I win a combat" / "When you win a combat" [468.3]. */
   | { on: 'winCombat'; who: 'self' | 'you' }
+  /** "When you choose a friendly unit", "When you choose me with a spell" [355.5]. */
+  | { on: 'chosen'; who: 'self' | 'friendly'; spell?: true }
+  /** "When you attach an Equipment to me" [435]. */
+  | { on: 'attached'; who: 'self' }
+  /** "When you recycle one or more cards to your Main Deck" [417]. */
+  | { on: 'recycled' }
+  /** "When you recycle a rune" [417.1.b]. */
+  | { on: 'runeRecycled' }
+  /** "When you spend a buff" [702.2.b]. */
+  | { on: 'buffSpent' }
+  /** "When you use an activated ability of a gear" [376]. */
+  | { on: 'gearAbility' }
   | { on: 'returnedToHand'; at: 'here' }                                         // a unit here returned to a hand
   | { on: 'buffed'; who: 'friendly' | 'self' }                                   // you buff a friendly unit [427]
   | { on: 'stunned'; who: 'enemy'; at: 'battlefield' | 'any';

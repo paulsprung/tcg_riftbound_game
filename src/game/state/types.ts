@@ -169,6 +169,7 @@ export interface GameObject {
   revealedUntil: RevealWindow | null; // a reveal is a state, not a zone [425.1.a]
   moves: number;                      // moves this turn (Kayn, Yasuo, Windrider); reset at turn start
   mighty?: boolean;                   // Might ≥ 5 at the last cleanup, for "becomes Mighty" [709]; unset until then
+  attachedTurn?: number;              // the turn it was last attached (Brutalizer)
   lastDamage: { item: ItemId | null; sources: ObjId[]; by: PlayerId | null; combat: boolean; spell?: boolean } | null;
                                       // kill attribution for cleanup kills [429.5.c]; cleared after the next cleanup
   // ---- memory that survives the zone change that created it ----
@@ -400,7 +401,7 @@ export interface TurnLog {             // reset at turn start; the per-turn memo
   exhausted: { p: PlayerId; objs: ObjId[]; group: number; byCost: boolean }[];   // one row per exhaust action
   scored: { p: PlayerId; bf: number; how: 'conquer' | 'hold'; point: boolean }[];
   points: { p: PlayerId; n: number; why: 'conquer' | 'hold' | 'effect' | 'burnOut' }[];
-  targeted: { item: ItemId; by: PlayerId; obj: ObjId; spell: boolean }[];         // "chose an enemy unit this turn"
+  targeted: { item: ItemId; by: PlayerId; obj: ObjId; spell: boolean; enemy?: boolean }[];         // "chose an enemy unit this turn"
   combatsWon: { p: PlayerId; bf: number; units: ObjId[] }[];
   hidden: { p: PlayerId; bf: number }[];
   draws: number[]; discards: number[]; xpGained: number[]; powerSpent: number[];   // per player

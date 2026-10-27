@@ -73,7 +73,9 @@ function printedMight(o: GameObject): number | null {
 }
 
 /** A static ability as it applies now: the ability and its host ("I"). */
-export interface StaticInst { a: StaticAbilityAst; host: ObjId; ctl: PlayerId }
+export interface StaticInst { a: StaticAbilityAst; host: ObjId; ctl: PlayerId;
+  /** The attached card whose effect text it is [718.3]. */
+  via?: ObjId }
 
 const MEMO = new WeakMap<GameState, { epoch: number; m: Map<ObjId, Derived>; busy: Set<ObjId>; statics: StaticInst[] | null }>();
 
@@ -103,7 +105,13 @@ export function activeStatics(s: GameState): StaticInst[] {
       const host = s.objects[o.attachedTo];
       if (!host) continue;
       for (const a of abilitiesOf(o.def)) {
-        if (a.kind === 'static' && a.effectText) out.push({ a, host: host.id, ctl: host.controller ?? host.owner });
+        if (a.kind === 'static' && a.effectText) out.push({ a, host: host.id, ctl: host.controller ?? host.owner, via: o.id });
+        // Svellsongur: the unit's own static abilities once more.
+        if (a.kind === 'static' && a.effectText && a.spec.s === 'copyHostText') {
+          for (const b of abilitiesOf(host.def)) {
+            if (b.kind === 'static' && !b.effectText && !b.grantedOnly) out.push({ a: b, host: host.id, ctl: host.controller ?? host.owner });
+          }
+        }
       }
       continue;
     }
@@ -119,11 +127,12 @@ export function activeStatics(s: GameState): StaticInst[] {
     object is its source (no `to`) or one its selector picks. */
 export function staticApplies(s: GameState, st: StaticInst, spec: { to?: SelAst }, id: ObjId): boolean {
   if (spec.to ? !matches(s, spec.to, id, { controller: st.ctl, source: st.host }) : st.host !== id) return false;
-  return !st.a.while || evalCond(s, st.a.while, { controller: st.ctl, source: st.host });
+  return !st.a.while || evalCond(s, st.a.while, { controller: st.ctl, source: st.host, thisObj: st.via ?? null });
 }
 
 /** Statics about an object: "I have …" or "… have …" (a `to` selector). */
-const TARGETED: readonly StaticAst['s'][] = ['might', 'keyword', 'entersReady', 'grantAbility', 'maxBuffs'];
+const TARGETED: readonly StaticAst['s'][] = ['might', 'keyword', 'entersReady', 'grantAbility', 'maxBuffs', 'tag', 'saveHost',
+  'doubleMightBonus', 'holdIsConquer', 'noEnemyChoose'];
 
 /** The statics of a kind that apply to an object now (for the kinds that
     are about objects), or every active one of that kind whose condition
@@ -137,7 +146,7 @@ export function staticsFor<S extends StaticAst['s']>(s: GameState, id: ObjId | n
     const sp = spec as Extract<StaticAst, { s: S }>;
     if (TARGETED.includes(kind) && id !== null) {
       if (!staticApplies(s, st, sp as { to?: SelAst }, id)) continue;
-    } else if (st.a.while && !evalCond(s, st.a.while, { controller: st.ctl, source: st.host })) continue;
+    } else if (st.a.while && !evalCond(s, st.a.while, { controller: st.ctl, source: st.host, thisObj: st.via ?? null })) continue;
     out.push({ st, spec: sp });
   }
   return out;
@@ -164,6 +173,8 @@ export function buffValueOf(s: GameState, o: GameObject): number {
 function mightBonus(s: GameState, id: ObjId): number {
   let n = 0;
   for (const o of Object.values(s.objects)) if (o.attachedTo === id) n += findCard(o.def)?.mightBonus ?? 0;
+  // "Each Equipment attached to me gives double its base Might bonus" (Gearhead).
+  if (n > 0 && activeStatics(s).some((st) => st.a.spec.s === 'doubleMightBonus' && st.host === id)) n *= 2;
   return n;
 }
 
@@ -185,8 +196,10 @@ function core(s: GameState, o: GameObject, withStatics: boolean): Derived {
   const onBoard = o.zone.z === 'base' || o.zone.z === 'bf' || o.zone.z === 'legend';
   if (withStatics && onBoard) {
     const statics = staticsFor(s, o.id, 'keyword');
-    for (const { spec } of statics) if (!spec.ifNot) keywords[spec.kw.kw] = (keywords[spec.kw.kw] ?? 0) + (spec.kw.value ?? 1);
-    for (const { spec } of statics) if (spec.ifNot && !keywords[spec.kw.kw]) keywords[spec.kw.kw] = spec.kw.value ?? 1;   // "if they didn't already"
+    const kv = (st: StaticInst, spec: Extract<StaticAst, { s: 'keyword' }>) => (spec.n !== undefined ? Math.max(0, value(s, spec.n, st.host, st.ctl))
+      : spec.kw.value ?? 1);
+    for (const { st, spec } of statics) if (!spec.ifNot) keywords[spec.kw.kw] = (keywords[spec.kw.kw] ?? 0) + kv(st, spec);
+    for (const { st, spec } of statics) if (spec.ifNot && !keywords[spec.kw.kw]) keywords[spec.kw.kw] = kv(st, spec);   // "if they didn't already"
   }
   if (base === null) return { might: null, baseMight: null, keywords };
   delta += o.buffs * buffValueOf(s, o);                              // one per buff [703]

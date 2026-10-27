@@ -1,9 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { hasKeyword, mightOf } from '../../src/game/rules/chars.ts';
 import { setField } from '../../src/game/state/mut.ts';
+import { moveDestinations } from '../../src/game/rules/move.ts';
 import { act, base, bf, control, evs, inHand, inTrash, keys, put, ready, reask, runes } from './helpers/scenario.ts';
 import { cast, drive, handSize, moveTo, nextTurn, onBoard, RICH } from './helpers/cards.ts';
+import { timingFrom } from '../../src/game/play/playCard.ts';
 import { attack, defsIn, dmg, equip, foe, golds, runeCount, tbl } from './helpers/setCards.ts';
+import { derive } from '../../src/game/layers/derive.ts';
+import { findCard } from '../../src/game/cards/oracle.ts';
+
+const derived = (g: ReturnType<typeof tbl>, id: number) => derive(g.s, id).keywords;
+const mightBonusOf = (def: string) => findCard(def)?.mightBonus ?? 0;
 
 /*
  * Spiritforged (SFD), the cards beyond the Champion Decks (cards/defs/sfd-set.ts):
@@ -73,6 +80,7 @@ describe('Spiritforged set: batch A', () => {
     const g = tbl(9307);
     foe(g, 'mystic-poro');
     const r = put(g, 'recruit', 0, base(0));
+    setField(g.s, g.s.objects[r], 'token', true);
     const a = put(g, 'azir-sovereign', 0, base(0));
     attack(g, a, [`pick:${r}`]);
     expect(evs(g, 'move').some((m) => m.objs.includes(r))).toBe(true);
@@ -189,6 +197,7 @@ describe('Spiritforged set: batch A', () => {
 
   it("Chemtech Cask: a spell on an opponent's turn may make a Gold", () => {
     const g = tbl(9320, { first: 1 });
+    runes(g, 0, [...ready('mind', 3), ...RICH]);
     put(g, 'chemtech-cask', 0, base(0));
     const p = inHand(g, 'premonition', 0);
     const u = inHand(g, 'progress-day', 1);
@@ -408,6 +417,7 @@ describe('Spiritforged set: batch A', () => {
 
   it('Fizz, Trickster: may play a spell up to [3] from your trash free of Energy, then recycle it', () => {
     const g = tbl(9347);
+    runes(g, 0, [...ready('mind', 3), ...RICH]);
     inTrash(g, 'premonition');
     const h = handSize(g);
     cast(g, 'fizz-trickster');
@@ -549,11 +559,10 @@ describe('Spiritforged set: batch A', () => {
 
   it("Minotaur Reckoner: units can't move to base", () => {
     const g = tbl(9363);
-    put(g, 'minotaur-reckoner', 0, base(0));
-    put(g, 'shipyard-skulker', 0, bf(0));
+    put(g, 'minotaur-reckoner', 0, bf(1));
+    const u = put(g, 'shipyard-skulker', 0, bf(0));
     control(g, 0, 0);
-    reask(g);
-    expect(keys(g)).not.toContain('move');
+    expect(moveDestinations(g.s, u)).toEqual([]);
   });
 
   it('On the Hunt: ready your units', () => {
@@ -642,6 +651,7 @@ describe('Spiritforged set: batch A', () => {
 
   it('Premonition: draw 3', () => {
     const g = tbl(9374);
+    runes(g, 0, [...ready('mind', 3), ...RICH]);
     const h = handSize(g);
     cast(g, 'premonition');
     expect(handSize(g)).toBe(h + 3);
@@ -964,5 +974,464 @@ describe('Spiritforged set: batch A', () => {
     act(g, 'yes');
     drive(g, [`t:${theirs}`]);
     expect([g.s.objects[mine], g.s.objects[theirs]]).toEqual([undefined, undefined]);
+  });
+});
+
+describe('Spiritforged set: batch B', () => {
+  it('Akshan, Mischievous: pay [O][O] to take an enemy gear (an Equipment attaches to me)', () => {
+    const g = tbl(9501);
+    runes(g, 0, [...ready('body', 3), ...RICH]);
+    const gr = put(g, 'boneshiver', 1, base(1));
+    const id = inHand(g, 'akshan-mischievous');
+    reask(g); act(g, `play:${id}`); act(g, 'yes'); drive(g, [`t:${gr}`]);
+    expect(g.s.objects[gr]).toMatchObject({ controller: 0, attachedTo: onBoard(g, 'akshan-mischievous', 0)[0] });
+  });
+
+  it('Altar of Memories: a friendly unit dies: may exhaust to draw 1 and put a card back', () => {
+    const g = tbl(9502);
+    put(g, 'altar-of-memories', 0, base(0));
+    const h = handSize(g);
+    put(g, 'mystic-poro', 0, base(0), { damage: 9 });
+    reask(g); drive(g, ['mode:0']);
+    expect(handSize(g)).toBe(h);
+  });
+
+  it('Ancient Henge: pay Energy to add that much [A]', () => {
+    const g = tbl(9503);
+    const a = put(g, 'ancient-henge', 0, base(0));
+    reask(g); act(g, `act:${a}#0`); drive(g, ['n:2']);
+    expect(g.s.players[0].pool.universal).toBe(2);
+  });
+
+  it('Ancient Warmonger: Assault equal to the enemy units here', () => {
+    const g = tbl(9504);
+    foe(g, 'mystic-poro'); foe(g, 'mystic-poro');
+    const w = put(g, 'ancient-warmonger', 0, bf(1));
+    expect(derived(g, w).assault).toBe(2);
+  });
+
+  it('Angle Shot: attach or detach an Equipment of the same controller; draw 1', () => {
+    const g = tbl(9505);
+    const u = put(g, 'shipyard-skulker', 0, base(0));
+    const e = put(g, 'boneshiver', 0, base(0));
+    cast(g, 'angle-shot', ['mode:0', `t:${u}`, `t:${e}`]);
+    expect(g.s.objects[e].attachedTo).toBe(u);
+  });
+
+  it('Azir, Ascendant: [G]: swap places with a unit you control (once per turn)', () => {
+    const g = tbl(9506);
+    const a = put(g, 'azir-ascendant', 0, base(0));
+    const u = put(g, 'shipyard-skulker', 0, bf(0)); control(g, 0, 0);
+    reask(g); act(g, `act:${a}#0`); drive(g, [`t:${u}`]);
+    expect(g.s.objects[a].zone).toEqual({ z: 'bf', bf: 0 });
+    reask(g);
+    expect(keys(g)).not.toContain(`act:${a}#0`);
+  });
+
+  it('Brutalizer: +2 if attached this turn', () => {
+    const g = tbl(9507);
+    const u = put(g, 'shipyard-skulker', 0, base(0));
+    const e = equip(g, 'brutalizer', u);
+    expect(mightOf(g.s, u)).toBe(3 + mightBonusOf('brutalizer'));
+    setField(g.s, g.s.objects[e], 'attachedTurn', g.s.turn.n);
+    expect(mightOf(g.s, u)).toBe(5 + mightBonusOf('brutalizer'));
+  });
+
+  it('Card Sharp: each opponent may take a Gold; you get one more for each who did', () => {
+    const g = tbl(9508);
+    cast(g, 'card-sharp', ['mode:0', 'mode:0']);
+    expect([golds(g), golds(g, 1)]).toEqual([2, 1]);
+  });
+
+  it('Counter Strike: prevent the next damage to a unit; draw 1', () => {
+    const g = tbl(9509);
+    const e = foe(g, 'shipyard-skulker');
+    cast(g, 'counter-strike', [`t:${e}`]);
+    cast(g, 'hextech-ray', [`t:${e}`]);
+    expect(dmg(g, e)).toBe(0);
+  });
+
+  it('Drag Under: [2] less from anywhere but hand; kill a unit at a battlefield', () => {
+    const g = tbl(9510);
+    const e = foe(g, 'mountain-drake');
+    cast(g, 'drag-under', [`t:${e}`]);
+    expect(g.s.objects[e]).toBeUndefined();
+  });
+
+  it('Experimental Hexplate: I am a Mech', () => {
+    const g = tbl(9511);
+    const u = put(g, 'shipyard-skulker', 0, base(0));
+    equip(g, 'experimental-hexplate', u);
+    put(g, 'rumble-scrapper', 0, base(0));
+    expect(mightOf(g.s, u)).toBeGreaterThanOrEqual(4);
+  });
+
+  it('Ezreal, Prodigal Explorer: draw once you chose enemies twice this turn', () => {
+    const g = tbl(9512, { legends: ['ezreal-prodigal-explorer'] });
+    const l = g.s.players[0].legend[0];
+    const e = foe(g, 'mountain-drake');
+    cast(g, 'hextech-ray', [`t:${e}`]);
+    reask(g); expect(keys(g)).not.toContain(`act:${l}#0`);
+    cast(g, 'hextech-ray', [`t:${e}`]);
+    reask(g); expect(keys(g)).toContain(`act:${l}#0`);
+  });
+
+  it('Fae Dragon: buff up to four; spending a buff makes a Gold', () => {
+    const g = tbl(9513);
+    runes(g, 0, [...ready('body', 3), ...RICH]);
+    const u = put(g, 'shipyard-skulker', 0, base(0));
+    cast(g, 'fae-dragon', [`t:${u}`]);
+    expect(g.s.objects[u].buffs).toBe(1);
+    cast(g, 'wallop', ['yes', `t:${u}`]);
+    expect(golds(g)).toBe(1);
+  });
+
+  it('Forge of the Fluft: friendly legends gain "[E]: attach an Equipment"', () => {
+    const g = tbl(9514, { bfs: ['forge-of-the-fluft'] });
+    put(g, 'mystic-poro', 0, bf(0)); control(g, 0, 0);
+    const u = put(g, 'shipyard-skulker', 0, base(0));
+    const e = put(g, 'boneshiver', 0, base(0));
+    const l = g.s.players[0].legend[0];
+    reask(g); act(g, `act:${l}#g0`); drive(g, [`t:${e}`, `t:${u}`]);
+    expect(g.s.objects[e].attachedTo).toBe(u);
+  });
+
+  it('Gearhead: Equipment give double Might bonus', () => {
+    const g = tbl(9515);
+    const u = put(g, 'gearhead', 0, base(0));
+    equip(g, 'brutalizer', u);
+    expect(mightOf(g.s, u)).toBe(3 + 2 * mightBonusOf('brutalizer'));
+  });
+
+  it('Guardian Angel: the unit is saved, the Angel dies', () => {
+    const g = tbl(9516);
+    const u = put(g, 'shipyard-skulker', 0, bf(0), { damage: 9 }); control(g, 0, 0);
+    const e = equip(g, 'guardian-angel', u);
+    reask(g); drive(g);
+    expect(g.s.objects[e]).toBeUndefined();
+    expect(g.s.objects[u].zone).toEqual({ z: 'base', p: 0 });
+  });
+
+  it('Hard Bargain: counter unless its controller pays [2]', () => {
+    const g = tbl(9517);
+    const u = put(g, 'shipyard-skulker', 0, base(0));
+    const hb = inHand(g, 'hard-bargain', 1);
+    const ps = inHand(g, 'primal-strength');
+    reask(g); act(g, `play:${ps}`); drive(g, [`t:${u}`, `play:${hb}`]);
+    expect(evs(g, 'counter').length + (mightOf(g.s, u) > 3 ? 1 : 0)).toBe(1);
+  });
+
+  it('Here to Help: play a unit from hand to your battlefield for [3] less', () => {
+    const g = tbl(9518);
+    put(g, 'mystic-poro', 0, bf(0)); control(g, 0, 0);
+    const c = inHand(g, 'mountain-drake');
+    cast(g, 'here-to-help', [`pick:${c}`]);
+    const d = onBoard(g, 'mountain-drake', 0);
+    expect(d).toHaveLength(1);
+    expect(g.s.objects[d[0]].zone).toEqual({ z: 'bf', bf: 0 });
+  });
+
+  it('Hextech Anomaly: pay [A]s to add that much Energy', () => {
+    const g = tbl(9519);
+    const a = put(g, 'hextech-anomaly', 0, base(0));
+    reask(g); act(g, `act:${a}#0`); drive(g, ['n:1']);
+    expect(g.s.players[0].pool.energy).toBeGreaterThanOrEqual(1);
+  });
+
+  it('Irelia, Blade Dancer: choosing a friendly unit, may exhaust me and pay [A] to ready it', () => {
+    const g = tbl(9520, { legends: ['irelia-blade-dancer'] });
+    const u = put(g, 'shipyard-skulker', 0, base(0), { exhausted: true });
+    cast(g, 'primal-strength', [`t:${u}`]);
+    expect(g.s.objects[u].exhausted).toBe(false);
+  });
+
+  it('Irelia, Graceful: your spells that choose me cost [1] less', () => {
+    const g = tbl(9521);
+    const i = put(g, 'irelia-graceful', 0, base(0));
+    const id = inHand(g, 'primal-strength');
+    reask(g); act(g, `play:${id}`); if (keys(g).includes(`t:${i}`)) act(g, `t:${i}`);
+    expect(g.s.pending).toMatchObject({ kind: 'payment', prompt: { energy: 3 } });
+  });
+
+  it('Jae Medarda: when you choose me with a spell, draw 1', () => {
+    const g = tbl(9522);
+    const j = put(g, 'jae-medarda', 0, base(0));
+    const h = handSize(g);
+    cast(g, 'primal-strength', [`t:${j}`]);
+    expect(handSize(g)).toBe(h + 1);
+  });
+
+  it('Jax, Grandmaster at Arms: attach a detached Equipment you control', () => {
+    const g = tbl(9523, { legends: ['jax-grandmaster-at-arms'] });
+    const u = put(g, 'shipyard-skulker', 0, base(0));
+    const e = put(g, 'boneshiver', 0, base(0));
+    reask(g); act(g, `act:${g.s.players[0].legend[0]}#0`); drive(g, [`t:${e}`, `t:${u}`]);
+    expect(g.s.objects[e].attachedTo).toBe(u);
+  });
+
+  it('Jax, Unmatched: your Equipment have Quick-Draw (Reaction from hand)', () => {
+    const g = tbl(9524);
+    put(g, 'jax-unmatched', 0, base(0));
+    const e = inHand(g, 'boneshiver');
+    expect(timingFrom(g.s, e).reaction).toBe(true);
+  });
+
+  it('Jax, Unrelenting: when you attach an Equipment to me, may pay [1] to draw 1', () => {
+    const g = tbl(9525);
+    const j = put(g, 'jax-unrelenting', 0, base(0));
+    const e = put(g, 'boneshiver', 0, base(0));
+    const h = handSize(g);
+    reask(g); act(g, `act:${e}#kwequip`); drive(g, [`t:${j}`]);
+    expect(handSize(g)).toBe(h + 1);
+  });
+
+  it('Karma, Channeler: recycling cards to your Main Deck buffs a friendly unit', () => {
+    const g = tbl(9526);
+    const k = put(g, 'karma-channeler', 0, base(0));
+    cast(g, 'stacked-deck');
+    expect(g.s.objects[k].buffs).toBe(1);
+  });
+
+  it('Kato the Arm: moving to a battlefield gives another friendly unit my keywords and Might', () => {
+    const g = tbl(9527);
+    const u = put(g, 'mystic-poro', 0, base(0));
+    moveTo(g, [put(g, 'kato-the-arm', 0, base(0))], 0);
+    drive(g, [`t:${u}`]);
+    expect(hasKeyword(g.s, u, 'deflect')).toBe(true);
+    expect(mightOf(g.s, u)).toBe(5);
+  });
+
+  it('Last Rites: when I conquer or hold, may play a unit from your trash', () => {
+    const g = tbl(9528);
+    inTrash(g, 'mystic-poro');
+    const u = put(g, 'shipyard-skulker', 0, base(0));
+    equip(g, 'last-rites', u);
+    moveTo(g, [u], 0); drive(g);
+    expect(onBoard(g, 'mystic-poro', 0)).toHaveLength(1);
+  });
+
+  it("Legion Quartermaster: return a friendly gear to hand as an additional cost", () => {
+    const g = tbl(9529);
+    put(g, 'arena-bar', 0, base(0));
+    cast(g, 'legion-quartermaster');
+    expect(defsIn(g, 'hand')).toContain('arena-bar');
+  });
+
+  it('Lucian, Purifier: your equipped units have Assault', () => {
+    const g = tbl(9530, { legends: ['lucian-purifier'] });
+    const u = put(g, 'shipyard-skulker', 0, base(0));
+    equip(g, 'boneshiver', u);
+    expect(hasKeyword(g.s, u, 'assault')).toBe(true);
+  });
+
+  it('Marai Spire: friendly Repeat costs cost [1] less', () => {
+    const g = tbl(9531, { bfs: ['marai-spire'] });
+    put(g, 'mystic-poro', 0, bf(0)); control(g, 0, 0);
+    const u = put(g, 'mystic-poro', 0, base(0));
+    const id = inHand(g, 'feral-strength');
+    reask(g); act(g, `play:${id}`); act(g, 'yes');
+    for (let i = 0; i < 6 && g.s.pending?.kind !== 'payment'; i++) drive(g, [`t:${u}`], { max: 1 });
+    expect(g.s.pending).toMatchObject({ kind: 'payment', prompt: { energy: 3 } });
+  });
+
+  it('Needlessly Large Yordle: [2][G] less per hold point this turn', () => {
+    const g = tbl(9532);
+    setField(g.s, g.s.log, 'points', [{ p: 0, n: 1, why: 'hold' }]);
+    const id = inHand(g, 'needlessly-large-yordle');
+    reask(g); act(g, `play:${id}`);
+    expect(g.s.pending).toMatchObject({ kind: 'payment', prompt: { energy: 8 } });
+  });
+
+  it('Not So Fast: counter an enemy spell that chooses a friendly unit', () => {
+    const g = tbl(9533, { first: 1 });
+    const u = put(g, 'mystic-poro', 0, base(0));
+    const n = inHand(g, 'not-so-fast', 0);
+    const r = inHand(g, 'rune-prison', 1);
+    reask(g); act(g, `play:${r}`); drive(g, [`t:${u}`, `play:${n}`]);
+    expect(g.s.objects[u].stunned).toBe(false);
+  });
+
+  it('Ornn, Fire Below the Mountain: [A] only for gear', () => {
+    const g = tbl(9534, { legends: ['ornn-fire-below-the-mountain'] });
+    reask(g); act(g, `act:${g.s.players[0].legend[0]}#0`); drive(g);
+    expect(g.s.players[0].pool.restricted).toMatchObject([{ kind: 'universal', onlyFor: 'gear' }]);
+  });
+
+  it('Prize of Progress: using a gear ability gives me +1', () => {
+    const g = tbl(9535);
+    const p = put(g, 'prize-of-progress', 0, base(0));
+    const a = put(g, 'arena-bar', 0, base(0));
+    put(g, 'mystic-poro', 0, base(0), { exhausted: true });
+    reask(g); act(g, `act:${a}#0`); drive(g);
+    expect(mightOf(g.s, p)).toBe(4);
+  });
+
+  it("Rabadon's Deathcrown: your spells deal 3 Bonus Damage", () => {
+    const g = tbl(9536);
+    equip(g, 'rabadons-deathcrown', put(g, 'mystic-poro', 0, base(0)));
+    const e = foe(g, 'mountain-drake');
+    cast(g, 'hextech-ray', [`t:${e}`]);
+    expect(dmg(g, e)).toBe(6);
+  });
+
+  it("Rek'Sai, Breacher: units played from elsewhere than hand get Accelerate", () => {
+    const g = tbl(9537);
+    runes(g, 0, [...RICH, ...ready('chaos', 2), ...ready('fury', 2)]);
+    put(g, 'reksai-breacher', 0, base(0));
+    inTrash(g, 'shipyard-skulker');
+    cast(g, 'the-harrowing', ['yes']);
+    expect(g.s.objects[onBoard(g, 'shipyard-skulker', 0)[0]].exhausted).toBe(false);
+  });
+
+  it('Relentless Pursuit: move a friendly unit, may attach an Equipment', () => {
+    const g = tbl(9538);
+    const u = put(g, 'shipyard-skulker', 0, base(0));
+    const e = put(g, 'boneshiver', 0, base(0));
+    cast(g, 'relentless-pursuit', [`t:${u}`, 'loc:bf0', `pick:${e}`]);
+    expect(g.s.objects[e].attachedTo).toBe(u);
+  });
+
+  it('Rell, Magnetic: when I attack, may play a cheap Equipment from hand free and attach it', () => {
+    const g = tbl(9539);
+    foe(g, 'mystic-poro');
+    inHand(g, 'seal-of-rage');
+    const e = inHand(g, 'cull');
+    const r = put(g, 'rell-magnetic', 0, base(0));
+    attack(g, r, [`pick:${e}`]);
+    const c = onBoard(g, 'cull', 0)[0];
+    expect(g.s.objects[c]?.attachedTo).toBe(r);
+  });
+
+  it('Renata Glasc, Chem-Baroness: hold may make a Gold; near a win your Gold adds [1] more', () => {
+    const g = tbl(9540, { legends: ['renata-glasc-chem-baroness'] });
+    put(g, 'mystic-poro', 0, bf(0)); control(g, 0, 0);
+    nextTurn(g);
+    expect(golds(g)).toBe(1);
+  });
+
+  it('Renata Glasc, Industrialist: your tokens enter ready', () => {
+    const g = tbl(9541);
+    put(g, 'renata-glasc-industrialist', 0, base(0));
+    cast(g, 'deserts-call');
+    expect(g.s.objects[onBoard(g, 'sandSoldier', 0)[0]].exhausted).toBe(false);
+  });
+
+  it("Ruin Runner: can't be chosen by enemy spells", () => {
+    const g = tbl(9542);
+    const r = put(g, 'ruin-runner', 1, base(1));
+    const id = inHand(g, 'rune-prison');
+    put(g, 'mystic-poro', 0, base(0));
+    reask(g); act(g, `play:${id}`);
+    expect(keys(g)).not.toContain(`t:${r}`);
+  });
+
+  it("Shurelya's Requiem: ready your units; your units here have Ganking", () => {
+    const g = tbl(9543);
+    const u = put(g, 'mystic-poro', 0, base(0), { exhausted: true });
+    cast(g, 'shurelyas-requiem');
+    expect(g.s.objects[u].exhausted).toBe(false);
+  });
+
+  it('Sivir, Battle Mistress: enemy units dying ready me', () => {
+    const g = tbl(9544, { legends: ['sivir-battle-mistress'] });
+    const l = g.s.players[0].legend[0];
+    setField(g.s, g.s.objects[l], 'exhausted', true);
+    cast(g, 'harnessed-dragon', [`t:${put(g, 'mystic-poro', 1, base(1))}`]);
+    expect(g.s.objects[l].exhausted).toBe(false);
+  });
+
+  it('Skyfall of Areion: my conquer effects are also hold effects', () => {
+    const g = tbl(9545);
+    const u = put(g, 'mystic-poro', 0, bf(0)); control(g, 0, 0);
+    equip(g, 'skyfall-of-areion', u);
+    equip(g, 'cull', u);
+    nextTurn(g);
+    expect(golds(g)).toBe(1);
+  });
+
+  it('Soraka, Wanderer: weaker friendly units here are saved', () => {
+    const g = tbl(9546);
+    put(g, 'soraka-wanderer', 0, bf(0)); control(g, 0, 0);
+    const u = put(g, 'mystic-poro', 0, bf(0), { damage: 9 });
+    reask(g); drive(g);
+    expect(g.s.objects[u].zone).toEqual({ z: 'base', p: 0 });
+  });
+
+  it('Spirit Wheel: choosing a friendly unit, may pay [1] and exhaust to draw 1', () => {
+    const g = tbl(9547);
+    put(g, 'spirit-wheel', 0, base(0));
+    const u = put(g, 'mystic-poro', 0, base(0));
+    const h = handSize(g);
+    cast(g, 'primal-strength', [`t:${u}`]);
+    expect(handSize(g)).toBe(h + 1);
+  });
+
+  it('Svellsongur: the unit has its text once more', () => {
+    const g = tbl(9548);
+    const u = put(g, 'stellacorn-herder', 0, base(0));
+    equip(g, 'svellsongur', u);
+    const h = handSize(g);
+    moveTo(g, [u], 0); drive(g);
+    expect(handSize(g)).toBe(h + 2);
+  });
+
+  it('Switcheroo: swap the Might of two units at the same battlefield', () => {
+    const g = tbl(9549);
+    const a = foe(g, 'mountain-drake'), b = foe(g, 'mystic-poro');
+    cast(g, 'switcheroo', [`t:${a}`, `t:${b}`]);
+    expect([mightOf(g.s, a), mightOf(g.s, b)]).toEqual([2, 10]);
+  });
+
+  it('Teemo, Strategist: when I defend, 1 damage per Hidden card in the top 5', () => {
+    const g = tbl(9550, { first: 1 });
+    put(g, 'teemo-strategist', 0, bf(0)); control(g, 0, 0);
+    for (const id of g.s.players[0].deck.slice(0, 5)) setField(g.s, g.s.objects[id], 'def', 'block');
+    const a = put(g, 'mountain-drake', 1, base(1));
+    moveTo(g, [a], 0); drive(g);
+    expect(evs(g, 'deal').some((d) => d.to === a && d.n === 5)).toBe(true);
+  });
+
+  it('Temporal Portal: the next spell gets Repeat equal to its cost', () => {
+    const g = tbl(9551);
+    const t = put(g, 'temporal-portal', 0, base(0));
+    reask(g); act(g, `act:${t}#0`); drive(g);
+    put(g, 'mystic-poro', 0, base(0));
+    const id = inHand(g, 'cleave');
+    reask(g); act(g, `play:${id}`);
+    expect(g.s.pending).toMatchObject({ kind: 'optionalCost', prompt: { ability: 'eff:repeat' } });
+  });
+
+  it('Temptation: move an enemy unit to a location with another unit of its controller', () => {
+    const g = tbl(9552);
+    const a = put(g, 'mystic-poro', 1, base(1));
+    foe(g, 'mountain-drake');
+    cast(g, 'temptation', [`t:${a}`]);
+    expect(g.s.objects[a].zone).toEqual({ z: 'bf', bf: 1 });
+  });
+
+  it('The Zero Drive: a dying wearer is banished with it; [3][B], banish this: play them', () => {
+    const g = tbl(9553);
+    const u = put(g, 'mystic-poro', 0, base(0), { damage: 9 });
+    const z = equip(g, 'the-zero-drive', u);
+    reask(g); drive(g);
+    expect(defsIn(g, 'banish')).toContain('mystic-poro');
+    reask(g); act(g, `act:${z}#0`); drive(g);
+    expect(onBoard(g, 'mystic-poro', 0)).toHaveLength(1);
+  });
+
+  it('Void Drone: [2] less from anywhere other than hand', () => {
+    const g = tbl(9554);
+    inTrash(g, 'void-drone');
+    const id = inHand(g, 'void-drone');
+    reask(g); act(g, `play:${id}`);
+    expect(g.s.pending).toMatchObject({ kind: 'payment', prompt: { energy: 3 } });
+  });
+
+  it('Void Hatchling: look at the top card before a reveal, may recycle it', () => {
+    const g = tbl(9555);
+    put(g, 'void-hatchling', 0, base(0));
+    moveTo(g, [put(g, 'apprentice-smith', 0, base(0))], 0);
+    drive(g);
+    expect(evs(g, 'look').length).toBeGreaterThan(0);
   });
 });

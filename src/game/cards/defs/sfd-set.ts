@@ -8,6 +8,7 @@ import {
   heal, iff, keywordTo, kill, kw, legend, legendSel, look, might, mightTo, modal, mode, move, named, onPlay, pay, permanentSel,
   pick, pickWhere, playCard, playerEffect, playFree, playToken, points, pred, prog, ready, recall, recycle, recycleRest,
   ref, returnToHand, revealTop, slot, spell, statik, stun, unit, unitSel, val, when, attach, exhaust,
+  choiceBy, counter, destSlot, detach, may, payX, spellSel, swap,
 } from '../../dsl/builders.ts';
 
 const friendly = unitSel({ rel: 'friendly' });
@@ -354,5 +355,188 @@ export const SFD_SET_DEFS = [
   unit('zaun-punk', 'You may kill a friendly gear as an additional cost to play me.\nWhen you play me, if you paid the additional cost, kill a gear.', {
     abilities: [costAbility({ optional: true, pay: { kill: { sel: gearSel({ rel: 'friendly' }), n: 1 } } }),
       onPlay(prog([kill(ref.slot('g'))], [slot('g', gearSel(), { harm: true })]), { if: cond.paid('zaun-punk#0') })],
+  }),
+
+  // ---- batch B ----
+  unit('akshan-mischievous', "[Weaponmaster]\nYou may pay [O][O] as an additional cost to play me.\nWhen you play me, if you paid the additional cost, move an enemy gear to your base. You control it until I leave the board. If it's an Equipment, attach it to me.", {
+    abilities: [costAbility({ optional: true, add: { power: ['body', 'body'] } }),
+      onPlay(prog([named('c', gainControl(ref.slot('g'))), recall(ref.bound('c')), iff(cond.is(ref.bound('c'), pred.tag('Equipment')), [attach(ref.bound('c'), ref.self)])],
+        [slot('g', gearSel({ rel: 'enemy' }), { harm: true })]), { if: cond.paid('akshan-mischievous#0') })],
+  }),
+  gear('altar-of-memories', 'When a friendly unit dies, you may exhaust me to draw 1, then put a card from your hand on the top or bottom of your Main Deck.', {
+    abilities: [when({ on: 'unitDies', at: 'any', who: 'friendly', each: true }, prog([draw(1), choose(cardSel({ in: 'hand', rel: 'friendly' }), 'c'),
+      choiceBy('self', [{ label: 'Top', body: [{ op: 'putOnTop', what: ref.bound('c') }] }, { label: 'Bottom', body: [recycle(ref.bound('c'))] }])]),
+    { may: true, cost: { exhaustSelf: true } })],
+  }),
+  gear('ancient-henge', '[Reaction][>] [E]: Pay any amount of Energy to [Add] that much [A].', {
+    abilities: [activated({ exhaustSelf: true }, prog([payX('x', 'energy'), { op: 'addX', name: 'x', as: 'power' }]), { timing: 'reaction' })],
+  }),
+  unit('ancient-warmonger', '[Accelerate]\nI have [Assault] equal to the number of enemy units here.', {
+    abilities: [always({ s: 'keyword', kw: kw.assault(), n: val.count(unitSel({ rel: 'enemy', at: 'here' })) })],
+  }),
+  spell('angle-shot', '[Reaction]\nChoose a unit and an Equipment with the same controller. Attach that Equipment to that unit or detach that Equipment from that unit. Draw 1.', {
+    kw: [kw.reaction()],
+    ...modal(1, [mode('Attach', [attach(ref.slot('e'), ref.slot('u'))]), mode('Detach', [detach(ref.slot('e'))])],
+      [slot('u', unitSel()), slot('e', equipment('any'))], [draw(1)]),
+  }),
+  unit('azir-ascendant', "[Action][>] [G]: Choose a unit you control. Move me to its location and it to my original location. If it's equipped, you may attach one of its Equipment to me. Use only once per turn.", {
+    abilities: [activated({ power: ['calm'] }, prog([swap(ref.self, ref.slot('u')),
+      choose(gearSel({ rel: 'friendly', where: [pred.tag('Equipment'), pred.attached] }), 'e', { min: 0, max: 1 }), attach(ref.bound('e'), ref.self)],
+    [slot('u', unitSel({ rel: 'friendly', other: true }))]), { timing: 'action', limit: { n: 1, per: 'turn' } })],
+  }),
+  gear('brutalizer', '[Equip] [G]\nIf this was attached to me this turn, I have an additional +2 [M].', {
+    abilities: [statik(2, { while: cond.attachedThisTurn, effectText: true })],
+  }),
+  unit('card-sharp', 'When you play me, you and each opponent may play a Gold gear token exhausted. For each opponent who did, you play a Gold gear token exhausted.', {
+    abilities: [onPlay(prog([choiceBy('self', [{ label: 'Gold', body: [gold(1)] }, { label: 'No', body: [] }]),
+      forEach('opponents', 'next', [choiceBy('self', [{ label: 'Gold', body: [gold(1), gold(1, { caster: true })] }, { label: 'No', body: [] }])])]))],
+  }),
+  spell('counter-strike', '[Reaction]\nChoose a unit. The next time that unit would be dealt damage this turn, prevent it. Draw 1.', {
+    kw: [kw.reaction()], choose: [slot('a', unitSel())], body: [{ op: 'preventNext', what: ref.slot('a') }, draw(1)],
+  }),
+  spell('drag-under', '[Action]\nI cost [2] less to play from anywhere other than your hand.\nKill a unit at a battlefield.', {
+    kw: [kw.action()], abilities: [costAbility({ discount: { energy: 2 }, while: cond.notFromHand })],
+    choose: [slot('a', atBf, { harm: true })], body: [kill(ref.slot('a'))],
+  }),
+  gear('experimental-hexplate', '[Equip] [B]\nI am a Mech.', { abilities: [always({ s: 'tag', tag: 'Mech' }, fx)] }),
+  legend('ezreal-prodigal-explorer', "[Reaction][>] [E]: Draw 1. Use only if you've chosen enemy units and/or gear twice this turn with spells or unit abilities.", [
+    activated({ exhaustSelf: true }, prog([draw(1)]), { timing: 'reaction', while: cond.chosenEnemies(2) }),
+  ]),
+  unit('fae-dragon', 'When you play me, buff up to four friendly units.\nWhen you spend a buff, play a Gold gear token exhausted.', {
+    abilities: [onPlay(prog([buff(ref.slot('a'))], [slot('a', friendly, { min: 0, max: 4 })])), when({ on: 'buffSpent' }, prog([gold(1)]))],
+  }),
+  battlefield('forge-of-the-fluft', 'While you control this battlefield, friendly legends have "[E]: Attach an Equipment you control to a unit you control."', [
+    always({ s: 'grantAbility', ability: 'forge-of-the-fluft#1', to: legendSel({ rel: 'friendly' }) }, { while: cond.controlsSelf }),
+    activated({ exhaustSelf: true }, prog([attach(ref.slot('e'), ref.slot('u'))], [slot('e', equipment()), slot('u', friendly)]), { grantedOnly: true }),
+  ]),
+  unit('gearhead', '[Accelerate]\nEach Equipment attached to me gives double its base Might bonus.', { abilities: [always({ s: 'doubleMightBonus' })] }),
+  gear('guardian-angel', '[Equip] [G]\nIf I would die, kill Guardian Angel instead. Heal me, exhaust me, and recall me.', {
+    abilities: [always({ s: 'saveHost' }, fx)],
+  }),
+  spell('hard-bargain', '[Reaction]\n[Repeat] [2]\nCounter a spell unless its controller pays [2].', {
+    kw: [kw.reaction()], choose: [slot('a', spellSel(), { harm: true })],
+    body: [named('p', { op: 'pay', cost: { energy: 2 }, who: { controllerOf: ref.slot('a') } }), iff(cond.not(cond.did('p')), [counter(ref.slot('a'))])],
+  }),
+  spell('here-to-help', '[Hidden]\n[Action]\nYou may play a unit from hand to a battlefield you control, reducing its cost by [3].', {
+    kw: [kw.action()],
+    body: [choose(cardSel({ in: 'hand', rel: 'friendly', where: [pred.type('unit')] }), 'c', { min: 0, max: 1 }), choose(bfSel({ rel: 'friendly' }), 'b'),
+      { op: 'playCard', what: ref.bound('c'), energyLess: 3, atRef: ref.bound('b') }],
+  }),
+  gear('hextech-anomaly', '[Reaction][>] [E]: Pay any amount of [A] to [Add] that much Energy.', {
+    abilities: [activated({ exhaustSelf: true }, prog([payX('x'), { op: 'addX', name: 'x', as: 'energy' }]), { timing: 'reaction' })],
+  }),
+  legend('irelia-blade-dancer', 'When you choose a friendly unit, you may exhaust me and pay [A] to ready it.\nWhen you conquer, you may pay [1] to ready me.', [
+    when({ on: 'chosen', who: 'friendly' }, prog([ready(ref.subject)]), { may: true, cost: { exhaustSelf: true, power: ['A'] } }),
+    when({ on: 'conquer', who: 'you', at: 'any' }, prog([ready(ref.self)]), { may: true, cost: { energy: 1 } }),
+  ]),
+  unit('irelia-graceful', 'Your spells that choose me cost [1] or [A] less.', {
+    abilities: [costAbility({ grant: { types: ['spell'] }, discount: { energy: 1, ifChoosesSource: true } })],
+  }),
+  unit('jae-medarda', 'When you choose me with a spell, draw 1.', { abilities: [when({ on: 'chosen', who: 'self', spell: true }, prog([draw(1)]))] }),
+  legend('jax-grandmaster-at-arms', '[1], [E]: Attach a detached Equipment you control to a unit you control.\n[E]: Attach an attached Equipment you control to a unit you control.', [
+    activated({ energy: 1, exhaustSelf: true }, prog([attach(ref.slot('e'), ref.slot('u'))],
+      [slot('e', gearSel({ rel: 'friendly', where: [pred.tag('Equipment'), pred.not(pred.attached)] })), slot('u', friendly)])),
+    activated({ exhaustSelf: true }, prog([attach(ref.slot('e'), ref.slot('u'))],
+      [slot('e', gearSel({ rel: 'friendly', where: [pred.tag('Equipment'), pred.attached] })), slot('u', friendly)])),
+  ]),
+  unit('jax-unmatched', '[Deflect]\nYour Equipment everywhere have [Quick-Draw].', {
+    abilities: [keywordTo({ kw: 'quickDraw' }, equipment()), always({ s: 'equipmentQuickDraw' })],
+  }),
+  unit('jax-unrelenting', '[Weaponmaster]\nWhen you attach an Equipment to me, you may pay [1] to draw 1.', {
+    abilities: [when({ on: 'attached', who: 'self' }, prog([draw(1)]), { may: true, cost: { energy: 1 } })],
+  }),
+  unit('karma-channeler', '[Vision]\nWhen you recycle one or more cards to your Main Deck, buff a friendly unit.', {
+    abilities: [when({ on: 'recycled' }, prog([buff(ref.slot('a'))], [slot('a', friendly)]))],
+  }),
+  unit('kato-the-arm', '[Deflect]\nWhen I move to a battlefield, give another friendly unit my keywords and +[M] equal to my Might this turn.', {
+    abilities: [when(movedToBf, prog([{ op: 'grantKeywordsOf', from: ref.self, to: ref.slot('a') }], [slot('a', unitSel({ rel: 'friendly', other: true }))]))],
+  }),
+  gear('last-rites', '[Equip] — [P], Recycle 2 cards from your trash\nWhen I conquer or hold, you may play a unit from your trash.', {
+    abilities: [when({ on: 'score', who: 'you', at: 'here' }, prog([playCard(ref.slot('c'))], [slot('c', cardSel({ rel: 'friendly', where: [pred.type('unit')] }))]),
+      { may: true, effectText: true })],
+  }),
+  unit('legion-quartermaster', "As an additional cost to play me, return a friendly gear to its owner's hand.", {
+    abilities: [costAbility({ pay: { bounce: { sel: gearSel({ rel: 'friendly' }), n: 1 } } })],
+  }),
+  legend('lucian-purifier', 'Your Equipment each give [Assault].', [keywordTo(kw.assault(), unitSel({ rel: 'friendly', where: [pred.equipped] }))]),
+  battlefield('marai-spire', 'While you control this battlefield, friendly [Repeat] costs cost [1] less.', [
+    always({ s: 'repeatLess' }, { while: cond.controlsSelf }),
+  ]),
+  unit('needlessly-large-yordle', '[Shield 5]\n[Tank]\nI cost [2][G] less for each point you scored from holding this turn.', {
+    abilities: [costAbility({ discount: { energy: 2, power: 1, times: val.holdPoints } })],
+  }),
+  spell('not-so-fast', '[Reaction]\nCounter an enemy spell or ability that chooses a friendly unit or gear.', {
+    kw: [kw.reaction()], choose: [slot('a', spellSel({ rel: 'enemy', where: [pred.choosesFriendly] }), { harm: true })], body: [counter(ref.slot('a'))],
+  }),
+  legend('ornn-fire-below-the-mountain', '[Reaction][>] [E]: [Add] [A]. Use only to play gear or use gear abilities.', [
+    activated({ exhaustSelf: true }, prog([{ op: 'add', power: 1, onlyFor: 'gear' }]), { timing: 'reaction', isAdd: true }),
+  ]),
+  unit('prize-of-progress', 'When you use an activated ability of a gear, give me +1 [M] this turn.', {
+    abilities: [when({ on: 'gearAbility' }, prog([might(1, ref.self)]))],
+  }),
+  gear('rabadons-deathcrown', '[Unique]\n[Equip] [A]\nYour spells and abilities deal 3 Bonus Damage.', {
+    abilities: [always({ s: 'bonusDamage', n: 3, by: 'you' }, fx)],
+  }),
+  unit('reksai-breacher', "[Accelerate]\n[Assault]\nFriendly units played from anywhere other than a player's hand have [Accelerate].", {
+    abilities: [costAbility({ grant: { types: ['unit'] }, optional: true, add: { energy: 1, power: ['C'] }, accelerate: true, while: cond.notFromHand })],
+  }),
+  spell('relentless-pursuit', '[Action]\nMove a friendly unit. You may attach up to one Equipment with the same controller to it. This turn, that unit has "When I conquer, you may move me to my base."', {
+    kw: [kw.action()], choose: [slot('a', friendly), destSlot('d', 'a')],
+    body: [move(ref.slot('a'), { dest: 'd' }), choose(equipment(), 'e', { min: 0, max: 1 }), attach(ref.bound('e'), ref.slot('a')),
+      delayed(999, { on: 'conquer', who: 'you', at: 'any' }, prog([iff(cond.is(ref.info('u'), pred.atEventBf), [may([move(ref.info('u'), 'base')])])]),
+        { capture: { u: ref.slot('a') } })],
+  }),
+  unit('rell-magnetic', '[Tank]\nWhen I attack, you may play an Equipment with Energy cost no more than [2], ignoring its cost. If you do, then do this: Attach it to me.', {
+    abilities: [when({ on: 'attack', who: 'self' }, prog([choose(cardSel({ in: 'hand', rel: 'friendly', where: [pred.tag('Equipment'), pred.energyCost('<=', 2)] }), 'e'),
+      named('p', playFree(ref.bound('e'))),
+      iff(cond.did('p'), [delayed(1, { on: 'cardPlayed', by: 'you', what: { types: ['gear'] } }, prog([attach(ref.subject, ref.info('r'))]), { capture: { r: ref.self } })])]),
+    { may: true })],
+  }),
+  legend('renata-glasc-chem-baroness', 'When you or an ally hold, you may exhaust me to play a Gold gear token exhausted.\nWhile your score is within 3 points of the Victory Score, your Gold [Add] an additional [1].', [
+    when({ on: 'hold', who: 'you', at: 'any' }, prog([gold(1)]), { may: true, cost: { exhaustSelf: true } }),
+    always({ s: 'goldBonus' }, { while: cond.nearWin(3) }),
+  ]),
+  unit('renata-glasc-industrialist', 'Your tokens enter ready.', { abilities: [always({ s: 'tokensEnterReady' })] }),
+  unit('ruin-runner', "I can't be chosen by enemy spells and abilities.", { abilities: [always({ s: 'noEnemyChoose' })] }),
+  gear('shurelyas-requiem', '[Unique]\n[Equip] [A]\nWhen you play this, ready your units.\nYour units here have [Ganking].', {
+    abilities: [onPlay(prog([ready(friendly)])), keywordTo(kw.ganking(), unitSel({ rel: 'friendly', at: 'here' }), fx)],
+  }),
+  legend('sivir-battle-mistress', 'When you recycle a rune, you may exhaust me to play a Gold gear token exhausted.\nWhen one or more enemy units die, ready me.', [
+    when({ on: 'runeRecycled' }, prog([gold(1)]), { may: true, cost: { exhaustSelf: true } }),
+    when({ on: 'unitDies', at: 'any', who: 'enemy' }, prog([ready(ref.self)])),
+  ]),
+  gear('skyfall-of-areion', '[Equip] [1][R]\nMy hold effects are also conquer effects, and vice versa.', { abilities: [always({ s: 'holdIsConquer' }, fx)] }),
+  unit('soraka-wanderer', 'I must be assigned combat damage last.\nIf another unit you control here would die, if it has less Might than me, instead heal it, exhaust it, and recall it.', {
+    abilities: [keywordTo(kw.backline()), always({ s: 'saveWeakerHere' })],
+  }),
+  gear('spirit-wheel', 'When you choose a friendly unit, you may pay [1] and exhaust this to draw 1.', {
+    abilities: [when({ on: 'chosen', who: 'friendly' }, prog([draw(1)]), { may: true, cost: { energy: 1, exhaustSelf: true } })],
+  }),
+  gear('svellsongur', "[Equip] [1][G]\nAs this is attached to a unit, copy that unit's text to this Equipment's effect text for as long as this is attached to it.", {
+    abilities: [always({ s: 'copyHostText' }, fx)],
+  }),
+  spell('switcheroo', '[Hidden]\n[Action]\nSwap the Might of two units at the same battlefield this turn.', {
+    kw: [kw.action()], choose: [slot('a', atBf), slot('b', unitSel({ at: { slot: 'a' } }), { distinctFrom: ['a'] })],
+    body: [{ op: 'swapMight', a: ref.slot('a'), b: ref.slot('b') }],
+  }),
+  unit('teemo-strategist', '[Hidden]\nWhen I defend, choose an enemy unit here and reveal the top 5 cards of your Main Deck. Deal 1 to that unit for each card with [Hidden] revealed this way, then recycle the revealed cards.', {
+    abilities: [when({ on: 'defend', who: 'self' }, prog([revealTop('r', 5), deal({ v: 'countBound', name: 'r', where: [pred.keyword('hidden')] }, ref.slot('a')),
+      recycle(ref.bound('r'))], [slot('a', enemyHere, { harm: true })]))],
+  }),
+  gear('temporal-portal', '[A], [E]: Give the next spell you play this turn [Repeat] equal to its cost.', {
+    abilities: [activated({ power: ['A'], exhaustSelf: true }, prog([playerEffect({ s: 'grantRepeat', uses: 1 })]))],
+  }),
+  spell('temptation', "[Repeat] [2]\nMove an enemy unit to a location where there's a unit with the same controller.", {
+    choose: [slot('a', unitSel({ rel: 'enemy' }), { harm: true }), destSlot('d', 'a', 'withFriends')], body: [move(ref.slot('a'), { dest: 'd' })],
+  }),
+  gear('the-zero-drive', '[Equip] [1][B]\n[3][B], Banish this: Play all units banished with this, ignoring their costs.\n[Deathknell][>] Banish me.', {
+    abilities: [activated({ energy: 3, power: ['mind'], banishSelf: true }, prog([{ op: 'playLinked', group: 'the-zero-drive' }])),
+      deathknell(prog([{ op: 'banish', what: ref.now(ref.self), linkGroup: 'the-zero-drive' }]), fx)],
+  }),
+  unit('void-drone', 'I cost [2] less to play from anywhere other than your hand.', {
+    abilities: [costAbility({ discount: { energy: 2 }, while: cond.notFromHand })],
+  }),
+  unit('void-hatchling', 'If you would reveal cards from a deck, look at the top card first. You may recycle it. Then reveal those cards.', {
+    abilities: [always({ s: 'peekBeforeReveal' })],
   }),
 ];

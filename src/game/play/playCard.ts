@@ -37,7 +37,7 @@
  * to S2 and its card returns to where it came from with the identity it
  * had there; a token whose play fails ceases to exist (Spec D §8.5, OQ-6).
  */
-import { cardDef } from '../cards/registry.ts';
+import { abilityById, cardDef } from '../cards/registry.ts';
 import { findCard } from '../cards/oracle.ts';
 import { K, parseKey, type Option } from '../core/decisions.ts';
 import { emit, emitZone, knowers } from '../core/events.ts';
@@ -208,7 +208,10 @@ export function playable(s: GameState, id: ObjId): boolean {
 export function timingFrom(s: GameState, id: ObjId): Timing {
   const o = s.objects[id];
   if (o.zone.z === 'facedown') return { action: false, reaction: true };
-  return cardTiming(o.def);
+  const t = cardTiming(o.def);
+  // "Your Equipment everywhere have [Quick-Draw]" (Jax, Unmatched): its Reaction timing [819].
+  if (tagsOf(o).includes('Equipment') && staticsFor(s, null, 'equipmentQuickDraw').some(({ st }) => st.ctl === o.owner)) t.reaction = true;
+  return t;
 }
 
 /** The domains the cards in p's hand need Power of, for payment ranking. */
@@ -367,7 +370,7 @@ const chosenTargets = (it: ChainItem): TargetRef[] => it.play.choices.executions
 /** The total cost of the item as chosen so far [356]. */
 function playCost(s: GameState, it: ChainItem, extra: TargetRef[] = []): ResourceCost {
   const o = s.objects[it.obj!];
-  return totalCost(s, { def: o.def, types: typesOf(o), p: it.controller, base: baseCost(s, it), chosen: chosenOptional(it), xs: xsOf(it),
+  return totalCost(s, { def: o.def, types: typesOf(o), p: it.controller, base: baseCost(s, it), chosen: chosenOptional(it), xs: xsOf(it), origin: it.play.origin.z,
     targets: [...chosenTargets(it), ...extra] });
 }
 
@@ -416,7 +419,7 @@ function optionalCostStep(s: GameState, f: PlayFrame, x: RunCtx, it: ChainItem, 
   if (key === undefined) {
     const o = s.objects[f.obj];
     const can = (yes: boolean) => paymentPlans(s, it.controller, totalCost(s, { def: o.def, types: typesOf(o), p: it.controller,
-      base: baseCost(s, it), chosen: [...chosenOptional(it), ...(yes ? [off.key] : [])] }), { limit: 1, spell: isSpellItem(s, it) })
+      base: baseCost(s, it), chosen: [...chosenOptional(it), ...(yes ? [off.key] : [])], origin: it.play.origin.z }), { limit: 1, spell: isSpellItem(s, it) })
       .length > 0;
     const yes = can(true), no = can(false);
     if (yes !== no) {
@@ -522,10 +525,10 @@ const STEPS: StepTable<PlayFrame> = [
     const spell = isType(o, 'spell');
     const asPlayed = it.play.choices.asPlayed;
     if (cardShowOff(o.def) && asPlayed.showOff !== true) return showOffStep(s, f, x, it);
-    const open = optionalOffers(s, o.def, typesOf(o), it.controller).filter((c) => it.play.choices.optionalCosts[c.key] === undefined);
+    const open = optionalOffers(s, o.def, typesOf(o), it.controller, it.play.origin.z).filter((c) => it.play.choices.optionalCosts[c.key] === undefined);
     if (open.length > 0) return optionalCostStep(s, f, x, it, open[0]);
     // "You may kill any number of friendly units as an additional cost": how many [355.1.a].
-    const xOff = costOffers(s, o.def, typesOf(o), it.controller).find((c) => c.a.x && asPlayed[`x:${c.key}`] === undefined);
+    const xOff = costOffers(s, o.def, typesOf(o), it.controller, it.play.origin.z).find((c) => c.a.x && asPlayed[`x:${c.key}`] === undefined);
     if (xOff) {
       const max = xMax(s, xOff.a.x!, it.controller);
       const key = answer(f);
@@ -568,7 +571,7 @@ const STEPS: StepTable<PlayFrame> = [
     if (spell) {
       const restrictBf = it.play.origin.z === 'facedown' ? it.play.origin.bf : undefined;
       // One execution more for each Repeat paid, each with its own choices [820.2].
-      const repeats = costOffers(s, o.def, typesOf(o), it.controller).filter((c) => c.a.repeat && chosenOptional(it).includes(c.key));
+      const repeats = costOffers(s, o.def, typesOf(o), it.controller, it.play.origin.z).filter((c) => c.a.repeat && chosenOptional(it).includes(c.key));
       if (it.play.choices.executions.length < 1 + repeats.length) {
         setField(s, it.play.choices, 'executions', [...it.play.choices.executions, { modes: [], dests: {}, targets: {} }]);
         return 'continue';
@@ -593,10 +596,10 @@ const STEPS: StepTable<PlayFrame> = [
     const c = playCost(s, it);
     const chosen = chosenOptional(it);
     const xs = xsOf(it);
-    const other = costOffers(s, o.def, typesOf(o), it.controller)
+    const other = costOffers(s, o.def, typesOf(o), it.controller, it.play.origin.z)
       .filter((off) => off.a.pay && (!off.a.optional || chosen.includes(off.key)))
       .map((off) => ({ key: off.key, src: off.src, pay: off.a.pay! }) as unknown as Json);
-    for (const off of costOffers(s, o.def, typesOf(o), it.controller)) {   // the objects of an "any number" cost
+    for (const off of costOffers(s, o.def, typesOf(o), it.controller, it.play.origin.z)) {   // the objects of an "any number" cost
       const n = xs[off.key] ?? 0;
       if (!off.a.x || n === 0) continue;
       const pay: NonStdCostAst = off.a.x.kill ? { kill: { sel: off.a.x.kill, n } } : { spendBuff: { sel: off.a.x.spendBuff!, n } };
@@ -670,6 +673,7 @@ const STEPS: StepTable<PlayFrame> = [
     const types = typesOf(card);
     if (!card.token) {
       // "The next spell you play this turn costs [5] less / deals 1 Bonus Damage": used up now.
+      if (types.includes('spell')) for (const e of playerEffects(s, p, 'grantRepeat')) { useEffect(s, e.id); break; }
       for (const e of playerEffects(s, p, 'costLess')) {
         if (((e.spec as { types?: CardType[] }).types ?? []).some((t) => types.includes(t))) { useEffect(s, e.id); break; }
       }
@@ -687,8 +691,8 @@ const STEPS: StepTable<PlayFrame> = [
       // What the spell chose: the turn log ("chose … this turn") and The Dreaming Tree.
       const chosen = [...new Set(it.play.choices.executions.flatMap((ex) => Object.values(ex.targets).flat())
         .flatMap((t) => (t.k === 'obj' && s.objects[t.id] ? [t.id] : [])))];
-      for (const obj of chosen) append(s, s.log.targeted, { item: it.id, by: p, obj, spell: true });
-      if (chosen.length > 0) fire(s, x, { e: 'chosen', p, objs: chosen });
+      for (const obj of chosen) append(s, s.log.targeted, { item: it.id, by: p, obj, spell: true, enemy: enemyThing(s, obj, p) });
+      if (chosen.length > 0) fire(s, x, { e: 'chosen', p, objs: chosen, spell: true });
       requestCleanup(s);
       return 'done';                                                 // a spell waits on the chain [359.3]
     }
@@ -724,6 +728,12 @@ const STEPS: StepTable<PlayFrame> = [
 
 defineSteps('play', STEPS);
 
+/** An enemy unit or gear ("chosen enemy units and/or gear"). */
+export const enemyThing = (s: GameState, id: ObjId, p: PlayerId) => {
+  const o = s.objects[id];
+  return o.controller !== null && o.controller !== p && (isType(o, 'unit') || isType(o, 'gear'));
+};
+
 /** Spends one use of a player effect (Last Caress's permission, Nami's next unit). */
 function useEffect(s: GameState, id: number) {
   const e = s.effects.find((x) => x.id === id);
@@ -751,11 +761,14 @@ function enteringExhausted(s: GameState, it: ChainItem, obj: ObjId, unit: boolea
   }
   if (ov.exhausted) return true;
   if (ov.ready) return false;
+  // "Your tokens enter ready" (Renata Glasc, Industrialist).
+  if (o.token && staticsFor(s, null, 'tokensEnterReady').some(({ st }) => st.ctl === p)) return false;
   const facts = { ...it.play.facts, ...(loc.z === 'bf' ? { to: loc } : {}) };
   if (!unit) {
     return (cardDef(o.def)?.abilities ?? []).some((a) => a.kind === 'static' && a.spec.s === 'entersExhausted');
   }
-  let ready = facts.paidOptional.some((k) => k.endsWith('#kw:accelerate'));   // [805.2.b]
+  let ready = facts.paidOptional.some((k) => k.endsWith('#kw:accelerate')      // [805.2.b], or an Accelerate given to it (Rek'Sai)
+    || (abilityById(k.split('@')[0]) as { accelerate?: true } | undefined)?.accelerate === true);
   for (const a of cardDef(o.def)?.abilities ?? []) {
     if (a.kind !== 'static' || a.spec.s !== 'entersReady' || a.spec.to) continue;
     if (!a.while || evalCond(s, a.while, { controller: p, source: obj, facts })) ready = true;

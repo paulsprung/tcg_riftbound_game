@@ -35,13 +35,15 @@ import type { ChainItem, Frame, GameState, Json, ObjId, PlayerId } from '../stat
 import { countFinalized } from '../abilities/triggers.ts';
 import { addItem, finalizeItem, itemById, playContext, removeItem } from '../rules/chain.ts';
 import { snapshotOf } from '../rules/chars.ts';
-import { paymentPlans } from '../rules/resources.ts';
+import { goldBonus, paymentPlans } from '../rules/resources.ts';
 import { slotLocsOf, stillLegal } from '../rules/targets.ts';
 import { abilityTiming, timingOk, windowAllows, type Window } from '../rules/timing.ts';
 import { choicesPossible, chooseNext, slotsOf } from './choices.ts';
 import { payStep } from './pay.ts';
 import { deflectFor } from './cost.ts';
-import { resourceCost } from './playCard.ts';
+import { enemyThing, resourceCost } from './playCard.ts';
+import { fire } from '../abilities/triggers.ts';
+import { append } from '../state/mut.ts';
 import { findCard } from '../cards/oracle.ts';
 
 type AbilityFrame = FrameOf<'ability'>;
@@ -74,6 +76,7 @@ export function canActivate(s: GameState, p: PlayerId, src: ObjId, a: ActivatedA
   const c = resourceCost(a.cost, domainsOf(s, src));
   if (a.cost.energyLessBy) c.energy = 0;                             // reduced by the unit chosen: checked as it is paid
   if (paymentPlans(s, p, c, { limit: 1 }).length === 0) return false;
+  if (a.limit && (s.usage[usageKey(src, a.id, '*')] ?? 0) >= a.limit.n) return false;   // "Use only once per turn"
   if (a.modesOncePerTurn && a.effect.modes) {
     const left = a.effect.modes.of.filter((_, i) => !(s.usage[usageKey(src, `${a.id}:mode${i}`, '*')] > 0)).length;
     if (left < a.effect.modes.pick) return false;
@@ -227,7 +230,7 @@ const STEPS: StepTable<AbilityFrame> = [
     setField(s, it.play, 'step', 5);
     const a = abilityOf(s, f);
     const ex = it.play.choices.executions[0];
-    const c = { controller: it.controller, source: it.source ?? null, slotLoc: slotLocsOf(s, ex) };
+    const c = { controller: it.controller, source: it.source ?? null, slotLoc: slotLocsOf(s, ex), lkiHere: it.sourceLki?.loc ?? null };
     const bad = slotsOf(a.effect, ex.modes).some((sl) => (ex.targets[sl.id] ?? []).some((t) => !stillLegal(s, t, sl, c)));
     if (bad || !timingOk(s, it)) return a.kind === 'triggered' ? removeTrigger(s, f, x, 'illegal') : rollback(s, f, x, 'illegal');
     return next(f);
@@ -240,10 +243,21 @@ const STEPS: StepTable<AbilityFrame> = [
     finalizeItem(s, x, it);
     countFinalized(s, it);                                           // [383.3.e]
     const a = abilityOf(s, f);
+    const srcObj = it.source !== undefined ? s.objects[it.source] : undefined;
+    if (a.kind === 'activated' && a.limit && it.source !== undefined) countUsage(s, usageKey(it.source, a.id, '*'));   // "Use only once per turn"
+    if (!it.isAdd && srcObj && (isType(srcObj, 'unit') || isType(srcObj, 'gear'))) {
+      // What a unit's or gear's ability chose ("with spells or unit abilities", "When you choose a friendly unit").
+      const chosen = [...new Set(it.play.choices.executions.flatMap((ex) => Object.values(ex.targets).flat())
+        .flatMap((t) => (t.k === 'obj' && s.objects[t.id] ? [t.id] : [])))];
+      if (isType(srcObj, 'unit')) for (const obj of chosen) append(s, s.log.targeted, { item: it.id, by: it.controller, obj, spell: false, enemy: enemyThing(s, obj, it.controller) });
+      if (chosen.length > 0) fire(s, x, { e: 'chosen', p: it.controller, objs: chosen, spell: false });
+      if (a.kind === 'activated' && isType(srcObj, 'gear')) fire(s, x, { e: 'gearAbility', p: it.controller, source: srcObj.id });
+    }
     if (a.kind === 'activated' && a.modesOncePerTurn && it.source !== undefined) {
       for (const m of it.play.choices.executions[0].modes) countUsage(s, usageKey(it.source, `${a.id}:mode${m}`, '*'));
     }
     if (a.kind === 'activated' && a.isAdd) {
+      if (a.id === 'gold#0' && goldBonus(s, it.controller)) addSpecial(s, x, it.controller, { energy: 1, source: 'gold' }, '430.2');
       for (const ins of a.effect.body) {
         if (ins.op !== 'add') continue;
         addSpecial(s, x, it.controller, { energy: ins.energy, universal: ins.power, onlyFor: ins.onlyFor,

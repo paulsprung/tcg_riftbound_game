@@ -31,6 +31,10 @@ export interface CondCtx {
   lki?: Snapshot | null;
   /** Names the resolution bound ("it": the revealed card). */
   bound?: Record<string, Json>;
+  /** Where the card being played comes from. */
+  origin?: string;
+  /** The Equipment whose effect text is evaluated. */
+  thisObj?: ObjId | null;
 }
 
 /** Whether an outcome counts as "you do" [359.3.e.14.b]: the instruction
@@ -113,6 +117,9 @@ export function evalCond(s: GameState, c: CondAst, x: CondCtx): boolean {
     }
     case 'full': return x.outcomes?.[`id:${c.instr}`]?.o === 'executed';
     case 'lkiAtBf': return x.lki?.loc?.z === 'bf';
+    case 'notFromHand': return x.origin !== undefined && x.origin !== 'hand';
+    case 'attachedThisTurn': return x.thisObj !== undefined && x.thisObj !== null && s.objects[x.thisObj]?.attachedTurn === s.turn.n;
+    case 'chosenEnemies': return new Set(s.log.targeted.filter((t) => t.by === x.controller && t.enemy).map((t) => t.item)).size >= c.n;
     case 'controlsSelf': return x.source !== null && s.objects[x.source]?.controller === x.controller;
     case 'powerSpent': return (s.log.powerSpent[x.controller] ?? 0) >= c.n;
     case 'nearWin': return s.players[x.controller].points >= victoryScore(s) - c.within;

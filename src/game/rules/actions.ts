@@ -30,7 +30,7 @@ import { shuffled, shuffleZone } from '../state/rng.ts';
 import { locOf, Z } from '../state/zones.ts';
 import type { Domain, GameObject, GameState, Json, Loc, ObjId, PlayerId, PowerReq, RunePool, Zone } from '../state/types.ts';
 import { opponentsOf } from './board.ts';
-import { isType, snapshotOf } from './chars.ts';
+import { isType, mightOf as mightOfUnit, snapshotOf } from './chars.ts';
 import { friendsAt } from './targets.ts';
 import { maxBuffs, victoryScore } from './defaults.ts';
 import { requestCleanup } from './tasks.ts';
@@ -142,6 +142,7 @@ export function recycleRune(s: GameState, x: X, id: ObjId, rule: string): ObjId 
   emitZone(s, x, { obj, prev: id, from, to: Z.runeDeck(o.owner), why: 'recycle', rule, before, group });
   emit(s, x, { k: 'recycle', p: o.owner, objs: [obj], rule, group });
   requestCleanup(s);                                                 // leaving the board [319.6]
+  if (from.z === 'base') fire(s, x, { e: 'recycled', p: o.owner, rune: true });   // "When you recycle a rune"
   return obj;
 }
 
@@ -196,6 +197,22 @@ function savedFromDeath(s: GameState, x: X, id: ObjId, dying: ObjId[]): boolean 
       healExhaustRecall(s, x, id);
       return true;
     }
+  }
+  for (const { st } of staticsFor(s, id, 'saveHost')) {             // Guardian Angel: "kill this instead"
+    if (st.via === undefined || !s.objects[st.via] || dying.includes(st.via)) continue;
+    emit(s, x, { k: 'replaced', source: st.via, event: 'die', rule: '369.1' });
+    kill(s, x, [st.via], { rule: '429', inCombat: () => false });
+    healExhaustRecall(s, x, id);
+    return true;
+  }
+  for (const { st } of staticsFor(s, null, 'saveWeakerHere')) {     // Soraka, Wanderer
+    const h = s.objects[st.host];
+    const hl = h ? locOf(h) : null, ul = locOf(u);
+    if (!h || st.host === id || st.ctl !== p || !hl || !ul || JSON.stringify(hl) !== JSON.stringify(ul)) continue;
+    if (mightOfUnit(s, id) >= mightOfUnit(s, st.host)) continue;
+    emit(s, x, { k: 'replaced', source: st.host, event: 'die', rule: '369.1' });
+    healExhaustRecall(s, x, id);
+    return true;
   }
   for (const { st } of staticsFor(s, null, 'saveFriendly')) {
     const h = s.objects[st.host];
@@ -317,6 +334,13 @@ export function deal(s: GameState, x: X, hits: { to: ObjId; n: number }[], o: {
   const hit: ObjId[] = [];
   for (const h of hits) {
     if (h.n < 1) continue;
+    // "The next time that unit would be dealt damage this turn, prevent it" (Counter Strike) [438].
+    const pv = s.effects.find((e) => (e.spec as { s?: string } | null)?.s === 'preventNext' && 'objs' in e.affects && e.affects.objs.includes(h.to));
+    if (pv) {
+      setField(s, s, 'effects', s.effects.filter((e) => e.id !== pv.id));
+      emit(s, x, { k: 'replaced', source: pv.source ?? h.to, event: 'deal', rule: '438' });
+      continue;
+    }
     const u = s.objects[h.to];
     append(s, u.damage, { amount: h.n, by: o.by, sources: o.sources, combat: o.combat, group });
     setField(s, u, 'lastDamage', { item: o.item ?? null, sources: o.sources, by: o.by, combat: o.combat,
@@ -394,7 +418,7 @@ export function toZone(s: GameState, x: X, id: ObjId, to: Zone, o: { why: string
 }
 
 /** Banishes cards [428]: each to its owner's banishment [428.1], [056]. */
-export function banish(s: GameState, x: X, objs: ObjId[], rule: string): ObjId[] {
+export function banish(s: GameState, x: X, objs: ObjId[], rule: string, link?: string): ObjId[] {
   if (objs.length === 0) return [];
   const group = newGroup(s);
   const out: ObjId[] = [];
@@ -403,6 +427,7 @@ export function banish(s: GameState, x: X, objs: ObjId[], rule: string): ObjId[]
   for (const id of objs) {
     const n = toZone(s, x, id, Z.banish(s.objects[id].owner), { why: 'banish', rule, group });
     if (n !== null) out.push(n);
+    if (n !== null && link) setField(s, s.objects[n], 'links', [...s.objects[n].links, { group: link, source: n, zone: 'banish' }]);
   }
   if (out.length > 0) emit(s, x, { k: 'banish', p: s.objects[out[0]].owner, objs: out, rule, group });
   if (fromBoard) requestCleanup(s);                                  // [319.6]
@@ -464,6 +489,7 @@ export function recycleCards(s: GameState, x: X, p: PlayerId, objs: ObjId[], rul
     out.push(obj);
   }
   emit(s, x, { k: 'recycle', p, objs: out, rule, group, vis: knowers(s, out) });
+  fire(s, x, { e: 'recycled', p, rune: false });                     // "When you recycle one or more cards to your Main Deck"
 }
 
 /** A player looks at cards [425]: they know them now, nobody else does. */
@@ -492,6 +518,7 @@ export function spendBuffs(s: GameState, x: X, units: ObjId[], rule: string): Ob
   if (done.length > 0) {
     emit(s, x, { k: 'spendBuff', objs: done, rule });
     requestCleanup(s);
+    fire(s, x, { e: 'buffSpent', objs: done });                      // "When you spend a buff"
   }
   return done;
 }
@@ -524,7 +551,7 @@ export function addMight(s: GameState, x: X, units: ObjId[], n: number, o: { con
     [479]: "its base Might becomes N" (layer 2), "give … [Shield 2]" (layer
     3). The objects are fixed now [479.4.b]. */
 export function addEffect(s: GameState, x: X, objs: ObjId[], spec: { s: 'baseMight'; n: number } | { s: 'keyword'; kw: string;
-  value: number } | { s: 'cantMove' } | { s: 'replaceDeath'; cost?: Json }, o: { controller: PlayerId; source: ObjId | null; item: number | null;
+  value: number } | { s: 'cantMove' } | { s: 'replaceDeath'; cost?: Json } | { s: 'preventNext' }, o: { controller: PlayerId; source: ObjId | null; item: number | null;
   rule: string; until?: 'thisTurn' | 'thisCombat' | 'permanent' }) {
   if (objs.length === 0) return;
   append(s, s.effects, {
@@ -590,9 +617,11 @@ export function attach(s: GameState, x: X, obj: ObjId, to: ObjId, rule: string):
   if (locOf(g) === null || locOf(u) === null) return false;
   if (g.attachedTo !== null) detach(s, x, obj, '435.1.f');
   setField(s, g, 'attachedTo', to);
+  setField(s, g, 'attachedTurn', s.turn.n);
   if (!sameZoneLoc(g, u)) moveObject(s, obj, u.zone);
   emit(s, x, { k: 'attach', obj, to, equipped: true, rule });
   requestCleanup(s);                                                 // [319.7]
+  fire(s, x, { e: 'attached', obj, to, by: u.controller });          // "When you attach an Equipment to me"
   return true;
 }
 
@@ -646,7 +675,10 @@ export function recyclePermanent(s: GameState, x: X, id: ObjId, rule: string): O
   if (onBoard) placeSelfLeave(s, x, id, snapshotOf(s, id), {}, false);
   const n = toZone(s, x, id, Z.deck(o.owner), { why: 'recycle', rule, pos: 'bottom' });
   if (onBoard) requestCleanup(s);
-  if (n !== null) emit(s, x, { k: 'recycle', p: o.owner, objs: [n], rule, vis: knowers(s, [n]) });
+  if (n !== null) {
+    emit(s, x, { k: 'recycle', p: o.owner, objs: [n], rule, vis: knowers(s, [n]) });
+    fire(s, x, { e: 'recycled', p: o.owner, rune: false });
+  }
   return n;
 }
 

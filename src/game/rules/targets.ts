@@ -14,6 +14,7 @@ import { locOf } from '../state/zones.ts';
 import type { GameState, Loc, ObjId, PlayerId, TargetRef, TokenId } from '../state/types.ts';
 import { energyCostOf, hasKeyword, isType, mightOf, tagsOf } from './chars.ts';
 import { findCard } from '../cards/oracle.ts';
+import { staticsFor } from '../layers/derive.ts';
 import { TOKENS } from '../cards/tokens.ts';
 
 export interface SelCtx {
@@ -110,7 +111,7 @@ export function predOk(s: GameState, p: PredAst, id: ObjId, c: SelCtx): boolean 
     case 'token': return o.token;
     case 'nonToken': return !o.token;
     case 'type': return p.any.some((t) => isType(o, t));
-    case 'tag': return tagsOf(o).includes(p.tag);
+    case 'tag': return tagsOf(o).includes(p.tag) || staticsFor(s, id, 'tag').some(({ spec }) => spec.tag === p.tag);   // "I am a Mech"
     case 'buffed': return o.buffs > 0;
     case 'stunned': return o.stunned;
     case 'mighty': return locOf(o) !== null ? mightOf(s, id) >= 5 : false;   // [708], [710]
@@ -134,6 +135,12 @@ export function predOk(s: GameState, p: PredAst, id: ObjId, c: SelCtx): boolean 
     }
     case 'damaged': return o.damage.length > 0;
     case 'inZone': return o.zone.z === p.z;
+    case 'choosesFriendly': {
+      const it = s.chain.find((i) => i.obj === id);
+      return !!it && it.play.choices.executions.some((ex) => Object.values(ex.targets).flat().some((t) => t.k === 'obj'
+        && s.objects[t.id]?.controller === c.controller && (isType(s.objects[t.id], 'unit') || isType(s.objects[t.id], 'gear'))));
+    }
+    case 'linked': return o.links.some((l) => l.group === p.group);
     case 'rel': return p.rel === 'friendly' ? o.controller === c.controller : o.controller !== null && o.controller !== c.controller;
     case 'moves': return o.moves === p.n;
     case 'name': return (findCard(o.def)?.name ?? (Object.hasOwn(TOKENS, o.def) ? TOKENS[o.def as TokenId].name : o.def)) === p.name;
