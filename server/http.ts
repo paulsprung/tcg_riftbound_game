@@ -8,6 +8,7 @@ import {
 } from './auth.ts';
 import type { Config } from './config.ts';
 import type { Db } from './db.ts';
+import { deckStore, economy, loadCatalog, readAccount, Refused, type Catalog } from './economy.ts';
 
 /*
  * The whole HTTP surface: the built app (with index.html for client
@@ -15,7 +16,11 @@ import type { Db } from './db.ts';
  * read better as one function.
  */
 
-export interface Deps { cfg: Config; db: Db; fetch?: typeof fetch }
+export interface Deps {
+  cfg: Config; db: Db; fetch?: typeof fetch;
+  /** The card data packs and starters come from; read from the built app when not given. */
+  catalog?: Catalog;
+}
 
 export function cookies(req: IncomingMessage): Record<string, string> {
   const out: Record<string, string> = {};
@@ -88,6 +93,25 @@ async function riotImage(req: IncomingMessage, res: ServerResponse, url: URL, f:
   res.end(Buffer.from(await up.arrayBuffer()));
 }
 
+/** A JSON request body, 64 KB at most. */
+async function body(req: IncomingMessage): Promise<Record<string, unknown>> {
+  if (!(req.headers['content-type'] ?? '').startsWith('application/json')) throw new Refused('Send JSON', 415);
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const ch of req) {
+    size += (ch as Buffer).length;
+    if (size > 65_536) throw new Refused('Too large', 413);
+    chunks.push(ch as Buffer);
+  }
+  try {
+    const v = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}') as unknown;
+    if (!v || typeof v !== 'object' || Array.isArray(v)) throw new Error();
+    return v as Record<string, unknown>;
+  } catch {
+    throw new Refused('Not JSON');
+  }
+}
+
 /** A few tries a minute per address, for the sign-in routes. */
 function limiter(perMinute: number) {
   const hits = new Map<string, { n: number; t: number }>();
@@ -100,9 +124,12 @@ function limiter(perMinute: number) {
   };
 }
 
-export function handler({ cfg, db, fetch: f = fetch }: Deps) {
+export function handler({ cfg, db, fetch: f = fetch, catalog }: Deps) {
   const secure = cfg.publicUrl.startsWith('https://');
   const authLimit = limiter(20);
+  const apiLimit = limiter(240);
+  let cat: Promise<Catalog> | null = catalog ? Promise.resolve(catalog) : null;
+  const getCatalog = () => (cat ??= loadCatalog(cfg.staticDir).catch((err) => { cat = null; throw err; }));
   const clientIp = (req: IncomingMessage) =>
     (cfg.trustProxy && (req.headers['cf-connecting-ip'] as string)) || req.socket.remoteAddress || '?';
 
@@ -150,6 +177,73 @@ export function handler({ cfg, db, fetch: f = fetch }: Deps) {
         await endSession(db, jar[SESSION_COOKIE]);
         setCookie(res, SESSION_COOKIE, '', 0, secure);
         return json(res, 200, { ok: true });
+      }
+
+      // ---- the signed-in player's account: changes are POST/PUT/DELETE from this site only ----
+      if (path.startsWith('/api/account') || path.startsWith('/api/decks') || path.startsWith('/api/admin')) {
+        const user = await userForSession(db, jar[SESSION_COOKIE]);
+        if (!user) return json(res, 401, { error: 'Sign in first' });
+        if (!apiLimit(user.id)) return json(res, 429, { error: 'Slow down a little' });
+        const write = req.method !== 'GET' && req.method !== 'HEAD';
+        if (write && req.headers.origin !== cfg.publicUrl) return json(res, 403, { error: 'Wrong origin' });
+        const route = `${req.method} ${path}`;
+        try {
+          if (route === 'GET /api/account') {
+            const [account, decks, admin] = await Promise.all([
+              readAccount(db, user.id), deckStore.list(db, user.id),
+              db.query('SELECT is_admin FROM users WHERE id = $1', [user.id]).then((r) => !!r.rows[0]?.is_admin),
+            ]);
+            return json(res, 200, { account, decks, admin });
+          }
+          if (route === 'POST /api/account/buy') {
+            const b = await body(req);
+            return json(res, 200, { account: await economy.buyPack(db, user.id, String(b.setId), Number(b.n ?? 1)) });
+          }
+          if (route === 'POST /api/account/open') {
+            const b = await body(req);
+            return json(res, 200, await economy.openPack(db, await getCatalog(), user.id, String(b.setId)));
+          }
+          if (route === 'POST /api/account/daily') return json(res, 200, { account: await economy.claimDaily(db, user.id) });
+          if (route === 'POST /api/account/starter') {
+            const b = await body(req);
+            return json(res, 200, { account: await economy.grantStarter(db, await getCatalog(), user.id, String(b.id)) });
+          }
+          if (route === 'POST /api/account/tutorial') return json(res, 200, await economy.completeTutorial(db, user.id));
+          if (route === 'POST /api/account/grade') {
+            const b = await body(req);
+            return json(res, 200, await economy.grade(db, user.id, b.cardId as string, b.foil as boolean));
+          }
+          if (route === 'PUT /api/account/showcase') {
+            const b = await body(req);
+            return json(res, 200, { account: await economy.setShowcase(db, user.id, b.items) });
+          }
+          const deck = /^\/api\/decks\/([^/]+)$/.exec(path);
+          if (deck && req.method === 'PUT') return json(res, 200, { deck: await deckStore.save(db, user.id, deck[1], (await body(req)).deck) });
+          if (deck && req.method === 'DELETE') { await deckStore.remove(db, user.id, deck[1]); return json(res, 200, { ok: true }); }
+
+          if (path.startsWith('/api/admin/')) {
+            const admin = await db.query('SELECT is_admin FROM users WHERE id = $1', [user.id]);
+            if (!admin.rows[0]?.is_admin) return json(res, 403, { error: 'Admins only' });
+            if (route === 'GET /api/admin/users') {
+              const q = (url.searchParams.get('q') ?? '').slice(0, 64);
+              const r = await db.query(`SELECT u.id, u.discord_id, u.name, coalesce(a.coins, 0) AS coins FROM users u LEFT JOIN accounts a ON a.user_id = u.id
+                WHERE u.name ILIKE $1 OR u.discord_id = $2 ORDER BY u.last_seen DESC LIMIT 25`, [`%${q.replace(/[%_\\]/g, '\\$&')}%`, q]);
+              return json(res, 200, { users: r.rows.map((x) => ({ id: x.id, discordId: x.discord_id, name: x.name, coins: x.coins })) });
+            }
+            if (route === 'POST /api/admin/grant') {
+              const b = await body(req);
+              const to = String(b.userId ?? '');
+              const exists = await db.query('SELECT 1 FROM users WHERE id::text = $1', [to]);
+              if (!exists.rowCount) return json(res, 404, { error: 'No such player' });
+              const account = await economy.grant(db, user.id, to, Number(b.coins ?? 0), (b.packs ?? {}) as Record<string, number>, String(b.reason ?? ''));
+              return json(res, 200, { account });
+            }
+          }
+          return json(res, 404, { error: 'No such API' });
+        } catch (err) {
+          if (err instanceof Refused) return json(res, err.status, { error: err.message });
+          throw err;
+        }
       }
 
       if (path.startsWith('/riot-img/')) return await riotImage(req, res, url, f);

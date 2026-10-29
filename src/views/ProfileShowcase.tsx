@@ -35,9 +35,8 @@ export function ProfileShowcase({ db, pieces, onInspect }: { db: CardDb; pieces:
     for (let i = shown.indexOf(p); i > 0; i--) collection.shift(p.item, -1);
   };
   const startGrade = (card: Card, foil: boolean) => {
-    const slab = collection.grade(card.id, foil);
     setPicking(null);
-    if (slab) setRun({ card, slab });
+    void collection.grade(card.id, foil).then((slab) => { if (slab) setRun({ card, slab }); });
   };
 
   return (

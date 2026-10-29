@@ -57,7 +57,7 @@ export function TutorialView({ db, cards, starter, onExit, onFinish }: {
   useEffect(() => {
     if (!result || ending) return;
     // the last state stays on screen for a moment before the ending
-    const t = setTimeout(() => setEnding({ granted: collection.completeTutorial(), won: result.winner === run.host.human }), 1600);
+    const t = setTimeout(() => { void collection.completeTutorial().then((granted) => setEnding({ granted, won: result.winner === run.host.human })); }, 1600);
     return () => clearTimeout(t);
   }, [result, ending, run.host]);
 
@@ -83,7 +83,7 @@ export function TutorialView({ db, cards, starter, onExit, onFinish }: {
   }), [run]);
 
   const restart = () => { run.host.stop(); setEnding(null); setConfirmSkip(false); setRun(newRun(cards, starter, run.n + 1)); };
-  const skip = () => { run.host.stop(); setEnding({ granted: collection.completeTutorial(), won: null }); };
+  const skip = () => { run.host.stop(); void collection.completeTutorial().then((granted) => setEnding({ granted, won: null })); };
 
   if (ending) return <TutorialReward db={db} granted={ending.granted} won={ending.won} onReplay={restart} onExit={onExit} onFinish={onFinish} />;
 

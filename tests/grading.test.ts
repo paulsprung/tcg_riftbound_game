@@ -53,25 +53,30 @@ describe('grading', () => {
 });
 
 describe('collection grading and showcase', () => {
-  it('turns a raw copy into a slab and keeps the showcase in step', () => {
+  it('turns a raw copy into a slab and keeps the showcase in step', async () => {
     collection.reset();
     const card = makeCard({ id: 'c1', rarity: 'epic' });
-    collection.addPack('tst', [{ card, foil: false, finish: 'holo', slot: 'Rare+', hype: 2 }]);
+    const pack = (foil: boolean) => async () => {
+      collection.addCoins(100);
+      await collection.buyPack('tst');
+      await collection.openPack('tst', () => [{ card, foil, finish: 'holo', slot: 'Rare+', hype: 2 }], [card]);
+    };
+    await pack(false)();
     expect(collection.display({ kind: 'raw', cardId: 'c1', foil: false })).toBe(true);
 
-    const slab = collection.grade('c1', false)!;
+    const slab = (await collection.grade('c1', false))!;
     expect(slab).toBeTruthy();
     const state = collection.get();
     expect(state.cards.c1.normal).toBe(0);
     expect(state.slabs).toHaveLength(1);
     // the last raw copy went off to be graded, so it left the showcase
     expect(state.showcase).toHaveLength(0);
-    expect(collection.grade('c1', false)).toBeNull();
+    expect(await collection.grade('c1', false)).toBeNull();
 
     collection.display({ kind: 'slab', cert: slab.cert });
     expect(collection.isDisplayed({ kind: 'slab', cert: slab.cert })).toBe(true);
     // opening another pack keeps slabs and the showcase
-    collection.addPack('tst', [{ card, foil: true, finish: 'holo', slot: 'Rare+', hype: 2 }]);
+    await pack(true)();
     expect(collection.get().slabs).toHaveLength(1);
     expect(collection.get().showcase).toHaveLength(1);
     collection.reset();

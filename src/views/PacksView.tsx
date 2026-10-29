@@ -43,7 +43,7 @@ export function PacksView({ db, onInspect }: { db: CardDb; onInspect: (t: Inspec
 
   const market = sub === 'market';
   const featured = sets[0];
-  const buy = (id: string, n: number) => { for (let i = 0; i < n; i++) collection.buyPack(id); };
+  const buy = (id: string, n: number) => { void collection.buyPack(id, n); };
 
   const side = (
     <>
@@ -72,8 +72,8 @@ export function PacksView({ db, onInspect }: { db: CardDb; onInspect: (t: Inspec
           <div className="lb-head">
             <h1>Featured Packs</h1>
             <div className="lb-tools">
-              {/* testing aid until coins come from the server */}
-              <button type="button" className="btn btn--ghost btn--small" onClick={() => collection.addCoins(1000)}>+1000 coins (test)</button>
+              {/* testing aid in this browser only: on the server, coins come from play and from an admin */}
+              {!collection.isRemote() && <button type="button" className="btn btn--ghost btn--small" onClick={() => collection.addCoins(1000)}>+1000 coins (test)</button>}
               <a className="btn btn--ghost btn--small" href="#collection/packs">Your packs ({Object.values(own.packs).reduce((a, b) => a + b, 0)})</a>
             </div>
           </div>

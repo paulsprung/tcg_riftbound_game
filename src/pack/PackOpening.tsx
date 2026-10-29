@@ -109,19 +109,27 @@ export function PackOpening({ set, cards, pack, style, onInspect, onExit }: Prop
   const stageW = Math.round(Math.min(w * 0.62, 300, (h - 260) * (744 / 1039)));
   const packW = Math.round(Math.min(w * 0.6, 290, (h - 220) * 0.58));
 
+  const opening = useRef(false);
   const tear = useCallback(() => {
-    if (phase !== 'sealed') return;
-    // the pack comes out of the inventory (bought in the shop, or a starter's)
-    if (!collection.takePack(set.id)) return;
+    if (phase !== 'sealed' || opening.current) return;
+    opening.current = true;
     askMotion();
-    setPhase('tearing');
-    // Into the collection straight away, so closing the tab mid-reveal
-    // never loses a pull.
-    before.current = ownedNow(pulls.map((p) => p.card.id));
-    collection.addPack(set.id, pulls);
-    savePending(toPending(set.id, pulls, 0, before.current));
-    window.setTimeout(() => setPhase('reveal'), 950);
-  }, [phase, pulls, set.id]);
+    // the pack comes out of the inventory (bought in the shop, or a starter's);
+    // signed in, the server deals its cards
+    void collection.openPack(set.id, () => pulls, cards).then((got) => {
+      opening.current = false;
+      if (!got) return;
+      setPulls(got);
+      // into the collection straight away, so closing the tab mid-reveal never
+      // loses a pull; what was owned before is what is owned now, less the pack
+      const now = ownedNow(got.map((p) => p.card.id));
+      for (const p of got) now[p.card.id] -= 1;
+      before.current = now;
+      savePending(toPending(set.id, got, 0, before.current));
+      setPhase('tearing');
+      window.setTimeout(() => setPhase('reveal'), 950);
+    });
+  }, [phase, pulls, cards, set.id]);
 
   const current = pulls[index];
   const currentReady = !!current && ready.has(current.card.id);

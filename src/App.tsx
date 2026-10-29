@@ -1,12 +1,14 @@
-import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { FoilDefs } from './card/HoloCard.tsx';
 import { Inspector, type InspectTarget } from './card/Inspector.tsx';
-import { useCollection } from './collection/store.ts';
+import { collection, useCollection } from './collection/store.ts';
 import { useCardDb } from './data/useCardDb.ts';
 import { Ambient } from './lobby/Ambient.tsx';
 import { seedDemoShowcase } from './lobby/demoSeed.ts';
 import { Lobby, LobbyTop } from './lobby/Lobby.tsx';
 import { Social } from './lobby/Social.tsx';
+import { noticeStore } from './net/api.ts';
+import { useSession } from './net/session.ts';
 import { CollectionHub, type CollectionTab } from './views/CollectionHub.tsx';
 import { HomeView } from './views/HomeView.tsx';
 import { PacksView } from './views/PacksView.tsx';
@@ -58,6 +60,13 @@ export function App() {
   }, []);
 
   const onInspect = useCallback((t: InspectTarget) => setInspect(t), []);
+  const session = useSession();
+  const notice = useSyncExternalStore(noticeStore.subscribe, noticeStore.get, noticeStore.get);
+  // once the account is in (or there is none), onboarding is what it says
+  useEffect(() => { if (session.status !== 'loading') setOnboarding(!(collection.get().starter && collection.get().tutorialDone)); }, [session.status]);
+
+  // signed in, the account comes from the server first: nothing starts on this browser's own collection
+  if (session.status === 'loading') return <div className="app"><Ambient /><p className="status">Signing in…</p></div>;
 
   return (
     <div className="app">
@@ -113,6 +122,8 @@ export function App() {
         card art are © Riot Games. Card data: Riot's card gallery and{' '}
         <a href="https://riftcodex.com" target="_blank" rel="noreferrer">Riftcodex</a>. · <a href="#rules">Rules</a>
       </footer>
+
+      {notice && <p className="notice" role="alert">{notice}</p>}
 
       {inspect && state.status === 'ready' && (
         <Inspector target={inspect} db={state.db} onClose={() => setInspect(null)} />

@@ -28,8 +28,10 @@ function printingFor(printings: string[], byId: Map<string, { variant: string }>
   return known.find((p) => byId.get(p)!.variant === 'base') ?? known[0] ?? null;
 }
 
-export async function loadStarters(db: CardDb): Promise<StarterChoice[]> {
-  const { STARTERS, findCard } = await import('../game/index.ts');
+type Game = Pick<typeof import('../game/index.ts'), 'STARTERS' | 'findCard'>;
+
+/** The starters out of the game data, with the printings this card data has. */
+export function startersFrom(db: CardDb, { STARTERS, findCard }: Game): StarterChoice[] {
   const byId = new Map(db.cards.map((c) => [c.id, c]));
   return STARTERS.map((s) => {
     const cards: Record<string, number> = {};
@@ -52,4 +54,8 @@ export async function loadStarters(db: CardDb): Promise<StarterChoice[]> {
       cards, size: Object.values(cards).reduce((a, n) => a + n, 0),
     };
   });
+}
+
+export async function loadStarters(db: CardDb): Promise<StarterChoice[]> {
+  return startersFrom(db, await import('../game/index.ts'));
 }

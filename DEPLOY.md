@@ -29,6 +29,19 @@ cd rift && git pull && docker compose up -d --build
 
 Datenbank-Änderungen (`server/migrations/*.sql`) laufen beim Start von selbst.
 
+## Admin werden
+
+Admin ist, wer in der Datenbank `is_admin` hat. Einmal nach dem ersten Login
+mit Discord (deine Discord-ID: Discord → Einstellungen → Erweitert →
+Entwicklermodus, dann Rechtsklick auf dich → „User-ID kopieren"):
+
+```bash
+docker compose exec db psql -U rift rift -c "UPDATE users SET is_admin = true WHERE discord_id = 'DEINE_ID'"
+```
+
+Ein Admin kann Spielern Coins und Packs geben (`POST /api/admin/grant`, mit
+Grund); jede Vergabe steht mit Admin und Grund in der Tabelle `ledger`.
+
 ## Backup
 
 ```bash

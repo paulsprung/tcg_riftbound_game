@@ -983,3 +983,10 @@ html[data-scaled] .app {
 .dv__body { overflow-y: auto; display: grid; gap: 18px; padding-right: 8px; }
 .dv__cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 14px 12px; margin-top: 10px; }
 .dv__card { position: relative; }
+
+/* the server said no (not enough coins, a pack you don't have): a line at the top for a few seconds */
+.notice {
+  position: fixed; z-index: 90; left: 50%; top: 70px; translate: -50% 0; margin: 0; max-width: min(520px, 90vw);
+  padding: 10px 18px; background: linear-gradient(180deg, #3a1420, #1d0a12); border: 1px solid #e0475f; color: #ffd9de;
+  font: 600 13px/1.4 var(--font-ui); box-shadow: 0 12px 30px rgba(0, 0, 0, .6); animation: rise .25s ease;
+}

@@ -21,8 +21,7 @@ export function Starters({ db }: { db: CardDb }) {
   const pick = (s: StarterChoice) => {
     setBusy(s.id);
     // the preview starts with some coins, so the shop can be tried right away
-    collection.grantStarter(s.id, s.cards, { [s.booster]: 1 }, import.meta.env.VITE_PREVIEW ? 1200 : 0);
-    setBusy(null);
+    void collection.grantStarter(s.id, s.cards, { [s.booster]: 1 }, import.meta.env.VITE_PREVIEW ? 1200 : 0).finally(() => setBusy(null));
   };
 
   const groups = PRODUCT_ORDER

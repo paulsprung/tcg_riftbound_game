@@ -62,7 +62,7 @@ export function CollectionHub({ db, tab, onInspect }: { db: CardDb; tab: Collect
       <div className="lb-progress">
         <span className="muted small">{owned.toLocaleString('en-US')} / {db.cards.length.toLocaleString('en-US')} cards collected</span>
         <div className="bar" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Collection"><span style={{ width: `${pct}%` }} /></div>
-        {confirming ? (
+        {collection.isRemote() ? null : confirming ? (
           <div className="confirm" role="group" aria-label="Confirm reset">
             <span>Delete every card?</span>
             <button type="button" className="btn btn--danger btn--small" onClick={() => { collection.reset(); setConfirming(false); }}>Delete</button>

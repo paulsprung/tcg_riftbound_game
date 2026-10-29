@@ -59,8 +59,8 @@ function DeckStep({ db, onTaken }: { db: CardDb; onTaken: () => void }) {
   const take = () => {
     if (!chosen) return;
     // the preview starts with some coins, so the shop can be tried right away
-    collection.grantStarter(chosen.id, chosen.cards, { [chosen.booster]: 1 }, import.meta.env.VITE_PREVIEW ? 1200 : 0);
-    onTaken();
+    void collection.grantStarter(chosen.id, chosen.cards, { [chosen.booster]: 1 }, import.meta.env.VITE_PREVIEW ? 1200 : 0)
+      .then((ok) => { if (ok) onTaken(); });
   };
 
   return (
@@ -115,13 +115,13 @@ export function Onboarding({ db, onDone }: { db: CardDb; onDone: (to: 'shop' | '
   // the preview can step over all of it
   const skipPreview = () => {
     if (!own.starter) {
-      loadStarters(db).then((all) => {
+      loadStarters(db).then(async (all) => {
         const s = all[0];
-        if (s) collection.grantStarter(s.id, s.cards, { [s.booster]: 1 }, 1200);
-        collection.completeTutorial();
+        if (s) await collection.grantStarter(s.id, s.cards, { [s.booster]: 1 }, 1200);
+        await collection.completeTutorial();
         onDone('home');
       }).catch(() => undefined);
-    } else { collection.completeTutorial(); onDone('home'); }
+    } else { void collection.completeTutorial().then(() => onDone('home')); }
   };
   const preview = Boolean(import.meta.env.VITE_PREVIEW);
 
