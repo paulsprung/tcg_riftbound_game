@@ -2,7 +2,8 @@ import { useEffect, type ReactNode } from 'react';
 import { HoloSwitches } from '../card/HoloSwitches.tsx';
 import { useCollection } from '../collection/store.ts';
 import { logout, useSession } from '../net/session.ts';
-import { DEMO, DEMO_FRIENDS, DEMO_PROFILE } from './demo.ts';
+import { DEMO, DEMO_PROFILE } from './demo.ts';
+import { social, useSocial } from './social.ts';
 import './lobby.css';
 
 export const NAV = [
@@ -14,12 +15,28 @@ export const NAV = [
 
 const Coin = () => <span className="lb-coin" aria-hidden />;
 
+/** The hextech mark in front of the name. */
+const Emblem = () => (
+  <svg className="lb-emblem" viewBox="0 0 32 32" aria-hidden>
+    <defs>
+      <linearGradient id="lb-g" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stopColor="#f0e6d2" /><stop offset=".5" stopColor="#c8aa6e" /><stop offset="1" stopColor="#785a28" />
+      </linearGradient>
+    </defs>
+    <polygon points="16,1.5 28.5,8.75 28.5,23.25 16,30.5 3.5,23.25 3.5,8.75" fill="#0a1428" stroke="url(#lb-g)" strokeWidth="1.6" />
+    <polygon points="16,7 23.8,11.5 23.8,20.5 16,25 8.2,20.5 8.2,11.5" fill="none" stroke="#0ac8b9" strokeWidth="1" opacity=".85" />
+    <path d="M16 11 L19.2 16 L16 21 L12.8 16 Z" fill="url(#lb-g)" />
+  </svg>
+);
+
 /** The bar across the top: brand, the four places, coins, who you are. */
 export function LobbyTop({ route }: { route: string }) {
   const own = useCollection();
   const session = useSession();
+  const { open, friends } = useSocial();
   const user = session.status === 'online' ? session.user : null;
   const name = user?.name ?? (DEMO ? DEMO_PROFILE.name : 'You');
+  const online = friends.filter((f) => f.presence === 'online').length;
 
   // on a phone the tabs scroll sideways: keep the current one in view
   useEffect(() => {
@@ -28,7 +45,7 @@ export function LobbyTop({ route }: { route: string }) {
 
   return (
     <header className="lb-top">
-      <a className="lb-brand" href="#home" aria-label="Riftbound home">Riftbound</a>
+      <a className="lb-brand" href="#home" aria-label="Riftbound home"><Emblem /><span>Riftbound</span></a>
       <nav className="lb-nav" aria-label="Sections">
         {NAV.map((n) => (
           <a key={n.id} href={`#${n.id}`} aria-current={route === n.id ? 'page' : undefined}>{n.label}</a>
@@ -39,6 +56,13 @@ export function LobbyTop({ route }: { route: string }) {
         <a className="lb-pill" href="#shop" title="Your coins" aria-label={`${own.coins} coins`}>
           <Coin /> {own.coins.toLocaleString('en-US')}
         </a>
+        {DEMO && (
+          <button type="button" className="lb-icon lb-icon--social" aria-label="Friends" aria-pressed={open} title="Friends"
+            onClick={() => social.setOpen(!open)}>
+            <svg viewBox="0 0 24 24" aria-hidden><path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm7 .5a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM2.5 19c.4-3.2 3-5 6.5-5s6.1 1.800 6.500 5H2.500Zm13.600-4.800c3 0 5 1.600 5.400 4.800h-4.200c-.2-1.900-.9-3.400-2.200-4.500.3-.2.600-.3 1-.3Z" fill="currentColor" /></svg>
+            {online > 0 && <em>{online}</em>}
+          </button>
+        )}
         {session.status === 'online' && !user ? (
           <a className="btn btn--primary btn--small" href="/auth/discord">Sign in with Discord</a>
         ) : (
@@ -53,31 +77,25 @@ export function LobbyTop({ route }: { route: string }) {
   );
 }
 
-/** The slim friends bar at the right edge. Friends come with online play. */
-function Friends() {
-  if (!DEMO) return null;
-  const online = DEMO_FRIENDS.filter((f) => f.state === 'online').length;
-  return (
-    <aside className="lb-friends" aria-label="Friends (sample)">
-      <span className="lb-friends__count" title={`${online} friends online (sample)`}>{online}</span>
-      {DEMO_FRIENDS.map((f) => <i key={f.name} className={`lb-dot lb-dot--${f.state}`} title={`${f.name} · ${f.state}`} />)}
-    </aside>
-  );
-}
-
 /**
- * A page of the lobby: an optional sidebar of its own, the content, the
- * friends bar. `bare` drops the chrome (a game in progress).
+ * A page of the lobby: an optional sidebar of its own and the content. The
+ * page fills the window; lists inside it (`.lb-scroll`) scroll, it does not.
+ * `bare` drops the chrome (a game in progress).
  */
 export function Lobby({ side, children, bare = false, className = '' }: {
   side?: ReactNode; children: ReactNode; bare?: boolean; className?: string;
 }) {
+  // the social dock hides while a game is on
+  useEffect(() => {
+    if (!bare) return;
+    document.documentElement.dataset.bare = '';
+    return () => { delete document.documentElement.dataset.bare; };
+  }, [bare]);
   // One structure either way, so a game in progress is not rebuilt when the chrome goes.
   return (
     <div className={`lb-page${side ? ' has-side' : ''}${bare ? ' is-bare' : ''} ${className}`}>
       {side && <aside className="lb-side">{side}</aside>}
       <div className="lb-main">{children}</div>
-      <Friends />
     </div>
   );
 }

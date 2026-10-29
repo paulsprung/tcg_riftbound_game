@@ -10,23 +10,29 @@
   --font-ui: 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-card: 'Proza Libre', 'DM Sans', sans-serif;
   --font-condensed: 'Instrument Sans', 'Arial Narrow', sans-serif;
-  --bg: #0a0812;
-  --bg-2: #120f1f;
-  --panel: #171329;
-  --line: rgba(255, 255, 255, .09);
-  --text: #ece8f7;
-  --muted: #a49cbc;
-  --accent: #e9c46a;
-  --accent-2: #b48cff;
-  --radius: 12px;
+  /* League-client palette: deep hextech blue, antique gold, a teal highlight. */
+  --bg: #010a13;
+  --bg-2: #0a1428;
+  --panel: #0c1a2c;
+  --line: rgba(200, 170, 110, .22);
+  --text: #f0e6d2;
+  --muted: #a09b8c;
+  --accent: #c8aa6e;
+  --accent-2: #0ac8b9;
+  --gold-hi: #f0e6d2;
+  --gold: #c8aa6e;
+  --gold-lo: #785a28;
+  --gold-dim: #463714;
+  --teal: #0ac8b9;
+  --radius: 4px;
   color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
-html, body { margin: 0; }
-body {
+html, body {
   background:
-    radial-gradient(1200px 600px at 50% -200px, #261c4a 0%, transparent 70%),
+    radial-gradient(1100px 620px at 50% -220px, #15385a 0%, transparent 70%),
+    radial-gradient(800px 500px at 100% 100%, rgba(10, 200, 185, .07), transparent 70%),
     var(--bg);
   background-attachment: fixed;
   color: var(--text);
@@ -36,6 +42,10 @@ body {
   overflow-x: hidden;
 }
 a { color: var(--accent); }
+* { scrollbar-width: thin; scrollbar-color: var(--gold-lo) transparent; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: var(--gold-lo); border-radius: 2px; }
+::-webkit-scrollbar-track { background: transparent; }
 h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing: .02em; line-height: 1.15; text-transform: uppercase; text-wrap: balance; }
 h1 { font-size: clamp(24px, 4vw, 34px); margin: 0 0 6px; }
 code { background: var(--panel); padding: 1px 6px; border-radius: 5px; }
@@ -43,11 +53,13 @@ code { background: var(--panel); padding: 1px 6px; border-radius: 5px; }
 .small { font-size: 13px; }
 
 .app { min-height: 100vh; display: flex; flex-direction: column; }
-.main {
-  flex: 1; width: 100%; max-width: 1240px; margin: 0 auto;
-  padding-block: 22px 48px;
-  padding-left: max(16px, env(safe-area-inset-left, 0px));
-  padding-right: max(16px, env(safe-area-inset-right, 0px));
+.main { flex: 1; width: 100%; }
+/* A window-sized app: the page itself never scrolls, only lists inside it do.
+   On phones and very short windows it falls back to a normal scrolling page. */
+@media (min-width: 901px) and (min-height: 561px) {
+  html, body { height: 100%; overflow: hidden; }
+  .app { height: 100dvh; min-height: 0; overflow: hidden; }
+  .app > .main { min-height: 0; overflow: hidden; display: flex; }
 }
 /* Paints the band above the sticky header on phones with a notch. */
 body::before {
@@ -59,57 +71,79 @@ body::before {
 
 /* ------------------------------------------------------------- toggles -- */
 
-.foil-toggle { display: flex; align-items: center; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 9px; }
+.foil-toggle { display: flex; align-items: center; gap: 2px; padding: 3px; border: 1px solid var(--gold-dim); border-radius: 2px; }
 .foil-toggle button, .seg button {
   border: 0; background: none; color: var(--muted);
-  padding: 5px 10px; border-radius: 6px; font: inherit; font-size: 13px; cursor: pointer;
+  padding: 5px 10px; border-radius: 2px; font: inherit; font-size: 12px; letter-spacing: .06em; cursor: pointer;
 }
-.foil-toggle button[aria-pressed="true"], .seg button[aria-pressed="true"] { background: rgba(255, 255, 255, .1); color: var(--text); }
+.foil-toggle button[aria-pressed="true"], .seg button[aria-pressed="true"] { background: rgba(200, 170, 110, .18); color: var(--gold-hi); }
 
 @media (max-width: 760px) {
   .foil-toggle { gap: 0; padding: 2px; }
 }
 
 .foot {
-  padding-block: 20px 28px;
-  padding-left: max(16px, env(safe-area-inset-left, 0px));
-  padding-right: max(16px, env(safe-area-inset-right, 0px)); text-align: center; color: var(--muted); font-size: 12px; border-top: 1px solid var(--line); }
+  flex: none; padding: 7px max(16px, env(safe-area-inset-right, 0px)) 8px max(16px, env(safe-area-inset-left, 0px));
+  text-align: center; color: #6f6c63; font-size: 11px; line-height: 1.35; border-top: 1px solid var(--gold-dim);
+  background: rgba(1, 10, 19, .85);
+}
+.foot a { color: #8d7a4e; }
+@media (min-width: 901px) and (min-height: 561px) {
+  .foot { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
 
 /* ------------------------------------------------------------ controls -- */
 
 .btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  padding: 9px 16px;
-  border-radius: 9px;
-  border: 1px solid var(--line);
-  background: var(--panel);
-  color: var(--text);
-  font: 500 14px/1 var(--font-ui);
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 11px 20px;
+  border-radius: 2px;
+  border: 1px solid var(--gold-lo);
+  background: linear-gradient(180deg, #1e2832, #0d141c);
+  box-shadow: inset 0 0 0 1px rgba(1, 10, 19, .85);
+  color: #cdbe91;
+  font: 700 12px/1 var(--font-ui);
+  letter-spacing: .12em;
   text-transform: uppercase;
   text-decoration: none;
   cursor: pointer;
+  transition: border-color .15s, color .15s, box-shadow .15s, filter .15s;
 }
-.btn:hover { border-color: rgba(255, 255, 255, .2); }
-.btn--primary { background: linear-gradient(180deg, #f1d488, #c9a046); color: #1d1405; border-color: transparent; }
-.btn--primary:hover { filter: brightness(1.06); }
+.btn:hover:not(:disabled) { border-color: var(--gold); color: var(--gold-hi); box-shadow: inset 0 0 0 1px rgba(1, 10, 19, .85), 0 0 14px rgba(200, 170, 110, .28); }
+.btn:disabled { opacity: .42; cursor: not-allowed; }
+.btn:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+.btn--primary {
+  background: linear-gradient(180deg, #d9bd7f, #a07f3a 55%, #8a6a2c);
+  color: #0a1428; border-color: #f0e6d2; text-shadow: 0 1px 0 rgba(255, 255, 255, .25);
+}
+.btn--primary:hover:not(:disabled) { color: #0a1428; filter: brightness(1.1); }
+/* The big call to action: hextech teal with a gold frame, as the client's Play. */
+.btn--cta {
+  background: linear-gradient(180deg, #0f4452, #062a36);
+  border-color: var(--gold); color: #cffcf6; padding: 14px 30px; font-size: 13px;
+  box-shadow: inset 0 0 0 1px rgba(1, 10, 19, .85), 0 0 18px rgba(10, 200, 185, .28);
+}
+.btn--cta:hover:not(:disabled) { color: #fff; border-color: var(--gold-hi); box-shadow: inset 0 0 0 1px rgba(1, 10, 19, .85), 0 0 26px rgba(10, 200, 185, .55); }
 .btn--ghost { background: transparent; }
-.btn--danger { background: #8f2a3a; border-color: transparent; }
-.btn--danger:hover { filter: brightness(1.1); }
+.btn--danger { background: linear-gradient(180deg, #8f2a3a, #5a1623); border-color: #c8333a; color: #ffd9dc; }
 .confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; }
-.btn--small { padding: 6px 10px; font-size: 13px; }
-.icon-btn { border: 0; background: rgba(255, 255, 255, .06); color: var(--text); width: 34px; height: 34px; border-radius: 50%; cursor: pointer; font-size: 15px; }
+.btn--small { padding: 8px 12px; font-size: 11px; }
+.icon-btn { border: 1px solid var(--gold-lo); background: rgba(1, 10, 19, .6); color: var(--text); width: 34px; height: 34px; border-radius: 50%; cursor: pointer; font-size: 15px; }
+.icon-btn:hover { border-color: var(--gold); }
 
 .input {
   min-width: 0;
-  padding: 9px 12px;
-  border-radius: 9px;
-  border: 1px solid var(--line);
-  background: var(--bg-2);
+  padding: 10px 12px;
+  border-radius: 2px;
+  border: 1px solid var(--gold-dim);
+  background: rgba(1, 10, 19, .75);
   color: var(--text);
   font: inherit; font-size: 14px;
 }
+.input:hover { border-color: var(--gold-lo); }
+.input:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 1px rgba(200, 170, 110, .35); }
 .input--search { flex: 1 1 240px; }
-.seg { display: inline-flex; padding: 3px; border: 1px solid var(--line); border-radius: 9px; }
+.seg { display: inline-flex; padding: 3px; border: 1px solid var(--gold-dim); border-radius: 2px; }
 
 .page-head { margin-bottom: 18px; }
 .page-head p { margin: 0; }

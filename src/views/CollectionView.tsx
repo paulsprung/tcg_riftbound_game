@@ -50,7 +50,7 @@ export function CollectionView({ db, onInspect, rarities, showUnowned }: {
   const anyFilter = q || set || type || domain || variant;
 
   return (
-    <section>
+    <section className="lb-col">
       <div className="lb-head">
         <h1>Your Collection <span className="muted small">{total.toLocaleString('en-US')} cards</span></h1>
         <div className="lb-tools">
@@ -92,7 +92,7 @@ export function CollectionView({ db, onInspect, rarities, showUnowned }: {
         </div>
       ) : (
         <>
-          <p className="muted small">{cards.length.toLocaleString('en-US')} shown</p>
+          <div className="lb-scroll">
           <CardGrid
             cards={cards}
             onInspect={onInspect}
@@ -111,6 +111,7 @@ export function CollectionView({ db, onInspect, rarities, showUnowned }: {
               );
             }}
           />
+          </div>
         </>
       )}
     </section>

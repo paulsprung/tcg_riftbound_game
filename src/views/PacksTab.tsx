@@ -14,7 +14,7 @@ export function PacksTab({ db }: { db: CardDb }) {
   const total = mine.reduce((n, s) => n + (own.packs[s.id] ?? 0), 0);
 
   return (
-    <section>
+    <section className="lb-col">
       <div className="lb-head">
         <h1>Packs to open <span className="muted small">{total} unopened</span></h1>
         <a className="btn btn--ghost btn--small" href="#shop">Buy packs</a>
@@ -26,7 +26,7 @@ export function PacksTab({ db }: { db: CardDb }) {
           <a className="btn btn--primary" href="#shop">Go to the shop</a>
         </div>
       ) : (
-        <div className="pack-shelf">
+        <div className="pack-shelf lb-scroll">
           {sets.filter((s) => (own.packs[s.id] ?? 0) > 0 || pending?.setId === s.id).map((s) => (
             <div key={s.id} className="pack-shelf__item">
               <PackWrapper set={s.info} style={s.style} hero={heroCard(s.cards, s.style)}

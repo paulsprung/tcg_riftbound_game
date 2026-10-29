@@ -65,7 +65,7 @@ export function PacksView({ db, onInspect }: { db: CardDb; onInspect: (t: Inspec
           <span className="lb-soon-note">Coming soon</span>
         </section>
       ) : (
-        <section>
+        <section className="lb-col">
           <div className="lb-head">
             <h1>Featured Packs</h1>
             <div className="lb-tools">
@@ -81,7 +81,7 @@ export function PacksView({ db, onInspect }: { db: CardDb; onInspect: (t: Inspec
                 <h2>{featured.info.name} Booster Pack</h2>
                 <p>{featured.pack.slots.reduce((n, s) => n + s.count, 0)} cards · {featured.style.tagline}. Every slot as in the real pack.</p>
                 <div className="shop-actions">
-                  <button type="button" className="btn btn--primary" disabled={own.coins < PACK_PRICE} onClick={() => buy(featured.id, 1)}>
+                  <button type="button" className="btn btn--cta" disabled={own.coins < PACK_PRICE} onClick={() => buy(featured.id, 1)}>
                     <Coin /> Buy 1 · {PACK_PRICE}
                   </button>
                   <button type="button" className="btn btn--ghost" disabled={own.coins < PACK_PRICE * 5} onClick={() => buy(featured.id, 5)}>
@@ -91,17 +91,17 @@ export function PacksView({ db, onInspect }: { db: CardDb; onInspect: (t: Inspec
               </div>
               <div className="shop-banner__pack">
                 <PackWrapper set={featured.info} style={featured.style} hero={heroCard(featured.cards, featured.style)}
-                  width={Math.round(250 * (packArt(featured.id)?.aspect ?? 1 / 1.72))} onClick={() => buy(featured.id, 1)} />
+                  width={Math.round(230 * (packArt(featured.id)?.aspect ?? 1 / 1.72))} onClick={() => buy(featured.id, 1)} />
               </div>
             </div>
           )}
 
           <p className="lb-label">All packs</p>
-          <div className="pack-shelf">
+          <div className="pack-shelf lb-scroll">
             {sets.map((s) => (
               <div key={s.id} className="pack-shelf__item">
                 <PackWrapper set={s.info} style={s.style} hero={heroCard(s.cards, s.style)}
-                  width={Math.round(250 * (packArt(s.id)?.aspect ?? 1 / 1.72))}
+                  width={Math.round(218 * (packArt(s.id)?.aspect ?? 1 / 1.72))}
                   onClick={() => ((own.packs[s.id] ?? 0) > 0 ? openPack(s.id) : buy(s.id, 1))} />
                 <div className="pack-shelf__label">
                   <strong>{s.info.name}</strong>

@@ -77,7 +77,7 @@ export function CollectionHub({ db, tab, onInspect }: { db: CardDb; tab: Collect
       {tab === 'cards' && <CollectionView db={db} onInspect={onInspect} rarities={rarities} showUnowned={showUnowned} />}
       {tab === 'packs' && <PacksTab db={db} />}
       {tab === 'decks' && <DecksView db={db} />}
-      {tab === 'showcase' && <ShowcaseView db={db} onInspect={onInspect} />}
+      {tab === 'showcase' && <div className="lb-scroll"><ShowcaseView db={db} onInspect={onInspect} /></div>}
     </Lobby>
   );
 }

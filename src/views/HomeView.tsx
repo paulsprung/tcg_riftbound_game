@@ -83,12 +83,12 @@ export function HomeView({ db }: { db: CardDb }) {
             <span className="hero__kicker">Next step</span>
             <strong>Play the tutorial</strong>
             <span className="muted">A short guided match. Finish it for 5 free booster packs, one from each set.</span>
-            <a className="btn btn--primary" href="#play/tutorial">Play the tutorial</a>
+            <a className="btn btn--cta" href="#play/tutorial">Play the tutorial</a>
           </div>
         ) : (
           <div className="hero__buttons">
-            <a className="btn btn--primary" href="#play">Play</a>
-            <a className="btn btn--ghost" href="#shop">{unopened > 0 ? `Open packs (${unopened})` : 'Shop'}</a>
+            <a className="btn btn--cta" href="#play">Play</a>
+            <a className="btn btn--primary" href="#shop">{unopened > 0 ? `Open packs (${unopened})` : 'Shop'}</a>
             <a className="btn btn--ghost" href="#collection">Collection</a>
           </div>
         )}

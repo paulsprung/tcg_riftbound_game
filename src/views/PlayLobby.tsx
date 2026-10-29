@@ -60,7 +60,7 @@ function OnlineMode({ db, mode }: { db: CardDb; mode: (typeof ONLINE)[number] })
         </figure>
       </div>
       <div className="play-online__actions">
-        <button type="button" className="btn btn--primary" disabled>{mode.id === 'custom' ? 'Create lobby' : mode.id === 'tournament' ? 'Browse tournaments' : 'Find match'}</button>
+        <button type="button" className="btn btn--cta" disabled>{mode.id === 'custom' ? 'Create lobby' : mode.id === 'tournament' ? 'Browse tournaments' : 'Find match'}</button>
         <a className="btn btn--ghost" href="#play/computer">Practice vs Computer</a>
       </div>
       {!own.starter && <p className="muted">Pick a starter deck on <a href="#home">Home</a> first.</p>}
@@ -90,7 +90,9 @@ export function PlayLobby({ db, mode }: { db: CardDb; mode: string }) {
   return (
     <Lobby side={side} bare={bare}>
       {online ? <OnlineMode db={db} mode={online} /> : (
-        <PlayView key={id === 'tutorial' ? 'tutorial' : 'play'} db={db} tutorial={id === 'tutorial'} onInGame={setInGame} />
+        <div className={bare ? 'lb-bare' : 'lb-play-scroll'}>
+          <PlayView key={id === 'tutorial' ? 'tutorial' : 'play'} db={db} tutorial={id === 'tutorial'} onInGame={setInGame} />
+        </div>
       )}
     </Lobby>
   );

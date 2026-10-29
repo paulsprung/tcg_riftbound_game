@@ -3,6 +3,7 @@ import { FoilDefs } from './card/HoloCard.tsx';
 import { Inspector, type InspectTarget } from './card/Inspector.tsx';
 import { useCardDb } from './data/useCardDb.ts';
 import { Lobby, LobbyTop } from './lobby/Lobby.tsx';
+import { Social } from './lobby/Social.tsx';
 import { CollectionHub, type CollectionTab } from './views/CollectionHub.tsx';
 import { HomeView } from './views/HomeView.tsx';
 import { PacksView } from './views/PacksView.tsx';
@@ -51,6 +52,7 @@ export function App() {
       <LobbyTop route={route} />
 
       <main className="main">
+        <div className="lb-view">
         {state.status === 'loading' && <p className="status">Loading cards…</p>}
         {state.status === 'missing' && (
           <div className="status status--error">
@@ -70,9 +72,11 @@ export function App() {
               </Suspense>
             )}
             {route === 'profile' && <ProfileView db={state.db} onInspect={onInspect} />}
-            {route === 'rules' && <Lobby><RulesView /></Lobby>}
+            {route === 'rules' && <Lobby><div className="lb-scroll"><RulesView /></div></Lobby>}
           </>
         )}
+        </div>
+        <Social />
       </main>
 
       <footer className="foot">
