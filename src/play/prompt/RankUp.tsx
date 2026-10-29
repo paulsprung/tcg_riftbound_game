@@ -61,8 +61,8 @@ export function RankUp({ before, after, onDone }: { before: RatingInfo; after: R
   return createPortal(
     <div className={`rk is-${phase}${up ? ' is-up' : ' is-down'}${newTier ? ' is-tier' : ''}`} role="dialog" aria-label={`${verdict}: ${rankName(after.tier, after.division)}`}
       onClick={() => { if (phase === 'reveal') onDone(); }}>
-      <div className="rk__rays" aria-hidden />
       <div className="rk__stage">
+        <div className="rk__rays" aria-hidden />
         <div className="rk__charge" aria-hidden />
         {/* before the change: the old crest; a tier up bursts it */}
         {(!changing || (newTier && up)) && (

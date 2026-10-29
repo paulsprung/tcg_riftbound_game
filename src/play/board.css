@@ -316,7 +316,7 @@ html:not([data-scaled]) .play__stage { min-height: 760px; overflow: visible; }
 .rk.is-down { --rk: #b9c6d8; --rk-2: rgba(140, 160, 190, .3); }
 .rk.is-up:not(.is-tier) { --rk: #8ff3ea; --rk-2: rgba(40, 220, 205, .45); }
 .rk__stage { position: relative; width: 440px; height: 440px; display: grid; place-items: center; align-self: center; }
-.rk__stage > * { grid-area: 1 / 1; }
+.rk__stage > * { position: absolute; left: 50%; top: 50%; translate: -50% -50%; }
 .rk__crest { transition: filter .8s, transform .8s; }
 .rk.is-charge .rk__crest:not(.is-new) { animation: rk-charge 1.2s ease-in both; }
 .rk.is-down .rk__crest.is-new { animation: rk-dim 1.2s ease-out both; }
@@ -326,7 +326,7 @@ html:not([data-scaled]) .play__stage { min-height: 760px; overflow: visible; }
 .rk.is-down .rk__charge { display: none; }
 .rk__flash { position: fixed; inset: 0; background: #fff; pointer-events: none; animation: rk-flash .55s ease-out forwards; }
 .rk__rays {
-  position: absolute; left: 50%; top: 42%; width: 200vmax; height: 200vmax; translate: -50% -50%; opacity: 0; pointer-events: none;
+  width: 200vmax; height: 200vmax; opacity: 0; pointer-events: none;
   background: repeating-conic-gradient(from 0deg, var(--rk-2) 0deg 4deg, transparent 4deg 14deg);
   mask-image: radial-gradient(circle, #000 0, rgba(0, 0, 0, .5) 14%, transparent 34%);
 }
@@ -347,7 +347,7 @@ html:not([data-scaled]) .play__stage { min-height: 760px; overflow: visible; }
 .rk__sub { margin: 0; color: var(--muted); letter-spacing: .12em; }
 .rk__go { margin-top: 10px; min-width: 180px; }
 /* a piece locking: a ring and sparks from the middle */
-.rk-sparks { position: relative; width: 0; height: 0; place-self: center; }
+.rk-sparks { width: 0; height: 0; }
 .rk-ring { position: absolute; left: -220px; top: -220px; width: 440px; height: 440px; border-radius: 50%; border: 3px solid var(--rk); opacity: 0; animation: rk-ring .7s var(--at) ease-out both; }
 .rk-sparks i { position: absolute; left: 0; top: 0; width: 3px; height: 16px; margin: -8px 0 0 -1.5px; border-radius: 2px; background: #fff; box-shadow: 0 0 8px var(--rk); opacity: 0;
   transform: rotate(var(--a)) translateY(0); animation: rk-spark .6s var(--at) ease-out both; }
