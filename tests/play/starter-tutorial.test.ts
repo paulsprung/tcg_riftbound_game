@@ -33,7 +33,7 @@ describe('the tutorial with the player\'s own starter deck', () => {
   });
 
   for (const st of STARTERS) {
-    it(`${st.id}: a player who follows the coach finishes the match, every core step reached`, () => {
+    it(`${st.id}: a player who follows the coach wins the match, every core step reached`, () => {
       const h = starterTutorialHost(st, ix, { clock: now, check: true });
       h.start();
       const coach = createStarterCoach();
@@ -41,20 +41,22 @@ describe('the tutorial with the player\'s own starter deck', () => {
       const seen = follow(h, coach, 4000, log);
       if (process.env.TUT_LOG === st.id) console.log(log.join('\n'), '\n', seen.join(' '));
       const v = h.getSnapshot().view;
-      expect(v.result, `${st.id}: ${seen.join(' ')}`).not.toBeNull();
+      expect(v.result?.winner, `${st.id}: ${seen.join(' ')}`).toBe(0);
       expect(h.getSnapshot().error).toBeNull();
       for (const id of STARTER_CORE_STEPS) expect(seen, st.id).toContain(id);
-      if (v.result?.winner === 0) expect(v.players[0].points).toBeGreaterThanOrEqual(STARTER_TUTORIAL_SCORE);
+      expect(v.players[0].points).toBeGreaterThanOrEqual(STARTER_TUTORIAL_SCORE);
       expect(viewFor(replay(h.record()).state, 0)).toEqual(v);
     }, 30_000);
   }
 
-  it('a player who ignores the coach (last allowed option) still reaches the end', () => {
-    for (const st of STARTERS.slice(0, 4)) {
+  it('a player who ignores the coach (last allowed option) still wins: the tutor never takes its last point', () => {
+    for (const st of STARTERS) {
       const h = starterTutorialHost(st, ix, { clock: now, check: true });
       h.start();
-      follow(h, createStarterCoach(), 5000, undefined, true);
-      expect(h.getSnapshot().view.result, st.id).not.toBeNull();
+      follow(h, createStarterCoach(), 6000, undefined, true);
+      const v = h.getSnapshot().view;
+      expect(v.result?.winner, st.id).toBe(0);
+      expect(v.players[1].points, st.id).toBeLessThan(STARTER_TUTORIAL_SCORE);
     }
-  }, 60_000);
+  }, 120_000);
 });

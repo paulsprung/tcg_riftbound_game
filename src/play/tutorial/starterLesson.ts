@@ -19,8 +19,10 @@ import type { TutorialCoach } from './lesson.ts';
  *     the deck's two domains so Power costs can be paid later.
  *   - The opponent (a script seat): plays its cheapest unit each turn and,
  *     on its second turn, walks one unit to its own battlefield (something
- *     to attack); it never casts Reactions in the coached turns. From turn
- *     9 on it is the simple bot.
+ *     to attack); it never casts Reactions and never attacks, and one point
+ *     short of winning it takes its units back to its base, so the match
+ *     can always be won. What it is not asked about (combat damage, a
+ *     card's own choices) the simple bot answers.
  *   - The coach: concepts, not a script. Each step teaches one idea (play a
  *     unit, end the turn, move, the showdown, conquer, a spell, hold,
  *     combat, the last point) and comes up when the game on screen offers
@@ -145,25 +147,34 @@ export function starterOpponentAnswer(v: PlayerView): string | null {
   const has = (k: string) => keys.includes(k);
   const me = v.me;
   if (d.kind === 'mulligan') return has('done') ? 'done' : null;
-  if (v.turn.n > 8) return null;
   const mine = v.turn.player === me;
+  // It never scores the last point: it takes a battlefield only while a
+  // conquer and a hold leave it short, and one point short it leaves them.
+  const points = v.players[me].points;
+  const advance = points <= STARTER_TUTORIAL_SCORE - 3;
+  const retreat = points >= STARTER_TUTORIAL_SCORE - 1;
+  const atBf = (id: ObjId) => typeof whereIs(v, id) === 'number';
+  const ready = (id: ObjId) => !(v.objects[id] as { exhausted?: boolean } | undefined)?.exhausted;
   switch (d.kind) {
     case 'priority': {
       if (d.prompt.window !== 'main' || !mine) return has('pass') ? 'pass' : null;
       const plays = inHandOfType(v, me, 'unit').filter((id) => has(`play:${id}`))
         .sort((a, b) => energy(defOf(v, a)!) - energy(defOf(v, b)!));
       if (plays.length > 0) return `play:${plays[0]}`;
-      // the second turn: one unit takes its own battlefield
-      const atBf = unitsOf(v, me).some((id) => typeof whereIs(v, id) === 'number');
-      if (v.turn.n >= 4 && !atBf && has('move')) return 'move';
+      const there = unitsOf(v, me).filter(atBf);
+      if (retreat ? there.some(ready) && has('move') : advance && v.turn.n >= 4 && there.length === 0 && has('move')) return 'move';
       return has('end') ? 'end' : null;
     }
     case 'moveUnits': {
       const chosen = d.prompt.t === 'moveUnits' ? d.prompt.chosen : 0;
+      if (retreat) return keys.find((k) => head(k) === 'u' && atBf(objOfKey(k)!)) ?? (has('done') ? 'done' : null);
+      if (!advance) return has('done') ? 'done' : null;
+      // the second turn: one unit takes its own battlefield
       const u = keys.find((k) => head(k) === 'u' && whereIs(v, objOfKey(k)!) === 'base');
       return chosen === 0 && u !== undefined ? u : has('done') ? 'done' : null;
     }
     case 'moveDest': {
+      if (retreat && has('loc:base')) return 'loc:base';
       const free = v.bfs.map((b, i) => ({ b, i })).filter(({ b }) => b.here.every((id) => v.objects[id]?.controller === me));
       const at = free.find(({ i }) => i === OPPONENT) ?? free[0];
       return at && has(`loc:bf${at.i}`) ? `loc:bf${at.i}` : null;
