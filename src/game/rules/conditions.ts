@@ -97,6 +97,12 @@ export function evalCond(s: GameState, c: CondAst, x: CondCtx): boolean {
     case 'showdown': return s.showdown !== null;
     case 'phase': return s.turn.phase === c.phase && (!c.yours || s.turn.player === x.controller);
     case 'xpGained': return (s.log.xpGained[x.controller] ?? 0) > 0;
+    case 'selfInShowdown': {
+      const o = x.source === null ? undefined : s.objects[x.source];
+      return s.showdown !== null && !!o && o.zone.z === 'bf' && o.zone.bf === s.showdown.bf;
+    }
+    case 'origin': return x.origin === c.z;
+    case 'runeDeck': return cmp(s.players[x.controller].runeDeck.length, c.op, c.n);
     case 'legion': {                                                 // another card finalized by you this turn [812.1.c]
       const me = x.source === null ? undefined : s.objects[x.source]?.card;
       return s.log.finalized.some((f) => f.p === x.controller && f.isCard && f.card !== me);
@@ -118,7 +124,8 @@ export function evalCond(s: GameState, c: CondAst, x: CondCtx): boolean {
       switch (c.what) {
         case 'discarded': n = s.log.discards[p]; break;
         case 'unitDied': n = s.log.deaths.filter((d) => d.snap.chars.types.includes('unit') && (c.rel === undefined
-          || (c.rel === 'friendly' ? d.snap.controller === p : d.snap.controller !== null && d.snap.controller !== p))).length; break;
+          || (c.rel === 'friendly' ? d.snap.controller === p : d.snap.controller !== null && d.snap.controller !== p))
+          && (!c.yourBeginning || (d.phase === 'beginning' && s.turn.player === p))).length; break;
         case 'played': n = s.log.played.filter((r) => r.p === p && r.isCard && typed(r.types)
           && (!c.tag || (findCard(r.def)?.tags ?? []).includes(c.tag)) && (c.minSpent === undefined || r.energySpent >= c.minSpent)).length; break;
         case 'playedToBf': n = s.log.played.filter((r) => r.p === p && r.to?.z === 'bf' && typed(r.types)).length; break;

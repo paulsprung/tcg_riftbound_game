@@ -24,6 +24,7 @@ import type { ChainItem, GameState, ObjId } from '../state/types.ts';
 import { TOKENS } from '../cards/tokens.ts';
 import { evalCond } from '../rules/conditions.ts';
 import { isType } from '../rules/chars.ts';
+import { usageKey } from '../rules/chain.ts';
 
 export interface ReplacementOffer { source: ObjId; a: ReplacementAst }
 
@@ -41,7 +42,8 @@ export function tokenReplacements(s: GameState, it: ChainItem): ReplacementOffer
       if (a.ev.by === 'you' && o.controller !== it.controller) continue;
       if (!isType(tok, a.ev.type)) continue;
       if (a.while && !evalCond(s, a.while, { controller: o.controller, source: o.id })) continue;
-      if (a.instead.playToken === tok.def || !Object.hasOwn(TOKENS, a.instead.playToken)) continue;   // no difference
+      if ('playToken' in a.instead && (a.instead.playToken === tok.def || !Object.hasOwn(TOKENS, a.instead.playToken))) continue;   // no difference
+      if (a.limit && (s.usage[usageKey(o.id, a.id, '*')] ?? 0) >= a.limit.n) continue;   // "Once each turn" [383.3.e]
       out.push({ source: o.id, a });
     }
   }

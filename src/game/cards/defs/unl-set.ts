@@ -9,7 +9,7 @@ import {
   recall, ref, returnToHand, revealHand, slot, spell, spellSel, stun, unit, unitSel, val, when, addPower, detach,
   addEnergy, buff, cardSel as cards, gold, legend, look, modal, mode, pickWhere, playCard, playToken, recycle, recycleRest,
   replay, revealTop, PETS, discardCards, keywordTo as kwTo, opponentsDraw, pay, points, runeSel, statik, win,
-  doubleDamage, permanentSel, playerEffect, putOnTop, toTrash,
+  doubleDamage, permanentSel, playerEffect, putOnTop, toTrash, facedownSel, gearSel, swap, lookAt, banishIfDies, replacement,
 } from '../../dsl/builders.ts';
 
 const friendly = unitSel({ rel: 'friendly' });
@@ -381,5 +381,203 @@ export const UNL_SET_DEFS = [
   spell('mirror-image', 'Choose a unit. Play a ready Reflection unit token to your base. Then do this: It becomes a copy of that unit. Give it [Temporary].', {
     choose: [slot('a', unitSel())],
     body: [playToken('reflection', 1, 'yourBase', { ready: true, copyOf: ref.slot('a'), give: [kw.temporary()] })],
+  }),
+
+  // ---- batch 5 (UNL batch B) ----
+  unit('mischievous-marai', '[Hidden]\nWhen you play me to a battlefield, deal 2 to an enemy unit here.', {
+    abilities: [onPlay(prog([deal(2, ref.slot('a'))], [slot('a', unitSel({ rel: 'enemy', at: 'here' }), { harm: true })]), { if: cond.playedToBf })],
+  }),
+  spell('monster-harpoon', '[Action]\nDeal 2 to a unit at a battlefield. If you control a facedown card, deal 4 to it instead.', {
+    kw: [kw.action()], choose: [slot('a', unitSel({ at: 'battlefield' }), { harm: true })],
+    body: [iff(cond.count(facedownSel({ rel: 'friendly' }), '>=', 1), [deal(4, ref.slot('a'))], [deal(2, ref.slot('a'))])],
+  }),
+  spell('moonfall', '[Action]\nChoose a battlefield where you have units. You may move up to one enemy unit to that battlefield. Then give enemy units there -2 [M] this turn.', {
+    kw: [kw.action()],
+    choose: [slot('b', bfSel({ where: [pred.unitsHere('friendly')] })), slot('e', unitSel({ rel: 'enemy' }), { min: 0, max: 1, harm: true })],
+    body: [move(ref.slot('e'), { slotBf: 'b' }), might(2, unitSel({ rel: 'enemy', at: { slot: 'b' } }), -1)],
+  }),
+  unit('nidalee-cat-form', '[Ambush]\nWhen I win a combat, draw 1.', { abilities: [when({ on: 'winCombat', who: 'self' }, prog([draw(1)]))] }),
+  unit('nilah-joyful-ascetic', '[Accelerate]\n[Ganking]\nWhen I move, gain 1 XP.', { abilities: [when({ on: 'moved', who: 'self' }, prog([gainXp(1)]))] }),
+  unit('petal-pixie', 'I have +1 [M] for each of your units with [Temporary] at my battlefield.', {
+    abilities: [statik(val.count(unitSel({ rel: 'friendly', at: 'here', where: [pred.keyword('temporary')] })), { while: cond.selfAt('battlefield') })],
+  }),
+  unit('poppy-defender-of-the-meek', 'You may spend 3 XP as an additional cost to play me. If you do, I cost [3] less.\n[Ambush]\n[Tank]', {
+    abilities: [costAbility({ optional: true, pay: { xp: 3 }, discount: { energy: 3 } })],
+  }),
+  legend('poppy-keeper-of-the-hammer', 'When you hold, gain 1 XP.\nSpend 3 XP, [E]: Draw 1.', [
+    when({ on: 'hold', who: 'you', at: 'any' }, prog([gainXp(1)])), activated({ xp: 3, exhaustSelf: true }, prog([draw(1)])),
+  ]),
+  unit('poppy-paragon', "[Deflect]\nWhen you play me, if an opponent's score is within 3 points of the Victory Score, ready me and gain 3 XP.", {
+    abilities: [onPlay(prog([ready(ref.self), gainXp(3)]), { if: cond.opponentNearWin(3) })],
+  }),
+  unit('prepared-neophyte', "If you've spent [4] or more to play a spell this turn, I have +4 [M].", {
+    abilities: [statik(4, { while: cond.thisTurn('played', { types: ['spell'], minSpent: 4 }) })],
+  }),
+  legend('pyke-bloodharbor-ripper', "[1], [E]: Return a friendly unit at a battlefield to its owner's hand. Play a Gold gear token exhausted.", [
+    activated({ energy: 1, exhaustSelf: true }, prog([returnToHand(ref.slot('a')), gold()], [slot('a', unitSel({ rel: 'friendly', at: 'battlefield' }))])),
+  ]),
+  unit('pyke-dockside-butcher', '[Hidden]\n[Ganking]\nYou may pay [R] as an additional cost to play me.\nWhen you play me, if you paid the additional cost, ready me and give me +2 [M] this turn.', {
+    abilities: [costAbility({ optional: true, add: { power: ['fury'] } }),
+      onPlay(prog([ready(ref.self), might(2, ref.self)]), { if: cond.paid('pyke-dockside-butcher#0') })],
+  }),
+  unit('pyke-returned', "[Hidden]\n[Backline]\nOnce each turn, when an enemy unit dies while I'm at a battlefield, play a Gold gear token exhausted.", {
+    abilities: [when({ on: 'unitDies', at: 'any', who: 'enemy' }, prog([gold()]), { limit: { n: 1, per: 'turn' }, if: cond.selfAt('battlefield') })],
+  }),
+  unit('red-brambleback', '[Accelerate]\nYour conquer effects for conquering here trigger an additional time.\nWhen I conquer, [Buff] a friendly unit.', {
+    abilities: [always({ s: 'extraScoreTriggers', how: 'conquer' }),
+      when({ on: 'conquer', who: 'you', at: 'here' }, prog([buff(ref.slot('a'))], [slot('a', friendly)]))],
+  }),
+  legend('rengar-pridestalker', 'When you play a unit, give a unit +1 [M] this turn.', [
+    when({ on: 'cardPlayed', by: 'you', what: { types: ['unit'] } }, prog([might(1, ref.slot('a'))], [slot('a', unitSel())])),
+  ]),
+  // Like Not So Fast, only spells are counted among what can be countered (ability items aren't choosable yet).
+  spell('repulse', '[Reaction]\nChoose a friendly unit at a battlefield. Counter an enemy spell or ability that chooses it and no other friendly unit.', {
+    kw: [kw.reaction()],
+    choose: [slot('u', unitSel({ rel: 'friendly', at: 'battlefield' })), slot('s', spellSel({ rel: 'enemy', where: [pred.choosesOnly('u')] }), { harm: true })],
+    body: [counter(ref.slot('s'))],
+  }),
+  unit('revna-the-lorekeeper', '[Ganking]\nWhen you play a spell, if you spent [4] or more, ready me.', {
+    abilities: [when({ on: 'cardPlayed', by: 'you', what: { types: ['spell'], minSpent: 4 } }, prog([ready(ref.self)]))],
+  }),
+  unit('rift-herald', 'When I move to a battlefield, look at the top 3 cards of your Main Deck. You may reveal a unit from among them and draw it. Recycle the rest.\n[Deathknell][>] Play a unit from your hand to your base, ignoring its Energy cost.', {
+    abilities: [when({ on: 'moved', who: 'self', to: 'bf' }, prog([look(3, 'l'), pickWhere('l', 1, 'u', { min: 0, where: [pred.type('unit')] }),
+      draw(1, ref.bound('u')), recycleRest('l', 'u')])),
+    deathknell(prog([choose(cards({ in: 'hand', rel: 'friendly', where: [pred.type('unit')] }), 'c'), playFree(ref.bound('c'), 'energy', { at: 'base' })]))],
+  }),
+  unit('ruined-rex', '[Deathknell][>] Deal 4 to an enemy unit.', {
+    abilities: [deathknell(prog([deal(4, ref.slot('a'))], [slot('a', unitSel({ rel: 'enemy' }), { harm: true })]))],
+  }),
+  spell('sacrifice', '[Reaction]\nAs an additional cost to play this, kill a friendly [Mighty] unit.\nDraw 2 and channel 1 rune exhausted.', {
+    kw: [kw.reaction()], abilities: [costAbility({ pay: { kill: { sel: unitSel({ rel: 'friendly', where: [pred.mighty] }), n: 1 } } })],
+    body: [draw(2), channel(1, { exhausted: true })],
+  }),
+  unit('safety-inspector', "You may spend 3 XP as an additional cost to play me.\nWhen you play me, each player must kill one of their units. If you paid my additional cost, you don't kill a unit this way.", {
+    abilities: [costAbility({ optional: true, pay: { xp: 3 } }),
+      onPlay(prog([eachPlayerKills(1, { exceptIf: cond.paid('safety-inspector#0') })]))],
+  }),
+  unit('scorchclaw', '[Hunt 2]\n[Level 3][>] I have +1 [M] and enter ready.', {
+    abilities: [statik(1, { while: cond.level(3) }), entersReady({ while: cond.level(3) })],
+  }),
+  unit('scrutinizing-sergeant', 'When you play me, gain 1 XP for each friendly unit.', { abilities: [onPlay(prog([gainXp(val.count(friendly))]))] }),
+  unit('scuttle-crab', 'When you play me, draw 1.\n[Deathknell][>] Choose an opponent. They reveal their hand. You can look at their facedown cards this turn. Gain 1 XP.', {
+    abilities: [onPlay(prog([draw(1)])), deathknell(prog([revealHand, lookAt(facedownSel({ rel: 'enemy' })), gainXp(1)]))],
+  }),
+  unit('shadow-watcher', 'If a friendly unit died during your Beginning Phase this turn, I enter ready.', {
+    abilities: [entersReady({ while: cond.thisTurn('unitDied', { rel: 'friendly', yourBeginning: true }) })],
+  }),
+  spell('shadows-call', 'Choose a friendly unit without [Temporary]. Give it [Temporary]. Draw 2.', {
+    choose: [slot('a', unitSel({ rel: 'friendly', where: [pred.not(pred.keyword('temporary'))] }))],
+    body: [grant(kw.temporary(), ref.slot('a'), 'permanent'), draw(2)],
+  }),
+  gear('shard-of-undoing', 'The first time a friendly unit dies during your Beginning Phase each turn, each opponent must kill one of their units.', {
+    abilities: [when({ on: 'unitDies', at: 'any', who: 'friendly' }, prog([eachPlayerKills(1, { who: 'opponents' })]), { first: 'turn', if: cond.yourBeginning })],
+  }),
+  gear('shepherds-heirloom', 'When you play this, gain 1 XP.\n[Equip] — Spend 1 XP', { abilities: [onPlay(prog([gainXp(1)]))] }),
+  unit('sinister-poro', 'When I attack, you may pay [1] to move an enemy unit here to its base.', {
+    abilities: [when({ on: 'attack', who: 'self' }, prog([move(ref.slot('a'), 'base')], [slot('a', unitSel({ rel: 'enemy', at: 'here' }), { harm: true })]),
+      { may: true, cost: { energy: 1 } })],
+  }),
+  spell('smite', '[Action]\nDeal 3 to a unit at a battlefield. If it would die this turn, banish it instead.', {
+    kw: [kw.action()], choose: [slot('a', unitSel({ at: 'battlefield' }), { harm: true })], body: [banishIfDies(ref.slot('a')), deal(3, ref.slot('a'))],
+  }),
+  spell('smoke-and-mirrors', "[Hidden]\n[Action]\nChoose a unit you control and another unit you control at a different location. If at least one of them has [Temporary], move each to the other's location. Draw 1.", {
+    kw: [kw.action()], choose: [slot('a', friendly), slot('b', unitSel({ rel: 'friendly', where: [pred.notAtSlot('a')] }), { distinctFrom: ['a'] })],
+    body: [iff(cond.or(cond.is(ref.slot('a'), pred.keyword('temporary')), cond.is(ref.slot('b'), pred.keyword('temporary'))),
+      [swap(ref.slot('a'), ref.slot('b'))]), draw(1)],
+  }),
+  unit('soul-shepherd', 'Your token units have +1 [M].', { abilities: [mightTo(1, unitSel({ rel: 'friendly', where: [pred.token] }))] }),
+  unit('spectral-centaur', 'When another friendly unit dies, give me +2 [M] this turn.', {
+    abilities: [when({ on: 'unitDies', at: 'any', who: 'friendlyOther', each: true }, prog([might(2, ref.self)]))],
+  }),
+  spell('sprite-burst', 'Play two ready 3 [M] Sprite unit tokens with [Temporary].', { body: [playToken('sprite', 2, 'choose', { ready: true })] }),
+  ...(() => {
+    const sprite = prog([playToken('sprite', 1, 'yourBase', { ready: true })]);
+    return [gear('sprite-fountain', "[Temporary]\nWhen you play this, play a ready 3 [M] Sprite unit token with [Temporary] to your base.\n[Deathknell][>] Repeat this gear's play effect.", {
+      abilities: [onPlay(sprite), deathknell(sprite)],
+    }), unit('sprite-queen', 'When you play me or at the start of your Beginning Phase, play a ready 3 [M] Sprite unit token with [Temporary] to your base.', {
+      abilities: [onPlay(sprite), when({ on: 'phase', at: 'beginning', whose: 'your' }, sprite)],
+    })];
+  })(),
+  unit('stalking-wolf', "[Ambush]\nAs an additional cost to play me, kill a Bird, Cat, Dog, or Poro you control. You may [Ambush] me to its battlefield, even if you don't have other units there.", {
+    abilities: [costAbility({ pay: { kill: { sel: unitSel({ rel: 'friendly', where: [pred.anyTag(...PETS)] }), n: 1 } } })],
+  }),
+  spell('star-crossed', "[Reaction]\nReturn a friendly unit and an enemy unit to their owners' hands.", {
+    kw: [kw.reaction()], choose: [slot('a', friendly), slot('b', unitSel({ rel: 'enemy' }), { harm: true })],
+    body: [returnToHand(ref.slot('a')), returnToHand(ref.slot('b'))],
+  }),
+  spell('stare-down', 'Choose a friendly unit and a battlefield. Move all enemy units at that battlefield with less Might than the chosen unit to their base. Gain 1 XP.', {
+    choose: [slot('a', friendly), slot('b', bfSel())],
+    body: [move(unitSel({ rel: 'enemy', at: { slot: 'b' }, where: [pred.mightVsSlot('a', '<')] }), 'base'), gainXp(1)],
+  }),
+  unit('starhound', 'When you play me, return a Bird, Cat, Dog, or Poro from your trash to your hand.', {
+    abilities: [onPlay(prog([returnToHand(ref.slot('c'))], [slot('c', cards({ rel: 'friendly', where: [pred.anyTag(...PETS)] }))]))],
+  }),
+  gear('sumpworks-map', '[Reaction]\n[Temporary]\nWhen an opponent scores, draw 1.', {
+    abilities: [when({ on: 'score', who: 'opponent', at: 'any' }, prog([draw(1)]))],
+  }),
+  unit('syndra-transcendent', "While I'm in a showdown, your spells have [Repeat] [2][P].", {
+    abilities: [costAbility({ grant: { types: ['spell'] }, optional: true, repeat: true, add: { energy: 2, power: ['chaos'] }, while: cond.selfInShowdown })],
+  }),
+  unit('targonian-visionary', '[Level 11][>] I have +4 [M].', { abilities: [statik(4, { while: cond.level(11) })] }),
+  battlefield('the-academy', 'When you hold here, give your next spell this turn [Repeat] equal to its base cost.', [
+    when({ on: 'hold', who: 'you', at: 'here' }, prog([playerEffect({ s: 'grantRepeat', uses: 1 })]), { controller: 'eventPlayer' }),
+  ]),
+  gear('the-list', 'As you play this, name a tag.\n[E]: Give a unit with the named tag -2 [M] this turn.', {
+    abilities: [always({ s: 'chooseTag', tags: 'any', gain: false }),
+      activated({ exhaustSelf: true }, prog([might(2, ref.slot('a'), -1)], [slot('a', unitSel({ where: [pred.namedTag] }), { harm: true })]))],
+  }),
+  spell('the-ruination', 'Kill all units.', { body: [kill(unitSel())] }),
+  spell('thrill-of-the-hunt', '[Reaction]\nBanish a friendly unit, then its owner plays it to any battlefield, ignoring its cost.', {
+    kw: [kw.reaction()], choose: [slot('a', friendly)],
+    body: [named('b', banish(ref.slot('a'))), playFree(ref.bound('b'), 'all', { by: 'owner', anyBf: true })],
+  }),
+  // In a Duel every enemy unit has the same controller.
+  spell('tricksy-tentacles', 'Move any number of enemy units with the same controller and a total Might of 8 or less to a single location.', {
+    choose: [slot('a', unitSel({ rel: 'enemy' }), { min: 1, max: 99, harm: true, sumMightMax: 8 }), destSlot('d', 'a', 'any')],
+    body: [move(ref.slot('a'), { dest: 'd' })],
+  }),
+  spell('turn-to-dust', 'Give a gear [Temporary].', {
+    choose: [slot('a', gearSel(), { harm: true })], body: [grant(kw.temporary(), ref.slot('a'), 'permanent')],
+  }),
+  unit('ultrasoft-poro', "[E]: Play two [1] [M] Bird unit tokens with [Deflect]. Use this ability only while I'm at a battlefield.", {
+    abilities: [activated({ exhaustSelf: true }, prog([playToken('bird', 2, 'choose')]), { while: cond.selfAt('battlefield') })],
+  }),
+  unit('undying-legion', '[Legion][>] You may play me from your trash for [3][R].', {
+    abilities: [always({ s: 'playFromTrash' }, { while: cond.legion }), costAbility({ alt: { energy: 3, power: ['fury'] }, while: cond.origin('trash') })],
+  }),
+  spell('undying-loyalty', 'This costs [2] less if you choose a Bird, Cat, Dog, or Poro.\nPlay a unit with cost no more than [2] and no more than [A] from your trash, ignoring its cost.', {
+    abilities: [costAbility({ discount: { energy: 2, ifTarget: [pred.anyTag(...PETS)] } })],
+    choose: [slot('c', cards({ rel: 'friendly', where: [pred.type('unit'), pred.energyCost('<=', 2), pred.powerCost('<=', 1)] }))],
+    body: [playFree(ref.slot('c'))],
+  }),
+  battlefield('vaults-of-helia', 'When you hold here, your non-token units cost [1] more to play this turn.', [
+    when({ on: 'hold', who: 'you', at: 'here' }, prog([playerEffect({ s: 'costMore', types: ['unit'], energy: 1, nonToken: true })]),
+      { controller: 'eventPlayer' }),
+  ]),
+  unit('vicious-snapjaws', 'When another friendly unit dies, gain 1 XP.', {
+    abilities: [when({ on: 'unitDies', at: 'any', who: 'friendlyOther', each: true }, prog([gainXp(1)]))],
+  }),
+  unit('vilemaw', "[Ambush]\nEnemy units here with less Might than me don't deal combat damage.\nWhen I hold, draw 1.", {
+    abilities: [always({ s: 'noCombatDamage', to: unitSel({ rel: 'enemy', at: 'here', where: [pred.mightVsSource('<')] }) }), when(hold, prog([draw(1)]))],
+  }),
+  spell('void-assault', 'Move a friendly unit, then move an enemy unit.', {
+    choose: [slot('a', friendly), destSlot('da', 'a', 'any'), slot('b', unitSel({ rel: 'enemy' }), { harm: true }), destSlot('db', 'b', 'any')],
+    body: [move(ref.slot('a'), { dest: 'da' }), move(ref.slot('b'), { dest: 'db' })],
+  }),
+  unit('walking-roost', '[Deflect]\nWhen you play me, choose an opponent. They play a 1 [M] Bird unit token with [Deflect].', {
+    abilities: [onPlay(prog([forEach('opponents', 'next', [playToken('bird', 1, 'choose')])]))],
+  }),
+  unit('wily-newtfish', "If you've gained XP this turn, I have +1 [M] and [Ganking].", {
+    abilities: [statik(1, { while: cond.xpGained }), kwTo(kw.ganking(), undefined, { while: cond.xpGained })],
+  }),
+  ...(() => {
+    const fx = prog([might(3, ref.slot('a')), grant(kw.tank(), ref.slot('a'))], [slot('a', unitSel({ rel: 'friendly', other: true, at: 'here' }))]);
+    return [unit('yuumi-magical-cat', 'When I attack or defend, give one of your other units here +3 [M] and [Tank] this turn.', {
+      abilities: [when({ on: 'attack', who: 'self' }, fx), when({ on: 'defend', who: 'self' }, fx)],
+    })];
+  })(),
+  unit('zilean-time-mage', "Once each turn, if you would play a token unit while I'm at a battlefield, you may play that token and an additional copy of it instead.", {
+    abilities: [replacement({ ev: { ev: 'playToken', by: 'you', type: 'unit' }, instead: { extraCopy: true }, while: cond.selfAt('battlefield'), may: true,
+      limit: { n: 1, per: 'turn' } })],
   }),
 ];

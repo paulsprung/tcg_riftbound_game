@@ -106,7 +106,7 @@ export function inCombat(s: GameState, id: ObjId): boolean {
 
 /** Ivern: "As you play me, choose Bird, Cat, Dog, or Poro. I gain that tag." */
 export const hasChosenTag = (o: GameObject, tag: string) => o.named?.kind === 'tag' && o.named.value === tag
-  && locOf(o) !== null && (cardDefOf(o.def)?.abilities ?? []).some((a) => a.kind === 'static' && a.spec.s === 'chooseTag');
+  && locOf(o) !== null && (cardDefOf(o.def)?.abilities ?? []).some((a) => a.kind === 'static' && a.spec.s === 'chooseTag' && a.spec.gain !== false);
 
 const unitsHere = (s: GameState, bf: number) => s.bfs[bf].here.filter((u) => isType(s.objects[u], 'unit'));
 
@@ -172,6 +172,36 @@ export function predOk(s: GameState, p: PredAst, id: ObjId, c: SelCtx): boolean 
       const total = unitsHere(s, bf).filter((u) => s.objects[u].controller !== c.controller)
         .reduce((n, u) => n + Math.max(0, mightOf(s, u)), 0);
       return mightOf(s, c.source!) > total;
+    }
+    case 'unitsHere': {                                              // "a battlefield where you have units"
+      const bf = s.bfs.findIndex((b) => b.obj === id);
+      return bf >= 0 && unitsHere(s, bf).some((u) => (p.rel === 'friendly' ? s.objects[u].controller === c.controller
+        : s.objects[u].controller !== null && s.objects[u].controller !== c.controller));
+    }
+    case 'mightVsSlot': {                                            // "with less Might than the chosen unit"
+      const other = c.slotObjs?.[p.slot]?.[0];
+      return other !== undefined && !!s.objects[other] && locOf(s.objects[other]) !== null && cmp(mightOf(s, id), p.op, mightOf(s, other));
+    }
+    case 'notAtSlot': {                                              // "at a different location"
+      const other = c.slotObjs?.[p.slot]?.[0];
+      const a = other === undefined || !s.objects[other] ? null : locOf(s.objects[other]), b = locOf(o);
+      return !a || !b || !sameLoc(a, b);
+    }
+    case 'choosesOnly': {                                            // "a spell … that chooses it and no other friendly unit"
+      const it = s.chain.find((i) => i.obj === id);
+      if (!it) return false;
+      const chosen = it.play.choices.executions.flatMap((ex) => Object.values(ex.targets).flat())
+        .flatMap((t) => (t.k === 'obj' && s.objects[t.id] ? [t.id] : []));
+      const friendly = [...new Set(chosen.filter((u) => isType(s.objects[u], 'unit') && s.objects[u].controller === c.controller))];
+      const want = c.slotObjs?.[p.slot]?.[0];
+      if (want === undefined) return friendly.length === 1;          // not chosen yet: some single friendly unit
+      return friendly.length === 1 && friendly[0] === want;
+    }
+    case 'empowered': return o.empowered > 0;
+    case 'namedTag': {                                               // The List: "a unit with the named tag"
+      const src = c.source === null ? undefined : s.objects[c.source];
+      const tag = src?.named?.kind === 'tag' ? src.named.value : undefined;
+      return tag !== undefined && predOk(s, { p: 'tag', tag }, id, c);
     }
     case 'costAtMostPaid': {
       const pc = c.paidCost;

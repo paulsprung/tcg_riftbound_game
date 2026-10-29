@@ -384,11 +384,20 @@ export function heal(s: GameState, x: X, units: ObjId[], rule: string) {
 export function kill(s: GameState, x: X, units0: ObjId[], o: { rule: string; inCombat: (id: ObjId) => boolean;
   by?: PlayerId | null; spell?: boolean }) {
   const units: ObjId[] = [];
+  const banished: ObjId[] = [];
   for (const id of units0) {
     if (!s.objects[id]) continue;
+    // Smite: "If it would die this turn, banish it instead" [367].
+    const bi = s.effects.find((e) => (e.spec as { s?: string } | null)?.s === 'banishIfDies' && 'objs' in e.affects && e.affects.objs.includes(id));
+    if (bi) {
+      emit(s, x, { k: 'replaced', source: bi.source ?? id, event: 'die', rule: '369.1' });
+      banished.push(id);
+      continue;
+    }
     if (isType(s.objects[id], 'unit') && savedFromDeath(s, x, id, units0)) continue;
     units.push(id);
   }
+  if (banished.length > 0) banish(s, x, banished, '428');
   if (units.length === 0) return;
   const group = newGroup(s);
   emit(s, x, { k: 'kill', objs: units.slice(), rule: o.rule, group });
@@ -404,7 +413,7 @@ export function kill(s: GameState, x: X, units0: ObjId[], o: { rule: string; inC
     const by = o.by !== undefined ? o.by : u.lastDamage?.by ?? null;
     const spell = o.by !== undefined ? o.spell === true : u.lastDamage?.spell === true;
     toZone(s, x, id, Z.trash(u.owner), { why: 'kill', rule: o.rule, group });
-    append(s, s.log.deaths, { snap, group, inCombat, at });
+    append(s, s.log.deaths, { snap, group, inCombat, at, phase: s.turn.phase });
     deaths.push({ snap, at, item, alone: alone[i], by, spell });
   }
   requestCleanup(s);                                                 // leaving the board [319.6]
@@ -562,13 +571,21 @@ export function addMight(s: GameState, x: X, units: ObjId[], n: number, o: { con
   });
   for (const id of units) emit(s, x, { k: 'mightChanged', obj: id, from: null, to: null, rule: o.rule });
   requestCleanup(s);                                                 // a Might change can make damage lethal [319.7]
+  if (n < 0) fire(s, x, { e: 'mightReduced', by: o.controller, objs: units.slice() });   // "When you reduce the Might of …"
+}
+
+/** Empowers or disempowers objects [442], [443]. */
+export function setEmpowered(s: GameState, x: X, objs: ObjId[], on: boolean) {
+  for (const id of objs) setField(s, s.objects[id], 'empowered', on ? 1 : 0);
+  emit(s, x, { k: on ? 'empower' : 'disempower', objs: objs.slice(), rule: on ? '442' : '443' });
 }
 
 /** A continuous effect on a locked set of objects for the rest of the turn
     [479]: "its base Might becomes N" (layer 2), "give … [Shield 2]" (layer
     3). The objects are fixed now [479.4.b]. */
 export function addEffect(s: GameState, x: X, objs: ObjId[], spec: { s: 'baseMight'; n: number } | { s: 'keyword'; kw: string;
-  value: number } | { s: 'cantMove' } | { s: 'replaceDeath'; cost?: Json } | { s: 'preventNext' } | { s: 'doubleDamage' }, o: { controller: PlayerId; source: ObjId | null; item: number | null;
+  value: number } | { s: 'cantMove' } | { s: 'replaceDeath'; cost?: Json } | { s: 'preventNext' } | { s: 'doubleDamage' }
+  | { s: 'banishIfDies' }, o: { controller: PlayerId; source: ObjId | null; item: number | null;
   rule: string; until?: 'thisTurn' | 'thisCombat' | 'permanent' }) {
   if (objs.length === 0) return;
   append(s, s.effects, {

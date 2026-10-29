@@ -31,7 +31,7 @@ import type { CardType, ChainItem, Domain, GameState, ObjId, PlayerId, PowerReq,
 import { energyCostOf, hasKeyword, isType, keywordOf, mightOf, typesOf } from '../rules/chars.ts';
 import { evalCond, tagsAmong } from '../rules/conditions.ts';
 import type { ResourceCost } from '../rules/resources.ts';
-import { selectAll } from '../rules/targets.ts';
+import { predOk, selectAll } from '../rules/targets.ts';
 import { boardObjects, staticsFor } from '../layers/derive.ts';
 import { findCard } from '../cards/oracle.ts';
 import { TOKENS } from '../cards/tokens.ts';
@@ -58,6 +58,11 @@ export function costOffers(s: GameState, def: string, types: CardType[], p: Play
     const power = printed.power.map((r): PowerReqAst => (r.k === 'any' ? 'A' : r.k === 'domain' ? r.d : 'C'));
     out.push({ key: 'eff:repeat', a: { id: 'eff:repeat', kind: 'cost', optional: true, repeat: true,
       add: { energy: printed.energy, power } }, src: null });
+  }
+  // Firelights Hideout: "the next unit you play this turn has [Accelerate]" [805].
+  if (types.includes('unit') && !Object.hasOwn(TOKENS, def) && !abilitiesOf(def).some((a) => a.id.endsWith('#kw:accelerate'))
+    && s.effects.some((e) => (e.spec as { s?: string } | null)?.s === 'grantAccelerate' && 'player' in e.affects && e.affects.player === p)) {
+    out.push({ key: 'eff#kw:accelerate', a: { id: 'eff#kw:accelerate', kind: 'cost', optional: true, add: { energy: 1, power: ['C'] } }, src: null });
   }
   for (const o of boardObjects(s)) {
     if (o.attachedTo !== null) continue;
@@ -102,6 +107,7 @@ export function nonStdPossible(s: GameState, pay: NonStdCostAst | undefined, src
   if (pay.spendBuff && buffCandidates(s, pay.spendBuff.sel, p, src).length < pay.spendBuff.n) return false;
   if (pay.bounce && costCandidates(s, pay.bounce.sel, p, src, false).length < pay.bounce.n) return false;
   if (pay.banishSelf && !me) return false;
+  if (pay.disempowerSelf && (!me || me.empowered === 0)) return false;
   return true;
 }
 
@@ -120,7 +126,8 @@ export function xMax(s: GameState, x: NonNullable<CostAbilityAst['x']>, p: Playe
 export function nonStdOf(c: CostAst | NonStdCostAst | undefined): NonStdCostAst | undefined {
   if (!c) return undefined;
   const out: NonStdCostAst = {};
-  for (const k of ['exhaustSelf', 'killSelf', 'spendBuffSelf', 'exhaust', 'kill', 'discard', 'recycleTrash', 'xp', 'spendBuff', 'bounce', 'banishSelf'] as const) {
+  for (const k of ['exhaustSelf', 'killSelf', 'spendBuffSelf', 'exhaust', 'kill', 'discard', 'recycleTrash', 'xp', 'spendBuff', 'bounce', 'banishSelf',
+    'disempowerSelf'] as const) {
     if (c[k] !== undefined) (out as Record<string, unknown>)[k] = c[k];
   }
   return Object.keys(out).length > 0 ? out : undefined;
@@ -140,6 +147,7 @@ function discountOf(s: GameState, d: DiscountAst, src: ObjId | null, p: PlayerId
     if (v.v === 'holdPoints') return s.log.points.filter((r) => r.p === p && r.why === 'hold').reduce((n, r) => n + r.n, 0);
     if (v.v === 'playedThisTurn') return s.log.played.filter((r) => r.p === p && r.isCard).length;
     if (v.v === 'tagsAmong') return tagsAmong(s, p, v.tags);
+    if (v.v === 'conquered') return new Set(s.log.scored.filter((r) => r.p === p && r.how === 'conquer').map((r) => r.bf)).size;
     if (v.v === 'maxMight') return Math.max(0, ...selectAll(s, v.of, { controller: p, source: src }).map((id) => mightOf(s, id)));
     return 0;
   };
@@ -165,6 +173,8 @@ export function totalCost(s: GameState, o: { def: string; types: CardType[]; p: 
   chosen: readonly string[]; targets?: readonly TargetRef[]; extraAny?: number;
   /** How many each "any number" cost ability (CostAbilityAst.x) takes, by its key. */
   xs?: Record<string, number>; origin?: string;
+  /** The amount of Power chosen for each "pay any amount of Power" cost ability (CostAbilityAst.xPower), by its key. */
+  xpow?: Record<string, number>;
   /** Estimate the reduction of a cost read from the objects it kills (Atakhan) with the most expensive candidate. */
   estimatePaid?: boolean }): ResourceCost {
   let energy = o.base.energy;
@@ -179,6 +189,7 @@ export function totalCost(s: GameState, o: { def: string; types: CardType[]; p: 
   const deflect = (o.targets ?? []).reduce((n, t) => n + deflectFor(s, t, o.p), 0) + (o.extraAny ?? 0);
   for (let i = 0; i < deflect; i++) power.push({ k: 'any' });       // [809.1.c.1]
   for (const off of offers) {                                        // additional costs, increases [356.2–356.3]
+    if (off.a.xPower) for (let i = 0; i < (o.xpow?.[off.key] ?? 0); i++) power.push({ k: 'any' });   // "pay any amount of Power"
     for (const c of [off.a.add, off.a.increase]) {
       if (!c) continue;
       energy += c.energy ?? 0;
@@ -196,6 +207,10 @@ export function totalCost(s: GameState, o: { def: string; types: CardType[]; p: 
     if (spec?.s !== 'costLess' || !('player' in e.affects) || e.affects.player !== o.p) continue;
     if (!(spec.types ?? []).some((t) => o.types.includes(t)) || o.def === '') continue;
     energy -= spec.energy ?? 0;
+    for (let i = 0; i < ((spec as { power?: number }).power ?? 0) && power.length > 0; i++) {   // "by [2][A]"
+      const j = power.findIndex((r) => r.k === 'any');
+      power = power.filter((_, k) => k !== (j >= 0 ? j : power.length - 1));
+    }
     break;
   }
   for (const off of offers) {                                        // [356.4.d], [356.4.g]
@@ -217,6 +232,9 @@ export function totalCost(s: GameState, o: { def: string; types: CardType[]; p: 
     const d = off.a.discount;
     if (!d) continue;
     if (d.all) { energy = 0; power = []; continue; }
+    // "This costs [2] less if you choose a Bird, Cat, Dog, or Poro": read once targets are chosen (the estimate assumes it).
+    if (d.ifTarget && !(o.estimatePaid && (o.targets ?? []).length === 0) && !(o.targets ?? []).some((t) => t.k === 'obj' && s.objects[t.id]
+      && d.ifTarget!.every((w) => predOk(s, w, t.id, { controller: o.p, source: off.src })))) continue;
     if (d.ifChoosesSource) {                                         // "Your spells that choose me cost [1] or [A] less"
       if (!(o.targets ?? []).some((t) => t.k === 'obj' && t.id === off.src)) continue;
       if (energy > 0) energy -= 1;
@@ -276,6 +294,7 @@ export function showOffCandidates(s: GameState, it: ChainItem): { obj: ObjId; fr
   const kw = cardShowOff(card.def);
   if (!kw) return [];
   const fits = (id: ObjId) => (kw.minEnergy === undefined || energyCostOf(s.objects[id]) >= kw.minEnergy)
+    && (kw.type === undefined || isType(s.objects[id], kw.type))
     && (kw.withKeyword === undefined || (findCard(s.objects[id].def)?.keywords ?? []).some((l) => l.keywords.some((k) => k.kw === kw.withKeyword)));
   const p = it.controller;
   const out: { obj: ObjId; fromHand: boolean }[] = [];
@@ -290,7 +309,7 @@ export function showOffCandidates(s: GameState, it: ChainItem): { obj: ObjId; fr
 }
 
 /** A card's Show Off keyword, if its definition has one [832.1.b]. */
-export function cardShowOff(def: string): { minEnergy?: number; withKeyword?: import('../state/types.ts').KeywordId } | null {
+export function cardShowOff(def: string): import('../dsl/ast.ts').ShowOffAst | null {
   const k = cardDef(def)?.keywords.find((x) => x.kw === 'showOff');
   return k ? k.showOff ?? {} : null;
 }

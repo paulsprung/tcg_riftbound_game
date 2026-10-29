@@ -84,7 +84,8 @@ export type TriggerEvent =
   | { e: 'mighty'; objs: ObjId[] }                                   // becomes Mighty [709]
   | { e: 'hid'; p: PlayerId; bf: number }                            // [422]
   | { e: 'showdown'; bf: number }                                    // a showdown begins [341]
-  | { e: 'drew'; p: PlayerId; before: number; after: number };       // cards drawn this turn, before and after a draw
+  | { e: 'drew'; p: PlayerId; before: number; after: number }        // cards drawn this turn, before and after a draw
+  | { e: 'mightReduced'; by: PlayerId; objs: ObjId[] };             // an effect of `by` lowered these units' Might [479.4]
 
 const sameLoc = (a: Loc | null | undefined, b: Loc | null | undefined) => !!a && !!b && a.z === b.z
   && (a.z === 'base' ? a.p === (b as typeof a).p : a.bf === (b as typeof a).bf);
@@ -223,7 +224,8 @@ function meets(s: GameState, w: TriggerAst, ev: TriggerEvent, o: GameObject | nu
       const by: PlayerId[] = [];
       for (const d of ev.deaths) {
         if (w.at === 'here' && !sameLoc(d.at, here)) continue;
-        if (!d.snap.chars.types.includes('unit')) continue;
+        if (w.at === 'battlefield' && d.at?.z !== 'bf') continue;
+        if (!(w.types ?? ['unit']).some((t) => d.snap.chars.types.includes(t))) continue;
         if (w.nonToken && isTokenDef(d.snap.def)) continue;
         const p = d.snap.controller;
         const me = c(null);
@@ -235,7 +237,7 @@ function meets(s: GameState, w: TriggerAst, ev: TriggerEvent, o: GameObject | nu
         if (w.notTag && d.snap.chars.tags.includes(w.notTag)) continue;
         if (w.killedBy && (d.by === undefined || d.by === null || d.by !== me || (w.killedBy === 'yourSpell' && !d.spell))) continue;
         if (w.each) {                                                // one instance per unit
-          if (p !== null) instances.push({ p: me ?? p, info: { p, subjectDef: d.snap.def } });
+          if (p !== null) instances.push({ p: me ?? p, info: { p, subjectDef: d.snap.def, subjectCard: d.snap.card ?? -1 } });
           continue;
         }
         if (p === null || by.includes(p)) continue;                  // one crossing per player per group [383.1.b]
@@ -405,8 +407,16 @@ function meets(s: GameState, w: TriggerAst, ev: TriggerEvent, o: GameObject | nu
         if (ev.units.includes(dinfo[w.info] as number)) instances.push({ p: ev.p, info: { p: ev.p, bf: ev.bf } });
         break;
       }
+      if (w.at === 'here' && !sameLoc({ z: 'bf', bf: ev.bf }, here)) break;   // "When you win a combat here"
       if (w.who === 'self' ? !!o && ev.units.includes(o.id) : c(ev.p) === ev.p) instances.push({ p: ev.p, info: { p: ev.p, bf: ev.bf } });
       break;
+    case 'mightReduced': {                                           // "When you reduce the Might of an enemy unit here"
+      if (ev.e !== 'mightReduced' || c(ev.by) !== ev.by || !o) break;
+      const hit = ev.objs.filter((id) => s.objects[id] && ctlOf(s, id) !== null && ctlOf(s, id) !== ev.by
+        && (w.at !== 'here' || sameLoc(locOf(s.objects[id]), here)));
+      if (hit.length > 0) instances.push({ p: ev.by, info: { p: ev.by, subject: hit[0] } });
+      break;
+    }
     case 'leaves': break;                                            // self-leave, placed by the zone change [383.2.c.3]
     case 'dies': break;                                              // self-leave: placed by the kill itself [383.2.c.3]
   }
@@ -482,7 +492,9 @@ export function placeSelfLeave(s: GameState, x: X, id: ObjId, snap: Snapshot, in
   if (!o) return;
   const found: PendingTrigger[] = [];
   // "Your [Deathknell] effects trigger an additional time" (Karthus, Eternal).
-  const twice = died && staticsFor(s, null, 'deathknellTwice').some(({ st }) => st.ctl === snap.controller);
+  // Detonation Amplifier: "Friendly [Deathknell] effects here trigger an additional time."
+  const twice = died && staticsFor(s, null, 'deathknellTwice').some(({ st, spec }) => st.ctl === snap.controller
+    && (!spec.here || (!!snap.loc && !!hereOf(s, st.host) && sameLoc(snap.loc, hereOf(s, st.host)))));
   for (const a of triggeredOn(s, o)) {
     if (!((died && a.when.on === 'dies') || a.when.on === 'leaves') || snap.controller === null) continue;
     const t: PendingTrigger = { ability: a.id, source: id, controller: snap.controller, info: { subject: id, ...info }, group: 0, lki: snap };

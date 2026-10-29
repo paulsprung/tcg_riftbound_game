@@ -5,4 +5,4 @@
  * differently: a rules fix, a new default in RulesConfig, a changed option
  * order.
  */
-export const ENGINE_VERSION = '0.5.0-unl';
+export const ENGINE_VERSION = '0.6.0-rad';

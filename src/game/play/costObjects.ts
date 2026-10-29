@@ -12,7 +12,7 @@ import { answer, ask, type RunCtx, type StepOut } from '../core/frames.ts';
 import type { NonStdCostAst } from '../dsl/ast.ts';
 import { append, setField } from '../state/mut.ts';
 import type { ChainItem, Frame, GameState, ObjId } from '../state/types.ts';
-import { banish, discard, exhaust, kill, recycleCards, returnToHand, spendBuffs, spendXp } from '../rules/actions.ts';
+import { banish, discard, exhaust, kill, recycleCards, returnToHand, setEmpowered, spendBuffs, spendXp } from '../rules/actions.ts';
 import { snapshotOf } from '../rules/chars.ts';
 import { buffCandidates, costCandidates, trashCandidates } from './cost.ts';
 
@@ -79,6 +79,7 @@ export function performCostObjects(s: GameState, x: RunCtx, it: ChainItem, key: 
   if (toKill.some((id) => !s.objects[id] || !['base', 'bf'].includes(s.objects[id].zone.z))) return false;
   if (dc.some((id) => s.objects[id]?.zone.z !== 'hand') || rc.some((id) => s.objects[id]?.zone.z !== 'trash')) return false;
   if (pay.spendBuffSelf && (!me || me.buffs === 0)) return false;
+  if (pay.disempowerSelf && (!me || me.empowered === 0)) return false;
   if (sp.some((id) => !s.objects[id] || s.objects[id].buffs === 0)) return false;
   if (pay.xp && s.players[p].xp < pay.xp) return false;
   const snaps = [...new Set([...toExhaust, ...toKill])].map((id) => snapshotOf(s, id));
@@ -87,6 +88,7 @@ export function performCostObjects(s: GameState, x: RunCtx, it: ChainItem, key: 
   if (sp.length > 0) spendBuffs(s, x, sp, '357.2');
   if (bc.length > 0) returnToHand(s, x, bc, '357.2');
   if (pay.banishSelf && src !== null && s.objects[src]) banish(s, x, [src], '357.2');
+  if (pay.disempowerSelf && src !== null && s.objects[src]) setEmpowered(s, x, [src], false);   // [443]
   if (pay.xp) spendXp(s, x, p, pay.xp, '357.2');
   if (dc.length > 0) discard(s, x, p, dc, '357.2');
   if (rc.length > 0) recycleCards(s, x, p, rc, '357.2');

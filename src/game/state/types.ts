@@ -398,7 +398,9 @@ export interface TurnLog {             // reset at turn start; the per-turn memo
   played:      { p: PlayerId; card: CardRef | null; def: DefId; isCard: boolean; types: CardType[];
                  from: ZoneKind; to?: Loc; energySpent: number; powerSpent: number; countered: boolean }[];   // [420.4.a]
   abilitiesResolved: { p: PlayerId; source: ObjId; ability: AbilityId }[];
-  deaths: { snap: Snapshot; group: number; inCombat: boolean; at: Loc | null }[];
+  deaths: { snap: Snapshot; group: number; inCombat: boolean; at: Loc | null;
+    /** The phase it died in ("during your Beginning Phase"). */
+    phase?: Phase }[];
   moves:  { obj: ObjId; from: Loc; to: Loc; by: PlayerId | null; standard: boolean; group: number }[];
   exhausted: { p: PlayerId; objs: ObjId[]; group: number; byCost: boolean }[];   // one row per exhaust action
   scored: { p: PlayerId; bf: number; how: 'conquer' | 'hold'; point: boolean; units?: ObjId[] }[];

@@ -43,6 +43,14 @@ const TOKEN_DEFS: CardDef[] = [
       { id: 'brush#1', kind: 'triggered', when: { on: 'score', who: 'you', at: 'here' }, may: true, controller: 'eventPlayer',
         effect: { body: [{ op: 'replaceBf', at: 'here', back: true }] } },
     ] },
+  // [187.12]
+  { id: 'bomb', text: '[Deploy]\n[Deathknell][>] Deal 2 to an enemy unit here and kill all other Bombs you control here.', keywords: [], abilities: [
+    { id: 'bomb#0', kind: 'triggered', when: { on: 'dies', who: 'self' }, effect: {
+      choose: [{ id: 'a', sel: [{ k: 'unit', rel: 'enemy', at: 'here' }], harm: true }],
+      body: [{ op: 'deal', n: 2, to: { slot: 'a' } },
+        { op: 'kill', what: { k: 'gear', rel: 'friendly', at: 'here', other: true, where: [{ p: 'name', name: 'Bomb' }] } }],
+    } },
+  ] },
   // [187.9]
   { id: 'baronPit', text: 'Units can move here from anywhere.', keywords: [], abilities: [
     { id: 'baronPit#0', kind: 'static', spec: { s: 'moveHereFromAnywhere' } },
@@ -84,12 +92,15 @@ function costOfKeyword(c: OracleCost | undefined): CostAst {
   if (!c) return {};
   const out: CostAst = {};
   if (c.energy > 0) out.energy = c.energy;
+  if (c.exhaust) out.exhaustSelf = true;                             // "[Empower] — [1], [E]"
   if (c.power.length > 0) out.power = c.power.map(power);
   for (const o of c.other ?? []) {
     const m = /^Discard (\d+)$/.exec(o);
     if (m) out.discard = Number(m[1]);
     const r = /^Recycle (\d+) cards? from your trash$/i.exec(o);
     if (r) out.recycleTrash = { n: Number(r[1]) };
+    const xp = /^Spend (\d+) XP$/i.exec(o);                        // "[Equip] — Spend 1 XP"
+    if (xp) out.xp = Number(xp[1]);
   }
   return out;
 }
@@ -140,6 +151,9 @@ export function keywordAbility(def: DefId, kw: KeywordId): AbilityAst | undefine
         body: [{ op: 'attach', what: self, to: { slot: 'u' } }],
       } };
     }
+    case 'empower':                                                  // "[Cost]: Empower me. Use only if not Empowered." [442]
+      return { id, kind: 'activated', cost: keywordCost(def, 'empower') ?? {}, while: { c: 'is', ref: self, pred: { p: 'not', of: { p: 'empowered' } } },
+        effect: { body: [{ op: 'empower', what: self }] } };
     case 'accelerate':                                               // [805.1.b]: [1][C], then I enter ready
       return { id, kind: 'cost', optional: true, add: { energy: 1, power: ['C'] } };
     case 'repeat': {                                                 // [820.1.d]
@@ -215,7 +229,7 @@ export type Coverage = 'defined' | 'partial' | 'vanilla' | 'keywords' | 'undefin
 /** The keywords whose rules the engine implements. */
 export const IMPLEMENTED_KEYWORDS: readonly KeywordId[] = ['tank', 'backline', 'deploy', 'disarm', 'action', 'reaction',
   'deflect', 'shield', 'assault', 'deathknell', 'showOff', 'accelerate', 'ganking', 'hidden', 'vision', 'temporary',
-  'equip', 'quickDraw', 'repeat', 'weaponmaster', 'ambush', 'hunt', 'legion', 'level', 'unique'];
+  'equip', 'quickDraw', 'repeat', 'weaponmaster', 'ambush', 'hunt', 'legion', 'level', 'unique', 'empower'];
 
 export function coverageOf(def: DefId): Coverage {
   const d = cardDef(def);

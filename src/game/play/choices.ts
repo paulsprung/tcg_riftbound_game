@@ -110,6 +110,9 @@ export function destCandidates(s: GameState, slot: SlotAst, units: ObjId[]): Loc
     s.bfs.forEach((b, bf) => {
       if (d.to === 'open' && (b.controller !== null || b.here.some((id) => isType(s.objects[id], 'unit')))) return;   // [170.11.c]
       if (d.to === 'controlled' && (b.controller === null || b.controller !== u.controller)) return;   // "a battlefield you control"
+      // "an occupied enemy battlefield": controlled by an opponent, with units [170.11.a].
+      if (d.to === 'occupiedEnemy' && (b.controller === null || b.controller === u.controller
+        || !b.here.some((id) => isType(s.objects[id], 'unit')))) return;
       out.push({ z: 'bf', bf });
     });
   }
@@ -117,6 +120,10 @@ export function destCandidates(s: GameState, slot: SlotAst, units: ObjId[]): Loc
 }
 
 const doneKey = (slot: string) => `slot:${slot}`;
+
+/** What each slot of an execution chose, as objects ("with less Might than the chosen unit"). */
+export const slotObjsOf = (ex: { targets: Record<string, TargetRef[]> } | undefined): Record<string, ObjId[]> =>
+  Object.fromEntries(Object.entries(ex?.targets ?? {}).map(([k, ts]) => [k, ts.flatMap((t) => (t.k === 'obj' ? [t.id] : []))]));
 
 /** Whether choosing `id` for a slot leaves the later slots that depend on it something to choose: a destination
     for the unit it moves, a candidate at the battlefield it names ("Choose a battlefield and an enemy unit there").
@@ -172,7 +179,8 @@ export function chooseNext(s: GameState, f: Frame, x: RunCtx, it: ChainItem, pro
   const done = (slot: string) => (e === 0 ? doneKey(slot) : `${doneKey(slot)}#${e}`);
   const cctx: ChoiceCtx = { controller: it.controller, source: it.source ?? null,
     ...(o.restrictBf !== undefined ? { restrictBf: o.restrictBf } : {}), ...(o.cond ? { cond: o.cond } : {}) };
-  const c: SelCtx = { controller: it.controller, source: it.source ?? null, slotLoc: slotLocsOf(s, ex),
+  const c: SelCtx = { controller: it.controller, source: it.source ?? null, slotLoc: slotLocsOf(s, ex), slotObjs: slotObjsOf(ex),
+    lkiHere: it.sourceLki?.loc ?? null,                              // "here" of a Deathknell: where its source died
     subject: typeof it.trigger?.subject === 'number' ? it.trigger.subject : null,
     eventBf: typeof it.trigger?.bf === 'number' ? it.trigger.bf : null };
   const usedModes = (o.modesUsed ?? []);

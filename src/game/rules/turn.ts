@@ -35,6 +35,8 @@ import { channelCount, drawCount, turnOrder } from './defaults.ts';
 import { score } from './scoring.ts';
 import { fire } from '../abilities/triggers.ts';
 import { defineTask, enqueue } from './tasks.ts';
+import { isType } from './chars.ts';
+import { staticsFor } from '../layers/derive.ts';
 
 type X = { present: boolean };
 
@@ -134,7 +136,9 @@ export function startTurn(s: GameState, x: X) {
 defineTask('awaken.readyAll', [(s, _f, x) => {
   const p = s.turn.player;
   const mine = Object.values(s.objects).filter((o) =>
-    o.controller === p && o.exhausted && ['base', 'bf', 'legend'].includes(o.zone.z) && s.bfs.every((b) => b.obj !== o.id));
+    o.controller === p && o.exhausted && ['base', 'bf', 'legend'].includes(o.zone.z) && s.bfs.every((b) => b.obj !== o.id)
+    // Firebrand Raider: "Units don't ready during the Awaken Phase."
+    && !(isType(o, 'unit') && staticsFor(s, null, 'noAwakenReady').length > 0));
   ready(s, x, mine.map((o) => o.id), '315.1.b');
   return 'done';
 }]);

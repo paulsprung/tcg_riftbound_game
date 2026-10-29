@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { hasKeyword, mightOf } from '../../src/game/rules/chars.ts';
-import { setField } from '../../src/game/state/mut.ts';
+import { moveObject, setField } from '../../src/game/state/mut.ts';
 import { moveDestinations } from '../../src/game/rules/move.ts';
 import { act, base, bf, control, evs, inHand, inTrash, keys, put, ready, reask, runes } from './helpers/scenario.ts';
-import { cast, drive, handSize, hide, moveTo, nextTurn, onBoard } from './helpers/cards.ts';
-import { attack, defsIn, dmg, emptyHand, equip, foe, tbl } from './helpers/setCards.ts';
+import { cast, drive, handSize, hide, moveTo, nextTurn, onBoard, opt } from './helpers/cards.ts';
+import { attack, defsIn, dmg, emptyHand, equip, foe, golds, tbl } from './helpers/setCards.ts';
 
 /*
  * Unleashed (UNL), the cards beyond the Champion Decks (cards/defs/unl-set.ts):
@@ -976,5 +976,584 @@ describe('Unleashed set: batch 4', () => {
     expect(g.s.objects[c[0]]).toMatchObject({ token: true, exhausted: false });
     expect(mightOf(g.s, c[0])).toBe(10);
     expect(hasKeyword(g.s, c[0], 'temporary')).toBe(true);
+  });
+});
+
+describe('Unleashed set: batch 5', () => {
+  it('Mischievous Marai: played to a battlefield (from face down), deal 2 to an enemy unit here', () => {
+    const g = tbl(9716);
+    put(g, 'shipyard-skulker', 0, bf(0)); control(g, 0, 0);
+    const fd = hide(g, 'mischievous-marai', 0);
+    setField(g.s, g.s.objects[fd].facedown!, 'hiddenOnTurn', g.s.turn.n - 1);
+    const e = put(g, 'vanguard-sergeant', 1, bf(0));
+    reask(g);
+    drive(g, [`play:${fd}`, `t:${e}`]);
+    expect(evs(g, 'deal').some((d) => d.to === e && d.n === 2 && !d.combat)).toBe(true);
+  });
+
+  it('Monster Harpoon: 2, or 4 if you control a facedown card', () => {
+    const g = tbl(9717);
+    runes(g, 0, [...ready('fury', 6), ...ready('mind', 6)]);
+    const e = foe(g, 'mountain-drake');
+    cast(g, 'monster-harpoon', [`t:${e}`]);
+    expect(dmg(g, e)).toBe(2);
+    put(g, 'shipyard-skulker', 0, bf(0)); control(g, 0, 0);
+    hide(g, 'sprite-call', 0);
+    cast(g, 'monster-harpoon', [`t:${e}`]);
+    expect(dmg(g, e)).toBe(6);
+  });
+
+  it('Moonfall: move up to one enemy unit to a battlefield where you have units, then enemy units there -2', () => {
+    const g = tbl(9718);
+    put(g, 'shipyard-skulker', 0, bf(0)); control(g, 0, 0);
+    const e = put(g, 'mountain-drake', 1, base(1));
+    const id = inHand(g, 'moonfall');
+    reask(g); act(g, `play:${id}`);
+    expect(keys(g)).toContain(`t:${e}`);                             // the only battlefield where you have units is chosen
+    drive(g, [`t:${e}`]);
+    expect(evs(g, 'move').some((m) => m.objs.includes(e) && m.to.z === 'bf')).toBe(true);
+    expect(mightOf(g.s, e)).toBe(8);
+  });
+
+  it('Nidalee, Cat Form: win a combat, draw 1', () => {
+    const g = tbl(9719);
+    foe(g, 'mystic-poro');
+    const n = handSize(g);
+    attack(g, put(g, 'nidalee-cat-form', 0, base(0)));
+    expect(handSize(g)).toBe(n + 1);
+  });
+
+  it('Nilah, Joyful Ascetic: when I move, gain 1 XP', () => {
+    const g = tbl(9720);
+    const u = put(g, 'nilah-joyful-ascetic', 0, base(0));
+    moveTo(g, [u], 0); drive(g);
+    expect(g.s.players[0].xp).toBe(1);
+  });
+
+  it('Petal Pixie: +1 for each of your Temporary units at my battlefield', () => {
+    const g = tbl(9721);
+    const p = put(g, 'petal-pixie', 0, bf(0));
+    put(g, 'sprite', 0, bf(0)); put(g, 'sprite', 0, bf(0)); put(g, 'sprite', 0, base(0));
+    control(g, 0, 0);
+    expect(mightOf(g.s, p)).toBe(4);
+  });
+
+  it('Poppy, Defender of the Meek: spend 3 XP to cost [3] less', () => {
+    const g = tbl(9722);
+    xp(g, 3);
+    const id = inHand(g, 'poppy-defender-of-the-meek');
+    reask(g); act(g, `play:${id}`); act(g, 'yes');
+    if (keys(g).includes('loc:base')) act(g, 'loc:base');
+    expect(g.s.pending).toMatchObject({ kind: 'payment', prompt: { energy: 3 } });
+    drive(g);
+    expect(g.s.players[0].xp).toBe(0);
+  });
+
+  it('Poppy, Keeper of the Hammer: hold: 1 XP; spend 3 XP, [E]: draw 1', () => {
+    const g = tbl(9723, { legends: ['poppy-keeper-of-the-hammer'] });
+    put(g, 'shipyard-skulker', 0, bf(0)); control(g, 0, 0);
+    nextTurn(g);
+    expect(g.s.players[0].xp).toBe(1);
+    xp(g, 3);
+    const n = handSize(g);
+    reask(g); act(g, `act:${g.s.players[0].legend[0]}#1`); drive(g);
+    expect(handSize(g)).toBe(n + 1);
+    expect(g.s.players[0].xp).toBe(0);
+  });
+
+  it('Poppy, Paragon: an opponent near winning: ready me and gain 3 XP', () => {
+    const g = tbl(9724);
+    setField(g.s, g.s.players[1], 'points', 6);
+    cast(g, 'poppy-paragon');
+    expect(g.s.objects[onBoard(g, 'poppy-paragon', 0)[0]].exhausted).toBe(false);
+    expect(g.s.players[0].xp).toBe(3);
+  });
+
+  it('Prepared Neophyte: +4 once you spent [4] or more on a spell this turn', () => {
+    const g = tbl(9725);
+    const u = put(g, 'prepared-neophyte', 0, base(0));
+    expect(mightOf(g.s, u)).toBe(1);
+    cast(g, 'primal-strength', [`t:${u}`]);
+    expect(mightOf(g.s, u)).toBe(12);
+  });
+
+  it('Pyke, Bloodharbor Ripper: [1], [E]: return a friendly unit at a battlefield; a Gold', () => {
+    const g = tbl(9726, { legends: ['pyke-bloodharbor-ripper'] });
+    const u = put(g, 'shipyard-skulker', 0, bf(0)); control(g, 0, 0);
+    reask(g); act(g, `act:${g.s.players[0].legend[0]}#0`); drive(g, [`t:${u}`]);
+    expect(defsIn(g, 'hand')).toContain('shipyard-skulker');
+    expect(golds(g)).toBe(1);
+  });
+
+  it('Pyke, Dockside Butcher: paying [R], ready and +2', () => {
+    const g = tbl(9727);
+    const id = inHand(g, 'pyke-dockside-butcher');
+    reask(g); act(g, `play:${id}`); act(g, 'yes'); drive(g);
+    const p = onBoard(g, 'pyke-dockside-butcher', 0)[0];
+    expect(g.s.objects[p].exhausted).toBe(false);
+    expect(mightOf(g.s, p)).toBe(4);
+  });
+
+  it('Pyke, Returned: once each turn, an enemy unit dies while I am at a battlefield: a Gold', () => {
+    const g = tbl(9728);
+    put(g, 'pyke-returned', 0, bf(0)); control(g, 0, 0);
+    const a = foe(g, 'mystic-poro');
+    const b = put(g, 'mystic-poro', 1, bf(1));
+    cast(g, 'soul-harvest', [`t:${a}`]);
+    cast(g, 'soul-harvest', [`t:${b}`]);
+    expect(golds(g)).toBe(1);
+  });
+
+  it('Red Brambleback: conquering here, conquer effects trigger again; buff a friendly unit', () => {
+    const g = tbl(9729);
+    const r = put(g, 'red-brambleback', 0, base(0));
+    const v = put(g, 'vanguard-sergeant', 0, base(0));
+    moveTo(g, [r], 0); drive(g, [`t:${r}`, `t:${v}`]);
+    expect(g.s.objects[r].buffs).toBe(1);
+    expect(g.s.objects[v].buffs).toBe(1);
+  });
+
+  it('Rengar, Pridestalker: when you play a unit, give a unit +1 this turn', () => {
+    const g = tbl(9730, { legends: ['rengar-pridestalker'] });
+    const u = put(g, 'shipyard-skulker', 0, base(0));
+    cast(g, 'mystic-poro', [`t:${u}`]);
+    expect(mightOf(g.s, u)).toBe(4);
+  });
+
+  it('Repulse: counter an enemy spell that chooses only that friendly unit', () => {
+    const g = tbl(9731, { first: 1 });
+    const u = put(g, 'shipyard-skulker', 0, bf(0)); control(g, 0, 0);
+    const r = inHand(g, 'repulse', 0);
+    const hr = inHand(g, 'hextech-ray', 1);
+    reask(g); act(g, `play:${hr}`); drive(g, [`t:${u}`, `play:${r}`, `t:${u}`]);
+    expect(evs(g, 'counter')).toHaveLength(1);
+    expect(dmg(g, u)).toBe(0);
+  });
+
+  it('Revna, the Lorekeeper: a spell for [4] or more readies me', () => {
+    const g = tbl(9732);
+    const r = put(g, 'revna-the-lorekeeper', 0, base(0), { exhausted: true });
+    cast(g, 'primal-strength', [`t:${r}`]);
+    expect(g.s.objects[r].exhausted).toBe(false);
+  });
+
+  it('Rift Herald: moving to a battlefield, may draw a unit of the top 3; Deathknell: play a unit from hand to base, Energy ignored', () => {
+    const g = tbl(9733);
+    const h = put(g, 'rift-herald', 0, base(0));
+    const v = moveObject(g.s, inHand(g, 'vanguard-sergeant'), { z: 'deck', p: 0 }, { pos: 'top' });
+    moveTo(g, [h], 0); drive(g, [`pick:${v}`]);
+    expect(defsIn(g, 'hand')).toContain('vanguard-sergeant');
+    emptyHand(g);
+    inHand(g, 'mountain-drake');
+    cast(g, 'clash-of-giants', [`t:${h}`, `t:${put(g, 'mountain-drake', 1, base(1))}`]);
+    expect(onBoard(g, 'mountain-drake', 0)).toHaveLength(1);
+  });
+
+  it('Ruined Rex: Deathknell: deal 4 to an enemy unit', () => {
+    const g = tbl(9735);
+    const r = put(g, 'ruined-rex', 0, base(0));
+    const e = put(g, 'mountain-drake', 1, base(1));
+    cast(g, 'clash-of-giants', [`t:${r}`, `t:${e}`, `t:${e}`]);
+    expect(g.s.objects[r]).toBeUndefined();
+    expect(g.s.objects[e]).toBeUndefined();
+  });
+
+  it('Sacrifice: kill a friendly Mighty unit: draw 2, channel 1 exhausted', () => {
+    const g = tbl(9736);
+    const u = put(g, 'mountain-drake', 0, base(0));
+    const n = handSize(g);
+    cast(g, 'sacrifice', [`pick:${u}`]);
+    expect(g.s.objects[u]).toBeUndefined();
+    expect(handSize(g)).toBe(n + 2);
+  });
+
+  it('Safety Inspector: each player kills a unit; not you if you paid 3 XP', () => {
+    const g = tbl(9737);
+    xp(g, 3);
+    const mine = put(g, 'shipyard-skulker', 0, base(0));
+    put(g, 'mystic-poro', 1, base(1));
+    const id = inHand(g, 'safety-inspector');
+    reask(g); act(g, `play:${id}`); act(g, 'yes'); drive(g);
+    expect(onBoard(g, 'mystic-poro', 1)).toHaveLength(0);
+    expect(g.s.objects[mine]).toBeDefined();
+  });
+
+  it('Scorchclaw: Level 3: +1 and enters ready', () => {
+    const g = tbl(9738);
+    xp(g, 3);
+    cast(g, 'scorchclaw');
+    const s0 = onBoard(g, 'scorchclaw', 0)[0];
+    expect(mightOf(g.s, s0)).toBe(4);
+    expect(g.s.objects[s0].exhausted).toBe(false);
+  });
+
+  it('Scrutinizing Sergeant: 1 XP for each friendly unit', () => {
+    const g = tbl(9739);
+    put(g, 'shipyard-skulker', 0, base(0)); put(g, 'shipyard-skulker', 0, base(0));
+    cast(g, 'scrutinizing-sergeant');
+    expect(g.s.players[0].xp).toBe(3);
+  });
+
+  it('Scuttle Crab: draw 1; Deathknell: they reveal their hand, you look at their facedown cards, 1 XP', () => {
+    const g = tbl(9740);
+    const n = handSize(g);
+    cast(g, 'scuttle-crab');
+    expect(handSize(g)).toBe(n + 1);
+    const c = put(g, 'scuttle-crab', 0, bf(0)); control(g, 0, 0);
+    cast(g, 'soul-harvest', [`t:${c}`]);
+    expect(g.s.players[0].xp).toBe(1);
+    expect(evs(g, 'reveal').length).toBeGreaterThan(0);
+  });
+
+  it('Shadow Watcher: enters ready if a friendly unit died during your Beginning Phase', () => {
+    const g = tbl(9741);
+    put(g, 'sprite', 0, base(0));
+    nextTurn(g);
+    cast(g, 'shadow-watcher');
+    expect(g.s.objects[onBoard(g, 'shadow-watcher', 0)[0]].exhausted).toBe(false);
+    const g2 = tbl(9742);
+    cast(g2, 'shadow-watcher');
+    expect(g2.s.objects[onBoard(g2, 'shadow-watcher', 0)[0]].exhausted).toBe(true);
+  });
+
+  it("Shadows' Call: give a friendly unit without Temporary Temporary; draw 2", () => {
+    const g = tbl(9743);
+    const u = put(g, 'shipyard-skulker', 0, base(0));
+    const n = handSize(g);
+    cast(g, 'shadows-call', [`t:${u}`]);
+    expect(hasKeyword(g.s, u, 'temporary')).toBe(true);
+    expect(handSize(g)).toBe(n + 2);
+  });
+
+  it('Shard of Undoing: the first friendly death in your Beginning Phase: each opponent kills a unit', () => {
+    const g = tbl(9744);
+    put(g, 'shard-of-undoing', 0, base(0));
+    put(g, 'sprite', 0, base(0));
+    put(g, 'mystic-poro', 1, base(1));
+    nextTurn(g);
+    expect(onBoard(g, 'mystic-poro', 1)).toHaveLength(0);
+  });
+
+  it("Shepherd's Heirloom: play: 1 XP; Equip by spending 1 XP", () => {
+    const g = tbl(9745);
+    cast(g, 'shepherds-heirloom');
+    expect(g.s.players[0].xp).toBe(1);
+    const h = onBoard(g, 'shepherds-heirloom', 0)[0];
+    const u = put(g, 'shipyard-skulker', 0, base(0));
+    reask(g); act(g, `act:${h}#kwequip`); drive(g, [`t:${u}`]);
+    expect(g.s.objects[h].attachedTo).toBe(u);
+    expect(g.s.players[0].xp).toBe(0);
+  });
+
+  it('Sinister Poro: attacking, pay [1] to move an enemy unit here to its base', () => {
+    const g = tbl(9746);
+    const e = foe(g, 'mountain-drake');
+    attack(g, put(g, 'sinister-poro', 0, base(0)), [`t:${e}`]);
+    expect(g.s.objects[e].zone).toEqual({ z: 'base', p: 1 });
+  });
+
+  it('Smite: deal 3 to a unit at a battlefield; if it would die this turn, banish it', () => {
+    const g = tbl(9747);
+    const e = foe(g, 'shipyard-skulker');
+    cast(g, 'smite', [`t:${e}`]);
+    expect(defsIn(g, 'banish', 1)).toContain('shipyard-skulker');
+    expect(defsIn(g, 'trash', 1)).not.toContain('shipyard-skulker');
+  });
+
+  it('Smoke and Mirrors: two of your units swap places if one has Temporary; draw 1', () => {
+    const g = tbl(9748);
+    const a = put(g, 'sprite', 0, base(0));
+    const b = put(g, 'shipyard-skulker', 0, bf(0)); control(g, 0, 0);
+    const n = handSize(g);
+    cast(g, 'smoke-and-mirrors', [`t:${a}`, `t:${b}`]);
+    expect(g.s.objects[a].zone).toEqual({ z: 'bf', bf: 0 });
+    expect(g.s.objects[b].zone).toEqual({ z: 'base', p: 0 });
+    expect(handSize(g)).toBe(n + 1);
+  });
+
+  it('Soul Shepherd: your token units have +1', () => {
+    const g = tbl(9749);
+    put(g, 'soul-shepherd', 0, base(0));
+    const t = put(g, 'sprite', 0, base(0));
+    setField(g.s, g.s.objects[t], 'token', true);
+    expect(mightOf(g.s, t)).toBe(4);
+  });
+
+  it('Spectral Centaur: another friendly unit dies: +2 this turn', () => {
+    const g = tbl(9750);
+    const c = put(g, 'spectral-centaur', 0, base(0));
+    const u = put(g, 'shipyard-skulker', 0, bf(0)); control(g, 0, 0);
+    cast(g, 'soul-harvest', [`t:${u}`]);
+    expect(mightOf(g.s, c)).toBe(7);
+  });
+
+  it('Sprite Burst: two ready Sprites', () => {
+    const g = tbl(9751);
+    cast(g, 'sprite-burst');
+    expect(onBoard(g, 'sprite', 0).filter((id) => !g.s.objects[id].exhausted)).toHaveLength(2);
+  });
+
+  it('Sprite Fountain: a ready Sprite as it is played and again as it dies', () => {
+    const g = tbl(9752);
+    cast(g, 'sprite-fountain');
+    expect(onBoard(g, 'sprite', 0)).toHaveLength(1);
+    nextTurn(g);
+    expect(onBoard(g, 'sprite-fountain', 0)).toHaveLength(0);
+    expect(onBoard(g, 'sprite', 0)).toHaveLength(1);
+  });
+
+  it('Sprite Queen: a ready Sprite as it is played and at the start of your Beginning Phase', () => {
+    const g = tbl(9753);
+    cast(g, 'sprite-queen');
+    expect(onBoard(g, 'sprite', 0)).toHaveLength(1);
+    nextTurn(g);
+    expect(onBoard(g, 'sprite', 0)).toHaveLength(1);
+  });
+
+  it('Stalking Wolf: kill a Bird, Cat, Dog, or Poro you control as an additional cost', () => {
+    const g = tbl(9754);
+    const p = put(g, 'mystic-poro', 0, base(0));
+    const id = inHand(g, 'stalking-wolf');
+    reask(g);
+    expect(keys(g)).toContain(`play:${id}`);
+    act(g, `play:${id}`); drive(g, [`pick:${p}`]);
+    expect(g.s.objects[p]).toBeUndefined();
+    expect(onBoard(g, 'stalking-wolf', 0)).toHaveLength(1);
+    const g2 = tbl(9755);
+    const id2 = inHand(g2, 'stalking-wolf');
+    reask(g2);
+    expect(keys(g2)).not.toContain(`play:${id2}`);
+  });
+
+  it("Star-Crossed: return a friendly unit and an enemy unit to their owners' hands", () => {
+    const g = tbl(9756);
+    const a = put(g, 'shipyard-skulker', 0, base(0));
+    const b = put(g, 'mountain-drake', 1, base(1));
+    cast(g, 'star-crossed', [`t:${a}`, `t:${b}`]);
+    expect(defsIn(g, 'hand', 1)).toContain('mountain-drake');
+    expect(defsIn(g, 'hand', 0)).toContain('shipyard-skulker');
+  });
+
+  it('Stare Down: enemy units there weaker than the chosen unit go to their base; 1 XP', () => {
+    const g = tbl(9757);
+    const u = put(g, 'vanguard-sergeant', 0, base(0));
+    const a = foe(g, 'shipyard-skulker');
+    const b = put(g, 'mountain-drake', 1, bf(1));
+    cast(g, 'stare-down', [`t:${u}`, `t:${g.s.bfs[1].obj}`]);
+    expect(g.s.objects[a].zone).toEqual({ z: 'base', p: 1 });
+    expect(g.s.objects[b].zone).toEqual({ z: 'bf', bf: 1 });
+    expect(g.s.players[0].xp).toBe(1);
+  });
+
+  it('Starhound: return a Bird, Cat, Dog, or Poro from your trash to your hand', () => {
+    const g = tbl(9758);
+    const c = inTrash(g, 'mystic-poro');
+    cast(g, 'starhound', [`t:${c}`]);
+    expect(defsIn(g, 'hand')).toContain('mystic-poro');
+  });
+
+  it('Sumpworks Map: when an opponent scores, draw 1', () => {
+    const g = tbl(9759);
+    put(g, 'sumpworks-map', 0, base(0));
+    foe(g, 'shipyard-skulker');
+    const n = handSize(g);
+    nextTurn(g);
+    expect(handSize(g)).toBeGreaterThanOrEqual(n + 2);
+  });
+
+  it('Syndra, Transcendent: in a showdown, your spells have Repeat [2][P]', () => {
+    const g = tbl(9760);
+    put(g, 'syndra-transcendent', 0, bf(0)); control(g, 0, 0);
+    const id = inHand(g, 'hextech-ray');
+    const e = put(g, 'mountain-drake', 1, bf(0));
+    reask(g);
+    if (g.s.pending?.player === 1) act(g, 'pass');                    // the combat's showdown: the attacker first
+    act(g, `play:${id}`);
+    expect(g.s.pending?.kind).toBe('optionalCost');
+    act(g, 'yes');
+    drive(g, [`t:${e}`, `t:${e}`], { max: 6 });
+    expect(evs(g, 'deal').filter((d) => d.to === e && !d.combat)).toHaveLength(2);
+  });
+
+  it('Targonian Visionary: Level 11: +4', () => {
+    const g = tbl(9761);
+    const u = put(g, 'targonian-visionary', 0, base(0));
+    xp(g, 11);
+    expect(mightOf(g.s, u)).toBe(10);
+  });
+
+  it('The Academy: holding here gives your next spell this turn Repeat equal to its cost', () => {
+    const g = tbl(9762, { bfs: ['the-academy'] });
+    put(g, 'shipyard-skulker', 0, bf(0)); control(g, 0, 0);
+    nextTurn(g);
+    const e = foe(g, 'mountain-drake');
+    const id = inHand(g, 'hextech-ray');
+    reask(g); act(g, `play:${id}`);
+    expect(g.s.pending?.kind).toBe('optionalCost');
+    act(g, 'yes'); drive(g, [`t:${e}`, `t:${e}`]);
+    expect(dmg(g, e)).toBe(6);
+  });
+
+  it('The List: name a tag; [E]: a unit with it gets -2', () => {
+    const g = tbl(9763);
+    const e = put(g, 'mountain-drake', 1, base(1));
+    put(g, 'shipyard-skulker', 1, base(1));
+    const id = inHand(g, 'the-list');
+    reask(g); act(g, `play:${id}`);
+    const labels = (g.s.pending!.prompt as unknown as { labels: string[] }).labels;
+    act(g, `mode:${labels.indexOf('Dragon')}`); drive(g);
+    const l = onBoard(g, 'the-list', 0)[0];
+    reask(g); act(g, `act:${l}#1`); drive(g);
+    expect(mightOf(g.s, e)).toBe(8);
+  });
+
+  it('The Ruination: kill all units', () => {
+    const g = tbl(9764);
+    runes(g, 0, [...ready('order', 6), ...ready('fury', 6)]);
+    put(g, 'shipyard-skulker', 0, base(0)); put(g, 'mountain-drake', 1, base(1));
+    cast(g, 'the-ruination');
+    expect(Object.values(g.s.objects).filter((o) => (o.zone.z === 'base' || o.zone.z === 'bf') && o.def === 'mountain-drake')).toHaveLength(0);
+    expect(onBoard(g, 'shipyard-skulker', 0)).toHaveLength(0);
+  });
+
+  it('Thrill of the Hunt: banish a friendly unit; its owner plays it to any battlefield, free', () => {
+    const g = tbl(9765);
+    foe(g, 'mystic-poro');
+    const u = put(g, 'mountain-drake', 0, base(0));
+    cast(g, 'thrill-of-the-hunt', [`t:${u}`, 'loc:bf1']);
+    const d = onBoard(g, 'mountain-drake', 0);
+    expect(d).toHaveLength(1);
+    expect(g.s.objects[d[0]].zone.z).toBe('bf');
+  });
+
+  it('Tricksy Tentacles: enemy units with total Might 8 or less to a single location', () => {
+    const g = tbl(9766);
+    const a = put(g, 'shipyard-skulker', 1, base(1));
+    const b = put(g, 'vanguard-sergeant', 1, base(1));
+    const c = put(g, 'mystic-poro', 1, base(1));
+    const id = inHand(g, 'tricksy-tentacles');
+    reask(g); act(g, `play:${id}`); act(g, `t:${a}`); act(g, `t:${b}`);
+    expect(keys(g)).not.toContain(`t:${c}`);
+    drive(g, ['loc:bf0']);
+    expect(g.s.objects[a].zone).toEqual({ z: 'bf', bf: 0 });
+    expect(g.s.objects[b].zone).toEqual({ z: 'bf', bf: 0 });
+  });
+
+  it('Turn to Dust: give a gear Temporary', () => {
+    const g = tbl(9767);
+    const gr = put(g, 'sumpworks-map', 1, base(1));
+    void gr;
+    const mine = put(g, 'shard-of-undoing', 1, base(1));
+    cast(g, 'turn-to-dust', [`t:${mine}`]);
+    expect(hasKeyword(g.s, mine, 'temporary')).toBe(true);
+  });
+
+  it('Ultrasoft Poro: [E] at a battlefield: two Birds', () => {
+    const g = tbl(9768);
+    const p = put(g, 'ultrasoft-poro', 0, base(0));
+    reask(g);
+    expect(keys(g)).not.toContain(`act:${p}#0`);
+    moveTo(g, [p], 0); drive(g);
+    setField(g.s, g.s.objects[p], 'exhausted', false);
+    reask(g); act(g, `act:${p}#0`); drive(g);
+    expect(onBoard(g, 'bird', 0)).toHaveLength(2);
+  });
+
+  it('Undying Legion: Legion: play me from your trash for [3][R]', () => {
+    const g = tbl(9769);
+    const u = inTrash(g, 'undying-legion');
+    reask(g);
+    expect(keys(g)).not.toContain(`play:${u}`);
+    cast(g, 'mystic-poro');
+    reask(g);
+    expect(keys(g)).toContain(`play:${u}`);
+    act(g, `play:${u}`);
+    if (keys(g).includes('loc:base')) act(g, 'loc:base');
+    expect(g.s.pending).toMatchObject({ kind: 'payment', prompt: { energy: 3 } });
+    drive(g);
+    expect(onBoard(g, 'undying-legion', 0)).toHaveLength(1);
+  });
+
+  it('Undying Loyalty: play a cheap unit from your trash free; [2] less for a Pet', () => {
+    const g = tbl(9770);
+    const c = inTrash(g, 'mystic-poro');
+    const id = inHand(g, 'undying-loyalty');
+    reask(g); act(g, `play:${id}`); opt(g, `t:${c}`);
+    expect(g.s.pending).toMatchObject({ kind: 'payment', prompt: { energy: 0 } });
+    drive(g);
+    expect(onBoard(g, 'mystic-poro', 0)).toHaveLength(1);
+  });
+
+  it('Vaults of Helia: holding here, your non-token units cost [1] more this turn', () => {
+    const g = tbl(9771, { bfs: ['vaults-of-helia'] });
+    put(g, 'shipyard-skulker', 0, bf(0)); control(g, 0, 0);
+    nextTurn(g);
+    const id = inHand(g, 'mystic-poro');
+    reask(g); act(g, `play:${id}`);
+    if (keys(g).includes('loc:base')) act(g, 'loc:base');
+    expect(g.s.pending).toMatchObject({ kind: 'payment', prompt: { energy: 3 } });
+  });
+
+  it('Vicious Snapjaws: another friendly unit dies: 1 XP', () => {
+    const g = tbl(9772);
+    put(g, 'vicious-snapjaws', 0, base(0));
+    const u = put(g, 'shipyard-skulker', 0, bf(0)); control(g, 0, 0);
+    cast(g, 'soul-harvest', [`t:${u}`]);
+    expect(g.s.players[0].xp).toBe(1);
+  });
+
+  it("Vilemaw: weaker enemy units here don't deal combat damage; hold: draw 1", () => {
+    const g = tbl(9773);
+    put(g, 'vilemaw', 0, bf(0)); control(g, 0, 0);
+    const n = handSize(g);
+    nextTurn(g);
+    expect(handSize(g)).toBe(n + 2);
+    const g2 = tbl(9774);
+    foe(g2, 'shipyard-skulker');
+    const w = put(g2, 'vilemaw', 0, base(0));
+    attack(g2, w);
+    expect(dmg(g2, w)).toBe(0);
+    expect(evs(g2, 'deal').some((d) => d.to === w)).toBe(false);
+  });
+
+  it('Void Assault: move a friendly unit, then an enemy unit', () => {
+    const g = tbl(9775);
+    const a = put(g, 'shipyard-skulker', 0, base(0));
+    const b = put(g, 'mountain-drake', 1, base(1));
+    cast(g, 'void-assault', [`t:${a}`, 'loc:bf0', `t:${b}`, 'loc:bf1']);
+    expect(g.s.objects[a].zone).toEqual({ z: 'bf', bf: 0 });
+    expect(g.s.objects[b].zone).toEqual({ z: 'bf', bf: 1 });
+  });
+
+  it('Walking Roost: an opponent plays a Bird', () => {
+    const g = tbl(9776);
+    cast(g, 'walking-roost');
+    expect(onBoard(g, 'bird', 1)).toHaveLength(1);
+  });
+
+  it('Wily Newtfish: gained XP this turn: +1 and Ganking', () => {
+    const g = tbl(9777);
+    const u = put(g, 'wily-newtfish', 0, base(0));
+    expect(mightOf(g.s, u)).toBe(4);
+    cast(g, 'demacian-diplomat');
+    expect(mightOf(g.s, u)).toBe(5);
+    expect(hasKeyword(g.s, u, 'ganking')).toBe(true);
+  });
+
+  it('Yuumi, Magical Cat: attacking, another unit of mine here gets +3 and Tank', () => {
+    const g = tbl(9778);
+    foe(g, 'mountain-drake');
+    const y = put(g, 'yuumi-magical-cat', 0, base(0));
+    const o = put(g, 'shipyard-skulker', 0, base(0));
+    moveTo(g, [y, o], 1);
+    drive(g, [`t:${o}`]);
+    expect(evs(g, 'mightChanged').some((e) => e.obj === o)).toBe(true);
+  });
+
+  it('Zilean, Time Mage: once each turn at a battlefield, a token unit comes with an extra copy', () => {
+    const g = tbl(9779);
+    put(g, 'zilean-time-mage', 0, bf(0)); control(g, 0, 0);
+    cast(g, 'sprite-burst', ['yes']);
+    expect(onBoard(g, 'sprite', 0)).toHaveLength(3);
   });
 });

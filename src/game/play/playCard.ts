@@ -38,7 +38,7 @@
  * had there; a token whose play fails ceases to exist (Spec D §8.5, OQ-6).
  */
 import { abilityById, cardDef } from '../cards/registry.ts';
-import { findCard } from '../cards/oracle.ts';
+import { ALL_TAGS, findCard } from '../cards/oracle.ts';
 import { K, parseKey, type Option } from '../core/decisions.ts';
 import { emit, emitZone, knowers } from '../core/events.ts';
 import { allMask } from '../state/ids.ts';
@@ -57,7 +57,7 @@ import type {
 } from '../state/types.ts';
 import { fire } from '../abilities/triggers.ts';
 import { addEffect, applyContested } from '../rules/actions.ts';
-import { addItem, finalizeItem, itemById, playContext, removeItem } from '../rules/chain.ts';
+import { addItem, countUsage, finalizeItem, itemById, playContext, removeItem, usageKey } from '../rules/chain.ts';
 import { energyCostOf, hasKeyword, isType, snapshotOf, tagsOf, typesOf } from '../rules/chars.ts';
 import {
   cardShowOff, cheapestCost, costOffers, deflectFor, mandatoryCostsPossible, optionalOffers, powerOf, showOffCandidates,
@@ -71,7 +71,7 @@ import { paymentPlans, type ResourceCost } from '../rules/resources.ts';
 import { isAlone, slotLocsOf, stillLegal } from '../rules/targets.ts';
 import { cardTiming, timingOk, windowAllows, type Timing, type Window } from '../rules/timing.ts';
 import { requestCleanup } from '../rules/tasks.ts';
-import { choicesPossible, chooseNext, modeLegal, slotsOf } from './choices.ts';
+import { choicesPossible, chooseNext, modeLegal, slotObjsOf, slotsOf } from './choices.ts';
 import { payStep } from './pay.ts';
 import { copyJson } from '../state/clone.ts';
 
@@ -101,6 +101,10 @@ export interface PlayOverrides {
   copyOf?: DefId;
   /** Keywords it has from now on ("Give it [Temporary]"). */
   give?: KeywordAst[];
+  /** "its owner plays it to any battlefield": every battlefield, and only those. */
+  anyBf?: true;
+  /** "back to the same location or to their base": only these locations. */
+  locs?: Loc[];
 }
 
 const overridesOf = (it: ChainItem): PlayOverrides => (it.play.instructedBy?.overrides ?? {}) as PlayOverrides;
@@ -201,6 +205,13 @@ export function playLocations(s: GameState, id: ObjId, p: PlayerId, origin?: Cha
   return [];
 }
 
+/** Where the item's permanent may be played: as playLocations says, or any battlefield when an instruction says so. */
+function itemLocations(s: GameState, it: ChainItem, obj: ObjId): Loc[] {
+  if (overridesOf(it).anyBf && isType(s.objects[obj], 'unit')) return s.bfs.map((_, bf): Loc => ({ z: 'bf', bf }));
+  if (overridesOf(it).locs) return overridesOf(it).locs!;
+  return playLocations(s, obj, it.controller, it.play.origin);
+}
+
 /** A spell needs a definition to be played: without one it has nothing to
     execute. Units and gear without one are vanilla bodies. */
 export function playable(s: GameState, id: ObjId): boolean {
@@ -249,7 +260,10 @@ export function playableCards(s: GameState, p: PlayerId, w: Window = 'main'): Ob
     return o.controller === p && o.facedown !== null && o.facedown.hiddenOnTurn < s.turn.n   // from the next turn [811.1.b]
       && !sealed(o.facedown.bf);
   });
-  const from = [...pl.hand, ...(pl.champion === null ? [] : [pl.champion]), ...facedown];
+  // Undying Legion: "You may play me from your trash for …" (while its condition holds).
+  const fromTrash = pl.trash.filter((id) => (cardDef(s.objects[id].def)?.abilities ?? []).some((a) => a.kind === 'static'
+    && a.spec.s === 'playFromTrash' && (!a.while || evalCond(s, a.while, { controller: p, source: id, origin: 'trash' }))));
+  const from = [...pl.hand, ...(pl.champion === null ? [] : [pl.champion]), ...facedown, ...fromTrash];
   // "Its controller can't play spells this turn" (Lilting Lullaby).
   const barred = playerEffects(s, p, 'cantPlayTypes').flatMap((e) => (e.spec as { types?: CardType[] }).types ?? []);
   return from.filter((id) => {
@@ -376,11 +390,15 @@ const xsOf = (it: ChainItem): Record<string, number> => Object.fromEntries(Objec
 
 const chosenTargets = (it: ChainItem): TargetRef[] => it.play.choices.executions.flatMap((ex) => Object.values(ex.targets).flat());
 
+/** The amounts chosen for "pay any amount of Power" costs ('xpow:<key>' in asPlayed). */
+const xpowOf = (it: ChainItem): Record<string, number> => Object.fromEntries(Object.entries(it.play.choices.asPlayed)
+  .filter(([k, v]) => k.startsWith('xpow:') && typeof v === 'number').map(([k, v]) => [k.slice(5), v as number]));
+
 /** The total cost of the item as chosen so far [356]. */
 function playCost(s: GameState, it: ChainItem, extra: TargetRef[] = []): ResourceCost {
   const o = s.objects[it.obj!];
   return totalCost(s, { def: o.def, types: typesOf(o), p: it.controller, base: baseCost(s, it), chosen: chosenOptional(it), xs: xsOf(it), origin: it.play.origin.z,
-    targets: [...chosenTargets(it), ...extra] });
+    targets: [...chosenTargets(it), ...extra], xpow: xpowOf(it) });
 }
 
 /** Whether choosing this target still leaves a cost the player can pay:
@@ -467,7 +485,7 @@ function replacementStep(s: GameState, f: PlayFrame, x: RunCtx, it: ChainItem) {
   if (key === undefined) {
     return ask(s, f, x, {
       player: who, kind: 'applyReplacement', prompt: { t: 'applyReplacement', ability: off.a.id, token: s.objects[f.obj].def,
-        with: off.a.instead.playToken }, ctx: { item: it.id, source: off.source, rule: '371.2' },
+        with: 'playToken' in off.a.instead ? off.a.instead.playToken : s.objects[f.obj].def }, ctx: { item: it.id, source: off.source, rule: '371.2' },
       options: [{ key: K.yes }, { key: K.no }], privateOptions: false,
     });
   }
@@ -475,6 +493,17 @@ function replacementStep(s: GameState, f: PlayFrame, x: RunCtx, it: ChainItem) {
   setField(s, it.play.choices.asPlayed, 'lineage', lineage);
   if (key !== K.yes) return 'continue';
   const old = s.objects[f.obj];
+  if (off.a.limit) countUsage(s, usageKey(off.source, off.a.id, '*'));
+  if ('extraCopy' in off.a.instead) {                                // Zilean: "that token and an additional copy of it"
+    const ov = overridesOf(it);
+    const loc = it.play.choices.location;
+    const copy = putOnChain(s, x, { obj: { token: old.def as TokenId, owner: old.owner }, controller: it.controller,
+      by: { item: it.play.instructedBy?.item ?? it.id, instr: it.play.instructedBy?.instr ?? 'replay' },
+      overrides: { ...ov, ...(loc ? { at: loc } : {}) } });
+    setField(s, copy.play.choices.asPlayed, 'lineage', lineage);
+    emit(s, x, { k: 'replaced', source: off.source, event: `playToken:${old.def}`, rule: '369.1' });
+    return 'continue';
+  }
   const zone = copyJson(old.zone);
   deleteObject(s, old.id);
   const obj = createObject(s, { def: off.a.instead.playToken, printing: null, owner: old.owner, zone, token: true,
@@ -556,10 +585,28 @@ const STEPS: StepTable<PlayFrame> = [
         ctx: { item: it.id, source: f.obj, rule: '355.1.a' }, options: Array.from({ length: max + 1 }, (_, i) => ({ key: K.n(i) })),
         privateOptions: false, back: backOk(s, f) });
     }
+    // Chronobreak: "As an additional cost to play this, pay any amount of Power": how much [355.1.a].
+    const pOff = costOffers(s, o.def, typesOf(o), it.controller, it.play.origin.z).find((c) => c.a.xPower && asPlayed[`xpow:${c.key}`] === undefined);
+    if (pOff) {
+      const key = answer(f);
+      if (key === K.back) return rollback(s, f, x, 'back');
+      // As much Power as could be made: runes, the pool's Power, Gold (a number that can't be paid fails at the payment).
+      const pl = s.players[it.controller];
+      const base = totalCost(s, { def: o.def, types: typesOf(o), p: it.controller, base: baseCost(s, it), chosen: chosenOptional(it), origin: it.play.origin.z });
+      const max = Math.max(0, Math.min(12, pl.base.filter((id) => s.objects[id].def.endsWith('-rune') && !s.objects[id].exhausted).length
+        + pl.pool.universal + Object.values(pl.pool.power).reduce((a, b) => a + b, 0) - base.power.length - Math.max(0, base.energy - pl.pool.energy)));
+      if (max === 0 || key !== undefined) {
+        setField(s, asPlayed, `xpow:${pOff.key}`, max === 0 ? 0 : parseKey(key!)!.n!);
+        return 'continue';
+      }
+      return ask(s, f, x, { player: it.controller, kind: 'number', prompt: { t: 'costNumber', card: o.def, ability: pOff.a.id, max },
+        ctx: { item: it.id, source: f.obj, rule: '355.1.a' }, options: Array.from({ length: max + 1 }, (_, i) => ({ key: K.n(i) })),
+        privateOptions: false, back: backOk(s, f) });
+    }
     // Ivern: "As you play me, choose Bird, Cat, Dog, or Poro. I gain that tag" [355.1].
     const tagChoice = (cardDef(o.def)?.abilities ?? []).find((a) => a.kind === 'static' && a.spec.s === 'chooseTag');
     if (tagChoice && tagChoice.kind === 'static' && tagChoice.spec.s === 'chooseTag' && asPlayed.chosenTag === undefined) {
-      const tags = tagChoice.spec.tags;
+      const tags = tagChoice.spec.tags === 'any' ? ALL_TAGS.slice() : tagChoice.spec.tags;   // The List: "name a tag"
       const key = answer(f);
       if (key === K.back) return rollback(s, f, x, 'back');
       if (key !== undefined) {
@@ -578,7 +625,7 @@ const STEPS: StepTable<PlayFrame> = [
       }
       const key = answer(f);
       if (key === K.back) return rollback(s, f, x, 'back');
-      let locs = playLocations(s, f.obj, it.controller, it.play.origin);
+      let locs = itemLocations(s, it, f.obj);
       // Played where only Ambush allows it now: to a battlefield where you have units [822.1.b].
       if (!timingOk(s, it, { ignoreAmbush: true }) && printed(o.def, 'ambush')) {
         locs = locs.filter((l) => l.z === 'bf' && hasUnitsAt(s, it.controller, l.bf));
@@ -694,14 +741,14 @@ const STEPS: StepTable<PlayFrame> = [
     setField(s, it.play, 'step', 5);
     const loc = it.play.choices.location;
     if (loc && !overridesOf(it).at) {
-      const ok = playLocations(s, f.obj, it.controller, it.play.origin).some((l) => l.z === loc.z
+      const ok = itemLocations(s, it, f.obj).some((l) => l.z === loc.z
         && (l.z === 'base' ? l.p === (loc as typeof l).p : l.bf === (loc as typeof l).bf));
       if (!ok) return rollback(s, f, x, 'illegal');
     }
     const prog = spellProg(s, it);
     if (prog) {
       for (const ex of it.play.choices.executions) {
-        const c = { controller: it.controller, source: null, slotLoc: slotLocsOf(s, ex) };
+        const c = { controller: it.controller, source: null, slotLoc: slotLocsOf(s, ex), slotObjs: slotObjsOf(ex) };
         for (const slot of slotsOf(prog, ex.modes)) {
           if (slot.dest) continue;
           if ((ex.targets[slot.id] ?? []).some((t) => !stillLegal(s, t, slot, c))) return rollback(s, f, x, 'illegal');
@@ -722,6 +769,7 @@ const STEPS: StepTable<PlayFrame> = [
     if (!card.token) {
       // "The next spell you play this turn costs [5] less / deals 1 Bonus Damage": used up now.
       if (types.includes('spell')) for (const e of playerEffects(s, p, 'grantRepeat')) { useEffect(s, e.id); break; }
+      if (types.includes('unit')) for (const e of playerEffects(s, p, 'grantAccelerate')) { useEffect(s, e.id); break; }
       for (const e of playerEffects(s, p, 'costLess')) {
         if (((e.spec as { types?: CardType[] }).types ?? []).some((t) => types.includes(t))) { useEffect(s, e.id); break; }
       }

@@ -69,14 +69,19 @@ export function activatedOf(def: string): ActivatedAst[] {
     choices can be made. */
 export function canActivate(s: GameState, p: PlayerId, src: ObjId, a: ActivatedAst, w: Window): boolean {
   const o = s.objects[src];
-  if (!o || o.controller !== p || !['base', 'bf', 'legend'].includes(o.zone.z)) return false;
+  // Black Market: "Each player may use this ability once on their turn (even if they don't control this battlefield)".
+  const any = a.anyPlayer === true && s.turn.player === p;
+  if (!o || (o.controller !== p && !any) || !['base', 'bf', 'legend'].includes(o.zone.z)) return false;
   if (!windowAllows(w, abilityTiming(a.id))) return false;
   if (a.while && !evalCond(s, a.while, { controller: p, source: src })) return false;
   if (!nonStdPossible(s, nonStdOf(a.cost), src, p)) return false;   // [415.4], [203.3]
   const c = resourceCost(a.cost, domainsOf(s, src));
-  if (a.cost.energyLessBy) c.energy = 0;                             // reduced by the unit chosen: checked as it is paid
+  const less = a.cost.energyLessBy;
+  if (less && typeof less === 'object' && less.v === 'count') {     // "[1] less for each …": known now
+    c.energy = Math.max(0, c.energy - selectAll(s, less.of, { controller: p, source: src }).length);
+  } else if (less) c.energy = 0;                                     // reduced by the unit chosen: checked as it is paid
   if (paymentPlans(s, p, c, { limit: 1 }).length === 0) return false;
-  if (a.limit && (s.usage[usageKey(src, a.id, '*')] ?? 0) >= a.limit.n) return false;   // "Use only once per turn"
+  if (a.limit && (s.usage[usageKey(src, a.id, a.anyPlayer ? p : '*')] ?? 0) >= a.limit.n) return false;   // "Use only once per turn"
   if (a.modesOncePerTurn && a.effect.modes) {
     const left = a.effect.modes.of.filter((_, i) => !(s.usage[usageKey(src, `${a.id}:mode${i}`, '*')] > 0)).length;
     if (left < a.effect.modes.pick) return false;
@@ -87,7 +92,8 @@ export function canActivate(s: GameState, p: PlayerId, src: ObjId, a: ActivatedA
 /** The abilities p could activate now: `act:<obj>#<sub>` (objAbilities.ts). */
 export function activatable(s: GameState, p: PlayerId, w: Window): { obj: ObjId; ability: string; sub: string }[] {
   const out: { obj: ObjId; ability: string; sub: string }[] = [];
-  const mine = [...s.players[p].legend, ...s.players[p].base, ...s.bfs.flatMap((b) => b.here)];
+  const mine = [...s.players[p].legend, ...s.players[p].base, ...s.bfs.flatMap((b) => b.here),
+    ...s.bfs.map((b) => b.obj).filter((id) => s.objects[id]?.controller !== p)];   // a battlefield anyone may use (Black Market)
   for (const id of mine) {
     for (const x of activatedOn(s, id)) if (canActivate(s, p, id, x.a, w)) out.push({ obj: id, ability: x.a.id, sub: x.sub });
   }
@@ -122,7 +128,8 @@ const STEPS: StepTable<AbilityFrame> = [
   (s, f, x) => {
     f.snap = snapshotState(s);
     const src = s.objects[f.src!];
-    const p = src.controller!;
+    const ab = abilityOf(s, f);
+    const p = ab.kind === 'activated' && ab.anyPlayer && s.turn.priority !== null ? s.turn.priority : src.controller!;
     const item = mint(s, 'item');
     const isAdd = abilityOf(s, f).kind === 'activated' && (abilityOf(s, f) as ActivatedAst).isAdd === true;
     const it: ChainItem = {
@@ -159,7 +166,7 @@ const STEPS: StepTable<AbilityFrame> = [
     const src = it.source !== undefined ? s.objects[it.source] : undefined;
     const restrictBf = a.kind === 'triggered' && a.when.on === 'played' && src?.played?.fromFacedownAt !== undefined
       ? src.played.fromFacedownAt : undefined;
-    const modesUsed = a.kind === 'activated' && a.modesOncePerTurn && it.source !== undefined
+    const modesUsed = a.modesOncePerTurn && it.source !== undefined
       ? (a.effect.modes?.of ?? []).flatMap((_, i) => (s.usage[usageKey(it.source!, `${a.id}:mode${i}`, '*')] > 0 ? [i] : [])) : [];
     const r = chooseNext(s, f, x, it, a.effect, {
       back: backOk(s, f), onBack: () => rollback(s, f, x, 'back'), deflect: (t) => deflectFor(s, t, it.controller),
@@ -248,7 +255,7 @@ const STEPS: StepTable<AbilityFrame> = [
     countFinalized(s, it);                                           // [383.3.e]
     const a = abilityOf(s, f);
     const srcObj = it.source !== undefined ? s.objects[it.source] : undefined;
-    if (a.kind === 'activated' && a.limit && it.source !== undefined) countUsage(s, usageKey(it.source, a.id, '*'));   // "Use only once per turn"
+    if (a.kind === 'activated' && a.limit && it.source !== undefined) countUsage(s, usageKey(it.source, a.id, a.anyPlayer ? it.controller : '*'));   // "Use only once per turn"
     if (!it.isAdd && srcObj && (isType(srcObj, 'unit') || isType(srcObj, 'gear'))) {
       // What a unit's or gear's ability chose ("with spells or unit abilities", "When you choose a friendly unit").
       const chosen = [...new Set(it.play.choices.executions.flatMap((ex) => Object.values(ex.targets).flat())
@@ -257,7 +264,7 @@ const STEPS: StepTable<AbilityFrame> = [
       if (chosen.length > 0) fire(s, x, { e: 'chosen', p: it.controller, objs: chosen, spell: false });
       if (a.kind === 'activated' && isType(srcObj, 'gear')) fire(s, x, { e: 'gearAbility', p: it.controller, source: srcObj.id });
     }
-    if (a.kind === 'activated' && a.modesOncePerTurn && it.source !== undefined) {
+    if (a.modesOncePerTurn && it.source !== undefined) {
       for (const m of it.play.choices.executions[0].modes) countUsage(s, usageKey(it.source, `${a.id}:mode${m}`, '*'));
     }
     if (a.kind === 'activated' && a.isAdd) {

@@ -138,6 +138,9 @@ for (const c of ORACLE.cards) {
   for (const p of c.printings) byPrinting[p] = c.id;
 }
 
+/** Every tag a card prints, sorted: what "name a tag" may name. */
+export const ALL_TAGS: readonly string[] = [...new Set(ORACLE.cards.flatMap((c) => c.tags ?? []))].sort();
+
 /** The oracle record of a card, or undefined for an unknown id. */
 export function findCard(def: DefId): OracleCard | undefined {
   return Object.hasOwn(byId, def) ? byId[def] : undefined;
