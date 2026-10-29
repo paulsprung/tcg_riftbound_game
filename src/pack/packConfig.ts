@@ -146,12 +146,13 @@ const SPIRITFORGED = pack([rarePlus(2, ORIGINS_RATES)], {
 
 const UNLEASHED = pack([rarePlus(2, { ...LATER_RATES, ultPerPack: 0.0008, legendPerBox: 12 })], {
   ultimate: ['UNL-238/219'],
-  tokens: ['UNL-T01//T05', 'UNL-T02//T05', 'UNL-T07//T05', 'UNL-T08//T05',
-    'UNL-T06//T04', 'UNL-T06//T05', 'UNL-T02//T04', 'UNL-T03//T04'],
+  // the faces of its double-sided token cards, each a card of its own (data/normalize.ts singleTokens)
+  tokens: ['UNL-T01', 'UNL-T02', 'UNL-T03', 'UNL-T04', 'UNL-T05', 'UNL-T06', 'UNL-T07', 'UNL-T08'],
 });
 
 const VENDETTA = pack([rarePlus(2, { ...LATER_RATES, legendPerBox: 12 })], {
-  tokens: ['VEN-T01//T02', 'VEN-T03//T04', 'VEN-T05//T06'],
+  // Tentacle (T06) has no picture anywhere: left out
+  tokens: ['VEN-T01', 'VEN-T02', 'VEN-T03', 'VEN-T04', 'VEN-T05'],
 });
 
 const RADIANCE = pack([
@@ -160,7 +161,7 @@ const RADIANCE = pack([
 ], {
   ultimate: ['RAD-184/167'],
   // Provisional (dotgg only); re-check once TCGplayer lists the booster tokens.
-  tokens: ['RAD-T01//T02', 'RAD-T02//T05', 'RAD-T03//T07', 'RAD-T04//T07', 'RAD-T05//T06', 'RAD-T06//T07'],
+  tokens: ['RAD-T01', 'RAD-T02', 'RAD-T03', 'RAD-T04', 'RAD-T05', 'RAD-T06', 'RAD-T07'],
 });
 
 /** Sets you can buy boosters of, newest first. */

@@ -261,6 +261,56 @@ export function splitTokenFaces(cards: Card[]): Card[] {
 }
 
 /**
+ * Tokens as single cards. A printed token card has two faces (Bomb // Gold:
+ * one card, two uses); here each face is a card of its own with the common
+ * card back, so the collection and the packs hold "Gold" and "Recruit", not
+ * "Bomb // Gold". A set's faces are its token numbers (VEN-T02 is Gold,
+ * whichever card it is printed on): each gets one card, `<set>-t<nn>`,
+ * pictured by its own clean Riot render when there is one, else by a
+ * printing that has it in front, else by the same token's render from
+ * another set. A face with no picture anywhere (Vendetta's Tentacle) is left
+ * out. Sets without token numbers (Origins' Recruits, the Buff promo) keep
+ * their records under the front face's name.
+ */
+export function singleTokens(cards: Card[], faces: Card[]): Card[] {
+  const twoFaced = cards.filter((c) => c.name.includes(' // '));
+  if (twoFaced.length === 0) return cards;
+  // printings whose picture is the wrong face (seen in the image audit)
+  const wrongFront = new Set(['unl-t06-t04', 'unl-t07-t04', 'unl-t08-t04', 'ven-t04-t01']);
+  const out: Card[] = cards.filter((c) => !c.name.includes(' // '));
+  // per face: the card, and how good its picture is (3 its own render, 2 a printing with it in front, 1 another set's)
+  const made = new Map<string, { card: Card; rank: number }>();
+  const faceNamed = (name: string) => faces.find((f) => f.name === name && /^cards\/|rgpub\.io/.test(f.image));
+  for (const d of twoFaced) {
+    const names = d.name.split(' // ').map((n) => n.trim());
+    const m = /^([a-z]+)-t(\d+)(?:-t(\d+))?/.exec(d.id);
+    if (!m) {
+      // no token numbers: the record is its front face
+      out.push({ ...d, name: names[0].replace(/\s*\([A-Z]{2}\)$/, ''), code: d.code.split('//')[0], supertype: 'Token', text: (d.text.split('//')[0] ?? '').trim() });
+      continue;
+    }
+    const [, set, front, back] = m;
+    for (const [i, nn] of [[0, front], [1, back]] as [number, string | undefined][]) {
+      if (!nn || !names[i]) continue;
+      const id = `${set}-t${nn.padStart(2, '0')}`;
+      const own = faces.find((f) => f.id === id);
+      const inFront = i === 0 && !wrongFront.has(d.id) && d.image ? d : undefined;
+      const pick = own ?? inFront ?? faceNamed(names[i]);
+      if (!pick) continue;
+      const rank = pick === own ? 3 : pick === inFront ? 2 : 1;
+      if ((made.get(id)?.rank ?? 0) >= rank) continue;
+      const text = own?.text ?? (d.text.split('//')[i] ?? '').trim();
+      made.set(id, { rank, card: {
+        ...d, id, name: names[i], code: `${set.toUpperCase()}-T${nn.padStart(2, '0')}`, number: Number(nn),
+        type: 'Token', supertype: 'Token', text, tags: [names[i]], image: pick.image, orientation: pick.orientation,
+      } });
+    }
+  }
+  for (const { card } of made.values()) out.push(card);
+  return out;
+}
+
+/**
  * One house style for names and texts, whichever source a card came from:
  * "Name, Title" (Riftcodex writes "Name - Title"), legends as printed on
  * the card, "Champion, Title" (Riot lists only the title), print finishes
@@ -344,7 +394,7 @@ export function buildDb(riotRaw: Raw[], riftcodexRaw: Raw[], supplements: Supple
   if (supplements.hidden) cards = cards.filter((c) => !supplements.hidden![c.id]);
   tidyCards(cards);
   const tokenFaces = splitTokenFaces(cards);
-  cards = cards.filter((c) => !tokenFaces.includes(c));
+  cards = singleTokens(cards.filter((c) => !tokenFaces.includes(c)), tokenFaces);
 
   for (const c of cards) c.setName = SET_NAMES[c.setId] ?? c.setName;
   cards.sort((a, b) =>
