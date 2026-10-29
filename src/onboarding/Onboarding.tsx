@@ -29,7 +29,7 @@ const PRODUCT_ORDER = ['ogs', 'ogn', 'sfd', 'unl', 'rad'];
 function Bar({ at }: { at: 0 | 1 | 2 }) {
   return (
     <header className="ob__bar">
-      <span className="ob__brand">Riftbound</span>
+      <span aria-hidden />
       <ol className="ob__steps" aria-label="Getting started">
         {STEPS.map((s, i) => (
           <li key={s.id} className={i < at ? 'is-done' : i === at ? 'is-now' : ''} aria-current={i === at ? 'step' : undefined}>
@@ -155,8 +155,7 @@ export function Onboarding({ db, onDone }: { db: CardDb; onDone: (to: 'shop' | '
     <div className="ob__page ob-intro">
       <HeroBanner db={db} bleed plain>
         <div className="lb-card ob-intro__card">
-          <span className="hero__kicker">Welcome</span>
-          <h1>Riftbound</h1>
+          <h1>Welcome</h1>
           <p className="muted">Open packs, build your collection and play the card game of League of Legends. Three steps to get going:</p>
           <ol className="ob-intro__steps">
             <li><Icon name="deck" size={22} /><div><b>Choose a starter deck</b><span>Every official starter deck is ready to play.</span></div></li>
@@ -166,7 +165,7 @@ export function Onboarding({ db, onDone }: { db: CardDb; onDone: (to: 'shop' | '
           <button type="button" className="btn btn--cta" onClick={() => setStep('deck')}>Begin</button>
         </div>
       </HeroBanner>
-      <header className="ob__bar ob__bar--float"><span className="ob__brand">Riftbound</span><HoloSwitches /></header>
+      <header className="ob__bar ob__bar--float"><span aria-hidden /><HoloSwitches /></header>
       {preview && <button type="button" className="ob__skip" onClick={skipPreview}>Skip onboarding (preview only)</button>}
     </div>
   );

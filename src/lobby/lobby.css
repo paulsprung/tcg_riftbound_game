@@ -926,3 +926,25 @@ html[data-scaled] .app {
 .pack-shelf--own .pack-shelf__item { width: auto; min-width: 140px; }
 .pack-shelf--own .pack-shelf__label strong { font-size: 18px; letter-spacing: .1em; }
 @media (max-width: 900px), (max-height: 560px) { .pack-shelf--own { flex-wrap: wrap; } }
+
+/* ---- feedback round 6: no pictures behind the pages, no wordmark ---- */
+.lb-ambient__glow {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 70% 55% at 62% 18%, rgba(21, 56, 90, .55), transparent 70%), radial-gradient(ellipse 55% 45% at 8% 100%, rgba(10, 200, 185, .07), transparent 70%);
+}
+.lb-top { padding-left: 14px; }
+.hero--compact { background: linear-gradient(120deg, #0b2036, #07182b 55%, #0b1f2e); }
+.hero--compact::before { content: ""; position: absolute; inset: 0; z-index: -1; opacity: .5;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100'%3E%3Cpath d='M28 66L0 50L0 16L28 0L56 16L56 50L28 66L28 100' fill='none' stroke='%23c8aa6e' stroke-opacity='.09'/%3E%3Cpath d='M28 0L28 34L0 50L0 84L28 100L56 84L56 50L28 34' fill='none' stroke='%23c8aa6e' stroke-opacity='.09'/%3E%3C/svg%3E"); }
+.play-online__card--pick { display: block; position: relative; padding: 0; border: 0; background: none; cursor: pointer; transition: transform .25s cubic-bezier(.2, .7, .2, 1), filter .25s; }
+.play-online__card--pick:hover:not(:disabled) { transform: translateY(-6px); filter: drop-shadow(0 22px 40px rgba(0, 0, 0, .7)) drop-shadow(0 0 26px rgba(10, 200, 185, .3)); }
+.play-online__card--pick:disabled { cursor: default; }
+.play-online__card--pick:focus-visible { outline: 2px solid var(--teal); outline-offset: 4px; }
+.play-online__change {
+  position: absolute; left: 50%; bottom: 12px; transform: translate(-50%, 6px); opacity: 0; padding: 6px 14px; white-space: nowrap; z-index: 3;
+  font: 800 10px/1 var(--font-ui); letter-spacing: .2em; text-transform: uppercase; color: var(--gold-hi); background: rgba(1, 10, 19, .85); border: 1px solid var(--gold); transition: opacity .2s, transform .2s;
+}
+.play-online__card--pick:hover .play-online__change, .play-online__card--pick:focus-visible .play-online__change { opacity: 1; transform: translate(-50%, 0); }
+.ds-modal__note { margin: 0; text-align: center; }
+.ds__summary { max-width: 360px; text-align: center; text-transform: none; letter-spacing: 0; }
+.ds__start { gap: 10px; }

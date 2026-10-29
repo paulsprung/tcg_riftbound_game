@@ -15,20 +15,6 @@ export const NAV = [
 
 const Coin = () => <span className="lb-coin" aria-hidden />;
 
-/** The hextech mark in front of the name. */
-const Emblem = () => (
-  <svg className="lb-emblem" viewBox="0 0 32 32" aria-hidden>
-    <defs>
-      <linearGradient id="lb-g" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stopColor="#f0e6d2" /><stop offset=".5" stopColor="#c8aa6e" /><stop offset="1" stopColor="#785a28" />
-      </linearGradient>
-    </defs>
-    <polygon points="16,1.5 28.5,8.75 28.5,23.25 16,30.5 3.5,23.25 3.5,8.75" fill="#0a1428" stroke="url(#lb-g)" strokeWidth="1.6" />
-    <polygon points="16,7 23.8,11.5 23.8,20.5 16,25 8.2,20.5 8.2,11.5" fill="none" stroke="#0ac8b9" strokeWidth="1" opacity=".85" />
-    <path d="M16 11 L19.2 16 L16 21 L12.8 16 Z" fill="url(#lb-g)" />
-  </svg>
-);
-
 /** The bar across the top: brand, the four places, coins, who you are. */
 export function LobbyTop({ route }: { route: string }) {
   const own = useCollection();
@@ -43,7 +29,6 @@ export function LobbyTop({ route }: { route: string }) {
 
   return (
     <header className="lb-top">
-      <a className="lb-brand" href="#home" aria-label="Riftbound home"><Emblem /><span>Riftbound</span></a>
       <nav className="lb-nav" aria-label="Sections">
         {NAV.map((n) => (
           <a key={n.id} href={`#${n.id}`} aria-current={route === n.id ? 'page' : undefined}>{n.label}</a>

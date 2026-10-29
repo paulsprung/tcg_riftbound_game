@@ -62,7 +62,7 @@ export function App() {
   return (
     <div className="app">
       <FoilDefs />
-      {state.status === 'ready' && <Ambient db={state.db} route={route} />}
+      <Ambient />
       {state.status === 'ready' && onboarding ? (
         <main className="main">
           <div className="lb-view">

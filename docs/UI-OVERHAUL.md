@@ -25,3 +25,8 @@ Reference screenshots: `ui-ref/riftatlas-table.webp` (target), `ui-ref/pay-butto
 - Goal: real online play between players (server-authoritative engine, matchmaking, ranked rating).
 - Tutorial opponent: a **random other starter deck** (today it is fixed: Garen, or Lux if you own Garen).
 - Custom decks from the deck builder must be playable → needs all cards defined in the engine first.
+
+## Images still to supply (reminder for the user)
+- **Season picture for Home** (one, ideally animated): drop the file in `public/season/` and set its path in `src/lobby/season.ts` (`art`). Until then the season's legend card art (Seraphine, Radiance) stands in.
+- Backgrounds behind the other pages: none on purpose. Add pictures here only when the user hands them over.
+- Avatars / profile banners: with accounts.

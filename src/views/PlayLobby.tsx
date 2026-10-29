@@ -1,12 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { HoloCard } from '../card/HoloCard.tsx';
 import { CardBack } from '../card/CardBack.tsx';
 import { useCollection } from '../collection/store.ts';
 import type { CardDb } from '../data/types.ts';
-import { loadStarters, type StarterChoice } from '../economy/starter.ts';
 import { Lobby, RankCard, SideLink, SideTitle } from '../lobby/Lobby.tsx';
 import type { IconName } from '../lobby/icons.tsx';
+import { BUILT_IN_DECKS, shortName } from '../play/host/decks.ts';
+import { cardFor, cardIndex } from '../play/model/cards.ts';
 import { PlayView } from '../play/PlayView.tsx';
+import { DeckPicker } from '../play/setup/DeckSetup.tsx';
 
 type ModeId = 'ranked' | 'casual' | 'tournament' | 'custom';
 
@@ -19,13 +21,13 @@ const ONLINE: { id: ModeId; icon: IconName; label: string; blurb: string; match:
 /** Online modes need the server: the page is built, the queue waits for it. */
 function OnlineMode({ db, mode }: { db: CardDb; mode: (typeof ONLINE)[number] }) {
   const own = useCollection();
-  const [deck, setDeck] = useState<StarterChoice | null>(null);
-  useEffect(() => {
-    let alive = true;
-    loadStarters(db).then((all) => { if (alive) setDeck(all.find((s) => s.id === own.starter) ?? null); }).catch(() => undefined);
-    return () => { alive = false; };
-  }, [db, own.starter]);
-  const legend = deck?.legendCard ? db.cards.find((c) => c.id === deck.legendCard) : undefined;
+  const cards = useMemo(() => cardIndex(db), [db]);
+  // the decks the player really has: the starter now, the built ones later
+  const decks = useMemo(() => BUILT_IN_DECKS.filter((b) => b.id === own.starter), [own.starter]);
+  const [chosen, setChosen] = useState<string | null>(null);
+  const [picking, setPicking] = useState(false);
+  const deck = decks.find((d) => d.id === chosen) ?? decks[0] ?? null;
+  const legend = deck ? cardFor(cards, deck.deck.legend) : undefined;
 
   return (
     <section className="play-online">
@@ -36,12 +38,14 @@ function OnlineMode({ db, mode }: { db: CardDb; mode: (typeof ONLINE)[number] })
       </header>
       <div className="play-online__stage">
         <figure className="play-online__side">
-          <div className="play-online__card">
+          <button type="button" className="play-online__card play-online__card--pick" disabled={!deck} onClick={() => setPicking(true)}
+            aria-label={deck ? `${shortName(deck.deck)}. Change deck` : 'No deck yet'}>
             {legend ? <HoloCard card={legend} finish="none" width="100%" imageWidth={480} /> : <CardBack />}
-          </div>
+            <span className="play-online__change">Change deck</span>
+          </button>
           <figcaption>
             <span className="play-online__tag">Solo</span>
-            <strong>{deck?.title ?? 'No deck yet'}</strong>
+            <strong>{deck ? shortName(deck.deck) : 'No deck yet'}</strong>
             <span className="muted small">{mode.match}</span>
           </figcaption>
         </figure>
@@ -59,6 +63,10 @@ function OnlineMode({ db, mode }: { db: CardDb; mode: (typeof ONLINE)[number] })
         <button type="button" className="btn btn--cta" disabled>{mode.id === 'tournament' ? 'Browse tournaments' : 'Find match'}</button>
       </div>
       {!own.starter && <p className="muted">Pick a starter deck on <a href="#home">Home</a> first.</p>}
+      {picking && deck && (
+        <DeckPicker cards={cards} db={db} title="Your deck" only={decks} current={deck.id} owned={own.starter}
+          onClose={() => setPicking(false)} onPick={(b) => { setChosen(b.id); setPicking(false); }} />
+      )}
     </section>
   );
 }
