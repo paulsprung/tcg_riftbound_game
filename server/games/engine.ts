@@ -23,6 +23,8 @@ export interface Update {
   pending: { player: PlayerId; id: number; passOnly: boolean } | null;
   result: GameState['result'];
   turn: number;
+  /** Who plays first this game, once settled. */
+  first: PlayerId | null;
   points: [number, number];
   /** Answers given in this change, for the record the server keeps. */
   answers: Answer[];
@@ -49,7 +51,7 @@ export class Engine {
     return {
       gameId, seats: [seat(0), seat(1)],
       pending: s.pending && !s.result ? { player: s.pending.player, id: s.pending.id, passOnly: passOnly(s) } : null,
-      result: s.result, turn: s.turn.n, points: [s.players[0].points, s.players[1].points], answers,
+      result: s.result, turn: s.turn.n, first: s.turn.firstPlayer ?? null, points: [s.players[0].points, s.players[1].points], answers,
     };
   }
 

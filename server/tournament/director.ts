@@ -1,5 +1,5 @@
 import { randomInt } from 'node:crypto';
-import type { DeckList } from '../../src/game/index.ts';
+import type { DeckList, GameSetup } from '../../src/game/index.ts';
 import { BOOSTER_SETS } from '../../src/pack/packConfig.ts';
 import type { Db } from '../db.ts';
 import { Refused } from '../economy.ts';
@@ -12,9 +12,9 @@ import { pairRound, standings, swissRounds, topCutPairs, type MatchResult, type 
  * from then on (a decklist), and pay the entry fee, which comes back if they
  * leave before the start or the tournament is cancelled. At the start time
  * (or when an admin starts it) the rounds run by themselves: each match is
- * played as online games (Bo1 or Bo3, the loser of a game plays first in the
- * next), byes count as 2-0 wins, a player who doesn't show up within the
- * no-show time loses that game. After the Swiss rounds the best 4 or 8 play
+ * played as online games (Bo1 or Bo3; who plays first by TR 407), byes count
+ * as 2-0 wins, and a player who doesn't come within the no-show time loses
+ * the match and is dropped (TR 703.8.d). The tiebreakers are TR 409's. After the Swiss rounds the best 4 or 8 play
  * a single-elimination top cut. At the end the prizes go out by final place.
  *
  * Everything lives in the database (tournaments, tournament_players,
@@ -39,7 +39,7 @@ export interface Settings {
 
 export interface TournamentInput { name: string; startsAt: number; settings: Partial<Settings> }
 
-const DEFAULTS: Settings = { bestOf: 1, maxPlayers: 32, entryFee: 0, topCut: 0, rounds: null, prizes: [], noShowMinutes: 5 };
+const DEFAULTS: Settings = { bestOf: 1, maxPlayers: 32, entryFee: 0, topCut: 0, rounds: null, prizes: [], noShowMinutes: 10 };
 
 interface Row { id: string; name: string; status: string; settings: Settings; starts_at: Date; round: number; stage: 'swiss' | 'top' }
 interface MatchRow { id: string; round: number; stage: string; tbl: number; a: string; b: string | null; wins: [number, number]; games: number; status: string; game_id: string | null }
@@ -238,8 +238,11 @@ export class Director {
     await this.roundDone(t2);
   }
 
-  /** The next game of a match: the loser of its last game plays first. */
-  private async playGame(t: Row, m: MatchRow, firstPlayer: 0 | 1 | null = null) {
+  /** The next game of a match. Who plays first (TR 407): in the first game a random
+      designated player chooses, in a playoff the higher seed (a) does (407.2.a); after
+      that the loser of the last game chooses, and a draw keeps the order (407.4). */
+  private async playGame(t: Row, m: MatchRow, firstPlayer: GameSetup['firstPlayer'] | null = null) {
+    if (firstPlayer === null && m.games === 0 && m.stage === 'top') firstPlayer = { designee: 0 };
     const ps = await this.players(t.id);
     const pa = ps.find((p) => p.user_id === m.a)!, pb = ps.find((p) => p.user_id === m.b)!;
     const cutLeft = m.stage === 'top' ? 2 * (await this.db.query("SELECT count(*)::int AS n FROM tournament_matches WHERE tournament_id = $1 AND stage = 'top' AND round = $2", [t.id, m.round])).rows[0].n : 0;
@@ -260,13 +263,19 @@ export class Director {
     if (f.winner !== null) wins[f.winner]++;
     const games = m.games + 1;
     const need = Math.ceil(t.settings.bestOf / 2);
-    const over = wins[0] >= need || wins[1] >= need || games >= t.settings.bestOf + 2;
+    // a player who never came loses the match and is dropped (TR 703.8.d, 414.4)
+    if (f.noShow !== null) {
+      wins[f.noShow] = 0;
+      wins[1 - f.noShow] = need;
+      await this.db.query('UPDATE tournament_players SET dropped = true WHERE tournament_id = $1 AND user_id = $2', [t.id, f.players[f.noShow]]);
+    }
+    const over = f.noShow !== null || wins[0] >= need || wins[1] >= need || games >= t.settings.bestOf + 2;
     // a top-cut match can't end level: the higher seed (a) goes on
     if (over && m.stage === 'top' && wins[0] === wins[1]) wins[0]++;
     await this.db.query('UPDATE tournament_matches SET wins = $2, games = $3, status = $4 WHERE id = $1', [m.id, wins, games, over ? 'done' : 'playing']);
     if (!over) {
-      const loser = f.winner === null ? null : ((1 - f.winner) as 0 | 1);
-      await this.playGame(t, { ...m, wins, games }, loser);
+      const next: GameSetup['firstPlayer'] = f.winner === null ? (f.first ?? 'random-designee-chooses') : { designee: (1 - f.winner) as 0 | 1 };
+      await this.playGame(t, { ...m, wins, games }, next);
       return;
     }
     await this.roundDone(t);

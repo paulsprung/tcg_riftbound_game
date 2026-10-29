@@ -206,6 +206,9 @@ defineStart((s: GameState, setup: GameSetup, x: RunCtx) => {
   if (typeof fixed === 'number' && !s.players.some((pl) => pl.id === fixed)) {
     throw new SetupError([`the First Player P${fixed} is not in the game [115]`]);
   }
+  if (typeof fixed === 'object' && !s.players.some((pl) => pl.id === fixed.designee)) {
+    throw new SetupError([`the designated player P${fixed.designee} is not in the game (TR 407)`]);
+  }
   const chosen = s.players.map((pl) => setup.chosenChampion?.[pl.id] ?? setup.decks[pl.id].chosenChampion);
   const issues = s.players.flatMap((pl) => deckIssues(s, setup.decks[pl.id], pl.id, chosen[pl.id]));
   if (issues.length > 0) throw new SetupError(issues);
@@ -270,6 +273,7 @@ defineStart((s: GameState, setup: GameSetup, x: RunCtx) => {
   const method = setup.firstPlayer ?? s.rules.firstPlayer;
   let designee: PlayerId | undefined;
   if (typeof method === 'number') setFirstPlayer(s, x, method, '115');
+  else if (typeof method === 'object') designee = method.designee;
   else if (method === 'random') setFirstPlayer(s, x, s.players[randInt(s, s.players.length)].id, '115');
   else designee = s.players[randInt(s, s.players.length)].id;
 

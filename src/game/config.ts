@@ -112,8 +112,10 @@ export interface GameSetup {
   /** Default DUEL. */
   mode?: ModeConfig;
   rules?: Partial<RulesConfig>;
-  /** A fixed player is for tests and the Card Lab; default TR 407. */
-  firstPlayer?: 'random-designee-chooses' | 'random' | PlayerId;
+  /** A fixed player is for tests and the Card Lab; default TR 407. `{ designee }`
+      names the player who chooses: the loser of a match's last game (TR 407.4)
+      or the higher seed in a playoff (TR 407.2.a). */
+  firstPlayer?: 'random-designee-chooses' | 'random' | PlayerId | { designee: PlayerId };
   /** Tutorials and tests: cards put on top of each deck after the shuffle
       [114], top first (a scripted lesson needs a known draw order). */
   stack?: [DeckStack?, DeckStack?];

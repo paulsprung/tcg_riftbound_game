@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { upsertUser } from '../server/auth.ts';
 import { connect, migrate, type Db } from '../server/db.ts';
 import { catalogFrom, economy } from '../server/economy.ts';
@@ -20,7 +20,7 @@ const url = base0 && `${base0}${base0.includes('?') ? '&' : '?'}options=${encode
 class Net implements Transport {
   starts: Extract<ServerMsg, { t: 'start' }>[] = [];
   send(userId: string, msg: ServerMsg) { if (msg.t === 'start') this.starts.push({ ...msg, gameId: `${msg.gameId}|${userId}` }); }
-  online() { return true; }
+  online(_u?: string) { return true; }
 }
 
 describe.skipIf(!url)('tournaments', () => {
@@ -94,6 +94,29 @@ describe.skipIf(!url)('tournaments', () => {
     expect(JSON.stringify(d)).not.toContain(users[1].id);
     director.stop(); online.stop();
   }, 60_000);
+
+  it('a player who never comes loses the match and is dropped (TR 703.8.d)', async () => {
+    const net = new Net();
+    // only users[0] and users[1] are connected
+    net.online = (u?: string) => u === users[0].id || u === users[1].id;
+    const online = new Online(db, new EnginePool(0), net, Date, { autoPass: 1 });
+    const director = new Director(db, online);
+    const id = await director.create(users[0].id, { name: 'No-show Cup', startsAt: Date.now() + 1000, settings: { bestOf: 3, noShowMinutes: 1 } });
+    for (const u of users.slice(0, 4)) await director.join(u.id, u.name, id, u.starter);
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    await director.start(id);
+    await vi.advanceTimersByTimeAsync(61_000);
+    vi.useRealTimers();
+    await new Promise((r) => setTimeout(r, 200));
+    const gone = (await db.query('SELECT user_id FROM tournament_players WHERE tournament_id = $1 AND dropped', [id])).rows.map((r) => r.user_id);
+    expect(gone.length).toBeGreaterThan(0);
+    expect(gone).not.toContain(users[0].id);
+    const lost = (await db.query('SELECT a, b, wins FROM tournament_matches WHERE tournament_id = $1 AND status = $2', [id, 'done'])).rows
+      .filter((m) => gone.includes(m.a) || gone.includes(m.b));
+    for (const m of lost) expect(gone.includes(m.a) ? m.wins : [m.wins[1], m.wins[0]]).toEqual([0, 2]);
+    await director.cancel(id);
+    director.stop(); online.stop();
+  });
 
   it('a tournament with one player is cancelled at its start and the fee comes back', async () => {
     const online = new Online(db, new EnginePool(0), new Net(), Date, { autoPass: 1 });

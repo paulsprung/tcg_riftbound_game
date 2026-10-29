@@ -99,7 +99,7 @@ function TournamentsAdmin() {
   const [entryFee, setFee] = useState(0);
   const [topCut, setCut] = useState<0 | 4 | 8>(0);
   const [rounds, setRounds] = useState('');
-  const [noShow, setNoShow] = useState(5);
+  const [noShow, setNoShow] = useState(10);
   const [prizes, setPrizes] = useState<PrizeRow[]>([{ coins: 500, set: SETS[0], packs: 0 }]);
   const load = () => api<{ tournaments: Tour[] }>('GET', '/api/tournaments').then((r) => setList(r.tournaments)).catch(() => undefined);
   useEffect(() => { void load(); }, []);

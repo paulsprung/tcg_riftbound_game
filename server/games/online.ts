@@ -41,7 +41,13 @@ export type { ClientMsg, Mode, QueueMode, RatingInfo, ServerMsg };
 export type GameMeta = NonNullable<Extract<ServerMsg, { t: 'start' }>['tournament']> & { match: string };
 
 /** How a game ended, for whoever ran it. */
-export interface Finished { gameId: string; mode: Mode; players: [string, string]; winner: PlayerId | null; reason: string; meta: GameMeta | null }
+export interface Finished {
+  gameId: string; mode: Mode; players: [string, string]; winner: PlayerId | null; reason: string; meta: GameMeta | null;
+  /** Who played first: the next game of a drawn match keeps it (TR 407.4). */
+  first: PlayerId | null;
+  /** The seat that never came (it lost by the no-show time): a match loss (TR 703.8.d). */
+  noShow: PlayerId | null;
+}
 
 export interface Transport { send(userId: string, msg: ServerMsg): void; online(userId: string): boolean }
 
@@ -56,6 +62,10 @@ interface Live {
   /** The engine and card set the game runs on: a record replays only on the same. */
   head: { engine: string; defsHash: string };
   meta: GameMeta | null;
+  first: PlayerId | null;
+  /** A tournament seat that hasn't connected since the game began; set when its no-show time ran out. */
+  noShow: PlayerId | null;
+  showed: [boolean, boolean];
 }
 
 export const infoOf = (x: Rating, games: number): RatingInfo => {
@@ -109,6 +119,7 @@ export class Online {
     if (!gameId) return;
     const g = this.games.get(gameId)!;
     const seat = g.players.indexOf(userId) as PlayerId;
+    g.showed[seat] = true;
     const t = g.away[seat];
     if (t) { clearTimeout(t); g.away[seat] = null; }
     await this.sendStart(g, seat, true);
@@ -212,14 +223,18 @@ export class Online {
   /** A game between two given players (a tournament's): a in seat 0. `firstPlayer` fixes who plays first
       (the loser of the match's last game); a player not connected has `noShowMs` to come. */
   async startPaired(a: Pick<Queued, 'userId' | 'name' | 'deck'>, b: Pick<Queued, 'userId' | 'name' | 'deck'>, meta: GameMeta,
-    firstPlayer: PlayerId | null, noShowMs: number): Promise<string> {
+    firstPlayer: GameRecord['setup']['firstPlayer'] | null, noShowMs: number): Promise<string> {
     for (const u of [a.userId, b.userId]) for (const q of this.queues.values()) { const i = q.findIndex((x) => x.userId === u); if (i >= 0) q.splice(i, 1); }
     const id = await this.begin('tournament', a, b, meta, firstPlayer);
     const g = this.games.get(id);
     if (g) {
       for (const seat of [0, 1] as const) {
-        if (this.net.online(g.players[seat])) continue;
-        g.away[seat] = setTimeout(() => { if (!this.net.online(g.players[seat])) void this.concede(g, seat); }, noShowMs);
+        if (this.net.online(g.players[seat])) { g.showed[seat] = true; continue; }
+        g.away[seat] = setTimeout(() => {
+          if (this.net.online(g.players[seat])) return;
+          if (!g.showed[seat]) g.noShow = seat;
+          void this.concede(g, seat);
+        }, noShowMs);
         g.away[seat].unref?.();
       }
     }
@@ -227,7 +242,7 @@ export class Online {
   }
 
   private async begin(mode: Mode, p0: Pick<Queued, 'userId' | 'name' | 'deck'>, p1: Pick<Queued, 'userId' | 'name' | 'deck'>, meta: GameMeta | null,
-    firstPlayer: PlayerId | null = null): Promise<string> {
+    firstPlayer: GameRecord['setup']['firstPlayer'] | null = null): Promise<string> {
     const id = randomUUID();
     const setup: GameRecord['setup'] = { seed: randomInt(0, 2 ** 31), decks: [p0.deck, p1.deck] as [DeckList, DeckList],
       ...(firstPlayer !== null ? { firstPlayer } : {}) };
@@ -235,6 +250,7 @@ export class Online {
       id, mode, players: [p0.userId, p1.userId], names: [p0.name, p1.name], decks: setup.decks, started: this.clock.now(),
       answers: [], setup, pending: null, deadline: null, lastView: null, strikes: [0, 0], timer: null, away: [null, null],
       dirty: true, over: false, turn: 0, busy: Promise.resolve(), head: { engine: '', defsHash: '' }, meta,
+      first: null, noShow: null, showed: [false, false],
     };
     this.games.set(id, g);
     this.byUser.set(p0.userId, id); this.byUser.set(p1.userId, id);
@@ -295,6 +311,7 @@ export class Online {
     g.dirty = g.dirty || u.answers.length > 0;
     g.pending = u.pending;
     g.turn = u.turn;
+    g.first = u.first;
     g.lastView = [u.seats[0].view, u.seats[1].view];
     this.clearTimers(g, false);
     g.deadline = u.pending && !u.pending.passOnly ? this.clock.now() + this.t.decision : null;
@@ -347,7 +364,7 @@ export class Online {
         id: row.id, mode: row.mode, players: row.players, names: d.names, decks: d.setup.decks as [DeckList, DeckList], started: d.started,
         answers: d.answers.slice(), setup: d.setup, pending: null, deadline: null, lastView: null, strikes: d.strikes ?? [0, 0], timer: null,
         away: [null, null], dirty: false, over: false, turn: 0, busy: Promise.resolve(), head: { engine: d.engine, defsHash: d.defsHash },
-        meta: d.meta ?? null,
+        meta: d.meta ?? null, first: null, noShow: null, showed: [true, true],
       };
       try {
         // an update of the engine or the cards in between: the record no longer replays, and the game is dropped
@@ -428,7 +445,8 @@ export class Online {
     }
     this.games.delete(g.id);
     await this.pool.engine.drop(g.id);
-    const done: Finished = { gameId: g.id, mode: g.mode, players: g.players, winner: res.winner, reason: res.reason, meta: g.meta };
+    const done: Finished = { gameId: g.id, mode: g.mode, players: g.players, winner: res.winner, reason: res.reason, meta: g.meta,
+      first: g.first, noShow: g.noShow };
     for (const h of this.finishHooks) await Promise.resolve(h(done)).catch((err) => console.error('after a game:', err));
   }
 

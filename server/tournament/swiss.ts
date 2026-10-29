@@ -1,19 +1,20 @@
 /*
  * Swiss rounds and a top cut, as card-game tournaments run them:
  *
- *   match points: win 3, draw 1, loss 0; a bye is a win (2-0 in games)
+ *   match points: win 3, draw 1, loss 0; a bye is a win (2-0 in games).
+ *     (The Tournament Rules leave the points to the event; this is the usual.)
  *   pairing: by match points, top down, never the same pair twice if it can
  *     be helped; an odd player out gets the bye, the lowest-ranked one who
  *     has not had one
- *   standings: match points, then the tiebreakers in TIEBREAKERS order:
+ *   standings: match points, then the tiebreakers of TR 409.2, in order:
  *     OMW%  the opponents' average match-win rate (each at least 1/3)
  *     GW%   the player's game-win rate (at least 1/3)
  *     OGW%  the opponents' average game-win rate
  *   rounds: enough that one undefeated player can remain (log2 of the field)
  *   top cut: single elimination of the best 4 or 8, seeded 1 vs 8, 4 vs 5 …
  *
- * Byes are left out of the opponents' rates. The order of the tiebreakers is
- * a setting: check it against the current Riftbound Tournament Rules.
+ * Byes are left out of the opponents' rates; a tie after all of them is broken
+ * by name here, where TR 409.3 asks for a random method.
  * Pure: the director (director.ts) keeps the state in the database.
  */
 
