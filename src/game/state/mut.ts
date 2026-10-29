@@ -336,6 +336,12 @@ export function moveObject(s: GameState, id: ObjId, to: Zone, o: MoveOptions = {
     if (isBoard(from.z)) {
       // A copy effect ends as its Equipment leaves the board [479.1]; the copy itself leaves as what it is [124].
       for (const h of Object.values(s.objects)) if (h.copyFx?.via === id) { h.def = h.copyFx.orig; delete h.copyFx; }
+      // What exists only while this is on the board ceases to exist [440.3.b] (Neeko's legend).
+      for (const h of Object.values(s.objects)) {
+        if (h.existsWhile !== id) continue;
+        extract(s, h.zone, h.id);
+        delete s.objects[h.id];
+      }
     }
     obj = {
       id: o.reuseId ?? mint(s, 'obj'), card: old.card, def: old.copyFx?.orig ?? old.def, printing: old.printing, token: old.token, owner: old.owner,

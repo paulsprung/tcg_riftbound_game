@@ -41,7 +41,7 @@ import type { InstrAst, MoveToAst, ProgAst, RefAst, SelAst, SlotAst, ValueAst } 
 import { collect, fire, placeAll, placeSelfLeave } from '../abilities/triggers.ts';
 import {
   addEffect, addMight, addSpecial, attach, banish, buffUnits, burn, cantMove, channelRunes, deal, detach, discard, drawCard,
-  drawCards, exhaust, gainPoints, gainXp, heal, kill, look, mill, moveUnits, ready, recall, recycleCards, recyclePermanent, recycleRune, returnToHand,
+  addLegend, drawCards, exhaust, gainPoints, gainXp, heal, kill, look, mill, moveUnits, ready, recall, recycleCards, recyclePermanent, recycleRune, returnToHand,
   endUnitGears, makeUnitGear, replaceBattlefield, setEmpowered, spendBuffs, spendXp, stunUnits, swapBackBattlefield, toZone,
 } from '../rules/actions.ts';
 import { itemById, markFepr, removeItem } from '../rules/chain.ts';
@@ -928,6 +928,20 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
       const objs = r.objs.filter((id) => onBoard(s, id));
       if (objs.length === 0) return negated;
       addEffect(s, x, objs, { s: 'kwFromKw', kw: ins.kw, from: ins.from }, effOpts('479.3'));
+      return ok;
+    }
+    case 'addLegend': {                                              // Neeko, Blending In
+      const me = it.source;
+      if (me === undefined || !s.objects[me] || !onBoard(s, me)) return negated;   // "while I'm on the board": over already
+      const pl = s.players[p];
+      const inPlay = new Set(pl.legend.map((id) => s.objects[id]?.def));
+      const can = (pl.extra[ins.from] ?? []).filter((d) => !inPlay.has(d));   // one of each at most [440.3.c]
+      if (can.length === 0) return negated;
+      if (can.length > 1 && got === undefined) {
+        return choice('mode', { who: p, item: it.id, labels: can.map((d) => findCard(d)?.name ?? d) });
+      }
+      const n = can.length === 1 ? 0 : (got as { n?: number }).n ?? 0;
+      addLegend(s, x, p, can[Math.min(n, can.length - 1)], me, '440.2.b.4');
       return ok;
     }
     case 'becomeUnit': {                                             // Orianna, Lady of Clockwork

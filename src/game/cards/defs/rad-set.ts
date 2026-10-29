@@ -480,4 +480,9 @@ export const RAD_SET_DEFS = [
       return [onPlay(m), when({ on: 'moved', who: 'self' }, m)];
     })()],
   }),
+  // Radiance patch notes: up to 3 legends chosen while building the deck (PlayerState.extra), shared by every Neeko; one
+  // of each in play at most; ready; not tokens; they cease to exist as Neeko leaves the board [103.1], [440.3].
+  unit('neeko-blending-in', "If Neeko is in your deck, choose up to 3 different legends in addition to your starting legend.\nWhen you play me, choose one of those Legends and add it to your Legend Zone while I'm on the board.", {
+    abilities: [onPlay(prog([{ op: 'addLegend', from: 'neeko-blending-in' }]))],
+  }),
 ];

@@ -897,6 +897,10 @@ export type InstrAst = { id?: string; link?: string } & (
   /** Orianna, Lady of Clockwork: "It becomes a unit gear with Might equal to its Energy cost until you choose another gear
       with me": the gears this source made units before stop being units as the new choice is made (finalization). */
   | { op: 'becomeUnit'; what: RefAst }
+  /** Neeko, Blending In: "choose one of those Legends and add it to your Legend Zone while I'm on the board": one of the
+      legends the controller chose while building their deck for this card (PlayerState.extra[from]) and has none of in
+      play, created ready [103.1], [440.3.c] (Radiance patch notes). */
+  | { op: 'addLegend'; from: string }
 );
 /** How long an effect lasts [479]. */
 export type Until = 'thisTurn' | 'thisCombat' | 'permanent';

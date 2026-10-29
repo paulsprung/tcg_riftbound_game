@@ -25,10 +25,10 @@ import { emit, emitZone, knowers, newGroup } from '../core/events.ts';
 import { emptyPool } from '../state/blank.ts';
 import { fire, placeSelfLeave } from '../abilities/triggers.ts';
 import { bit } from '../state/ids.ts';
-import { append, deleteObject, mint, moveObject, replaceBattlefieldObj, setAsUnit, setCopy, setField, swapBackBattlefieldObj } from '../state/mut.ts';
+import { append, createObject, deleteObject, mint, moveObject, replaceBattlefieldObj, setAsUnit, setCopy, setField, swapBackBattlefieldObj } from '../state/mut.ts';
 import { shuffled, shuffleZone } from '../state/rng.ts';
 import { locOf, Z } from '../state/zones.ts';
-import type { Domain, GameObject, GameState, Json, Loc, ObjId, PlayerId, PowerReq, RunePool, Zone } from '../state/types.ts';
+import type { DefId, Domain, GameObject, GameState, Json, Loc, ObjId, PlayerId, PowerReq, RunePool, Zone } from '../state/types.ts';
 import { opponentsOf } from './board.ts';
 import { energyCostOf, isType, mightOf as mightOfUnit, snapshotOf } from './chars.ts';
 import { friendsAt } from './targets.ts';
@@ -751,6 +751,15 @@ export function endUnitGears(s: GameState, x: X, by: ObjId, rule: string) {
     emit(s, x, { k: 'becomeUnit', obj: g.id, unit: false, rule });
     requestCleanup(s);
   }
+}
+
+/** Neeko, Blending In: "add it to your Legend Zone while I'm on the board" [440.2.b.4], [440.3.b–c]: a legend card (not
+    a token) created ready in p's Legend Zone, existing while `whileOn` is on the board. */
+export function addLegend(s: GameState, x: X, p: PlayerId, def: DefId, whileOn: ObjId, rule: string): ObjId {
+  const o = createObject(s, { def, printing: null, owner: p, controller: p, zone: { z: 'legend', p } });
+  setField(s, o, 'existsWhile', whileOn);
+  emit(s, x, { k: 'legendAdded', obj: o.id, def, p, rule });
+  return o.id;
 }
 
 /** Every card attached to a unit detaches (the unit leaves the board [719.5]). */

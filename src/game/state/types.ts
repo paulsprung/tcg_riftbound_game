@@ -185,6 +185,9 @@ export interface GameObject {
   /** A gear that is also a unit [137.3.b], [143.5] (Orianna, Lady of Clockwork): its base Might, and the legend whose
       effect made it one ("until you choose another gear with me"). */
   asUnit?: { might: number; by: ObjId };
+  /** Created for a duration [440.3.b] (Neeko, Blending In's legend "while I'm on the board"): it ceases to exist as
+      that object leaves the board. */
+  existsWhile?: ObjId;
   aliasOf?: ObjId;                    // Replace keeps identity for references [439.1.a]
 }
 

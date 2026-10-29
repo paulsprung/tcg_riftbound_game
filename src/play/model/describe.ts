@@ -245,6 +245,7 @@ export function describeAll(events: readonly ObservedEvent[], c: DescribeCtx): L
       case 'spendBuff': add(e, `${listOf(e.objs.map(unitName))} spend${e.objs.length === 1 ? 's' : ''} a buff.`, 'game'); break;
       case 'becomeMighty': add(e, `${unitName(e.obj)} becomes Mighty.`, 'game'); break;
       case 'becomeCopy': add(e, `${unitName(e.obj)} becomes ${c.nameOf(e.def)}.`, 'game'); break;
+      case 'legendAdded': add(e, `${subject(e.p)} ${e.p === c.me ? 'add' : 'adds'} ${c.nameOf(e.def)} to the Legend Zone.`, who(e.p)); break;
       case 'becomeUnit': add(e, `${unitName(e.obj)} ${e.unit ? 'becomes a unit' : 'stops being a unit'}.`, 'game'); break;
       case 'keywordsChanged': {
         const last = out[out.length - 1];

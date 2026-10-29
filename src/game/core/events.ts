@@ -44,7 +44,8 @@ export type EventBody =
   | { k: 'move'; objs: ObjId[]; from: Loc[]; to: Loc; standard: boolean } | { k: 'recall'; objs: ObjId[] }
   | { k: 'control'; bf: number; p: PlayerId | null } | { k: 'contested'; bf: number; p: PlayerId | null }
   | { k: 'mightChanged'; obj: ObjId; from: number | null; to: number | null } | { k: 'keywordsChanged'; obj: ObjId }
-  | { k: 'becomeMighty'; obj: ObjId } | { k: 'becomeCopy'; obj: ObjId; def: DefId } | { k: 'becomeUnit'; obj: ObjId; unit: boolean } | { k: 'controlChanged'; obj: ObjId; p: PlayerId }
+  | { k: 'becomeMighty'; obj: ObjId } | { k: 'becomeCopy'; obj: ObjId; def: DefId } | { k: 'becomeUnit'; obj: ObjId; unit: boolean }
+  | { k: 'legendAdded'; obj: ObjId; def: DefId; p: PlayerId } | { k: 'controlChanged'; obj: ObjId; p: PlayerId }
   | { k: 'staged'; bf: number; what: 'showdown' | 'combat' } | { k: 'showdownStart' | 'showdownEnd'; bf: number }
   | { k: 'combatStart'; bf: number; attacker: PlayerId } | { k: 'designate'; objs: ObjId[]; d: 'attacker' | 'defender' | null }
   | { k: 'assign'; by: PlayerId; to: ObjId; n: number } | { k: 'combatResult'; bf: number; result: CombatState['result'] }
