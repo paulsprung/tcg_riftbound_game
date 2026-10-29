@@ -4,7 +4,10 @@ import type { InspectTarget } from '../card/Inspector.tsx';
 import { useCollection } from '../collection/store.ts';
 import { defaultFinish } from '../data/cardInfo.ts';
 import type { Card, CardDb } from '../data/types.ts';
+import { missingCards, ownedDefs } from '../decks/ownership.ts';
+import { decks as deckStore, useDecks, type SavedDeck } from '../decks/store.ts';
 import { loadStarters, type StarterChoice } from '../economy/starter.ts';
+import { findCard, validateDeck } from '../game/index.ts';
 
 const SECTIONS: { id: string; label: string; types: string[] }[] = [
   { id: 'legend', label: 'Legend', types: ['Legend'] },
@@ -56,23 +59,39 @@ function DeckView({ deck, db, onInspect, onClose }: { deck: StarterChoice; db: C
   );
 }
 
-/** Your decks. The starter you took is the first; the builder adds the rest. */
+/** A built deck in the viewer's shape: printings and copies. */
+function asShown(d: SavedDeck): StarterChoice {
+  const cards: Record<string, number> = {};
+  const add = (def: string, n: number) => {
+    const id = d.printings?.[def]?.[0] ?? findCard(def)?.printings[0];
+    if (id) cards[id] = (cards[id] ?? 0) + n;
+  };
+  add(d.legend, 1);
+  for (const e of [...d.main, ...d.runes]) add(e.def, e.n);
+  for (const b of d.battlefields) add(b, 1);
+  return { id: d.id, title: d.name, product: 'Your deck', set: 'mine', booster: '', blurb: '', legendCard: d.printings?.[d.legend]?.[0] ?? findCard(d.legend)?.printings[0] ?? null,
+    cards, size: Object.values(cards).reduce((a, b) => a + b, 0) };
+}
+
+/** Your decks. The starter you took is the first; the ones you built follow. */
 export function DecksView({ db, onInspect }: { db: CardDb; onInspect: (t: InspectTarget) => void }) {
   const own = useCollection();
+  const built = useDecks();
+  const owned = useMemo(() => ownedDefs(own), [own]);
   const [deck, setDeck] = useState<StarterChoice | null>(null);
-  const [showing, setShowing] = useState(false);
+  const [showing, setShowing] = useState<StarterChoice | null>(null);
   useEffect(() => {
     let alive = true;
     if (own.starter) loadStarters(db).then((all) => { if (alive) setDeck(all.find((s) => s.id === own.starter) ?? null); }).catch(() => undefined);
     return () => { alive = false; };
   }, [db, own.starter]);
-  const legend: Card | undefined = deck?.legendCard ? db.cards.find((c) => c.id === deck.legendCard) : undefined;
+  const byId = useMemo(() => new Map(db.cards.map((c) => [c.id, c])), [db]);
+  const legend: Card | undefined = deck?.legendCard ? byId.get(deck.legendCard) : undefined;
 
   return (
     <section className="lb-col">
       <div className="lb-head">
         <h1>Your Decks</h1>
-        <span className="lb-soon-note">Deck builder coming soon</span>
       </div>
       <div className="dk-grid lb-scroll">
         {own.starter ? (
@@ -81,7 +100,7 @@ export function DecksView({ db, onInspect }: { db: CardDb; onInspect: (t: Inspec
             <div className="dk-tile__info">
               <strong>{deck?.title ?? 'Starter deck'}</strong>
               <span className="muted small">{deck ? `${deck.size} cards` : '…'}</span>
-              <button type="button" className="btn btn--cta btn--small" disabled={!deck} onClick={() => setShowing(true)}>Show me this deck</button>
+              <button type="button" className="btn btn--cta btn--small" disabled={!deck} onClick={() => setShowing(deck)}>Show me this deck</button>
             </div>
           </article>
         ) : (
@@ -90,13 +109,32 @@ export function DecksView({ db, onInspect }: { db: CardDb; onInspect: (t: Inspec
             <a className="btn btn--primary btn--small" href="#home">Choose a starter deck</a>
           </article>
         )}
-        <article className="dk-tile dk-tile--new" aria-disabled>
+        {built.map((d) => {
+          const shown = asShown(d);
+          const art = shown.legendCard ? byId.get(shown.legendCard) : undefined;
+          const ready = validateDeck(d, 'sanctioned', { format: 'standard' }).every((i) => i.severity !== 'error') && missingCards(d, owned).length === 0;
+          return (
+            <article key={d.id} className="lb-card dk-tile">
+              <div className="dk-tile__art">{art ? <HoloCard card={art} finish="none" width="100%" imageWidth={360} /> : <div className="starter__ph" />}</div>
+              <div className="dk-tile__info">
+                <strong>{d.name}</strong>
+                <span className={`small ${ready ? 'dk-ready' : 'dk-draft'}`}>{ready ? 'Ready to play' : 'Not ready yet'}</span>
+                <span className="dk-tile__btns">
+                  <a className="btn btn--cta btn--small" href={`#collection/decks/edit/${d.id}`}>Edit</a>
+                  <button type="button" className="btn btn--ghost btn--small" onClick={() => setShowing(shown)}>Show</button>
+                  <button type="button" className="btn btn--ghost btn--small" onClick={() => deckStore.duplicate(d.id)}>Copy</button>
+                </span>
+              </div>
+            </article>
+          );
+        })}
+        <a className="dk-tile dk-tile--new" href="#collection/decks/new">
           <span aria-hidden>+</span>
           <strong>New deck</strong>
           <span className="muted small">Build one from your collection</span>
-        </article>
+        </a>
       </div>
-      {showing && deck && <DeckView deck={deck} db={db} onInspect={onInspect} onClose={() => setShowing(false)} />}
+      {showing && <DeckView deck={showing} db={db} onInspect={onInspect} onClose={() => setShowing(null)} />}
     </section>
   );
 }

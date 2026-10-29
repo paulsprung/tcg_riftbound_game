@@ -4,7 +4,8 @@ import { useCollection } from '../collection/store.ts';
 import type { CardDb } from '../data/types.ts';
 import { Lobby, RankCard, SideLink, SideTitle } from '../lobby/Lobby.tsx';
 import type { IconName } from '../lobby/icons.tsx';
-import { BUILT_IN_DECKS } from '../play/host/decks.ts';
+import { playerDecks } from '../play/host/decks.ts';
+import { useDecks } from '../decks/store.ts';
 import { cardIndex } from '../play/model/cards.ts';
 import { PlayView } from '../play/PlayView.tsx';
 import { DeckPicker, DeckSlot, FormatSwitch } from '../play/setup/DeckSetup.tsx';
@@ -21,8 +22,9 @@ const ONLINE: { id: ModeId; icon: IconName; label: string; blurb: string; match:
 function OnlineMode({ db, mode }: { db: CardDb; mode: (typeof ONLINE)[number] }) {
   const own = useCollection();
   const cards = useMemo(() => cardIndex(db), [db]);
-  // the decks the player really has: the starter now, the built ones later
-  const decks = useMemo(() => BUILT_IN_DECKS.filter((b) => b.id === own.starter), [own.starter]);
+  // the decks the player really has, ready to play: the starter and the built ones
+  const built = useDecks();
+  const decks = useMemo(() => playerDecks(own, true), [own, built]);
   const [chosen, setChosen] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
   const deck = decks.find((d) => d.id === chosen) ?? decks[0] ?? null;

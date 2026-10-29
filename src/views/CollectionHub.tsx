@@ -1,12 +1,15 @@
-import { useMemo, useState } from 'react';
+import { lazy, Suspense, useMemo, useState } from 'react';
 import type { InspectTarget } from '../card/Inspector.tsx';
 import { collection, useCollection } from '../collection/store.ts';
 import { cap } from '../data/cardInfo.ts';
 import type { CardDb, Rarity } from '../data/types.ts';
 import { Lobby, SideLink, SideTitle } from '../lobby/Lobby.tsx';
 import { CollectionView } from './CollectionView.tsx';
-import { DecksView } from './DecksView.tsx';
 import { PacksTab } from './PacksTab.tsx';
+
+// the decks bring the engine's card rules with them: loaded when opened
+const DecksView = lazy(() => import('./DecksView.tsx').then((m) => ({ default: m.DecksView })));
+const DeckBuilder = lazy(() => import('./DeckBuilder.tsx').then((m) => ({ default: m.DeckBuilder })));
 
 export type CollectionTab = 'cards' | 'packs' | 'decks';
 
@@ -26,6 +29,8 @@ export function CollectionHub({ db, tab, onInspect }: { db: CardDb; tab: Collect
   }, [own.cards, own.slabs]);
   const pct = db.cards.length ? Math.round((owned / db.cards.length) * 100) : 0;
 
+  // '#collection/decks/new', '#collection/decks/edit/<id>': the builder, the whole page
+  const building = tab === 'decks' ? /^#\/?collection\/decks\/(new|edit\/([\w-]+))/.exec(location.hash) : null;
   const toggle = (r: Rarity) => setRarities((s) => { const n = new Set(s); if (n.has(r)) n.delete(r); else n.add(r); return n; });
 
   const side = (
@@ -70,11 +75,21 @@ export function CollectionHub({ db, tab, onInspect }: { db: CardDb; tab: Collect
     </>
   );
 
+  if (building) {
+    return (
+      <Lobby>
+        <Suspense fallback={<p className="muted">Loading…</p>}>
+          <DeckBuilder db={db} onInspect={onInspect} editing={building[1] === 'new' ? 'new' : building[2]} />
+        </Suspense>
+      </Lobby>
+    );
+  }
+
   return (
     <Lobby side={side}>
       {tab === 'cards' && <CollectionView db={db} onInspect={onInspect} rarities={rarities} showUnowned={showUnowned} />}
       {tab === 'packs' && <PacksTab db={db} />}
-      {tab === 'decks' && <DecksView db={db} onInspect={onInspect} />}
+      {tab === 'decks' && <Suspense fallback={<p className="muted">Loading…</p>}><DecksView db={db} onInspect={onInspect} /></Suspense>}
     </Lobby>
   );
 }

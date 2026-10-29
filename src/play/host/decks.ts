@@ -1,3 +1,6 @@
+import type { CollectionState } from '../../collection/store.ts';
+import { missingCards, ownedDefs } from '../../decks/ownership.ts';
+import { decks } from '../../decks/store.ts';
 import {
   PRODUCTS, STARTERS, validateDeck, type DeckList, type DefId, type Issue, type Starter,
 } from '../../game/index.ts';
@@ -14,15 +17,22 @@ export interface BuiltInDeck {
   id: string;
   /** The product's name. */
   product: string;
-  set: Starter['set'];
+  /** 'mine' for a deck the player built. */
+  set: Starter['set'] | 'mine';
   deck: DeckList;
 }
 
 export const BUILT_IN_DECKS: BuiltInDeck[] = STARTERS.map((s) => ({ id: s.id, product: s.product, set: s.set, deck: s.deck }));
 
-/** A built-in deck by id; undefined for an unknown one. */
+/** A deck the player built, by its saved id, as the setup screens list decks. */
+export const CUSTOM_PREFIX = 'my:';
+export function customDecks(): BuiltInDeck[] {
+  return decks.get().map((d) => ({ id: `${CUSTOM_PREFIX}${d.id}`, product: 'Your decks', set: 'mine', deck: d }));
+}
+
+/** A built-in deck, or one the player built ('my:<id>'), by id; undefined for an unknown one. */
 export const builtInDeck = (id: string | null | undefined): BuiltInDeck | undefined =>
-  BUILT_IN_DECKS.find((b) => b.id === id);
+  BUILT_IN_DECKS.find((b) => b.id === id) ?? (id?.startsWith(CUSTOM_PREFIX) ? customDecks().find((b) => b.id === id) : undefined);
 
 /** The built-in decks by product, oldest product first. */
 export const DECK_GROUPS: { set: Starter['set']; name: string; decks: BuiltInDeck[] }[] = (Object.keys(PRODUCTS) as Starter['set'][])
@@ -62,3 +72,12 @@ export function deckProblems(d: DeckList, chosen: DefId = d.chosenChampion): str
 
 /** '103.3.b' → '[103.3.b]'; Tournament Rules and design references as they are. */
 const ruleRef = (rule: string) => (/^\d/.test(rule) ? `[${rule}]` : rule);
+
+/** The decks a player has: the starter they took and the ones they built.
+    `ready` keeps those that are legal and made of cards they own: what the
+    online modes accept. */
+export function playerDecks(coll: CollectionState, ready = false): BuiltInDeck[] {
+  const own = ownedDefs(coll);
+  const built = customDecks().filter((b) => !ready || (deckProblems(b.deck).length === 0 && missingCards(b.deck, own).length === 0));
+  return [...BUILT_IN_DECKS.filter((b) => b.id === coll.starter), ...built];
+}

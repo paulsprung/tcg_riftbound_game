@@ -4,7 +4,7 @@ import { HoloCard } from '../../card/HoloCard.tsx';
 import { DOMAIN_COLOR, defaultFinish, symbolFor } from '../../data/cardInfo.ts';
 import type { CardDb } from '../../data/types.ts';
 import type { DefId } from '../../game/index.ts';
-import { BUILT_IN_DECKS, builtInDeck, DECK_GROUPS, deckProblems, PRODUCT_LABEL, shortName, type BuiltInDeck } from '../host/decks.ts';
+import { BUILT_IN_DECKS, builtInDeck, customDecks, DECK_GROUPS, deckProblems, PRODUCT_LABEL, shortName, type BuiltInDeck } from '../host/decks.ts';
 import { cardFor, nameOf, type CardIndex } from '../model/cards.ts';
 import type { SavedGame } from '../host/autosave.ts';
 import type { OrderChoice } from '../model/setup.ts';
@@ -256,7 +256,7 @@ export function DeckSetup({ cards, db, initial, error, onStart, saved, onResume,
       {picking && (
         <DeckPicker cards={cards} db={db} title={picking === 'mine' ? 'Your deck' : c.opponent === 'hotseat' ? "Player 2's deck" : "The computer's deck"}
           current={picking === 'mine' ? c.mine : c.theirs} owned={picking === 'mine' ? owned : null}
-          mine={(picking === 'mine' || c.opponent === 'hotseat') && owned ? BUILT_IN_DECKS.filter((b) => b.id === owned) : undefined}
+          mine={picking === 'mine' || c.opponent === 'hotseat' ? [...BUILT_IN_DECKS.filter((b) => b.id === owned), ...customDecks()] : undefined}
           onRandom={picking === 'theirs' ? () => { setC({ ...c, theirs: BUILT_IN_DECKS[Math.floor(Math.random() * BUILT_IN_DECKS.length)].id }); setPicking(null); } : undefined}
           onClose={() => setPicking(null)}
           onPick={(b) => { setC(picking === 'mine' ? { ...c, mine: b.id, champion: b.deck.chosenChampion } : { ...c, theirs: b.id }); setPicking(null); }} />

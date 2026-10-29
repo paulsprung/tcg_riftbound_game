@@ -124,7 +124,9 @@ export function validateDeck(d: DeckList, mode: DeckMode, o: ValidateOptions = {
     if (tag !== undefined && c.championTag !== tag) return `${c.name} does not have the ${tag} champion tag`;
     return null;
   };
-  const chosen = championProblem(d.chosenChampion);
+  // an empty or unknown Chosen Champion is no champion at all (a deck still being built)
+  const chosen = findCard(d.chosenChampion) ? championProblem(d.chosenChampion)
+    : 'the deck has no Chosen Champion: a champion unit of its legend (TR 402.1)';
   if (chosen) error('chosenChampion', '103.3.a.2', chosen, [d.chosenChampion]);
   if (d.championOptions) {
     if (!d.championOptions.includes(d.chosenChampion)) {
