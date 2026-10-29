@@ -97,7 +97,7 @@ export function GradingRun({ card, slab, onClose, onAnother }: {
           {phase === 'done' ? (
             <div className="grading__actions">
               {displayed ? (
-                <a className="btn btn--ghost" href="#collection/showcase" onClick={onClose}>In your showcase ✓</a>
+                <a className="btn btn--ghost" href="#profile" onClick={onClose}>In your showcase ✓</a>
               ) : (
                 <button type="button" className="btn btn--primary" onClick={display}>Put in showcase</button>
               )}

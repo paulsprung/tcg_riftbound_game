@@ -1,19 +1,13 @@
 import { useMemo } from 'react';
-import { HoloCard } from '../card/HoloCard.tsx';
 import type { InspectTarget } from '../card/Inspector.tsx';
-import { SHOWCASE_SIZE, useCollection } from '../collection/store.ts';
-import { defaultFinish } from '../data/cardInfo.ts';
-import type { Card, CardDb } from '../data/types.ts';
+import { useCollection } from '../collection/store.ts';
+import type { CardDb } from '../data/types.ts';
 import { DEMO, DEMO_PROFILE } from '../lobby/demo.ts';
 import { Lobby } from '../lobby/Lobby.tsx';
 import { useSession } from '../net/session.ts';
-import { rank } from '../showcase/rank.ts';
-import { Slab } from '../showcase/Slab.tsx';
-import type { Slab as SlabData } from '../showcase/grading.ts';
 import { HeroBanner } from './HeroBanner.tsx';
-import '../showcase/showcase.css';
-
-interface Piece { key: string; card: Card; slab: SlabData | null; foil: boolean }
+import { ProfileShowcase } from './ProfileShowcase.tsx';
+import { useShowcase } from './showcasePieces.ts';
 
 /** Your public face: who you are, the cards you show off, how you play. */
 export function ProfileView({ db, onInspect }: { db: CardDb; onInspect: (t: InspectTarget) => void }) {
@@ -21,32 +15,7 @@ export function ProfileView({ db, onInspect }: { db: CardDb; onInspect: (t: Insp
   const session = useSession();
   const user = session.status === 'online' ? session.user : null;
   const name = user?.name ?? (DEMO ? DEMO_PROFILE.name : 'You');
-  const byId = useMemo(() => new Map(db.cards.map((c) => [c.id, c])), [db]);
-  const slabByCert = useMemo(() => new Map(own.slabs.map((s) => [s.cert, s])), [own.slabs]);
-
-  const pieces = own.showcase.flatMap((item): Piece[] => {
-    if (item.kind === 'slab') {
-      const slab = slabByCert.get(item.cert);
-      const card = slab && byId.get(slab.cardId);
-      return slab && card ? [{ key: `s${item.cert}`, card, slab, foil: slab.foil }] : [];
-    }
-    const card = byId.get(item.cardId);
-    const o = own.cards[item.cardId];
-    return card && o && (item.foil ? o.foil : o.normal) > 0 ? [{ key: `r${item.cardId}${item.foil}`, card, slab: null, foil: item.foil }] : [];
-  }).slice(0, 4);
-
-  // the preview shows a few of your best cards when the showcase is still empty
-  const samples = useMemo((): Piece[] => {
-    if (!DEMO || pieces.length > 0) return [];
-    const out: Piece[] = [];
-    for (const [id, o] of Object.entries(own.cards)) {
-      const card = byId.get(id);
-      if (!card || card.type === 'Rune' || card.type === 'Battlefield' || o.normal + o.foil < 1) continue;
-      out.push({ key: `d${id}`, card, slab: null, foil: o.foil > 0 });
-    }
-    return out.sort((a, b) => rank(b.card, b.foil) - rank(a.card, a.foil)).slice(0, 3);
-  }, [own.cards, byId, pieces.length]);
-  const shown = pieces.length > 0 ? pieces : samples;
+  const pieces = useShowcase(db);
 
   const collected = useMemo(() => {
     const ids = new Set(Object.entries(own.cards).filter(([, o]) => o.normal + o.foil > 0).map(([id]) => id));
@@ -81,26 +50,8 @@ export function ProfileView({ db, onInspect }: { db: CardDb; onInspect: (t: Insp
           </div>
         </HeroBanner>
 
-        <p className="lb-label profile__label">Card showcase</p>
-        <div className="profile__showcase">
-          {shown.map((p) => (
-            <figure key={p.key} className="profile__piece">
-              {p.slab ? (
-                <Slab slab={p.slab} card={p.card} width="100%" imageWidth={360}
-                  onClick={() => onInspect({ card: p.card, finish: defaultFinish(p.card, p.slab!.foil), slab: p.slab! })} />
-              ) : (
-                <HoloCard card={p.card} finish={defaultFinish(p.card, p.foil)} width="100%" imageWidth={360}
-                  onClick={() => onInspect({ card: p.card, finish: defaultFinish(p.card, p.foil) })} />
-              )}
-              <figcaption><strong>{p.card.name}</strong><span className="muted small">{p.slab ? `Graded ${p.slab.grade}` : p.card.rarity}</span></figcaption>
-            </figure>
-          ))}
-          {own.showcase.length < SHOWCASE_SIZE && (
-            <a className="profile__add" href="#collection/showcase"><span aria-hidden>+</span>Add card</a>
-          )}
-        </div>
+        <ProfileShowcase db={db} pieces={pieces} onInspect={onInspect} />
 
-        <p className="lb-label profile__label">Player stats</p>
         <div className="profile__stats">
           {stats.map((s) => (
             <div key={s.label} className={`lb-card profile__stat${s.off ? ' is-off' : ''}`}>
@@ -109,7 +60,6 @@ export function ProfileView({ db, onInspect }: { db: CardDb; onInspect: (t: Insp
             </div>
           ))}
         </div>
-        {!DEMO && <p className="muted small">Match stats, rank and level appear once online matches start.</p>}
       </div>
     </Lobby>
   );

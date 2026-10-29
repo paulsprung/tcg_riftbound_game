@@ -72,7 +72,6 @@ export function LobbyTop({ route }: { route: string }) {
           </a>
         )}
         {user && <button type="button" className="lb-signout" onClick={() => { void logout(); }}>Sign out</button>}
-        <a className="lb-icon" href="#rules" title="Rules" aria-label="Rules" aria-current={route === 'rules' ? 'page' : undefined}><Icon name="help" size={20} /></a>
       </div>
     </header>
   );

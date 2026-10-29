@@ -27,8 +27,8 @@ function Scene({ card, active }: { card: Card; active: boolean }) {
  * The big banner on Home. Legend art that drifts slowly, embers rising, and
  * a few legends in turn. Still when effects are off.
  */
-export function HeroBanner({ db, children, footer, compact = false, bleed = false }: {
-  db: CardDb; children?: React.ReactNode; footer?: React.ReactNode; compact?: boolean; bleed?: boolean;
+export function HeroBanner({ db, children, footer, compact = false, bleed = false, plain = false }: {
+  db: CardDb; children?: React.ReactNode; footer?: React.ReactNode; compact?: boolean; bleed?: boolean; plain?: boolean;
 }) {
   const fx = useEffects();
   const stars = useMemo(() => {
@@ -55,7 +55,7 @@ export function HeroBanner({ db, children, footer, compact = false, bleed = fals
       <div className="hero__embers" aria-hidden>
         {Array.from({ length: 14 }, (_, k) => <i key={k} style={{ '--k': k } as React.CSSProperties} />)}
       </div>
-      {!compact && <div className="hero__text">
+      {!compact && !plain && <div className="hero__text">
         <p className="lb-label">Riftbound</p>
         <h1>{name}</h1>
         {title && <p className="hero__title">{title}</p>}

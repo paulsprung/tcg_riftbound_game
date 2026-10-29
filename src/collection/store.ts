@@ -38,7 +38,7 @@ export const PACK_PRICE = 100;
 export const DAILY_COINS = 50;
 const DAY = 86_400_000;
 
-export const SHOWCASE_SIZE = 12;
+export const SHOWCASE_SIZE = 5;
 
 /** The tutorial's reward: one booster of each set the shop sells. */
 export const TUTORIAL_PACKS = ['ogn', 'sfd', 'unl', 'rad', 'ven'] as const;

@@ -125,15 +125,6 @@ export function PlayView({ db, tutorial = false, onInGame }: { db: CardDb; tutor
   if (!game) {
     return (
       <>
-        {!own.tutorialDone && (
-          <div className="tutorial-offer">
-            <div>
-              <strong>New to Riftbound? Play the tutorial</strong>
-              <span className="muted"> A short guided match. Finish it for 5 free booster packs, one from each set.</span>
-            </div>
-            <a className="btn btn--primary btn--small" href="#play/tutorial">Play the tutorial</a>
-          </div>
-        )}
         <DeckSetup cards={cards} db={db} initial={choice} error={error} onStart={start} owned={own.starter}
         saved={saved && resumable(saved) ? saved : null} onResume={resume}
         onDiscard={() => { store.clear(); setSaved(null); }} />

@@ -39,8 +39,10 @@ const newRun = (cards: CardIndex, starter: string | null, n: number): Run => {
       + `· first to ${STARTER_TUTORIAL_SCORE} points` };
 };
 
-export function TutorialView({ db, cards, starter, onExit }: {
+export function TutorialView({ db, cards, starter, onExit, onFinish }: {
   db: CardDb; cards: CardIndex; starter: string | null; onExit: () => void;
+  /** First-run onboarding: no skipping, and the reward leads into the lobby. */
+  onFinish?: (to: 'shop' | 'play' | 'home') => void;
 }) {
   const [run, setRun] = useState<Run>(() => newRun(cards, starter, 0));
   const [ending, setEnding] = useState<{ granted: boolean; won: boolean | null } | null>(null);
@@ -82,7 +84,7 @@ export function TutorialView({ db, cards, starter, onExit }: {
   const restart = () => { run.host.stop(); setEnding(null); setConfirmSkip(false); setRun(newRun(cards, starter, run.n + 1)); };
   const skip = () => { run.host.stop(); setEnding({ granted: collection.completeTutorial(), won: null }); };
 
-  if (ending) return <TutorialReward db={db} granted={ending.granted} won={ending.won} onReplay={restart} onExit={onExit} />;
+  if (ending) return <TutorialReward db={db} granted={ending.granted} won={ending.won} onReplay={restart} onExit={onExit} onFinish={onFinish} />;
 
   const actions = confirmSkip ? (
     <span className="tutorial__confirm">
@@ -93,7 +95,9 @@ export function TutorialView({ db, cards, starter, onExit }: {
   ) : (
     <>
       <button type="button" className="btn btn--small btn--ghost" onClick={restart}>Restart</button>
-      <button type="button" className="btn btn--small btn--ghost" onClick={() => setConfirmSkip(true)}>Skip tutorial</button>
+      {(!onFinish || import.meta.env.VITE_PREVIEW) && (
+        <button type="button" className="btn btn--small btn--ghost" onClick={() => setConfirmSkip(true)}>Skip tutorial</button>
+      )}
     </>
   );
   return (
@@ -104,8 +108,8 @@ export function TutorialView({ db, cards, starter, onExit }: {
 }
 
 /** The ending: the five packs (or a note that they were taken already). */
-export function TutorialReward({ db, granted, won, onReplay, onExit }: {
-  db: CardDb; granted: boolean; won: boolean | null; onReplay: () => void; onExit: () => void;
+export function TutorialReward({ db, granted, won, onReplay, onExit, onFinish }: {
+  db: CardDb; granted: boolean; won: boolean | null; onReplay: () => void; onExit: () => void; onFinish?: (to: 'shop' | 'play' | 'home') => void;
 }) {
   const own = useCollection();
   useEffect(() => { window.scrollTo(0, 0); }, []);
@@ -137,11 +141,17 @@ export function TutorialReward({ db, granted, won, onReplay, onExit }: {
         </div>
       )}
       <div className="home__actions">
-        <a className="btn btn--primary" href="#shop">
-          Open your packs ({Object.values(own.packs).reduce((a, b) => a + b, 0)} in the Shop)
-        </a>
+        {onFinish ? (
+          <button type="button" className="btn btn--cta" onClick={() => onFinish('shop')}>
+            Enter Riftbound ({Object.values(own.packs).reduce((a, b) => a + b, 0)} packs to open)
+          </button>
+        ) : (
+          <a className="btn btn--cta" href="#shop">
+            Open your packs ({Object.values(own.packs).reduce((a, b) => a + b, 0)} in the Shop)
+          </a>
+        )}
         <button type="button" className="btn btn--ghost" onClick={onReplay}>Play the tutorial again</button>
-        <button type="button" className="btn btn--ghost" onClick={onExit}>Play a real game</button>
+        {!onFinish && <button type="button" className="btn btn--ghost" onClick={onExit}>Play a real game</button>}
       </div>
     </section>
   );

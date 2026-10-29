@@ -12,9 +12,10 @@ export interface Member { id: string; state: 'invited' | 'joined' }
 interface State { open: boolean; friends: Friend[]; party: Member[]; note: string }
 
 const KEY = 'riftbound-sim:social';
+/** Closed to begin with: the friends list opens over the page when asked for. */
 const readOpen = (): boolean => {
   try { const v = localStorage.getItem(KEY); if (v === 'open' || v === 'closed') return v === 'open'; } catch { /* blocked */ }
-  return window.innerWidth >= 1280;
+  return false;
 };
 
 let state: State = { open: DEMO ? readOpen() : false, friends: DEMO ? DEMO_FRIENDS : [], party: [], note: '' };

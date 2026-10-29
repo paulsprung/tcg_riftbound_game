@@ -29,6 +29,11 @@ export const DECK_GROUPS: { set: Starter['set']; name: string; decks: BuiltInDec
   .map((set) => ({ set, name: PRODUCTS[set], decks: BUILT_IN_DECKS.filter((b) => b.set === set) }))
   .filter((g) => g.decks.length > 0);
 
+/** The products by their short names, for tabs. */
+export const PRODUCT_LABEL: Record<string, string> = {
+  ogs: 'Proving Grounds', ogn: 'Origins', sfd: 'Spiritforged', unl: 'Unleashed', rad: 'Radiance',
+};
+
 /** A deck's short name: "Annie", "Seraphine". */
 export const shortName = (d: DeckList) => d.name.replace(/^[^:]*: /, '').replace(/ Showdown Deck$/, '');
 

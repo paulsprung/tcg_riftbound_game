@@ -14,12 +14,26 @@ import { openPack, useBoosters } from './boosters.ts';
 // phone's back gesture return to the shelf.
 const subFromHash = () => /^#\/?shop\/([a-z0-9]+)/.exec(location.hash)?.[1] ?? null;
 
+/** The window's height, so the packs can be as big as fits without a scroll bar. */
+function useViewportHeight() {
+  const [h, setH] = useState(() => window.innerHeight);
+  useEffect(() => {
+    const on = () => setH(window.innerHeight);
+    window.addEventListener('resize', on);
+    return () => window.removeEventListener('resize', on);
+  }, []);
+  return h;
+}
+
 const Coin = () => <span className="lb-coin" aria-hidden />;
 
 export function PacksView({ db, onInspect }: { db: CardDb; onInspect: (t: InspectTarget) => void }) {
   const [sub, setSub] = useState<string | null>(subFromHash);
   const own = useCollection();
   const sets = useBoosters(db);
+  const vh = useViewportHeight();
+  // what is left for the packs once the bar, the header and the banner have their share
+  const packH = Math.max(150, Math.min(250, vh - 520));
   useEffect(() => {
     const on = () => setSub(subFromHash());
     window.addEventListener('hashchange', on);
@@ -91,17 +105,17 @@ export function PacksView({ db, onInspect }: { db: CardDb; onInspect: (t: Inspec
               </div>
               <div className="shop-banner__pack">
                 <PackWrapper set={featured.info} style={featured.style} hero={heroCard(featured.cards, featured.style)}
-                  width={Math.round(230 * (packArt(featured.id)?.aspect ?? 1 / 1.72))} onClick={() => buy(featured.id, 1)} />
+                  width={Math.round(150 * (packArt(featured.id)?.aspect ?? 1 / 1.72))} onClick={() => buy(featured.id, 1)} />
               </div>
             </div>
           )}
 
           <p className="lb-label">All packs</p>
-          <div className="pack-shelf lb-scroll">
+          <div className="pack-shelf">
             {sets.map((s) => (
               <div key={s.id} className="pack-shelf__item">
                 <PackWrapper set={s.info} style={s.style} hero={heroCard(s.cards, s.style)}
-                  width={Math.round(192 * (packArt(s.id)?.aspect ?? 1 / 1.72))}
+                  width={Math.round(packH * (packArt(s.id)?.aspect ?? 1 / 1.72))}
                   onClick={() => ((own.packs[s.id] ?? 0) > 0 ? openPack(s.id) : buy(s.id, 1))} />
                 <div className="pack-shelf__label">
                   <strong>{s.info.name}</strong>

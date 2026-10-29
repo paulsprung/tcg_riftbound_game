@@ -7,9 +7,8 @@ import { Lobby, SideLink, SideTitle } from '../lobby/Lobby.tsx';
 import { CollectionView } from './CollectionView.tsx';
 import { DecksView } from './DecksView.tsx';
 import { PacksTab } from './PacksTab.tsx';
-import { ShowcaseView } from './ShowcaseView.tsx';
 
-export type CollectionTab = 'cards' | 'packs' | 'decks' | 'showcase';
+export type CollectionTab = 'cards' | 'packs' | 'decks';
 
 const RARITIES: Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'showcase'];
 
@@ -35,7 +34,6 @@ export function CollectionHub({ db, tab, onInspect }: { db: CardDb; tab: Collect
       <SideLink href="#collection" icon="cards" active={tab === 'cards'}>Collection</SideLink>
       <SideLink href="#collection/packs" icon="pack" active={tab === 'packs'}>Packs{unopened > 0 ? ` (${unopened})` : ''}</SideLink>
       <SideLink href="#collection/decks" icon="deck" active={tab === 'decks'}>Decks</SideLink>
-      <SideLink href="#collection/showcase" icon="star" active={tab === 'showcase'}>Showcase</SideLink>
 
       {tab === 'cards' && (
         <>
@@ -77,7 +75,6 @@ export function CollectionHub({ db, tab, onInspect }: { db: CardDb; tab: Collect
       {tab === 'cards' && <CollectionView db={db} onInspect={onInspect} rarities={rarities} showUnowned={showUnowned} />}
       {tab === 'packs' && <PacksTab db={db} />}
       {tab === 'decks' && <DecksView db={db} />}
-      {tab === 'showcase' && <div className="lb-scroll"><ShowcaseView db={db} onInspect={onInspect} /></div>}
     </Lobby>
   );
 }

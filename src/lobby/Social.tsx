@@ -77,9 +77,11 @@ export function Social() {
   const openMenu = (f: Friend, e: MouseEvent) => { e.preventDefault(); setMenu({ f, x: e.clientX, y: e.clientY }); };
 
   if (!DEMO) return null;
-  if (!open) {
-    return (
-      <aside className="lb-social is-rail" aria-label="Friends">
+
+  return (
+    <div className={`lb-social${open ? ' is-open' : ''}`}>
+      {/* the slim rail always keeps its place; the panel opens over the page, it does not push it */}
+      <aside className="soc-rail" aria-label="Friends">
         <button type="button" className="soc-fold" onClick={() => social.setOpen(true)} aria-label="Open friends list" title="Friends"><Icon name="chevronLeft" size={16} /></button>
         <span className="soc-count" title={`${online} friends online (sample)`}>{online}</span>
         {friends.filter((f) => f.presence !== 'offline').map((f) => (
@@ -88,71 +90,69 @@ export function Social() {
             <Avatar name={f.name} presence={f.presence} />
           </button>
         ))}
-        {menu && <Menu friend={menu.f} x={menu.x} y={menu.y} onClose={() => setMenu(null)} />}
       </aside>
-    );
-  }
+      {open && (
+        <aside className="soc-panel" aria-label="Friends">
+          <header className="soc-head">
+            <h2>Social <em>sample</em></h2>
+            <button type="button" className="soc-fold" onClick={() => social.setOpen(false)} aria-label="Fold friends list" title="Fold"><Icon name="chevronRight" size={16} /></button>
+          </header>
 
-  return (
-    <aside className="lb-social" aria-label="Friends">
-      <header className="soc-head">
-        <h2>Social <em>sample</em></h2>
-        <button type="button" className="soc-fold" onClick={() => social.setOpen(false)} aria-label="Fold friends list" title="Fold"><Icon name="chevronRight" size={16} /></button>
-      </header>
+          <div className="soc-me">
+            <span className="soc-av soc-av--online" aria-hidden>{DEMO_PROFILE.name.slice(0, 1)}<i /></span>
+            <div><b>{DEMO_PROFILE.name}</b><span>Online · Riftbound</span></div>
+          </div>
 
-      <div className="soc-me">
-        <span className="soc-av soc-av--online" aria-hidden>{DEMO_PROFILE.name.slice(0, 1)}<i /></span>
-        <div><b>{DEMO_PROFILE.name}</b><span>Online · Riftbound</span></div>
-      </div>
+          <div className="soc-party">
+            <p className="lb-label">Your lobby</p>
+            <ul>
+              <li><Avatar name={DEMO_PROFILE.name} presence="online" /><span>You</span><em>Leader</em></li>
+              {party.map((m) => {
+                const f = byId(m.id);
+                return f ? (
+                  <li key={m.id} className={m.state === 'invited' ? 'is-wait' : ''}>
+                    <Avatar name={f.name} presence={f.presence} /><span>{f.name}</span>
+                    <em>{m.state === 'invited' ? 'Invited…' : 'Ready'}</em>
+                    <button type="button" aria-label={`Remove ${f.name} from the lobby`} onClick={() => social.leave(m.id)}><Icon name="close" size={12} /></button>
+                  </li>
+                ) : null;
+              })}
+              {party.length === 0 && <li className="soc-party__hint">Right-click a friend to invite them.</li>}
+            </ul>
+          </div>
 
-      <div className="soc-party">
-        <p className="lb-label">Your lobby</p>
-        <ul>
-          <li><Avatar name={DEMO_PROFILE.name} presence="online" /><span>You</span><em>Leader</em></li>
-          {party.map((m) => {
-            const f = byId(m.id);
-            return f ? (
-              <li key={m.id} className={m.state === 'invited' ? 'is-wait' : ''}>
-                <Avatar name={f.name} presence={f.presence} /><span>{f.name}</span>
-                <em>{m.state === 'invited' ? 'Invited…' : 'Ready'}</em>
-                <button type="button" aria-label={`Remove ${f.name} from the lobby`} onClick={() => social.leave(m.id)}><Icon name="close" size={12} /></button>
-              </li>
-            ) : null;
-          })}
-          {party.length === 0 && <li className="soc-party__hint">Right-click a friend to invite them.</li>}
-        </ul>
-      </div>
+          <div className="soc-search">
+            <input className="input" type="search" placeholder="Search friends" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search friends" />
+          </div>
 
-      <div className="soc-search">
-        <input className="input" type="search" placeholder="Search friends" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search friends" />
-      </div>
-
-      <div className="soc-list lb-scroll">
-        {groups.map(({ p, list }) => (
-          <section key={p}>
-            <button type="button" className="soc-group" aria-expanded={!folded[p]} onClick={() => setFolded((s) => ({ ...s, [p]: !s[p] }))}>
-              <span aria-hidden>{folded[p] ? '▸' : '▾'}</span>{LABEL[p]} <b>({list.length})</b>
-            </button>
-            {!folded[p] && list.map((f) => (
-              <div key={f.id} className={`soc-row is-${p}`} onContextMenu={(e) => openMenu(f, e)}>
-                <button type="button" className="soc-row__main" onDoubleClick={() => social.say('Chat arrives with online play')}
-                  onClick={(e) => openMenu(f, e)} aria-haspopup="menu">
-                  <Avatar name={f.name} presence={f.presence} />
-                  <span className="soc-row__text"><b>{f.name}</b><span>{party.some((m) => m.id === f.id) ? 'In your lobby' : f.doing}</span></span>
+          <div className="soc-list lb-scroll">
+            {groups.map(({ p, list }) => (
+              <section key={p}>
+                <button type="button" className="soc-group" aria-expanded={!folded[p]} onClick={() => setFolded((s) => ({ ...s, [p]: !s[p] }))}>
+                  <span aria-hidden>{folded[p] ? '▸' : '▾'}</span>{LABEL[p]} <b>({list.length})</b>
                 </button>
-                {p !== 'offline' && !party.some((m) => m.id === f.id) && !f.doing.startsWith('In Game') && (
-                  <button type="button" className="soc-row__invite" onClick={() => social.invite(f.id)} aria-label={`Invite ${f.name}`} title="Invite to game"><Icon name="plus" size={15} /></button>
-                )}
-              </div>
+                {!folded[p] && list.map((f) => (
+                  <div key={f.id} className={`soc-row is-${p}`} onContextMenu={(e) => openMenu(f, e)}>
+                    <button type="button" className="soc-row__main" onDoubleClick={() => social.say('Chat arrives with online play')}
+                      onClick={(e) => openMenu(f, e)} aria-haspopup="menu">
+                      <Avatar name={f.name} presence={f.presence} />
+                      <span className="soc-row__text"><b>{f.name}</b><span>{party.some((m) => m.id === f.id) ? 'In your lobby' : f.doing}</span></span>
+                    </button>
+                    {p !== 'offline' && !party.some((m) => m.id === f.id) && !f.doing.startsWith('In Game') && (
+                      <button type="button" className="soc-row__invite" onClick={() => social.invite(f.id)} aria-label={`Invite ${f.name}`} title="Invite to game"><Icon name="plus" size={15} /></button>
+                    )}
+                  </div>
+                ))}
+              </section>
             ))}
-          </section>
-        ))}
-      </div>
+          </div>
 
-      <footer className="soc-foot">
-        {note ? <span role="status" className="soc-note">{note}</span> : <span className="muted small">Friends, chat and lobbies arrive with online play.</span>}
-      </footer>
+          <footer className="soc-foot">
+            {note ? <span role="status" className="soc-note">{note}</span> : <span className="muted small">Friends, chat and lobbies arrive with online play.</span>}
+          </footer>
+        </aside>
+      )}
       {menu && <Menu friend={menu.f} x={menu.x} y={menu.y} onClose={() => setMenu(null)} />}
-    </aside>
+    </div>
   );
 }

@@ -1,66 +1,45 @@
 import { useEffect, useMemo, useState } from 'react';
 import { HoloCard } from '../card/HoloCard.tsx';
+import { Slab } from '../showcase/Slab.tsx';
 import { collection, DAILY_COINS, useCollection } from '../collection/store.ts';
 import { defaultFinish } from '../data/cardInfo.ts';
-import type { Card, CardDb } from '../data/types.ts';
+import type { CardDb } from '../data/types.ts';
 import { Lobby } from '../lobby/Lobby.tsx';
-import { NEWS } from '../lobby/news.ts';
-import { rank } from '../showcase/rank.ts';
+import { NewsCarousel } from '../lobby/NewsCarousel.tsx';
 import { HeroBanner } from './HeroBanner.tsx';
+import { useShowcase } from './showcasePieces.ts';
 import { Starters } from './Starters.tsx';
 
 const hhmm = (ms: number) => `${Math.floor(ms / 3_600_000)} h ${Math.ceil((ms % 3_600_000) / 60_000)} min`;
 
-/** The player's best pulls, rarest first: what the featured slot cycles through. */
-function useFeatured(db: CardDb) {
-  const own = useCollection();
-  return useMemo(() => {
-    const byId = new Map(db.cards.map((c) => [c.id, c]));
-    const out: { card: Card; foil: boolean }[] = [];
-    for (const [id, o] of Object.entries(own.cards)) {
-      const card = byId.get(id);
-      if (!card || card.type === 'Rune' || card.type === 'Battlefield') continue;
-      if (o.foil > 0) out.push({ card, foil: true });
-      if (o.normal > 0) out.push({ card, foil: false });
-    }
-    return out.sort((a, b) => rank(b.card, b.foil) - rank(a.card, a.foil)).slice(0, 12);
-  }, [db, own.cards]);
-}
-
+/** Left of the banner: your featured card (the first one in your showcase) and the news. */
 function Side({ db }: { db: CardDb }) {
-  const featured = useFeatured(db);
-  const [n, setN] = useState(0);
-  const pick = featured.length ? featured[n % featured.length] : null;
+  const pick = useShowcase(db)[0];
   return (
     <>
-      <p className="lb-label">Featured Riftbound</p>
-      <div className="lb-card home-feat">
+      <p className="lb-label">Your showcase</p>
+      <a className="lb-card home-feat" href="#profile" aria-label={pick ? `${pick.card.name}, your featured card. Open your profile` : 'Pick a featured card in your profile'}>
         {pick ? (
           <>
-            <HoloCard card={pick.card} finish={defaultFinish(pick.card, pick.foil)} width="100%" imageWidth={420} />
+            <div className="home-feat__card">
+              {pick.slab ? (
+                <Slab slab={pick.slab} card={pick.card} width="100%" imageWidth={520} tilt="hover" />
+              ) : (
+                <HoloCard card={pick.card} finish={defaultFinish(pick.card, pick.foil)} width="100%" imageWidth={520} />
+              )}
+            </div>
             <div className="home-feat__info">
               <strong>{pick.card.name}</strong>
-              <span className="muted small">{pick.card.setName} · {pick.card.rarity}</span>
+              <span className="muted small">{pick.slab ? `Graded ${pick.slab.grade}` : `${pick.card.setName} · ${pick.card.rarity}`}</span>
             </div>
           </>
         ) : (
-          <p className="muted small home-feat__empty">Open a pack: your best pull shows up here.</p>
+          <p className="muted small home-feat__empty">Put a card in your showcase: it is featured here.</p>
         )}
-      </div>
-      {featured.length > 1 && (
-        <button type="button" className="btn btn--ghost home-feat__change" onClick={() => setN((x) => x + 1)}>⇄ Change card</button>
-      )}
+      </a>
 
       <p className="lb-label home-news__label">Latest news</p>
-      <div className="home-news">
-        {NEWS.map((x) => (
-          <article key={x.title} className="lb-card home-news__item">
-            <span className={`home-tag home-tag--${x.tone}`}>{x.tag}</span>
-            <strong>{x.title}</strong>
-            <p className="muted small">{x.body}</p>
-          </article>
-        ))}
-      </div>
+      <NewsCarousel />
     </>
   );
 }
