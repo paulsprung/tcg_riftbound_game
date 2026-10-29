@@ -26,10 +26,18 @@ describe.skipIf(!url)('marketplace', () => {
     const s = [...catalog.starters.values()][0];
     await economy.grantStarter(db, catalog, seller, s.id);
     card = Object.entries(s.cards).find(([, n]) => n >= 5)![0];
+    // trading needs an account a few days old with some matches played
+    await db.query("UPDATE users SET created_at = now() - interval '30 days'");
+    await db.query("INSERT INTO ratings (user_id, mode, games) SELECT id, 'casual', 10 FROM users");
     await economy.grant(db, seller, buyer, 1000, {}, 'test');
     await economy.grant(db, seller, other, 1000, {}, 'test');
   });
   afterAll(async () => { await db?.end(); });
+
+  it('a fresh account cannot trade yet', async () => {
+    const fresh = (await upsertUser(db, { id: '509', username: 'new' })).id;
+    await expect(market.list(db, catalog, fresh, card, false, 1, 10)).rejects.toThrow(/Trading opens/);
+  });
 
   it('a listing holds the copies; a buyer takes some, the seller gets the price less 5 %', async () => {
     const had = await raw(seller);

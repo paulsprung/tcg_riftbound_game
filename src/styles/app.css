@@ -6,10 +6,10 @@
        ui        DM Sans, optical size 32     <- TT Norms Pro Compact
        card      Proza Libre 800              <- Arpona Bold (card names)
        condensed Instrument Sans at 75% width <- Lorimer No 2 (rules text) */
-  --font-display: 'Faustina', Georgia, serif;
-  --font-ui: 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-card: 'Proza Libre', 'DM Sans', sans-serif;
-  --font-condensed: 'Instrument Sans', 'Arial Narrow', sans-serif;
+  --font-display: 'Faustina Variable', 'Faustina', Georgia, serif;
+  --font-ui: 'DM Sans Variable', 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-card: 'Proza Libre', 'DM Sans Variable', sans-serif;
+  --font-condensed: 'Instrument Sans Variable', 'Instrument Sans', 'Arial Narrow', sans-serif;
   /* League-client palette: deep hextech blue, antique gold, a teal highlight. */
   --bg: #010a13;
   --bg-2: #0a1428;

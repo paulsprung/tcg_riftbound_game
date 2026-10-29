@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ownUrl } from './hosts.ts';
 import type { Card } from './types.ts';
 
 /*
@@ -17,12 +18,9 @@ const BUNDLE = 'bundle:';
 /** The image server resizes on request; grids don't need the full 744px scan. */
 export function imageAt(card: Card, width: number): string {
   if (!card.image || card.image.startsWith(BUNDLE)) return '';
-  if (!/rgpub\.io/.test(card.image)) return card.image;
-  const url = `${card.image}${card.image.includes('?') ? '&' : '?'}w=${width}`;
-  // Same-origin through the dev server's proxy (vite.config.ts), so the
-  // WebGL foil can read the pixels while developing.
-  // (and through our server in the hosted build, VITE_RIOT_PROXY)
-  return import.meta.env.DEV || import.meta.env.VITE_RIOT_PROXY ? url.replace(/^https:\/\/cmsassets\.rgpub\.io/, '/riot-img') : url;
+  if (!/rgpub\.io/.test(card.image)) return ownUrl(card.image);
+  // same-origin through this site (data/hosts.ts), so the WebGL foil can read the pixels
+  return ownUrl(`${card.image}${card.image.includes('?') ? '&' : '?'}w=${width}`);
 }
 
 /** Can a WebGL texture be made from this URL? Cross-origin images without

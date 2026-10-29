@@ -11,7 +11,7 @@ export interface Config {
   discordClientSecret: string;
   /** Folder with the built app (vite build). */
   staticDir: string;
-  /** Behind Cloudflare: trust its CF-Connecting-IP header. */
+  /** Behind Cloudflare (TRUST_PROXY=true, set in docker-compose.yml): trust its CF-Connecting-IP header. */
   trustProxy: boolean;
 }
 
@@ -28,6 +28,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     discordClientId: need('DISCORD_CLIENT_ID'),
     discordClientSecret: need('DISCORD_CLIENT_SECRET'),
     staticDir: env.STATIC_DIR ?? 'dist',
-    trustProxy: env.TRUST_PROXY !== 'false',
+    // only behind a proxy that sets the header (Cloudflare): otherwise anyone could pick their address
+    trustProxy: env.TRUST_PROXY === 'true',
   };
 }

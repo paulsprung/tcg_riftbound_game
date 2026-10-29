@@ -31,3 +31,7 @@ export const LISTING_DAYS = 14;
 /** Active listings per player, at most. */
 export const MAX_LISTINGS = 50;
 export const MAX_PRICE = 1_000_000;
+/** Trading opens for an account this old (days) with this many finished online matches:
+    fresh accounts can't funnel their free packs and coins into another. */
+export const MARKET_MIN_DAYS = 3;
+export const MARKET_MIN_MATCHES = 5;

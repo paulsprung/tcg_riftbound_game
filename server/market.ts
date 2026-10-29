@@ -1,4 +1,4 @@
-import { LISTING_DAYS, MARKET_FEE, MAX_LISTINGS, MAX_PRICE } from '../src/economy/rules.ts';
+import { LISTING_DAYS, MARKET_FEE, MARKET_MIN_DAYS, MARKET_MIN_MATCHES, MAX_LISTINGS, MAX_PRICE } from '../src/economy/rules.ts';
 import type { Db } from './db.ts';
 import { addCards, editCards, readAccount, Refused, withAccounts, type Catalog, type Tx } from './economy.ts';
 
@@ -25,6 +25,16 @@ const row = (r: Record<string, unknown>, me: string): Listing => ({
   mine: r.seller === me, seller: (r.seller_name as string) ?? '?', expiresAt: new Date(r.expires_at as string).getTime(),
 });
 
+/** Fresh accounts don't trade yet (alt accounts would pass their free packs and coins on). */
+async function mayTrade(c: Tx, userId: string) {
+  const r = (await c.query(`SELECT u.created_at < now() - make_interval(days => $2) AS old,
+      (SELECT coalesce(sum(games), 0)::int FROM ratings WHERE user_id = u.id) AS games
+    FROM users u WHERE u.id = $1`, [userId, MARKET_MIN_DAYS])).rows[0];
+  if (!r?.old || r.games < MARKET_MIN_MATCHES) {
+    throw new Refused(`Trading opens once your account is ${MARKET_MIN_DAYS} days old and has played ${MARKET_MIN_MATCHES} online matches`);
+  }
+}
+
 /** The copies of a listing back to its seller (cancelled or expired). */
 async function giveBack(c: Tx, l: { seller: string; card_id: string; foil: boolean; qty: number }) {
   if (l.qty > 0) await addCards(c, l.seller, [{ id: l.card_id, foil: l.foil, n: l.qty }]);
@@ -37,6 +47,7 @@ export const market = {
     const n = count(qty, 1, 99, 'Copies');
     const p = count(price, 1, MAX_PRICE, 'Price');
     return withAccounts(db, [userId], async (c) => {
+      await mayTrade(c, userId);
       const active = (await c.query("SELECT count(*)::int AS n FROM market_listings WHERE seller = $1 AND status = 'active'", [userId])).rows[0].n;
       if (active >= MAX_LISTINGS) throw new Refused(`At most ${MAX_LISTINGS} listings at a time`);
       await editCards(c, userId, (cards) => {
@@ -59,6 +70,7 @@ export const market = {
     if (!peek) throw new Refused('No such listing', 404);
     if (peek.seller === userId) throw new Refused('That is your own listing');
     return withAccounts(db, [userId, peek.seller], async (c) => {
+      await mayTrade(c, userId);
       const l = (await c.query("SELECT * FROM market_listings WHERE id = $1 AND status = 'active' AND expires_at > now() FOR UPDATE", [listingId])).rows[0];
       if (!l) throw new Refused('That listing is gone');
       if (l.qty < n) throw new Refused(`Only ${l.qty} left`);

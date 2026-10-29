@@ -13,9 +13,10 @@ import type { HostSnapshot, Preview, TableHost } from './GameHost.ts';
  * sends the answers back.
  *
  * A batch draft (§4.7) is previewed here, without asking the server: the
- * view is completed with a sample of the hidden cards (both lists are open,
- * TR 401.5) and the keys applied to it. Inside a batch nothing hidden is
- * revealed and no randomness is used, so the next decision is the same
+ * view is completed with a sample of the hidden cards (our own list; the
+ * opponent's is private, TR 401.5, and its unknown cards become
+ * placeholders) and the keys applied to it. Inside a batch nothing hidden
+ * is revealed and no randomness is used, so the next decision is the same
  * whatever the sample holds.
  */
 

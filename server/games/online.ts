@@ -83,6 +83,9 @@ export function timeoutAnswer(v: PlayerView): string {
 export class Online {
   private readonly queues = new Map<QueueMode, Queued[]>(MODES.map((m) => [m, []]));
   private readonly finishHooks = new Set<(f: Finished) => void | Promise<void>>();
+  private readonly hellos = new Map<string, number>();
+  /** Players whose queue request is being checked: a second one waits its turn. */
+  private readonly joining = new Set<string>();
   private readonly games = new Map<string, Live>();
   private readonly byUser = new Map<string, string>();
   private readonly ticker: ReturnType<typeof setInterval>;
@@ -106,6 +109,8 @@ export class Online {
   /** Tells a player their account changed (a sale, a gift, a prize), if they are connected. */
   notify(userId: string, why: string) { this.net.send(userId, { t: 'account', why }); }
   inGame(userId: string) { return this.byUser.has(userId); }
+  /** A deleted account: out of every queue. */
+  forget(userId: string) { for (const q of this.queues.values()) { const i = q.findIndex((x) => x.userId === userId); if (i >= 0) q.splice(i, 1); } }
 
   get stats() { return { games: this.games.size, queued: [...this.queues.values()].reduce((n, q) => n + q.length, 0) }; }
 
@@ -138,7 +143,14 @@ export class Online {
 
   async message(userId: string, name: string, m: ClientMsg) {
     try {
-      if (m.t === 'hello') return await this.connected(userId);
+      if (m.t === 'hello') {
+        // a reconnect replays the game for its log: once every few seconds is plenty
+        const last = this.hellos.get(userId) ?? 0;
+        if (this.clock.now() - last < 3000) return;
+        this.hellos.set(userId, this.clock.now());
+        if (this.hellos.size > 50_000) this.hellos.clear();
+        return await this.connected(userId);
+      }
       if (m.t === 'queue') return await this.enqueue(userId, name, m.mode, m.deck);
       if (m.t === 'leave') {
         for (const q of this.queues.values()) { const i = q.findIndex((x) => x.userId === userId); if (i >= 0) q.splice(i, 1); }
@@ -153,7 +165,10 @@ export class Online {
         return await this.answer(g, seat, m.keys.map(String), false);
       }
     } catch (err) {
-      this.net.send(userId, { t: 'error', message: err instanceof Error ? err.message : 'Something went wrong' });
+      // our own refusals keep their words; anything else (the database, a bug) is logged, not shown
+      const own = err instanceof Error && !('code' in err) && err.message.length < 200;
+      if (!own) console.error('online:', err);
+      this.net.send(userId, { t: 'error', message: own ? (err as Error).message : 'Something went wrong' });
     }
   }
 
@@ -187,10 +202,18 @@ export class Online {
   private async enqueue(userId: string, name: string, mode: QueueMode, ref: string) {
     if (!MODES.includes(mode)) throw new Error('No such mode');
     if (this.byUser.has(userId)) throw new Error('You are in a game');
-    const deck = await this.deckFor(userId, String(ref));
+    if (this.joining.has(userId)) throw new Error('One moment');
+    this.joining.add(userId);
+    let entry: Queued;
+    try {
+      const deck = await this.deckFor(userId, String(ref));
+      entry = { userId, name, deck, rating: (await this.rating(userId, mode)).rating.r, since: this.clock.now() };
+    } finally { this.joining.delete(userId); }
+    // matched meanwhile (another tab): stay out of the queue
+    if (this.byUser.has(userId)) throw new Error('You are in a game');
     for (const q of this.queues.values()) { const i = q.findIndex((x) => x.userId === userId); if (i >= 0) q.splice(i, 1); }
-    const since = this.clock.now();
-    this.queues.get(mode)!.push({ userId, name, deck, rating: (await this.rating(userId, mode)).rating.r, since });
+    const since = entry.since;
+    this.queues.get(mode)!.push(entry);
     this.net.send(userId, { t: 'queued', mode, since });
     await this.matchmake();
   }
@@ -204,7 +227,7 @@ export class Online {
       for (let i = 0; i < q.length; i++) {
         const a = q[i];
         const reach = (x: Queued) => WINDOW + WIDEN * ((now - x.since) / 1000);
-        const j = q.findIndex((b, k) => k > i && Math.abs(a.rating - b.rating) <= Math.min(reach(a), reach(b)));
+        const j = q.findIndex((b, k) => k > i && b.userId !== a.userId && Math.abs(a.rating - b.rating) <= Math.min(reach(a), reach(b)));
         if (j < 0) continue;
         const b = q[j];
         q.splice(j, 1); q.splice(i, 1); i--;
@@ -265,7 +288,12 @@ export class Online {
 
   private startMsg(g: Live, seat: PlayerId): ServerMsg {
     const meta = g.meta ? { id: g.meta.id, name: g.meta.name, round: g.meta.round, game: g.meta.game, score: g.meta.score } : undefined;
-    return { t: 'start', gameId: g.id, seat, mode: g.mode, names: g.names, decks: g.decks as [DeckList, DeckList], ...(meta ? { tournament: meta } : {}) };
+    // decklists are private (TR 401.5): your own list, and of theirs only what the table shows anyway
+    const theirs = g.decks[1 - seat];
+    const shown: DeckList = { name: theirs.name, source: theirs.source, legend: theirs.legend, chosenChampion: '' as DeckList['chosenChampion'], main: [], runes: [], battlefields: [],
+      printings: theirs.printings?.[theirs.legend] ? { [theirs.legend]: theirs.printings[theirs.legend] } : {} };
+    const decks = (seat === 0 ? [g.decks[0], shown] : [shown, g.decks[1]]) as [DeckList, DeckList];
+    return { t: 'start', gameId: g.id, seat, mode: g.mode, names: g.names, decks, ...(meta ? { tournament: meta } : {}) };
   }
 
   /** The start of a game again, for a player who comes back: their view and what they saw so far. */
@@ -398,7 +426,12 @@ export class Online {
     const outcome: { coins: [number, number]; rating: [{ before: RatingInfo; after: RatingInfo } | null, { before: RatingInfo; after: RatingInfo } | null] } = { coins: [0, 0], rating: [null, null] };
     try {
       await c.query('BEGIN');
-      // ratings: both players' rows locked in a fixed order, so two games ending at once can't deadlock
+      // both accounts first, then the ratings, each in one fixed order (as every transfer does):
+      // games, sales and prizes that touch the same players at once can't deadlock
+      for (const u of [...g.players].sort()) {
+        await c.query('INSERT INTO accounts (user_id) VALUES ($1) ON CONFLICT DO NOTHING', [u]);
+        await c.query('SELECT 1 FROM accounts WHERE user_id = $1 FOR UPDATE', [u]);
+      }
       const order = (g.mode === 'tournament' ? [] : [0, 1].sort((x, y) => (g.players[x] < g.players[y] ? -1 : 1))) as PlayerId[];
       const before: Record<number, { rating: Rating; games: number; wins: number }> = {};
       for (const s of order) {
@@ -416,8 +449,6 @@ export class Online {
         if (g.mode === 'ranked') outcome.rating[s] = { before: infoOf(me.rating, me.games), after: infoOf(next, me.games + 1) };
         // coins, up to the daily limit
         if (rewarded) {
-          await c.query('INSERT INTO accounts (user_id) VALUES ($1) ON CONFLICT DO NOTHING', [g.players[s]]);
-          await c.query('SELECT 1 FROM accounts WHERE user_id = $1 FOR UPDATE', [g.players[s]]);
           const today = (await c.query(`SELECT coalesce(sum(coins), 0)::int AS n FROM ledger WHERE user_id = $1 AND reason LIKE 'match %'
             AND created_at > now() - interval '1 day'`, [g.players[s]])).rows[0].n as number;
           const coins = Math.max(0, Math.min(score === 1 ? WIN_COINS : LOSS_COINS, MATCH_COINS_PER_DAY - today));

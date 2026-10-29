@@ -91,7 +91,7 @@ describe.skipIf(!url)('server', () => {
       const s = cookieOf(await get('/auth/discord'), STATE_COOKIE);
       await get(`/auth/discord/callback?code=good&state=${s}`, `${STATE_COOKIE}=${s}`);
     }
-    expect(Number((await db.query('SELECT count(*) FROM users')).rows[0].count)).toBe(1);
+    expect(Number((await db.query("SELECT count(*) FROM users WHERE discord_id <> 'deleted'")).rows[0].count)).toBe(1);
   });
 
   it('runs each migration once', async () => {

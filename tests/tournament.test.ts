@@ -90,7 +90,9 @@ describe.skipIf(!url)('tournaments', () => {
     expect((await db.query('SELECT n FROM owned_packs WHERE user_id = $1 AND set_id = $2', [users[0].id, 'rad'])).rows[0].n).toBe(2);
     // the standings as the page shows them: names only, the winner on top of the Swiss table
     const d = await director.detail(id, users[0].id);
-    expect(d.standings[0]).toMatchObject({ name: 'player1', me: true, points: 9 });
+    // the pairings are random: the Swiss table is topped by an unbeaten player, player1 among them
+    expect(d.standings[0].points).toBe(9);
+    expect(d.standings.find((x) => x.me)).toMatchObject({ name: 'player1', points: 9 });
     expect(JSON.stringify(d)).not.toContain(users[1].id);
     director.stop(); online.stop();
   }, 60_000);

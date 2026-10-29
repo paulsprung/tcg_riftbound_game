@@ -1,7 +1,7 @@
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { extname, join, normalize, resolve } from 'node:path';
+import { extname, join, normalize, resolve, sep } from 'node:path';
 import {
   createSession, discordAuthorizeUrl, discordUser, endSession, SESSION_COOKIE, sameSecret, STATE_COOKIE,
   upsertUser, userForSession,
@@ -11,6 +11,7 @@ import type { Db } from './db.ts';
 import { deckStore, economy, loadCatalog, readAccount, Refused, type Catalog } from './economy.ts';
 import type { Online } from './games/online.ts';
 import { market } from './market.ts';
+import { deleteAccount, exportAccount } from './privacy.ts';
 import type { Director } from './tournament/director.ts';
 
 /*
@@ -32,7 +33,9 @@ export function cookies(req: IncomingMessage): Record<string, string> {
   const out: Record<string, string> = {};
   for (const part of (req.headers.cookie ?? '').split(';')) {
     const i = part.indexOf('=');
-    if (i > 0) out[part.slice(0, i).trim()] = decodeURIComponent(part.slice(i + 1).trim());
+    if (i <= 0) continue;
+    // a malformed value (a lone %) is skipped, never thrown: this runs before any try
+    try { out[part.slice(0, i).trim()] = decodeURIComponent(part.slice(i + 1).trim()); } catch { /* skip */ }
   }
   return out;
 }
@@ -62,7 +65,8 @@ const TYPES: Record<string, string> = {
 async function serveStatic(cfg: Config, req: IncomingMessage, res: ServerResponse, path: string) {
   const root = resolve(cfg.staticDir);
   let file = normalize(join(root, decodeURIComponent(path)));
-  if (!file.startsWith(root)) { res.writeHead(400); res.end(); return; }
+  // inside the folder, not merely starting like it (dist vs dist-server)
+  if (file !== root && !file.startsWith(root + sep)) { res.writeHead(400); res.end(); return; }
   let info = await stat(file).catch(() => null);
   if (!info || info.isDirectory()) {
     // client routes (#hash routes never reach here, but /some/path might): the app
@@ -82,22 +86,48 @@ async function serveStatic(cfg: Config, req: IncomingMessage, res: ServerRespons
 }
 
 /**
- * Riot's card images, passed through so they are same-origin: the WebGL
- * foil can then read their pixels (Riot sends no CORS headers). Only card
- * images from Riot's own CDN; Cloudflare in front caches them.
+ * Pictures from other hosts, passed through so the browser only ever talks
+ * to this site: no visitor's address goes to Riot, the card databases or
+ * Discord (GDPR), and the WebGL foil can read the pixels (Riot sends no CORS
+ * headers). Each prefix maps to one host and only paths of the given shape;
+ * Cloudflare in front caches them.
  */
-async function riotImage(req: IncomingMessage, res: ServerResponse, url: URL, f: typeof fetch) {
-  const rest = url.pathname.slice('/riot-img'.length);
-  if (!/^\/sanity\/images\/[\w-]+\/[\w-]+\/[\w-]+\.(png|jpg|webp)$/.test(rest)) { res.writeHead(400); res.end(); return; }
-  const up = await f(`https://cmsassets.rgpub.io${rest}${url.search}`);
-  if (!up.ok || !up.body) { res.writeHead(up.status === 404 ? 404 : 502); res.end(); return; }
+const IMAGE_HOSTS: { prefix: string; origin: string; path: RegExp }[] = [
+  { prefix: '/riot-img', origin: 'https://cmsassets.rgpub.io', path: /^\/sanity\/images\/[\w-]+\/[\w-]+\/[\w-]+\.(png|jpg|webp|svg)$/ },
+  { prefix: '/riot-asset', origin: 'https://assetcdn.rgpub.io', path: /^\/public\/live\/[\w/.-]+\.(svg|png|webp)$/ },
+  { prefix: '/ext-img/dotgg', origin: 'https://static.dotgg.gg', path: /^\/riftbound\/cards\/[\w.-]+\.(webp|png|jpg)$/ },
+  { prefix: '/ext-img/piltover', origin: 'https://cdn.piltoverarchive.com', path: /^\/cards\/[\w.-]+\.(webp|png|jpg)$/ },
+  { prefix: '/avatar', origin: 'https://cdn.discordapp.com', path: /^\/avatars\/\d{5,25}\/a?_?[0-9a-f]{16,40}\.png$/ },
+];
+const IMAGE_TYPES = /^image\/(png|jpeg|webp|svg\+xml|gif)$/;
+
+async function proxyImage(req: IncomingMessage, res: ServerResponse, url: URL, f: typeof fetch, host: (typeof IMAGE_HOSTS)[number]) {
+  const rest = url.pathname.slice(host.prefix.length);
+  if (!host.path.test(rest) || rest.includes('..')) { res.writeHead(400); res.end(); return; }
+  // only the resize parameters of Riot's image server go along
+  const q = new URLSearchParams();
+  for (const k of ['w', 'fm', 'q', 'accountingTag', 'size']) { const v = url.searchParams.get(k); if (v && /^[\w-]{1,20}$/.test(v)) q.set(k, v); }
+  const up = await f(`${host.origin}${rest}${q.size ? `?${q}` : ''}`, { redirect: 'error' });
+  const type = (up.headers.get('content-type') ?? '').split(';')[0].trim();
+  if (!up.ok || !up.body || !IMAGE_TYPES.test(type)) { res.writeHead(up.status === 404 ? 404 : 502); res.end(); return; }
   res.writeHead(200, {
-    'content-type': up.headers.get('content-type') ?? 'image/png',
+    'content-type': type,
     'cache-control': 'public, max-age=604800, immutable',
+    // an SVG from elsewhere is shown, never run
+    ...(type === 'image/svg+xml' ? { 'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'" } : {}),
   });
   if (req.method === 'HEAD') { res.end(); return; }
   res.end(Buffer.from(await up.arrayBuffer()));
 }
+
+/** Discord's avatar URL as this site's own path. */
+const ownAvatar = (u: string | null) => (u ? u.replace(/^https:\/\/cdn\.discordapp\.com/, '/avatar') : null);
+
+const csp = (publicUrl: string) => [
+  "default-src 'self'", "script-src 'self'", "style-src 'self' 'unsafe-inline'", "img-src 'self' data: blob:",
+  "font-src 'self' data:", `connect-src 'self' ${publicUrl.replace(/^http/, 'ws')}`, "worker-src 'self' blob:", "object-src 'none'",
+  "base-uri 'none'", "form-action 'self'", "frame-ancestors 'none'",
+].join('; ');
 
 /** A JSON request body, 64 KB at most. */
 async function body(req: IncomingMessage): Promise<Record<string, unknown>> {
@@ -134,6 +164,7 @@ export function handler({ cfg, db, fetch: f = fetch, catalog, online, director }
   const secure = cfg.publicUrl.startsWith('https://');
   const authLimit = limiter(20);
   const apiLimit = limiter(240);
+  const CSP = csp(cfg.publicUrl);
   let cat: Promise<Catalog> | null = catalog ? Promise.resolve(catalog) : null;
   const getCatalog = () => (cat ??= loadCatalog(cfg.staticDir).catch((err) => { cat = null; throw err; }));
   const clientIp = (req: IncomingMessage) =>
@@ -142,16 +173,20 @@ export function handler({ cfg, db, fetch: f = fetch, catalog, online, director }
   return async (req: IncomingMessage, res: ServerResponse) => {
     res.setHeader('x-content-type-options', 'nosniff');
     res.setHeader('referrer-policy', 'strict-origin-when-cross-origin');
-    res.setHeader('x-frame-options', 'SAMEORIGIN');
-    const url = new URL(req.url ?? '/', 'http://x');
-    const path = url.pathname;
-    const jar = cookies(req);
+    res.setHeader('x-frame-options', 'DENY');
+    // only this site's own scripts, styles, pictures and socket (every outside picture is proxied)
+    res.setHeader('content-security-policy', CSP);
+    if (secure) res.setHeader('strict-transport-security', 'max-age=31536000; includeSubDomains');
+    let path = '';
     try {
+      const url = new URL(req.url ?? '/', 'http://x');
+      path = url.pathname;
+      const jar = cookies(req);
       if (path === '/api/health') return json(res, 200, { ok: true, ...(online ? { games: online.stats.games, queued: online.stats.queued } : {}) });
 
       if (path === '/api/me') {
         const user = await userForSession(db, jar[SESSION_COOKIE]);
-        return json(res, 200, { user: user && { id: user.id, name: user.name, avatar: user.avatar } });
+        return json(res, 200, { user: user && { id: user.id, name: user.name, avatar: ownAvatar(user.avatar) } });
       }
 
       if (path === '/auth/discord') {
@@ -201,12 +236,25 @@ export function handler({ cfg, db, fetch: f = fetch, catalog, online, director }
             ]);
             return json(res, 200, { account, decks, admin });
           }
+          // ---- the player's rights (GDPR art. 15, 17, 20) ----
+          if (route === 'GET /api/account/export') {
+            res.setHeader('content-disposition', 'attachment; filename="riftbound-account.json"');
+            return json(res, 200, await exportAccount(db, user.id));
+          }
+          if (route === 'POST /api/account/delete') {
+            if ((await body(req)).confirm !== 'DELETE') return json(res, 400, { error: 'Type DELETE to confirm' });
+            await deleteAccount(db, user.id, (u) => online?.inGame(u) ?? false);
+            online?.forget(user.id);
+            setCookie(res, SESSION_COOKIE, '', 0, secure);
+            return json(res, 200, { ok: true });
+          }
           if (route === 'GET /api/account/standing') {
             if (!online) return json(res, 404, { error: 'No online play here' });
             const [ranked, casual] = await Promise.all([online.standing(user.id, 'ranked'), online.standing(user.id, 'casual')]);
             const recent = await db.query(`SELECT id, mode, players, winner, reason, turns, ended_at, outcome FROM matches
               WHERE players[1] = $1 OR players[2] = $1 ORDER BY ended_at DESC LIMIT 10`, [user.id]);
-            return json(res, 200, { ranked, casual, recent: recent.rows.map((m) => {
+            const won = (await db.query('SELECT count(*)::int AS n FROM tournament_players WHERE user_id = $1 AND final_rank = 1', [user.id])).rows[0].n;
+            return json(res, 200, { ranked, casual, tournamentsWon: won, recent: recent.rows.map((m) => {
               const seat = m.players[0] === user.id ? 0 : 1;
               return { id: m.id, mode: m.mode, won: m.winner === seat, draw: m.winner === null, reason: m.reason, turns: m.turns,
                 endedAt: new Date(m.ended_at).getTime(), coins: m.outcome?.coins?.[seat] ?? 0 };
@@ -287,7 +335,7 @@ export function handler({ cfg, db, fetch: f = fetch, catalog, online, director }
             if (route === 'GET /api/admin/users') {
               const q = (url.searchParams.get('q') ?? '').slice(0, 64);
               const r = await db.query(`SELECT u.id, u.discord_id, u.name, coalesce(a.coins, 0) AS coins FROM users u LEFT JOIN accounts a ON a.user_id = u.id
-                WHERE u.name ILIKE $1 OR u.discord_id = $2 ORDER BY u.last_seen DESC LIMIT 25`, [`%${q.replace(/[%_\\]/g, '\\$&')}%`, q]);
+                WHERE (u.name ILIKE $1 OR u.discord_id = $2) AND u.discord_id <> 'deleted' ORDER BY u.last_seen DESC LIMIT 25`, [`%${q.replace(/[%_\\]/g, '\\$&')}%`, q]);
               return json(res, 200, { users: r.rows.map((x) => ({ id: x.id, discordId: x.discord_id, name: x.name, coins: x.coins })) });
             }
             if (route === 'POST /api/admin/grant') {
@@ -307,7 +355,8 @@ export function handler({ cfg, db, fetch: f = fetch, catalog, online, director }
         }
       }
 
-      if (path.startsWith('/riot-img/')) return await riotImage(req, res, url, f);
+      const img = IMAGE_HOSTS.find((h) => path.startsWith(`${h.prefix}/`));
+      if (img) return await proxyImage(req, res, url, f, img);
       if (path.startsWith('/api/')) return json(res, 404, { error: 'No such API' });
       if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, 405, { error: 'Method not allowed' });
       return await serveStatic(cfg, req, res, path);

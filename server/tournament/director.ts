@@ -204,6 +204,11 @@ export class Director {
   }
 
   private async nextRound(t: Row) {
+    // the cards must still be theirs: a deck sold or graded away since sign-up drops its player
+    for (const p of await this.db.query('SELECT user_id, deck_ref FROM tournament_players WHERE tournament_id = $1 AND NOT dropped', [t.id]).then((r) => r.rows)) {
+      const ok = await this.online.deckFor(p.user_id, p.deck_ref).then(() => true, () => false);
+      if (!ok) await this.db.query('UPDATE tournament_players SET dropped = true WHERE tournament_id = $1 AND user_id = $2', [t.id, p.user_id]);
+    }
     const ps = await this.players(t.id);
     const active = ps.filter((p) => !p.dropped).map((p) => p.user_id);
     const swissTotal = t.settings.rounds ?? swissRounds(ps.length);
@@ -303,11 +308,15 @@ export class Director {
     const c = await this.db.connect();
     try {
       await c.query('BEGIN');
+      // the winners' accounts locked in one fixed order first, as every transfer does (no deadlocks)
+      for (const u of order.filter((_, i) => t.settings.prizes[i]).sort()) {
+        await c.query('INSERT INTO accounts (user_id) VALUES ($1) ON CONFLICT DO NOTHING', [u]);
+        await c.query('SELECT 1 FROM accounts WHERE user_id = $1 FOR UPDATE', [u]);
+      }
       for (const [i, userId] of order.entries()) {
         await c.query('UPDATE tournament_players SET final_rank = $3 WHERE tournament_id = $1 AND user_id = $2', [t.id, userId, i + 1]);
         const prize = t.settings.prizes[i];
         if (!prize || (prize.coins === 0 && !prize.packs)) continue;
-        await c.query('INSERT INTO accounts (user_id) VALUES ($1) ON CONFLICT DO NOTHING', [userId]);
         await c.query('UPDATE accounts SET coins = coins + $2 WHERE user_id = $1', [userId, prize.coins]);
         for (const [set, n] of Object.entries(prize.packs ?? {})) {
           await c.query(`INSERT INTO owned_packs (user_id, set_id, n) VALUES ($1, $2, $3)

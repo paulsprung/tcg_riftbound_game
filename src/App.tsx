@@ -14,6 +14,7 @@ import { HomeView } from './views/HomeView.tsx';
 import { PacksView } from './views/PacksView.tsx';
 import { ProfileView } from './views/ProfileView.tsx';
 import { RulesView } from './views/RulesView.tsx';
+import { LegalView } from './views/LegalView.tsx';
 
 // The play table brings the engine with it: loaded only when opened.
 // A new player sees this first, not the lobby (loaded only for them).
@@ -21,7 +22,7 @@ const Onboarding = lazy(() => import('./onboarding/Onboarding.tsx').then((m) => 
 const AdminView = lazy(() => import('./views/AdminView.tsx').then((m) => ({ default: m.AdminView })));
 const PlayLobby = lazy(() => import('./views/PlayLobby.tsx').then((m) => ({ default: m.PlayLobby })));
 
-const ROUTES = ['home', 'play', 'collection', 'shop', 'profile', 'rules', 'admin'] as const;
+const ROUTES = ['home', 'play', 'collection', 'shop', 'profile', 'rules', 'admin', 'privacy', 'imprint'] as const;
 type Route = (typeof ROUTES)[number];
 const COLLECTION_TABS: CollectionTab[] = ['cards', 'packs', 'decks'];
 
@@ -107,6 +108,7 @@ export function App() {
               )}
               {route === 'profile' && <ProfileView db={state.db} onInspect={onInspect} />}
               {route === 'rules' && <Lobby><div className="lb-scroll"><RulesView /></div></Lobby>}
+              {(route === 'privacy' || route === 'imprint') && <LegalView page={route} />}
               {route === 'admin' && <Suspense fallback={<p className="status">Loading…</p>}><AdminView /></Suspense>}
             </>
           )}
@@ -122,7 +124,7 @@ export function App() {
         {import.meta.env.VITE_PREVIEW && <>Preview build: card art is bundled at reduced size. </>}
         Fan-made simulator, not affiliated with or endorsed by Riot Games. Riftbound, League of Legends and all
         card art are © Riot Games. Card data: Riot's card gallery and{' '}
-        <a href="https://riftcodex.com" target="_blank" rel="noreferrer">Riftcodex</a>. · <a href="#rules">Rules</a>
+        <a href="https://riftcodex.com" target="_blank" rel="noreferrer">Riftcodex</a>. · <a href="#rules">Rules</a> · <a href="#privacy">Privacy</a> · <a href="#imprint">Imprint</a>
       </footer>
 
       {notice && <p className={`notice${notice.ok ? ' notice--ok' : ''}`} role={notice.ok ? 'status' : 'alert'}>{notice.text}</p>}

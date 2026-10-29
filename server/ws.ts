@@ -17,6 +17,8 @@ import type { ClientMsg, Online, ServerMsg, Transport } from './games/online.ts'
 
 const MAX_MSG = 16_384;
 const PER_SECOND = 30;
+/** Sockets (tabs) per player at once. */
+const MAX_SOCKETS = 5;
 
 export class Sockets implements Transport {
   private readonly conns = new Map<string, Set<WebSocket>>();
@@ -45,12 +47,19 @@ export class Sockets implements Transport {
     ping.unref();
 
     server.on('upgrade', (req: IncomingMessage, socket: Duplex, head: Buffer) => {
-      const refuse = (code: number) => { socket.write(`HTTP/1.1 ${code} No\r\nConnection: close\r\n\r\n`); socket.destroy(); };
-      if (new URL(req.url ?? '/', 'http://x').pathname !== '/ws') return refuse(404);
+      // a reset while the session is looked up must not take the process down
+      socket.on('error', () => socket.destroy());
+      const refuse = (code: number) => { if (!socket.destroyed) socket.write(`HTTP/1.1 ${code} No\r\nConnection: close\r\n\r\n`); socket.destroy(); };
+      try {
+        if (new URL(req.url ?? '/', 'http://x').pathname !== '/ws') return refuse(404);
+      } catch { return refuse(400); }
       if (req.headers.origin !== cfg.publicUrl) return refuse(403);
       void userForSession(db, cookies(req)[SESSION_COOKIE]).then((user) => {
         if (!user) return refuse(401);
+        if ((this.conns.get(user.id)?.size ?? 0) >= MAX_SOCKETS) return refuse(429);
         this.wss.handleUpgrade(req, socket, head, (ws) => {
+          // a frame too big or malformed: that connection goes, nothing else
+          ws.on('error', () => ws.terminate());
           alive.add(ws);
           ws.on('pong', () => alive.add(ws));
           const set = this.conns.get(user.id) ?? new Set();

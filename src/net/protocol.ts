@@ -25,7 +25,7 @@ export type ServerMsg =
   | { t: 'state'; queue: { mode: QueueMode; since: number } | null; game: string | null }
   | { t: 'queued'; mode: QueueMode; since: number }
   | { t: 'left' }
-  /** A game: your seat, both names and both lists (open decklists, TR 401.5). */
+  /** A game: your seat, both names, your list and of theirs only the name and legend (decklists are private, TR 401.5). */
   | { t: 'start'; gameId: string; seat: PlayerId; mode: Mode; names: [string, string]; decks: [DeckList, DeckList];
       /** A tournament's game: its name, round and the match score so far. */
       tournament?: { id: string; name: string; round: string; game: number; score: [number, number] } }

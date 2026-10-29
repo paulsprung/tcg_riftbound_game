@@ -1,7 +1,8 @@
+import { ownUrl } from '../data/hosts.ts';
 import { symbolFor } from '../data/cardInfo.ts';
 import type { CardDb } from '../data/types.ts';
 
-const MIGHT_FALLBACK = 'https://assetcdn.rgpub.io/public/live/riot-shared/player-experiences/riot-glyphs/rb/latest/might.svg';
+const MIGHT_FALLBACK = ownUrl('https://assetcdn.rgpub.io/public/live/riot-shared/player-experiences/riot-glyphs/rb/latest/might.svg');
 
 /** Rules text with Riot's symbol codes (:rb_energy_1:, :rb_rune_fury:,
     :rb_might:, ...) drawn as symbols and [Keywords] as tags. */
