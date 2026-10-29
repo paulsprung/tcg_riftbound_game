@@ -19,12 +19,14 @@ const DECKS = [SERAPHINE, SERAPHINE];
 interface Played { s: GameState; answers: number; illegal: string[] }
 
 /** A game between two agents; plans are followed while they fit, as the host does. */
-function aiGame(seed: number, levels: [AiLevel, AiLevel], check: (cfg: AgentConfig, s: GameState) => void = () => {}): Played {
+async function aiGame(seed: number, levels: [AiLevel, AiLevel], check: (cfg: AgentConfig, s: GameState) => void = () => {}): Promise<Played> {
   let s = createGame({ seed, decks: [SERAPHINE, SERAPHINE] }).state;
   const plans: string[][] = [[], []];
   const illegal: string[] = [];
   let answers = 0;
   while (s.pending && answers < 4000) {
+    // let the worker answer vitest now and then (its RPC times out otherwise)
+    if (answers % 50 === 0) await new Promise((r) => setTimeout(r, 0));
     const d = s.pending, p = d.player;
     const real = d.options.filter((o) => !o.ui).map((o) => o.key);
     let key: string;
@@ -46,22 +48,22 @@ function aiGame(seed: number, levels: [AiLevel, AiLevel], check: (cfg: AgentConf
 }
 
 describe('§11 the computer opponent', () => {
-  it('never answers with anything but a real option of its decision (Beginner and Normal, plans included)', () => {
+  it('never answers with anything but a real option of its decision (Beginner and Normal, plans included)', async () => {
     for (const seed of [101, 102]) {
-      const g = aiGame(seed, seed % 2 ? ['normal', 'beginner'] : ['beginner', 'normal']);
+      const g = await aiGame(seed, seed % 2 ? ['normal', 'beginner'] : ['beginner', 'normal']);
       expect(g.illegal, `seed ${seed}`).toEqual([]);
       expect(g.s.result, `seed ${seed}`).not.toBeNull();
     }
   }, 120_000);
 
-  it('is deterministic: the same view, seed and level give the same answer and the same game', () => {
+  it('is deterministic: the same view, seed and level give the same answer and the same game', async () => {
     let calls = 0;
-    const g1 = aiGame(7, ['normal', 'normal'], (cfg, s) => {
+    const g1 = await aiGame(7, ['normal', 'normal'], (cfg, s) => {
       if (calls++ % 15 !== 0) return;
       const v = viewFor(s, cfg.me);
       expect(decide(cfg, v)).toEqual(decide(cfg, structuredClone(v)));
     });
-    const g2 = aiGame(7, ['normal', 'normal']);
+    const g2 = await aiGame(7, ['normal', 'normal']);
     expect(hashState(g2.s)).toBe(hashState(g1.s));
   }, 120_000);
 
@@ -101,7 +103,7 @@ describe('§11 the computer opponent', () => {
       await new Promise((r) => setTimeout(r, 0));
       const normalSeat: PlayerId = seed % 2 ? 0 : 1;
       const levels: [AiLevel, AiLevel] = normalSeat === 0 ? ['normal', 'beginner'] : ['beginner', 'normal'];
-      const g = aiGame(seed, levels);
+      const g = await aiGame(seed, levels);
       expect(g.illegal).toEqual([]);
       if (g.s.result?.winner === normalSeat) normalWins++;
     }
