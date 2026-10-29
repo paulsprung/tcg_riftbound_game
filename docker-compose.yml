@@ -2,6 +2,10 @@
 # from .env (copy .env.example). Nothing is published to the internet: the
 # tunnel connects out to Cloudflare, which serves rift.shyy.dev. The app's
 # port is only open on the server's localhost, for checks.
+#
+# Sized for a 4 GB server (docs/CAPACITY.md): the app up to 1.5 GB, Postgres
+# up to 1.2 GB with its cache tuned to that, the rest for the system and the
+# tunnel. On a bigger server raise mem_limit and the Postgres numbers together.
 services:
   app:
     build: .
@@ -9,6 +13,9 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgres://rift:${POSTGRES_PASSWORD}@db:5432/rift
+      # the JS heap below the container's limit, so Node collects before Docker kills it
+      NODE_OPTIONS: --max-old-space-size=1200
+    mem_limit: 1536m
     ports:
       - "127.0.0.1:${APP_PORT:-8080}:8080"
     depends_on:
@@ -18,6 +25,22 @@ services:
   db:
     image: postgres:16
     restart: unless-stopped
+    mem_limit: 1228m
+    shm_size: 256m
+    command:
+      - postgres
+      - -c
+      - shared_buffers=384MB
+      - -c
+      - effective_cache_size=900MB
+      - -c
+      - work_mem=8MB
+      - -c
+      - maintenance_work_mem=64MB
+      - -c
+      - max_connections=40
+      - -c
+      - wal_compression=on
     environment:
       POSTGRES_USER: rift
       POSTGRES_DB: rift

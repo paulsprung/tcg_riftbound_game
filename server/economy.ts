@@ -81,19 +81,29 @@ const addPacks = async (c: Tx, userId: string, packs: Record<string, number>) =>
   }
 };
 
-const addCards = async (c: Tx, userId: string, cards: { id: string; foil: boolean; n: number }[]) => {
-  for (const x of cards) {
-    await c.query(`INSERT INTO owned_cards (user_id, card_id, normal, foil) VALUES ($1, $2, $3, $4)
-      ON CONFLICT (user_id, card_id) DO UPDATE SET normal = owned_cards.normal + EXCLUDED.normal, foil = owned_cards.foil + EXCLUDED.foil`,
-    [userId, x.id, x.foil ? 0 : x.n, x.foil ? x.n : 0]);
+type Cards = Record<string, [number, number]>;
+
+/** The raw copies, changed by `fn` and written back (the account row is locked). */
+async function editCards<T>(c: Tx, userId: string, fn: (cards: Cards) => T): Promise<T> {
+  const r = await c.query('SELECT cards FROM accounts WHERE user_id = $1', [userId]);
+  const cards = (r.rows[0]?.cards ?? {}) as Cards;
+  const out = fn(cards);
+  await c.query('UPDATE accounts SET cards = $2 WHERE user_id = $1', [userId, JSON.stringify(cards)]);
+  return out;
+}
+
+const addCards = (c: Tx, userId: string, add: { id: string; foil: boolean; n: number }[]) => editCards(c, userId, (cards) => {
+  for (const x of add) {
+    const o = cards[x.id] ?? [0, 0];
+    o[x.foil ? 1 : 0] += x.n;
+    cards[x.id] = o;
   }
-};
+});
 
 /** The account as the app's collection store holds it. */
 export async function readAccount(q: Db | Tx, userId: string): Promise<CollectionState> {
-  const [acc, cards, packs, slabs] = await Promise.all([
-    q.query('SELECT coins, starter, daily_at, tutorial_done, showcase FROM accounts WHERE user_id = $1', [userId]),
-    q.query('SELECT card_id, normal, foil FROM owned_cards WHERE user_id = $1 AND (normal > 0 OR foil > 0)', [userId]),
+  const [acc, packs, slabs] = await Promise.all([
+    q.query('SELECT coins, starter, daily_at, tutorial_done, showcase, cards FROM accounts WHERE user_id = $1', [userId]),
     q.query('SELECT set_id, n, opened FROM owned_packs WHERE user_id = $1', [userId]),
     q.query('SELECT data FROM slabs WHERE user_id = $1 ORDER BY graded_at DESC', [userId]),
   ]);
@@ -104,7 +114,8 @@ export async function readAccount(q: Db | Tx, userId: string): Promise<Collectio
     dailyAt: a?.daily_at ? new Date(a.daily_at).getTime() : 0,
     tutorialDone: a?.tutorial_done ?? false,
     showcase: (a?.showcase ?? []) as ShowcaseItem[],
-    cards: Object.fromEntries(cards.rows.map((r) => [r.card_id, { normal: r.normal, foil: r.foil }])),
+    cards: Object.fromEntries(Object.entries((a?.cards ?? {}) as Cards).filter(([, [n, f]]) => n + f > 0)
+      .map(([id, [normal, foil]]) => [id, { normal, foil }])),
     packs: Object.fromEntries(packs.rows.filter((r) => r.n > 0).map((r) => [r.set_id, r.n])),
     packsOpened: Object.fromEntries(packs.rows.filter((r) => r.opened > 0).map((r) => [r.set_id, r.opened])),
     slabs: slabs.rows.map((r) => r.data as Slab),
@@ -182,9 +193,13 @@ export const economy = {
   async grade(db: Db, userId: string, cardId: string, foil: boolean, random = secureRandom) {
     if (typeof cardId !== 'string' || typeof foil !== 'boolean') throw new Refused('Which card?');
     return withAccount(db, userId, async (c) => {
-      const col = foil ? 'foil' : 'normal';
-      const r = await c.query(`UPDATE owned_cards SET ${col} = ${col} - 1 WHERE user_id = $1 AND card_id = $2 AND ${col} > 0`, [userId, cardId]);
-      if (r.rowCount !== 1) throw new Refused('You have no raw copy of that card');
+      const at = foil ? 1 : 0;
+      const left = await editCards(c, userId, (cards) => {
+        const o = cards[cardId];
+        if (!o || o[at] < 1) throw new Refused('You have no raw copy of that card');
+        o[at] -= 1;
+        return o[at];
+      });
       // certificates are unique across all accounts: draw again on the rare clash
       for (let tries = 0; ; tries++) {
         const slab = gradeCard(cardId, foil, random);
@@ -192,8 +207,7 @@ export const economy = {
           [slab.cert, userId, cardId, JSON.stringify(slab)]);
         if (ins.rowCount === 1) {
           // a raw card on show whose last copy went to the grader leaves the stage with it
-          const left = await c.query(`SELECT ${col} AS n FROM owned_cards WHERE user_id = $1 AND card_id = $2`, [userId, cardId]);
-          if ((left.rows[0]?.n ?? 0) === 0) {
+          if (left === 0) {
             await c.query(`UPDATE accounts SET showcase = (SELECT coalesce(jsonb_agg(i), '[]') FROM jsonb_array_elements(showcase) i
               WHERE NOT (i->>'kind' = 'raw' AND i->>'cardId' = $2 AND (i->>'foil')::boolean = $3)) WHERE user_id = $1`, [userId, cardId, foil]);
           }
@@ -208,6 +222,7 @@ export const economy = {
   async setShowcase(db: Db, userId: string, items: unknown) {
     if (!Array.isArray(items) || items.length > SHOWCASE_SIZE) throw new Refused(`At most ${SHOWCASE_SIZE} items`);
     return withAccount(db, userId, async (c) => {
+      const cards = ((await c.query('SELECT cards FROM accounts WHERE user_id = $1', [userId])).rows[0]?.cards ?? {}) as Cards;
       const clean: ShowcaseItem[] = [];
       const key = (i: ShowcaseItem) => (i.kind === 'slab' ? `s:${i.cert}` : `r:${i.cardId}:${i.foil}`);
       for (const raw of items as Record<string, unknown>[]) {
@@ -217,8 +232,7 @@ export const economy = {
           if (!s.rowCount) throw new Refused('That slab is not yours');
           item = { kind: 'slab', cert: raw.cert };
         } else if (raw?.kind === 'raw' && typeof raw.cardId === 'string' && typeof raw.foil === 'boolean') {
-          const o = await c.query(`SELECT ${raw.foil ? 'foil' : 'normal'} AS n FROM owned_cards WHERE user_id = $1 AND card_id = $2`, [userId, raw.cardId]);
-          if (!(o.rows[0]?.n > 0)) throw new Refused('You don\'t own that card');
+          if (!((cards[raw.cardId]?.[raw.foil ? 1 : 0] ?? 0) > 0)) throw new Refused('You don\'t own that card');
           item = { kind: 'raw', cardId: raw.cardId, foil: raw.foil };
         } else throw new Refused('Not a showcase item');
         if (!clean.some((x) => key(x) === key(item))) clean.push(item);
