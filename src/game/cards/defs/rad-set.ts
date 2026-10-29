@@ -141,7 +141,8 @@ export const RAD_SET_DEFS = [
   ]),
   legend('ekko-boy-who-shattered-time', '[Empower] — [1], [E]\nDisempower me, [E]: Reduce the cost of the next unit you play this turn by [2][A] and give it "Kill me at end of turn."', [
     activated({ disempowerSelf: true, exhaustSelf: true }, prog([playerEffect({ s: 'costLess', types: ['unit'], energy: 2, power: 1, uses: 1 }),
-      delayed(1, { on: 'cardPlayed', by: 'you', what: { types: ['unit'], card: true } }, prog([
+      // "end of turn" = the end of this turn (Radiance patch notes); a token unit is "the next unit you play" too [440.2.c].
+      delayed(1, { on: 'cardPlayed', by: 'you', what: { types: ['unit'] } }, prog([
         delayed(1, { on: 'phase', at: 'endOfTurn', whose: 'any' }, prog([kill(ref.info('u'))]), { capture: { u: ref.subject } })]))])),
   ]),
   unit('ekko-ingenious', "As an additional cost to play me, return a friendly unit to its owner's hand.\n[Ganking]", {

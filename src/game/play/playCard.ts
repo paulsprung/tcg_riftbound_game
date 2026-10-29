@@ -826,6 +826,13 @@ const STEPS: StepTable<PlayFrame> = [
     const p = it.controller;
     const card = s.objects[f.obj];
     const types = typesOf(card);
+    // "The next unit you play this turn …": a token unit is played too [440.2.c] (Ekko, Boy Who Shattered Time).
+    if (card.token && types.includes('unit')) {
+      for (const e of playerEffects(s, p, 'grantAccelerate')) { useEffect(s, e.id); break; }
+      for (const e of playerEffects(s, p, 'costLess')) {
+        if (((e.spec as { types?: CardType[] }).types ?? []).includes('unit')) { useEffect(s, e.id); break; }
+      }
+    }
     if (!card.token) {
       // "The next spell you play this turn costs [5] less / deals 1 Bonus Damage": used up now.
       if (types.includes('spell')) for (const e of playerEffects(s, p, 'grantRepeat')) { useEffect(s, e.id); break; }

@@ -109,7 +109,8 @@ export const UNL_SET_DEFS = [
   }),
   spell('crescent-strike', '[Action]\nChoose a battlefield and an enemy unit there. Deal 4 to that unit and 1 to each other enemy unit there.', {
     kw: [kw.action()], choose: [slot('b', bfSel()), slot('a', unitSel({ rel: 'enemy', at: { slot: 'b' } }), { harm: true })],
-    body: [deal(4, ref.slot('a')), deal(1, unitSel({ rel: 'enemy', at: { slot: 'b' }, where: [pred.notSlot('a')] }))],
+    // One instruction, one Deal action dealing 4 and 1 at the same time [418.1.d].
+    body: [{ op: 'deal', n: 4, to: ref.slot('a'), and: { n: 1, to: unitSel({ rel: 'enemy', at: { slot: 'b' }, where: [pred.notSlot('a')] }) } }],
   }),
 
   // ---- batch 2 ----
@@ -432,10 +433,10 @@ export const UNL_SET_DEFS = [
   legend('rengar-pridestalker', 'When you play a unit, give a unit +1 [M] this turn.', [
     when({ on: 'cardPlayed', by: 'you', what: { types: ['unit'] } }, prog([might(1, ref.slot('a'))], [slot('a', unitSel())])),
   ]),
-  // Like Not So Fast, only spells are counted among what can be countered (ability items aren't choosable yet).
+  // "a spell or ability": finalized ability items on the chain may be chosen too [355.9.a.2].
   spell('repulse', '[Reaction]\nChoose a friendly unit at a battlefield. Counter an enemy spell or ability that chooses it and no other friendly unit.', {
     kw: [kw.reaction()],
-    choose: [slot('u', unitSel({ rel: 'friendly', at: 'battlefield' })), slot('s', spellSel({ rel: 'enemy', where: [pred.choosesOnly('u')] }), { harm: true })],
+    choose: [slot('u', unitSel({ rel: 'friendly', at: 'battlefield' })), slot('s', spellSel({ rel: 'enemy', abilities: true, where: [pred.choosesOnly('u')] }), { harm: true })],
     body: [counter(ref.slot('s'))],
   }),
   unit('revna-the-lorekeeper', '[Ganking]\nWhen you play a spell, if you spent [4] or more, ready me.', {

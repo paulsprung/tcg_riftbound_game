@@ -35,7 +35,7 @@ import { allMask } from '../state/ids.ts';
 import { append, moveObject, pushFrame, setCopy, setField } from '../state/mut.ts';
 import { Z, locOf } from '../state/zones.ts';
 import type {
-  ChainItem, Env, GameState, Json, Loc, ObjId, Outcome, PlayerId, PowerReq, TargetRef,
+  ChainItem, Env, GameState, ItemId, Json, Loc, ObjId, Outcome, PlayerId, PowerReq, TargetRef,
 } from '../state/types.ts';
 import type { InstrAst, MoveToAst, ProgAst, RefAst, SelAst, SlotAst, ValueAst } from './ast.ts';
 import { collect, fire, placeAll, placeSelfLeave } from '../abilities/triggers.ts';
@@ -174,7 +174,7 @@ const targetsOf = (it: ChainItem, st: Step, slot: string): TargetRef[] =>
 /** What a reference names now, or null when the information is gone
     [359.3.e.12]. Targets come back with the illegal ones dropped. */
 function resolveRef(s: GameState, it: ChainItem, env: Env, r: RefAst | SelAst, st: Step, c: SelCtx):
-  { objs: ObjId[]; ignored?: Outcome } {
+  { objs: ObjId[]; items?: ItemId[]; ignored?: Outcome } {
   if (typeof r === 'object' && 'k' in r) return { objs: selectAll(s, r, c) };      // a set locked now [479.4]
   if (r === 'this') {
     const id = thisOf(s, it, env);
@@ -193,8 +193,10 @@ function resolveRef(s: GameState, it: ChainItem, env: Env, r: RefAst | SelAst, s
     const slot = st.slots.find((sl) => sl.id === r.slot)!;
     const chosen = targetsOf(it, st, r.slot);
     if (chosen.length === 0) return { objs: [] };                                // "up to" with none chosen
-    const legal = chosen.filter((t) => stillLegal(s, t, slot, c)).map((t) => (t as { id: ObjId }).id);
-    return legal.length === 0 ? { objs: [], ignored: { o: 'ignored', why: 'targets' } } : { objs: legal };
+    const ok = chosen.filter((t) => stillLegal(s, t, slot, c));
+    const legal = ok.flatMap((t) => (t.k === 'obj' ? [t.id] : []));
+    const items = ok.flatMap((t) => (t.k === 'item' ? [t.id] : []));   // "a spell or ability": ability items [355.9.a.2]
+    return ok.length === 0 ? { objs: [], ignored: { o: 'ignored', why: 'targets' } } : { objs: legal, ...(items.length > 0 ? { items } : {}) };
   }
   if ('bound' in r) return { objs: boundObjs(env, r.bound).filter((id) => s.objects[id]) };
   if ('now' in r) {
@@ -543,10 +545,16 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
       if (ins.op === 'stun' || (ins.op === 'might' && ins.sign < 0)) objs = immune(objs);
       if (objs.length === 0) return negated;
       if (ins.op === 'deal') {
-        const n = val((ins as Extract<InstrAst, { op: 'deal' }>).n);
+        const di = ins as Extract<InstrAst, { op: 'deal' }>;
+        const n = val(di.n);
         if (n <= 0) return negated;                                  // no Deal, no bonus [715.4]
-        deal(s, x, objs.map((to) => ({ to, n: n + bonusDamage(s, it, to) })), { sources: attribution, by: p, combat: false,
-          rule: '418', item: it.id, spell: it.kind === 'card' });
+        const hits = objs.map((to) => ({ to, n: n + bonusDamage(s, it, to) }));
+        if (di.and) {                                                // "… and 1 to each other …": the same Deal [418.1.d]
+          const r2 = ref(di.and.to);
+          const n2 = val(di.and.n);
+          if (!r2.ignored && n2 > 0) for (const to of r2.objs.filter((id) => onBoard(s, id) && !objs.includes(id))) hits.push({ to, n: n2 + bonusDamage(s, it, to) });
+        }
+        deal(s, x, hits, { sources: attribution, by: p, combat: false, rule: '418', item: it.id, spell: it.kind === 'card' });
         const card = it.obj !== undefined ? s.objects[it.obj]?.card : undefined;   // "each time this spell has dealt damage this turn"
         if (card !== undefined) setField(s, s.log, 'cardDeals', [...(s.log.cardDeals ?? []), card]);
       }
@@ -1028,12 +1036,14 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
     case 'counter': {
       const r = ref(ins.what);
       if (r.ignored) return r.ignored;
-      const target = s.chain.find((c2) => c2.obj !== undefined && r.objs.includes(c2.obj));
+      const target = s.chain.find((c2) => c2.obj !== undefined && r.objs.includes(c2.obj))
+        ?? s.chain.find((c2) => c2.obj === undefined && (r.items ?? []).includes(c2.id));   // an ability item [426]
       if (!target) return negated;
       // "This can't be countered"; Mel: "Your spells and abilities can't be countered".
-      if ((cardDef(s.objects[target.obj!].def)?.abilities ?? []).some((a) => a.kind === 'static' && a.spec.s === 'cantBeCountered' && !a.spec.yours)
+      if ((target.obj !== undefined && (cardDef(s.objects[target.obj].def)?.abilities ?? []).some((a) => a.kind === 'static'
+        && a.spec.s === 'cantBeCountered' && !a.spec.yours))
         || staticsFor(s, null, 'cantBeCountered').some(({ st, spec }) => spec.yours && st.ctl === target.controller)) return negated;
-      lookBack(s, it, [target.obj!]);
+      if (target.obj !== undefined) lookBack(s, it, [target.obj]);
       counterItem(s, x, target, ins.to);
       return ok;
     }

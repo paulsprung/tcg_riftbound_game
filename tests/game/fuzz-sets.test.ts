@@ -20,8 +20,9 @@ import { randomDeck } from './helpers/randomDeck.ts';
  */
 
 const SETS = ['ogn', 'sfd', 'unl', 'rad', 'ven'];
-/** Sets with cards left undefined (unsure, docs/CARDS-UNSURE.md): their decks take only executable cards. */
-const PARTIAL = ['rad', 'ven'];
+/** Sets with cards left undefined: their decks take only executable cards (none since the rulings pass,
+    docs/CARD-RULINGS.md). */
+const PARTIAL: string[] = [];
 const GAMES = Number(process.env.FUZZ_SET_GAMES ?? 8);
 const AI_GAMES = Number(process.env.FUZZ_SET_AI ?? 2);
 

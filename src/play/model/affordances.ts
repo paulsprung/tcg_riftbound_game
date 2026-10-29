@@ -169,6 +169,7 @@ function buttonLabel(d: Decision, key: string, draft: readonly string[], names: 
   if (d.kind === 'showOff' && key === 'no') return 'Don\'t show off';
   if (d.kind === 'optionalCost') return key === 'yes' ? 'Pay it' : 'Don\'t';
   if (d.kind === 'applyReplacement') return key === 'yes' ? 'Instead' : 'Keep it';
+  if (k?.head === 't' && k.item !== undefined) return 'The ability on the chain';
   if (k?.head === 't') return name;
   return META_LABEL[key] ?? key;
 }

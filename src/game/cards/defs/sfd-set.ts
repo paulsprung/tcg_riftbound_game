@@ -466,7 +466,8 @@ export const SFD_SET_DEFS = [
     abilities: [costAbility({ discount: { energy: 2, power: 1, times: val.holdPoints } })],
   }),
   spell('not-so-fast', '[Reaction]\nCounter an enemy spell or ability that chooses a friendly unit or gear.', {
-    kw: [kw.reaction()], choose: [slot('a', spellSel({ rel: 'enemy', where: [pred.choosesFriendly] }), { harm: true })], body: [counter(ref.slot('a'))],
+    kw: [kw.reaction()], choose: [slot('a', spellSel({ rel: 'enemy', abilities: true, where: [pred.choosesFriendly] }), { harm: true })],
+    body: [counter(ref.slot('a'))],
   }),
   legend('ornn-fire-below-the-mountain', '[Reaction][>] [E]: [Add] [A]. Use only to play gear or use gear abilities.', [
     activated({ exhaustSelf: true }, prog([{ op: 'add', power: 1, onlyFor: 'gear' }]), { timing: 'reaction', isAdd: true }),

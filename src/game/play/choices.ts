@@ -13,7 +13,7 @@ import { K, parseKey, type Option } from '../core/decisions.ts';
 import { answer, ask, type RunCtx, type StepOut } from '../core/frames.ts';
 import { setField } from '../state/mut.ts';
 import type { ChainItem, Frame, GameState, Loc, ObjId, PlayerId, TargetRef } from '../state/types.ts';
-import { slotCandidates, slotLocsOf, slotMax, slotMin, targetRef, type SelCtx } from '../rules/targets.ts';
+import { slotCandidates, slotItemCandidates, slotLocsOf, slotMax, slotMin, targetRef, type SelCtx } from '../rules/targets.ts';
 import { evalCond, type CondCtx } from '../rules/conditions.ts';
 import { isType, mightOf } from '../rules/chars.ts';
 import { staticsFor } from '../layers/derive.ts';
@@ -68,7 +68,7 @@ export function modeLegal(s: GameState, m: ModeAst, it: ChoiceCtx): boolean {
     if (sl.dest) return sl.dest.to !== 'open' || s.bfs.some((b) => b.controller === null    // an open battlefield [170.11.c]
       && !b.here.some((id) => isType(s.objects[id], 'unit')));
     return !slotActive(s, sl, it) || slotMin(sl) === 0 || dependent(sl) || (sl.if !== undefined && sl.if.c !== 'xp')
-      || candidatesFor(s, sl, it, c).length >= slotMin(sl);
+      || candidatesFor(s, sl, it, c).length + slotItemCandidates(s, sl, c).length >= slotMin(sl);
   });
 }
 
@@ -80,7 +80,7 @@ export function choicesPossible(s: GameState, prog: ProgAst | undefined, it: Cho
   const c = { controller: it.controller, source: it.source ?? null };
   // A slot under a condition that may still change ("If you paid the additional cost, choose … instead") is judged as it is chosen.
   if (!(prog.choose ?? []).every((sl) => sl.dest || !slotActive(s, sl, it) || slotMin(sl) === 0 || dependent(sl)
-    || (sl.if !== undefined && sl.if.c !== 'xp') || candidatesFor(s, sl, it, c).length >= slotMin(sl))) return false;
+    || (sl.if !== undefined && sl.if.c !== 'xp') || candidatesFor(s, sl, it, c).length + slotItemCandidates(s, sl, c).length >= slotMin(sl))) return false;
   if (prog.modes) return prog.modes.of.filter((m) => modeLegal(s, m, it)).length >= prog.modes.pick;
   return true;
 }
@@ -255,17 +255,21 @@ export function chooseNext(s: GameState, f: Frame, x: RunCtx, it: ChainItem, pro
       && (slot.sumMightMax === undefined || total + Math.max(0, mightOf(s, id)) <= slot.sumMightMax)
       && (!slot.oneEachLoc || !chosen.some((u) => s.objects[u] && JSON.stringify(locOf(s.objects[u])) === JSON.stringify(locOf(s.objects[id]))))
       && leavesChoices(s, all, slot, id, cctx, c));
+    // "a spell or ability": finalized ability items too [355.9.a.2].
+    const chosenItems = (ex.targets[slot.id] ?? []).flatMap((t) => (t.k === 'item' ? [t.id] : []));
+    const items = slotItemCandidates(s, slot, c).filter((id) => !chosenItems.includes(id));
     const enough = chosen.length >= slotMin(slot);
-    if (chosen.length >= slotMax(slot) || (enough && cands.length === 0)) {
+    if (chosen.length >= slotMax(slot) || (enough && cands.length === 0 && items.length === 0)) {
       setField(s, it.play.choices.asPlayed, done(slot.id), true);
       return 'continue';
     }
-    if (!enough && cands.length === 0) return o.onImpossible();
+    if (!enough && cands.length === 0 && items.length === 0) return o.onImpossible();
     if (key === undefined) {
       const options: Option[] = cands.map((id: ObjId) => {
         const d = o.deflect?.(targetRef(s, id)) ?? 0;
         return { key: K.t(id), refs: [{ obj: id }], ...(d > 0 ? { meta: { deflect: d } } : {}) };
       });
+      for (const id of items) options.push({ key: K.tItem(id), refs: [{ item: id }] });
       if (enough) options.push({ key: K.done });
       return ask(s, f, x, {
         player: it.controller, kind: 'target',
@@ -279,7 +283,12 @@ export function chooseNext(s: GameState, f: Frame, x: RunCtx, it: ChainItem, pro
       setField(s, it.play.choices.asPlayed, done(slot.id), true);
       return 'continue';
     }
-    const id = parseKey(key)!.obj!;
+    const pk = parseKey(key)!;
+    if (pk.item !== undefined) {
+      setField(s, ex.targets, slot.id, [...(ex.targets[slot.id] ?? []), { k: 'item', id: pk.item }]);
+      return 'continue';
+    }
+    const id = pk.obj!;
     setField(s, ex.targets, slot.id, [...(ex.targets[slot.id] ?? []), targetRef(s, id)]);
     return 'continue';
   }

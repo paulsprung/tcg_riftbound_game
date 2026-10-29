@@ -52,6 +52,16 @@ export function randomDeck(set: string, seed: number, o: { executable?: boolean 
       name: `${set} random ${seed}`, source: 'generated', legend: legend.id, chosenChampion: champion.id,
       main: [...count.entries()].map(([def, n]) => ({ def, n })), runes, battlefields: bfs,
     };
+    // Neeko, Blending In: up to 3 more legends, chosen while building the deck [103.1] (any of them, names all different).
+    if (count.has('neeko-blending-in')) {
+      const others = ORACLE.cards.filter((c) => c.types.includes('legend') && c.name !== legend.name);
+      const picked: OracleCard[] = [];
+      for (let t = 0; picked.length < 3 && t < 50; t++) {
+        const c = pickOne(others);
+        if (!picked.some((x) => x.name === c.name)) picked.push(c);
+      }
+      deck.extra = { 'neeko-blending-in': picked.map((c) => c.id) };
+    }
     if (isLegalDeck(validateDeck(deck, 'casual', { format: null }))) return deck;
   }
   return null;

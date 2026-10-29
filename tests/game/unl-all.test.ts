@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { hasKeyword, mightOf } from '../../src/game/rules/chars.ts';
 import { moveObject, setField } from '../../src/game/state/mut.ts';
+import { paymentPlans } from '../../src/game/rules/resources.ts';
 import { moveDestinations } from '../../src/game/rules/move.ts';
 import { act, base, bf, control, evs, inHand, inTrash, keys, put, ready, reask, runes } from './helpers/scenario.ts';
 import { cast, drive, handSize, hide, moveTo, nextTurn, onBoard, opt } from './helpers/cards.ts';
@@ -376,14 +377,17 @@ describe('Unleashed set: batch 2', () => {
     expect(defsIn(g, 'hand')).toContain('premonition');
   });
 
-  it('Diana, Scorn of the Moon: [E]: add [1], only during showdowns', () => {
+  it('Diana, Scorn of the Moon: [E]: add [1] any time; the Energy is spent only during showdowns', () => {
     const g = tbl(9642, { legends: ['diana-scorn-of-the-moon'] });
     const l = g.s.players[0].legend[0];
+    runes(g, 0, []);
     reask(g);
-    expect(keys(g)).not.toContain(`act:${l}#0`);
-    moveTo(g, [put(g, 'shipyard-skulker', 0, base(0))], 0);
-    expect(g.s.showdown).not.toBeNull();
-    expect(keys(g)).toContain(`act:${l}#0`);
+    expect(keys(g)).toContain(`act:${l}#0`);                         // usable outside a showdown too (CARD-RULINGS)
+    act(g, `act:${l}#0`); drive(g);
+    expect(g.s.players[0].pool.restricted).toEqual([{ amount: 1, kind: 'energy', onlyFor: 'showdown', source: 'diana-scorn-of-the-moon' }]);
+    expect(paymentPlans(g.s, 0, { energy: 1, power: [] })).toHaveLength(0);
+    setField(g.s, g.s, 'showdown', { bf: 0, kind: 'nonCombat' });
+    expect(paymentPlans(g.s, 0, { energy: 1, power: [] })).toHaveLength(1);
   });
 
   it("Disposal Order: recycle up to 3 cards from opponents' trashes, or draw 1", () => {
@@ -446,7 +450,7 @@ describe('Unleashed set: batch 2', () => {
     const a = put(g, 'mountain-drake', 1, base(1));
     const b = foe(g, 'mountain-drake');
     const c = put(g, 'mountain-drake', 1, bf(1));
-    cast(g, 'elder-dragon', [`pick:${a}`, `pick:${b}`]);
+    cast(g, 'elder-dragon', [`t:${a}`, `t:${b}`]);
     expect(g.s.objects[a]).toBeUndefined();
     expect(g.s.objects[b]).toBeUndefined();
     expect(g.s.objects[c]).toBeDefined();

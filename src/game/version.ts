@@ -5,4 +5,4 @@
  * differently: a rules fix, a new default in RulesConfig, a changed option
  * order.
  */
-export const ENGINE_VERSION = '0.7.0-ven';
+export const ENGINE_VERSION = '0.8.0-rulings';

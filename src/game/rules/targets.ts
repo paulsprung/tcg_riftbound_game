@@ -11,7 +11,7 @@
  */
 import type { LocSelAst, PredAst, SelAst, SlotAst } from '../dsl/ast.ts';
 import { locOf } from '../state/zones.ts';
-import type { GameObject, GameState, Loc, ObjId, PlayerId, TargetRef, TokenId } from '../state/types.ts';
+import type { ChainItem, GameObject, GameState, ItemId, Loc, ObjId, PlayerId, TargetRef, TokenId } from '../state/types.ts';
 import { cardDef as cardDefOf } from '../cards/registry.ts';
 import { energyCostOf, hasKeyword, isType, mightOf, tagsOf } from './chars.ts';
 import { findCard } from '../cards/oracle.ts';
@@ -152,8 +152,7 @@ export function predOk(s: GameState, p: PredAst, id: ObjId, c: SelCtx): boolean 
     case 'inZone': return o.zone.z === p.z;
     case 'choosesFriendly': {
       const it = s.chain.find((i) => i.obj === id);
-      return !!it && it.play.choices.executions.some((ex) => Object.values(ex.targets).flat().some((t) => t.k === 'obj'
-        && s.objects[t.id]?.controller === c.controller && (isType(s.objects[t.id], 'unit') || isType(s.objects[t.id], 'gear'))));
+      return !!it && itemChoosesFriendly(s, it, c);
     }
     case 'linked': return o.links.some((l) => l.group === p.group);
     case 'rel': return p.rel === 'friendly' ? o.controller === c.controller : o.controller !== null && o.controller !== c.controller;
@@ -195,13 +194,7 @@ export function predOk(s: GameState, p: PredAst, id: ObjId, c: SelCtx): boolean 
     }
     case 'choosesOnly': {                                            // "a spell … that chooses it and no other friendly unit"
       const it = s.chain.find((i) => i.obj === id);
-      if (!it) return false;
-      const chosen = it.play.choices.executions.flatMap((ex) => Object.values(ex.targets).flat())
-        .flatMap((t) => (t.k === 'obj' && s.objects[t.id] ? [t.id] : []));
-      const friendly = [...new Set(chosen.filter((u) => isType(s.objects[u], 'unit') && s.objects[u].controller === c.controller))];
-      const want = c.slotObjs?.[p.slot]?.[0];
-      if (want === undefined) return friendly.length === 1;          // not chosen yet: some single friendly unit
-      return friendly.length === 1 && friendly[0] === want;
+      return !!it && itemChoosesOnly(s, it, p.slot, c);
     }
     case 'empowered': return o.empowered > 0;
     case 'empoweredAtLeast': return o.empowered >= p.n;
@@ -328,6 +321,38 @@ export function slotLocsOf(s: GameState, ex: { targets: Record<string, TargetRef
 }
 
 /** The legal choices for a target slot [355.8]. */
+/** A chain item chose a friendly unit or gear (Not So Fast). */
+function itemChoosesFriendly(s: GameState, it: ChainItem, c: SelCtx): boolean {
+  return it.play.choices.executions.some((ex) => Object.values(ex.targets).flat().some((t) => t.k === 'obj'
+    && s.objects[t.id]?.controller === c.controller && (isType(s.objects[t.id], 'unit') || isType(s.objects[t.id], 'gear'))));
+}
+
+/** A chain item chooses what the slot chose and no other friendly unit (Repulse). */
+function itemChoosesOnly(s: GameState, it: ChainItem, slot: string, c: SelCtx): boolean {
+  const chosen = it.play.choices.executions.flatMap((ex) => Object.values(ex.targets).flat())
+    .flatMap((t) => (t.k === 'obj' && s.objects[t.id] ? [t.id] : []));
+  const friendly = [...new Set(chosen.filter((u) => isType(s.objects[u], 'unit') && s.objects[u].controller === c.controller))];
+  const want = c.slotObjs?.[slot]?.[0];
+  if (want === undefined) return friendly.length === 1;              // not chosen yet: some single friendly unit
+  return friendly.length === 1 && friendly[0] === want;
+}
+
+/** Whether a finalized ability item on the chain fits a "spell or ability" selector [355.9.a.2]. */
+export function itemMatches(s: GameState, sel: SelAst, item: ItemId, c: SelCtx): boolean {
+  const it = s.chain.find((i) => i.id === item);
+  if (!sel.abilities || sel.k !== 'spell' || !it || it.obj !== undefined || it.status !== 'finalized' || it.isAdd) return false;
+  if (sel.rel === 'friendly' && it.controller !== c.controller) return false;
+  if (sel.rel === 'enemy' && it.controller === c.controller) return false;
+  return (sel.where ?? []).every((p) => (p.p === 'choosesFriendly' ? itemChoosesFriendly(s, it, c)
+    : p.p === 'choosesOnly' ? itemChoosesOnly(s, it, p.slot, c) : false));
+}
+
+/** The ability items a slot may choose ("Counter an enemy spell or ability that …"). */
+export function slotItemCandidates(s: GameState, slot: SlotAst, c: SelCtx): ItemId[] {
+  if (!slot.sel.some((sel) => sel.abilities)) return [];
+  return s.chain.filter((i) => slot.sel.some((sel) => itemMatches(s, sel, i.id, c))).map((i) => i.id);
+}
+
 export function slotCandidates(s: GameState, slot: SlotAst, c: SelCtx): ObjId[] {
   const ids = [...new Set(slot.sel.flatMap((sel) => pool(s, sel)))];
   return ids.filter((id) => slot.sel.some((sel) => matches(s, sel, id, c)));
@@ -346,6 +371,7 @@ export function targetRef(s: GameState, id: ObjId): TargetRef {
     object, in the same kind of zone, and it still fits the slot
     [359.3.e.2–4]. */
 export function stillLegal(s: GameState, t: TargetRef, slot: SlotAst, c: SelCtx): boolean {
+  if (t.k === 'item') return slot.sel.some((sel) => itemMatches(s, sel, t.id, c));
   if (t.k !== 'obj') return false;
   const o = s.objects[t.id];
   // A move between locations keeps the object [124] ("Move a friendly unit and ready it").

@@ -480,6 +480,9 @@ export interface SelAst {
   where?: PredAst[];
   /** "other": not the source itself [355.9.c]. */
   other?: true;
+  /** k:'spell': "a spell or ability": finalized ability items on the chain may be chosen too [355.9.a.2]
+      (rel and the predicates choosesFriendly / choosesOnly apply to them). */
+  abilities?: true;
 }
 /** 'here': where the item's source is [359.3.f.2]; { slot }: the
     battlefield a slot chose ("friendly units there"); 'eventBf': the
@@ -682,7 +685,9 @@ export type PlayerEffectAst =
 /** `id` names an instruction for "if you do" (CondAst 'did'); `link` makes
     it linked to another, ignored if that one was [359.3.e.14.a]. */
 export type InstrAst = { id?: string; link?: string } & (
-  | { op: 'deal'; n: ValueAst; to: RefAst | SelAst }                             // [418]
+  | { op: 'deal'; n: ValueAst; to: RefAst | SelAst;                             // [418]
+      /** "Deal 4 to that unit and 1 to each other enemy unit there": more units, other amounts, the same Deal action [418.1.d]. */
+      and?: { n: ValueAst; to: RefAst | SelAst } }
   | { op: 'draw'; n: ValueAst; from?: RefAst }                                   // [414]; from: "draw one of them" [414.1]
   | { op: 'banish' | 'kill' | 'stun' | 'buff'; what: RefAst | SelAst;           // [428], [429], [424], [427]
       /** banish: "banished with this" [395–398], a link group. */
