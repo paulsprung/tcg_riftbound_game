@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { InspectTarget } from '../card/Inspector.tsx';
+import { Icon } from '../lobby/icons.tsx';
 import { gradedCounts, useCollection } from '../collection/store.ts';
 import { VARIANT_LABEL } from '../data/cardInfo.ts';
 import type { Card, CardDb, Rarity } from '../data/types.ts';
@@ -55,6 +56,7 @@ export function CollectionView({ db, onInspect, rarities, showUnowned }: {
         <h1>Your Collection <span className="muted small">{total.toLocaleString('en-US')} cards</span></h1>
         <div className="lb-tools">
           <div className="lb-search">
+            <Icon name="search" size={16} />
             <input className="input" type="search" placeholder="Search cards…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search cards" />
           </div>
           <select className="input" value={sort} onChange={(e) => setSort(e.target.value as Sort)} aria-label="Sort">

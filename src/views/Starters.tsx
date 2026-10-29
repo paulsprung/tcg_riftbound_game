@@ -20,7 +20,8 @@ export function Starters({ db }: { db: CardDb }) {
 
   const pick = (s: StarterChoice) => {
     setBusy(s.id);
-    collection.grantStarter(s.id, s.cards, { [s.booster]: 1 }, 0);
+    // the preview starts with some coins, so the shop can be tried right away
+    collection.grantStarter(s.id, s.cards, { [s.booster]: 1 }, import.meta.env.VITE_PREVIEW ? 1200 : 0);
     setBusy(null);
   };
 

@@ -7,6 +7,7 @@ import type { Card, CardDb } from '../data/types.ts';
 import { DEMO, DEMO_PROFILE } from '../lobby/demo.ts';
 import { Lobby } from '../lobby/Lobby.tsx';
 import { useSession } from '../net/session.ts';
+import { rank } from '../showcase/rank.ts';
 import { Slab } from '../showcase/Slab.tsx';
 import type { Slab as SlabData } from '../showcase/grading.ts';
 import { HeroBanner } from './HeroBanner.tsx';
@@ -33,6 +34,19 @@ export function ProfileView({ db, onInspect }: { db: CardDb; onInspect: (t: Insp
     const o = own.cards[item.cardId];
     return card && o && (item.foil ? o.foil : o.normal) > 0 ? [{ key: `r${item.cardId}${item.foil}`, card, slab: null, foil: item.foil }] : [];
   }).slice(0, 4);
+
+  // the preview shows a few of your best cards when the showcase is still empty
+  const samples = useMemo((): Piece[] => {
+    if (!DEMO || pieces.length > 0) return [];
+    const out: Piece[] = [];
+    for (const [id, o] of Object.entries(own.cards)) {
+      const card = byId.get(id);
+      if (!card || card.type === 'Rune' || card.type === 'Battlefield' || o.normal + o.foil < 1) continue;
+      out.push({ key: `d${id}`, card, slab: null, foil: o.foil > 0 });
+    }
+    return out.sort((a, b) => rank(b.card, b.foil) - rank(a.card, a.foil)).slice(0, 3);
+  }, [own.cards, byId, pieces.length]);
+  const shown = pieces.length > 0 ? pieces : samples;
 
   const collected = useMemo(() => {
     const ids = new Set(Object.entries(own.cards).filter(([, o]) => o.normal + o.foil > 0).map(([id]) => id));
@@ -69,7 +83,7 @@ export function ProfileView({ db, onInspect }: { db: CardDb; onInspect: (t: Insp
 
         <p className="lb-label profile__label">Card showcase</p>
         <div className="profile__showcase">
-          {pieces.map((p) => (
+          {shown.map((p) => (
             <figure key={p.key} className="profile__piece">
               {p.slab ? (
                 <Slab slab={p.slab} card={p.card} width="100%" imageWidth={360}

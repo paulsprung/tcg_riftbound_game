@@ -27,7 +27,9 @@ function Scene({ card, active }: { card: Card; active: boolean }) {
  * The big banner on Home. Legend art that drifts slowly, embers rising, and
  * a few legends in turn. Still when effects are off.
  */
-export function HeroBanner({ db, children, compact = false }: { db: CardDb; children?: React.ReactNode; compact?: boolean }) {
+export function HeroBanner({ db, children, footer, compact = false, bleed = false }: {
+  db: CardDb; children?: React.ReactNode; footer?: React.ReactNode; compact?: boolean; bleed?: boolean;
+}) {
   const fx = useEffects();
   const stars = useMemo(() => {
     const byName = new Map(db.cards.filter((c) => c.type === 'Legend' && c.variant === 'base').map((c) => [c.name, c]));
@@ -47,7 +49,7 @@ export function HeroBanner({ db, children, compact = false }: { db: CardDb; chil
   const [name, title] = star ? star.name.split(/,\s*(.+)/) : ['', ''];
 
   return (
-    <section className={`hero${compact ? ' hero--compact' : ''}`} data-fx={fx}>
+    <section className={`hero${compact ? ' hero--compact' : ''}${bleed ? ' hero--bleed' : ''}`} data-fx={fx}>
       {stars.map((c, k) => <Scene key={c.id} card={c} active={k === i} />)}
       <div className="hero__shade" aria-hidden />
       <div className="hero__embers" aria-hidden>
@@ -64,6 +66,7 @@ export function HeroBanner({ db, children, compact = false }: { db: CardDb; chil
         </div>
       </div>}
       {children && <div className="hero__actions">{children}</div>}
+      {footer && <div className="hero__foot">{footer}</div>}
     </section>
   );
 }

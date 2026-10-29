@@ -95,39 +95,56 @@ body::before {
 /* ------------------------------------------------------------ controls -- */
 
 .btn {
+  --cut: 7px; --edge: var(--gold-lo);
+  position: relative; overflow: hidden; isolation: isolate;
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  padding: 11px 20px;
-  border-radius: 2px;
-  border: 1px solid var(--gold-lo);
-  background: linear-gradient(180deg, #1e2832, #0d141c);
-  box-shadow: inset 0 0 0 1px rgba(1, 10, 19, .85);
+  padding: 12px 22px;
+  border: 1px solid var(--edge);
+  background: linear-gradient(180deg, #1c2a3a, #0b121b);
+  clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
   color: #cdbe91;
   font: 700 12px/1 var(--font-ui);
-  letter-spacing: .12em;
+  letter-spacing: .14em;
   text-transform: uppercase;
   text-decoration: none;
   cursor: pointer;
-  transition: border-color .15s, color .15s, box-shadow .15s, filter .15s;
+  transition: color .15s, filter .15s, --edge .15s;
 }
-.btn:hover:not(:disabled) { border-color: var(--gold); color: var(--gold-hi); box-shadow: inset 0 0 0 1px rgba(1, 10, 19, .85), 0 0 14px rgba(200, 170, 110, .28); }
+/* the two cut corners get their edge line, and a light slides across on hover */
+.btn::after {
+  content: ""; position: absolute; inset: -1px; pointer-events: none; z-index: 1;
+  background:
+    linear-gradient(to bottom right, transparent calc(50% - .8px), var(--edge) calc(50% - .8px), var(--edge) calc(50% + .8px), transparent calc(50% + .8px)) 0 0 / var(--cut) var(--cut) no-repeat,
+    linear-gradient(to bottom right, transparent calc(50% - .8px), var(--edge) calc(50% - .8px), var(--edge) calc(50% + .8px), transparent calc(50% + .8px)) 100% 100% / var(--cut) var(--cut) no-repeat;
+}
+.btn::before {
+  content: ""; position: absolute; top: 0; bottom: 0; left: -70%; width: 45%; z-index: -1; pointer-events: none;
+  background: linear-gradient(100deg, transparent, rgba(240, 230, 210, .26), transparent); transform: skewX(-20deg); transition: left .6s ease;
+}
+.btn:hover:not(:disabled)::before { left: 130%; }
+.btn:hover:not(:disabled) { --edge: var(--gold); border-color: var(--gold); color: var(--gold-hi); filter: brightness(1.12); }
 .btn:disabled { opacity: .42; cursor: not-allowed; }
-.btn:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+.btn:focus-visible { outline: 2px solid var(--teal); outline-offset: 3px; }
 .btn--primary {
-  background: linear-gradient(180deg, #d9bd7f, #a07f3a 55%, #8a6a2c);
-  color: #0a1428; border-color: #f0e6d2; text-shadow: 0 1px 0 rgba(255, 255, 255, .25);
+  --edge: #f0e6d2;
+  background: linear-gradient(180deg, #e2c887, #b08a40 52%, #8a6a2c);
+  color: #0a1428; text-shadow: 0 1px 0 rgba(255, 255, 255, .3);
 }
-.btn--primary:hover:not(:disabled) { color: #0a1428; filter: brightness(1.1); }
+.btn--primary:hover:not(:disabled) { color: #0a1428; }
 /* The big call to action: hextech teal with a gold frame, as the client's Play. */
 .btn--cta {
-  background: linear-gradient(180deg, #0f4452, #062a36);
-  border-color: var(--gold); color: #cffcf6; padding: 14px 30px; font-size: 13px;
-  box-shadow: inset 0 0 0 1px rgba(1, 10, 19, .85), 0 0 18px rgba(10, 200, 185, .28);
+  --edge: var(--gold); --cut: 10px;
+  background: linear-gradient(180deg, #14596a, #07303c 60%, #052732); border-color: var(--gold); color: #d8fffa; padding: 15px 34px; font-size: 13px; letter-spacing: .2em;
+  box-shadow: inset 0 0 18px rgba(10, 200, 185, .3), inset 0 1px 0 rgba(255, 255, 255, .12);
+  animation: cta-breathe 3.2s ease-in-out infinite;
 }
-.btn--cta:hover:not(:disabled) { color: #fff; border-color: var(--gold-hi); box-shadow: inset 0 0 0 1px rgba(1, 10, 19, .85), 0 0 26px rgba(10, 200, 185, .55); }
+.btn--cta:hover:not(:disabled) { color: #fff; --edge: var(--gold-hi); border-color: var(--gold-hi); }
+@keyframes cta-breathe { 50% { box-shadow: inset 0 0 28px rgba(10, 200, 185, .55), inset 0 1px 0 rgba(255, 255, 255, .18); } }
+@media (prefers-reduced-motion: reduce) { .btn--cta { animation: none; } }
 .btn--ghost { background: transparent; }
-.btn--danger { background: linear-gradient(180deg, #8f2a3a, #5a1623); border-color: #c8333a; color: #ffd9dc; }
+.btn--danger { --edge: #c8333a; background: linear-gradient(180deg, #8f2a3a, #5a1623); border-color: #c8333a; color: #ffd9dc; }
 .confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; }
-.btn--small { padding: 8px 12px; font-size: 11px; }
+.btn--small { --cut: 5px; padding: 9px 14px; font-size: 11px; }
 .icon-btn { border: 1px solid var(--gold-lo); background: rgba(1, 10, 19, .6); color: var(--text); width: 34px; height: 34px; border-radius: 50%; cursor: pointer; font-size: 15px; }
 .icon-btn:hover { border-color: var(--gold); }
 

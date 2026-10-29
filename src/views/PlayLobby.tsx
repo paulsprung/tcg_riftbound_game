@@ -5,19 +5,20 @@ import { useCollection } from '../collection/store.ts';
 import type { CardDb } from '../data/types.ts';
 import { loadStarters, type StarterChoice } from '../economy/starter.ts';
 import { Lobby, RankCard, SideLink, SideTitle } from '../lobby/Lobby.tsx';
+import type { IconName } from '../lobby/icons.tsx';
 import { PlayView } from '../play/PlayView.tsx';
 
 type ModeId = 'ranked' | 'casual' | 'custom' | 'tournament' | 'computer' | 'tutorial';
 
-const ONLINE: { id: ModeId; icon: string; label: string; blurb: string; match: string }[] = [
-  { id: 'ranked', icon: '🏆', label: 'Ranked', match: '1v1 Ranked Match', blurb: 'Climb the ladder. Wins earn Rank Points, coins and XP.' },
-  { id: 'casual', icon: '🎮', label: 'Casual', match: '1v1 Casual Match', blurb: 'Unranked games with your deck. Win to earn coins and XP.' },
-  { id: 'custom', icon: '⚙', label: 'Custom', match: 'Private Lobby', blurb: 'Invite a friend to a private match. Every card in the game is available, no deck needed.' },
-  { id: 'tournament', icon: '♛', label: 'Tournament', match: 'Bracket Tournament', blurb: 'Enter a bracket and play for exclusive prizes.' },
+const ONLINE: { id: ModeId; icon: IconName; label: string; blurb: string; match: string }[] = [
+  { id: 'ranked', icon: 'trophy', label: 'Ranked', match: '1v1 Ranked Match', blurb: 'Climb the ladder. Wins earn Rank Points, coins and XP.' },
+  { id: 'casual', icon: 'gamepad', label: 'Casual', match: '1v1 Casual Match', blurb: 'Unranked games with your deck. Win to earn coins and XP.' },
+  { id: 'custom', icon: 'sliders', label: 'Custom', match: 'Private Lobby', blurb: 'Invite a friend to a private match. Every card in the game is available, no deck needed.' },
+  { id: 'tournament', icon: 'crown', label: 'Tournament', match: 'Bracket Tournament', blurb: 'Enter a bracket and play for exclusive prizes.' },
 ];
-const OFFLINE: { id: ModeId; icon: string; label: string }[] = [
-  { id: 'computer', icon: '🤖', label: 'vs Computer' },
-  { id: 'tutorial', icon: '📖', label: 'Tutorial' },
+const OFFLINE: { id: ModeId; icon: IconName; label: string }[] = [
+  { id: 'computer', icon: 'chip', label: 'vs Computer' },
+  { id: 'tutorial', icon: 'book', label: 'Tutorial' },
 ];
 
 /** Online modes need the server: the page is built, the queue waits for it. */

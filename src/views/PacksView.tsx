@@ -44,8 +44,8 @@ export function PacksView({ db, onInspect }: { db: CardDb; onInspect: (t: Inspec
   const side = (
     <>
       <SideTitle>SHOP</SideTitle>
-      <SideLink href="#shop" icon="🛍" active={!market}>Store</SideLink>
-      <SideLink href="#shop/market" icon="⚖" active={market} soon>Marketplace</SideLink>
+      <SideLink href="#shop" icon="bag" active={!market}>Store</SideLink>
+      <SideLink href="#shop/market" icon="scale" active={market} soon>Marketplace</SideLink>
       <div className="lb-side__gap" />
       <SideTitle>YOUR BALANCE</SideTitle>
       <div className="lb-balance">
@@ -101,7 +101,7 @@ export function PacksView({ db, onInspect }: { db: CardDb; onInspect: (t: Inspec
             {sets.map((s) => (
               <div key={s.id} className="pack-shelf__item">
                 <PackWrapper set={s.info} style={s.style} hero={heroCard(s.cards, s.style)}
-                  width={Math.round(218 * (packArt(s.id)?.aspect ?? 1 / 1.72))}
+                  width={Math.round(192 * (packArt(s.id)?.aspect ?? 1 / 1.72))}
                   onClick={() => ((own.packs[s.id] ?? 0) > 0 ? openPack(s.id) : buy(s.id, 1))} />
                 <div className="pack-shelf__label">
                   <strong>{s.info.name}</strong>

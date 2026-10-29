@@ -32,10 +32,10 @@ export function CollectionHub({ db, tab, onInspect }: { db: CardDb; tab: Collect
   const side = (
     <>
       <SideTitle>INVENTORY</SideTitle>
-      <SideLink href="#collection" icon="▤" active={tab === 'cards'}>Collection</SideLink>
-      <SideLink href="#collection/packs" icon="▣" active={tab === 'packs'}>Packs{unopened > 0 ? ` (${unopened})` : ''}</SideLink>
-      <SideLink href="#collection/decks" icon="❏" active={tab === 'decks'}>Decks</SideLink>
-      <SideLink href="#collection/showcase" icon="★" active={tab === 'showcase'}>Showcase</SideLink>
+      <SideLink href="#collection" icon="cards" active={tab === 'cards'}>Collection</SideLink>
+      <SideLink href="#collection/packs" icon="pack" active={tab === 'packs'}>Packs{unopened > 0 ? ` (${unopened})` : ''}</SideLink>
+      <SideLink href="#collection/decks" icon="deck" active={tab === 'decks'}>Decks</SideLink>
+      <SideLink href="#collection/showcase" icon="star" active={tab === 'showcase'}>Showcase</SideLink>
 
       {tab === 'cards' && (
         <>

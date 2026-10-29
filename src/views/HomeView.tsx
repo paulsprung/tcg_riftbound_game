@@ -73,13 +73,29 @@ export function HomeView({ db }: { db: CardDb }) {
   const unopened = useMemo(() => Object.values(own.packs).reduce((a, b) => a + b, 0), [own.packs]);
   const cards = Object.values(own.cards).reduce((a, o) => a + o.normal + o.foil, 0) + own.slabs.length;
 
+  const tiles = own.starter && (
+    <div className="home-tiles">
+      <div className="lb-card home-tile"><b>{own.coins.toLocaleString('en-US')}</b><span className="muted">Coins</span></div>
+      <div className="lb-card home-tile"><b>{unopened}</b><span className="muted">Unopened {unopened === 1 ? 'pack' : 'packs'}</span></div>
+      <div className="lb-card home-tile"><b>{cards}</b><span className="muted">Cards owned</span></div>
+      <div className="lb-card home-tile home-tile--daily">
+        <div>
+          <b>Daily coins</b>
+          <span className="muted small">{wait === 0 ? `${DAILY_COINS} coins are waiting.` : `Next in ${hhmm(wait)}.`}</span>
+        </div>
+        <button type="button" className="btn btn--primary btn--small" disabled={wait > 0}
+          onClick={() => { collection.claimDaily(); setNow(Date.now()); }}>Claim {DAILY_COINS}</button>
+      </div>
+    </div>
+  );
+
   return (
-    <Lobby side={<Side db={db} />} className="wide-side">
-      <HeroBanner db={db}>
+    <Lobby side={<Side db={db} />} className="wide-side home-page">
+      <HeroBanner db={db} bleed={Boolean(own.starter)} footer={tiles || undefined}>
         {!own.starter ? (
           <p className="hero__cta-note">Choose your starter deck below to begin.</p>
         ) : !own.tutorialDone ? (
-          <div className="hero__next">
+          <div className="lb-card hero__next">
             <span className="hero__kicker">Next step</span>
             <strong>Play the tutorial</strong>
             <span className="muted">A short guided match. Finish it for 5 free booster packs, one from each set.</span>
@@ -93,23 +109,6 @@ export function HomeView({ db }: { db: CardDb }) {
           </div>
         )}
       </HeroBanner>
-
-      {own.starter && (
-        <div className="home-tiles">
-          <div className="lb-card home-tile"><b>{own.coins.toLocaleString('en-US')}</b><span className="muted">Coins</span></div>
-          <div className="lb-card home-tile"><b>{unopened}</b><span className="muted">Unopened {unopened === 1 ? 'pack' : 'packs'}</span></div>
-          <div className="lb-card home-tile"><b>{cards}</b><span className="muted">Cards owned</span></div>
-          <div className="lb-card home-tile home-tile--daily">
-            <div>
-              <b>Daily coins</b>
-              <span className="muted small">{wait === 0 ? `${DAILY_COINS} coins are waiting.` : `Next in ${hhmm(wait)}.`}</span>
-            </div>
-            <button type="button" className="btn btn--primary btn--small" disabled={wait > 0}
-              onClick={() => { collection.claimDaily(); setNow(Date.now()); }}>Claim {DAILY_COINS}</button>
-          </div>
-        </div>
-      )}
-
       {!own.starter && <div className="home-starters"><Starters db={db} /></div>}
     </Lobby>
   );

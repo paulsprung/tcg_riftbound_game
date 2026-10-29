@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { DEMO, DEMO_PROFILE, type Friend, type Presence } from './demo.ts';
+import { Icon } from './icons.tsx';
 import { social, useSocial } from './social.ts';
 
 const ORDER: Presence[] = ['online', 'away', 'offline'];
@@ -79,7 +80,7 @@ export function Social() {
   if (!open) {
     return (
       <aside className="lb-social is-rail" aria-label="Friends">
-        <button type="button" className="soc-fold" onClick={() => social.setOpen(true)} aria-label="Open friends list" title="Friends">‹</button>
+        <button type="button" className="soc-fold" onClick={() => social.setOpen(true)} aria-label="Open friends list" title="Friends"><Icon name="chevronLeft" size={16} /></button>
         <span className="soc-count" title={`${online} friends online (sample)`}>{online}</span>
         {friends.filter((f) => f.presence !== 'offline').map((f) => (
           <button key={f.id} type="button" className="soc-rail__friend" title={`${f.name} · ${f.doing}`} onClick={() => social.setOpen(true)}
@@ -96,7 +97,7 @@ export function Social() {
     <aside className="lb-social" aria-label="Friends">
       <header className="soc-head">
         <h2>Social <em>sample</em></h2>
-        <button type="button" className="soc-fold" onClick={() => social.setOpen(false)} aria-label="Fold friends list" title="Fold">›</button>
+        <button type="button" className="soc-fold" onClick={() => social.setOpen(false)} aria-label="Fold friends list" title="Fold"><Icon name="chevronRight" size={16} /></button>
       </header>
 
       <div className="soc-me">
@@ -114,7 +115,7 @@ export function Social() {
               <li key={m.id} className={m.state === 'invited' ? 'is-wait' : ''}>
                 <Avatar name={f.name} presence={f.presence} /><span>{f.name}</span>
                 <em>{m.state === 'invited' ? 'Invited…' : 'Ready'}</em>
-                <button type="button" aria-label={`Remove ${f.name} from the lobby`} onClick={() => social.leave(m.id)}>✕</button>
+                <button type="button" aria-label={`Remove ${f.name} from the lobby`} onClick={() => social.leave(m.id)}><Icon name="close" size={12} /></button>
               </li>
             ) : null;
           })}
@@ -140,7 +141,7 @@ export function Social() {
                   <span className="soc-row__text"><b>{f.name}</b><span>{party.some((m) => m.id === f.id) ? 'In your lobby' : f.doing}</span></span>
                 </button>
                 {p !== 'offline' && !party.some((m) => m.id === f.id) && !f.doing.startsWith('In Game') && (
-                  <button type="button" className="soc-row__invite" onClick={() => social.invite(f.id)} aria-label={`Invite ${f.name}`} title="Invite to game">＋</button>
+                  <button type="button" className="soc-row__invite" onClick={() => social.invite(f.id)} aria-label={`Invite ${f.name}`} title="Invite to game"><Icon name="plus" size={15} /></button>
                 )}
               </div>
             ))}

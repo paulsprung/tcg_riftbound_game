@@ -3,6 +3,7 @@ import { HoloSwitches } from '../card/HoloSwitches.tsx';
 import { useCollection } from '../collection/store.ts';
 import { logout, useSession } from '../net/session.ts';
 import { DEMO, DEMO_PROFILE } from './demo.ts';
+import { Icon, type IconName } from './icons.tsx';
 import { social, useSocial } from './social.ts';
 import './lobby.css';
 
@@ -59,7 +60,7 @@ export function LobbyTop({ route }: { route: string }) {
         {DEMO && (
           <button type="button" className="lb-icon lb-icon--social" aria-label="Friends" aria-pressed={open} title="Friends"
             onClick={() => social.setOpen(!open)}>
-            <svg viewBox="0 0 24 24" aria-hidden><path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm7 .5a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM2.5 19c.4-3.2 3-5 6.5-5s6.1 1.800 6.500 5H2.500Zm13.600-4.800c3 0 5 1.600 5.400 4.800h-4.200c-.2-1.900-.9-3.400-2.200-4.500.3-.2.600-.3 1-.3Z" fill="currentColor" /></svg>
+            <Icon name="users" size={20} />
             {online > 0 && <em>{online}</em>}
           </button>
         )}
@@ -71,7 +72,7 @@ export function LobbyTop({ route }: { route: string }) {
           </a>
         )}
         {user && <button type="button" className="lb-signout" onClick={() => { void logout(); }}>Sign out</button>}
-        <a className="lb-icon" href="#rules" title="Rules" aria-label="Rules" aria-current={route === 'rules' ? 'page' : undefined}>?</a>
+        <a className="lb-icon" href="#rules" title="Rules" aria-label="Rules" aria-current={route === 'rules' ? 'page' : undefined}><Icon name="help" size={20} /></a>
       </div>
     </header>
   );
@@ -106,11 +107,11 @@ export function SideTitle({ children }: { children: ReactNode }) {
 
 /** A link in the sidebar. */
 export function SideLink({ href, active, icon, children, soon = false, onClick }: {
-  href?: string; active: boolean; icon?: string; children: ReactNode; soon?: boolean; onClick?: () => void;
+  href?: string; active: boolean; icon?: IconName; children: ReactNode; soon?: boolean; onClick?: () => void;
 }) {
   const inner = (
     <>
-      {icon && <span className="lb-side__icon" aria-hidden>{icon}</span>}
+      {icon && <span className="lb-side__icon"><Icon name={icon} size={19} /></span>}
       <span>{children}</span>
       {soon && <em className="lb-soon">soon</em>}
     </>

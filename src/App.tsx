@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { FoilDefs } from './card/HoloCard.tsx';
 import { Inspector, type InspectTarget } from './card/Inspector.tsx';
 import { useCardDb } from './data/useCardDb.ts';
+import { Ambient } from './lobby/Ambient.tsx';
 import { Lobby, LobbyTop } from './lobby/Lobby.tsx';
 import { Social } from './lobby/Social.tsx';
 import { CollectionHub, type CollectionTab } from './views/CollectionHub.tsx';
@@ -49,6 +50,7 @@ export function App() {
   return (
     <div className="app">
       <FoilDefs />
+      {state.status === 'ready' && <Ambient db={state.db} route={route} />}
       <LobbyTop route={route} />
 
       <main className="main">
