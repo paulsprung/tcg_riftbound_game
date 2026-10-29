@@ -32,4 +32,6 @@ export type ServerMsg =
   /** Your view after a change, with what you observed in it; `full` replaces the log (after a reconnect). Deadlines are ms since the epoch. */
   | { t: 'update'; gameId: string; view: PlayerView; events: ObservedEvent[]; full: boolean; deadline: number | null; theirDeadline: number | null }
   | { t: 'end'; gameId: string; winner: PlayerId | null; reason: string; coins: number; rating: { before: RatingInfo; after: RatingInfo } | null }
+  /** Your account changed from elsewhere (a sale, a gift, a prize): fetch it again. */
+  | { t: 'account'; why: string }
   | { t: 'error'; message: string };

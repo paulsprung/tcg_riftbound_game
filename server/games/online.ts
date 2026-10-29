@@ -93,6 +93,8 @@ export class Online {
   /** Called after every game's end (tournaments hang their matches on it). */
   onFinish(h: (f: Finished) => void | Promise<void>) { this.finishHooks.add(h); }
   isLive(gameId: string) { return this.games.has(gameId); }
+  /** Tells a player their account changed (a sale, a gift, a prize), if they are connected. */
+  notify(userId: string, why: string) { this.net.send(userId, { t: 'account', why }); }
   inGame(userId: string) { return this.byUser.has(userId); }
 
   get stats() { return { games: this.games.size, queued: [...this.queues.values()].reduce((n, q) => n + q.length, 0) }; }

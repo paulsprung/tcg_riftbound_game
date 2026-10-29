@@ -22,3 +22,12 @@ export const LOSS_COINS = 5;
 export const MATCH_COINS_PER_DAY = 150;
 /** A match shorter than this (turns) pays nothing: a quick concession is not a game. */
 export const MIN_REWARD_TURNS = 3;
+
+// ---- the marketplace ----
+/** The market's cut of a sale (a coin sink): the seller gets the price less this. */
+export const MARKET_FEE = 0.05;
+/** A listing comes down after this many days, the cards back to the seller. */
+export const LISTING_DAYS = 14;
+/** Active listings per player, at most. */
+export const MAX_LISTINGS = 50;
+export const MAX_PRICE = 1_000_000;

@@ -28,7 +28,7 @@ let retry = 0;
 let state: OnlineState = { status: 'off', queue: null, game: null, start: null, end: null, error: null };
 const stateListeners = new Set<() => void>();
 const listeners = new Set<Listener>();
-/** Called at a game's end (the account's coins changed). */
+/** Called when the account changed on the server: a game's end, a sale, a gift. */
 const endHooks = new Set<() => void>();
 /** Updates that came before anyone listened (the game's first view, right after 'start'). */
 let early: ServerMsg[] = [];
@@ -49,7 +49,7 @@ function open() {
     else if (m.t === 'queued') set({ queue: { mode: m.mode, since: m.since }, error: null });
     else if (m.t === 'left') set({ queue: null });
     else if (m.t === 'start') { early = []; set({ queue: null, game: m.gameId, start: m, end: null }); }
-    else if (m.t === 'end') { set({ game: null, end: m }); endHooks.forEach((h) => h()); }
+    else if (m.t === 'end' || m.t === 'account') { if (m.t === 'end') set({ game: null, end: m }); endHooks.forEach((h) => h()); }
     else if (m.t === 'error') set({ error: m.message });
     if (listeners.size === 0 && m.t === 'update') early.push(m);
     listeners.forEach((l) => l(m));
@@ -79,7 +79,8 @@ export const online = {
     missed.forEach(l);
     return () => { listeners.delete(l); };
   },
-  onEnd(h: () => void) { endHooks.add(h); return () => { endHooks.delete(h); }; },
+  /** The account changed on the server (a game's coins, a sale, a gift). */
+  onAccount(h: () => void) { endHooks.add(h); return () => { endHooks.delete(h); }; },
   dismissEnd() { set({ end: null, start: null }); },
   clearError() { set({ error: null }); },
   get: () => state,

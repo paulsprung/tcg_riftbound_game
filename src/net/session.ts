@@ -37,8 +37,8 @@ export async function loadSession(): Promise<void> {
     const acc = await fetchAccount();
     collection.useServer(acc.account);
     decks.useServer(acc.decks);
-    // a game's coins: the account again when one ends
-    online.onEnd(() => { void fetchAccount().then((a) => collection.useServer(a.account)).catch(() => undefined); });
+    // a game's coins, a sale, a gift: the account again
+    online.onAccount(() => { void fetchAccount().then((a) => collection.useServer(a.account)).catch(() => undefined); });
     set({ status: 'online', user: { ...body.user, admin: acc.admin } });
     // online play: the socket stays open while signed in
     online.connect();

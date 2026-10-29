@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import type { InspectTarget } from '../card/Inspector.tsx';
 import { collection, PACK_PRICE, useCollection } from '../collection/store.ts';
 import { packArt } from '../data/media.ts';
@@ -8,6 +8,8 @@ import { useViewport } from '../lobby/scale.ts';
 import { PackOpening } from '../pack/PackOpening.tsx';
 import { heroCard, PackWrapper } from '../pack/PackWrapper.tsx';
 import { useBoosters } from './boosters.ts';
+
+const Market = lazy(() => import('./Market.tsx').then((m) => ({ default: m.Market })));
 
 // What is on screen is in the address: #shop is the store, #shop/market the
 // marketplace, #shop/rad the pack being opened, so the browser's and the
@@ -49,7 +51,7 @@ export function PacksView({ db, onInspect }: { db: CardDb; onInspect: (t: Inspec
     <>
       <SideTitle>SHOP</SideTitle>
       <SideLink href="#shop" icon="bag" active={!market}>Store</SideLink>
-      <SideLink href="#shop/market" icon="scale" active={market} soon>Marketplace</SideLink>
+      <SideLink href="#shop/market" icon="scale" active={market}>Marketplace</SideLink>
       <div className="lb-side__gap" />
       <SideTitle>YOUR BALANCE</SideTitle>
       <div className="lb-balance">
@@ -62,11 +64,7 @@ export function PacksView({ db, onInspect }: { db: CardDb; onInspect: (t: Inspec
   return (
     <Lobby side={side}>
       {market ? (
-        <section className="shop-soon">
-          <h1>Marketplace</h1>
-          <p className="muted">Sell cards you don't need and buy the ones you're missing, for coins. It opens together with accounts and online play.</p>
-          <span className="lb-soon-note">Coming soon</span>
-        </section>
+        <Suspense fallback={<p className="muted">Loading…</p>}><Market db={db} onInspect={onInspect} /></Suspense>
       ) : (
         <section className="lb-col">
           <div className="lb-head">

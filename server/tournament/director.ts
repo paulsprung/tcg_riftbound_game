@@ -310,6 +310,7 @@ export class Director {
       await c.query("UPDATE tournaments SET status = 'done', ended_at = now() WHERE id = $1", [t.id]);
       await c.query('COMMIT');
     } catch (err) { await c.query('ROLLBACK').catch(() => undefined); throw err; } finally { c.release(); }
+    for (const [i, userId] of order.entries()) if (t.settings.prizes[i]) this.online.notify(userId, 'prize');
   }
 
   // ---- money back ----

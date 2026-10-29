@@ -50,15 +50,20 @@ export async function loadCatalog(staticDir: string): Promise<Catalog> {
 /** Math.random's shape, from the crypto source. */
 export const secureRandom = () => randomInt(0, 2 ** 32) / 2 ** 32;
 
-type Tx = pg.PoolClient;
+export type Tx = pg.PoolClient;
 
 /** Runs `fn` in a transaction with the user's account row created and locked. */
-async function withAccount<T>(db: Db, userId: string, fn: (c: Tx) => Promise<T>): Promise<T> {
+const withAccount = <T>(db: Db, userId: string, fn: (c: Tx) => Promise<T>) => withAccounts(db, [userId], fn);
+
+/** The same for several accounts (a sale: buyer and seller), locked in a fixed order so two sales can't deadlock. */
+export async function withAccounts<T>(db: Db, userIds: string[], fn: (c: Tx) => Promise<T>): Promise<T> {
   const c = await db.connect();
   try {
     await c.query('BEGIN');
-    await c.query('INSERT INTO accounts (user_id) VALUES ($1) ON CONFLICT DO NOTHING', [userId]);
-    await c.query('SELECT 1 FROM accounts WHERE user_id = $1 FOR UPDATE', [userId]);
+    for (const userId of [...new Set(userIds)].sort()) {
+      await c.query('INSERT INTO accounts (user_id) VALUES ($1) ON CONFLICT DO NOTHING', [userId]);
+      await c.query('SELECT 1 FROM accounts WHERE user_id = $1 FOR UPDATE', [userId]);
+    }
     const out = await fn(c);
     await c.query('COMMIT');
     return out;
@@ -84,7 +89,7 @@ const addPacks = async (c: Tx, userId: string, packs: Record<string, number>) =>
 type Cards = Record<string, [number, number]>;
 
 /** The raw copies, changed by `fn` and written back (the account row is locked). */
-async function editCards<T>(c: Tx, userId: string, fn: (cards: Cards) => T): Promise<T> {
+export async function editCards<T>(c: Tx, userId: string, fn: (cards: Cards) => T): Promise<T> {
   const r = await c.query('SELECT cards FROM accounts WHERE user_id = $1', [userId]);
   const cards = (r.rows[0]?.cards ?? {}) as Cards;
   const out = fn(cards);
@@ -92,7 +97,7 @@ async function editCards<T>(c: Tx, userId: string, fn: (cards: Cards) => T): Pro
   return out;
 }
 
-const addCards = (c: Tx, userId: string, add: { id: string; foil: boolean; n: number }[]) => editCards(c, userId, (cards) => {
+export const addCards = (c: Tx, userId: string, add: { id: string; foil: boolean; n: number }[]) => editCards(c, userId, (cards) => {
   for (const x of add) {
     const o = cards[x.id] ?? [0, 0];
     o[x.foil ? 1 : 0] += x.n;

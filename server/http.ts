@@ -10,6 +10,7 @@ import type { Config } from './config.ts';
 import type { Db } from './db.ts';
 import { deckStore, economy, loadCatalog, readAccount, Refused, type Catalog } from './economy.ts';
 import type { Online } from './games/online.ts';
+import { market } from './market.ts';
 import type { Director } from './tournament/director.ts';
 
 /*
@@ -185,7 +186,7 @@ export function handler({ cfg, db, fetch: f = fetch, catalog, online, director }
       }
 
       // ---- the signed-in player's account: changes are POST/PUT/DELETE from this site only ----
-      if (path.startsWith('/api/account') || path.startsWith('/api/decks') || path.startsWith('/api/admin') || path.startsWith('/api/tournaments')) {
+      if (path.startsWith('/api/account') || path.startsWith('/api/decks') || path.startsWith('/api/admin') || path.startsWith('/api/tournaments') || path.startsWith('/api/market')) {
         const user = await userForSession(db, jar[SESSION_COOKIE]);
         if (!user) return json(res, 401, { error: 'Sign in first' });
         if (!apiLimit(user.id)) return json(res, 429, { error: 'Slow down a little' });
@@ -237,6 +238,27 @@ export function handler({ cfg, db, fetch: f = fetch, catalog, online, director }
           if (deck && req.method === 'PUT') return json(res, 200, { deck: await deckStore.save(db, user.id, deck[1], (await body(req)).deck) });
           if (deck && req.method === 'DELETE') { await deckStore.remove(db, user.id, deck[1]); return json(res, 200, { ok: true }); }
 
+          // ---- the marketplace ----
+          if (route === 'GET /api/market') {
+            const sort = url.searchParams.get('sort');
+            return json(res, 200, { offers: await market.browse(db, await getCatalog(), (url.searchParams.get('q') ?? '').slice(0, 60), sort === 'new' || sort === 'name' ? sort : 'price') });
+          }
+          if (route === 'GET /api/market/card') {
+            return json(res, 200, await market.card(db, user.id, String(url.searchParams.get('id') ?? ''), url.searchParams.get('foil') === '1'));
+          }
+          if (route === 'GET /api/market/mine') return json(res, 200, await market.mine(db, user.id));
+          if (route === 'POST /api/market/list') {
+            const b = await body(req);
+            return json(res, 200, { account: await market.list(db, await getCatalog(), user.id, b.cardId, b.foil, b.qty, b.price) });
+          }
+          if (route === 'POST /api/market/buy') {
+            const b = await body(req);
+            const r = await market.buy(db, user.id, b.listingId, b.qty);
+            online?.notify(r.seller, 'sale');
+            return json(res, 200, { account: r.account });
+          }
+          if (route === 'POST /api/market/cancel') { const b = await body(req); return json(res, 200, { account: await market.cancel(db, user.id, b.listingId) }); }
+
           const tour = /^\/api\/tournaments(?:\/([^/]+))?(?:\/(join|leave))?$/.exec(path);
           if (tour && director) {
             if (req.method === 'GET' && !tour[1]) return json(res, 200, { tournaments: await director.list(user.id) });
@@ -274,6 +296,7 @@ export function handler({ cfg, db, fetch: f = fetch, catalog, online, director }
               const exists = await db.query('SELECT 1 FROM users WHERE id::text = $1', [to]);
               if (!exists.rowCount) return json(res, 404, { error: 'No such player' });
               const account = await economy.grant(db, user.id, to, Number(b.coins ?? 0), (b.packs ?? {}) as Record<string, number>, String(b.reason ?? ''));
+              online?.notify(to, 'gift');
               return json(res, 200, { account });
             }
           }

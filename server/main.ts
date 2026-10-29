@@ -5,6 +5,7 @@ import { connect, migrate } from './db.ts';
 import { Online } from './games/online.ts';
 import { EnginePool } from './games/pool.ts';
 import { handler } from './http.ts';
+import { market } from './market.ts';
 import { Director } from './tournament/director.ts';
 import { Sockets } from './ws.ts';
 
@@ -25,6 +26,8 @@ const resumed = await online.recover();
 server.listen(cfg.port, () => console.log(`Riftbound server on :${cfg.port} (${cfg.publicUrl}), ${pool.threads} engine thread(s)${resumed ? `, ${resumed} game(s) resumed` : ''}`));
 
 setInterval(() => { pruneSessions(db).catch(() => undefined); }, 6 * 3600_000).unref();
+// market listings past their time: the cards back to their sellers
+setInterval(() => { market.expire(db).catch((err) => console.error('market expiry:', err)); }, 10 * 60_000).unref();
 
 const stop = () => {
   server.close();
