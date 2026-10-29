@@ -13,7 +13,6 @@ import './lobby.css';
 
 export const NAV = [
   { id: 'home', label: 'Home' },
-  { id: 'play', label: 'Play' },
   { id: 'collection', label: 'Collection' },
   { id: 'shop', label: 'Shop' },
 ] as const;
@@ -26,7 +25,6 @@ export function LobbyTop({ route }: { route: string }) {
   const session = useSession();
   const user = session.status === 'online' ? session.user : null;
   const name = user?.name ?? (DEMO ? DEMO_PROFILE.name : 'You');
-  const ol = useOnline();
 
   // on a phone the tabs scroll sideways: keep the current one in view
   useEffect(() => {
@@ -35,13 +33,13 @@ export function LobbyTop({ route }: { route: string }) {
 
   return (
     <header className="lb-top">
+      <PlayButton active={route === 'play'} />
       <nav className="lb-nav" aria-label="Sections">
         {NAV.map((n) => (
           <a key={n.id} href={`#${n.id}`} aria-current={route === n.id ? 'page' : undefined}>{n.label}</a>
         ))}
       </nav>
       <div className="lb-top__right">
-        {ol.game && <a className="lb-pill lb-pill--live" href="#play/ranked">● Back to your game</a>}
         <HoloSwitches />
         <a className="lb-pill" href="#shop" title="Your coins" aria-label={`${own.coins} coins`}>
           <Coin /> {own.coins.toLocaleString('en-US')}
@@ -57,6 +55,26 @@ export function LobbyTop({ route }: { route: string }) {
         {user && <button type="button" className="lb-signout" onClick={() => { void logout(); }}>Sign out</button>}
       </div>
     </header>
+  );
+}
+
+/** The way into a game, large at the top left as in the League client; while searching it counts, in a game it leads back. */
+function PlayButton({ active }: { active: boolean }) {
+  const ol = useOnline();
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    if (!ol.queue) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [ol.queue]);
+  const waited = ol.queue ? Math.max(0, Math.floor((now - ol.queue.since) / 1000)) : 0;
+  const state = ol.game ? 'is-live' : ol.queue ? 'is-search' : '';
+  return (
+    <a className={`lb-play ${state}${active ? ' is-here' : ''}`} href={ol.queue ? `#play/${ol.queue.mode}` : ol.game ? '#play/ranked' : '#play'}>
+      <span className="lb-play__ring" aria-hidden />
+      <strong>{ol.game ? 'In game' : ol.queue ? 'Searching' : 'Play'}</strong>
+      {ol.queue && <em>{Math.floor(waited / 60)}:{String(waited % 60).padStart(2, '0')}</em>}
+    </a>
   );
 }
 

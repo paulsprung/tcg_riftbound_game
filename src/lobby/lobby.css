@@ -992,3 +992,104 @@ html[data-scaled] .app {
   100% { opacity: 0; transform: translate(var(--bx), var(--by)) scale(var(--bs)) rotate(var(--br)); filter: brightness(4) blur(6px); }
 }
 @media (prefers-reduced-motion: reduce) { .rc-p { animation: none !important; } .rc-leave, .rc-burst { opacity: 0; } }
+
+/* ======================================================= round 7: depth --
+   The client's Play button, a stage for the decks on the Play pages, panels
+   with a bevel, calmer type. */
+
+/* the Play button: a gold-framed plate at the top left, teal light inside */
+.lb-play {
+  --w: 168px; position: relative; flex: none; display: grid; place-items: center; align-content: center; gap: 2px;
+  width: var(--w); height: 44px; margin-right: -8px; text-decoration: none; isolation: isolate;
+  clip-path: polygon(14px 0, calc(100% - 22px) 0, 100% 50%, calc(100% - 22px) 100%, 14px 100%, 0 50%);
+  background: linear-gradient(180deg, #f0e6d2, #c8aa6e 30%, #785a28 70%, #c89b3c);
+  transition: filter .2s, transform .2s;
+}
+.lb-play::before {
+  content: ""; position: absolute; inset: 2px; z-index: -1; clip-path: inherit;
+  background: radial-gradient(ellipse 80% 120% at 50% 120%, rgba(10, 200, 185, .55), transparent 60%), linear-gradient(180deg, #0c3a48, #041a22);
+  box-shadow: inset 0 0 20px rgba(10, 200, 185, .35);
+}
+.lb-play strong { font: 800 18px/1 var(--font-display); letter-spacing: .14em; text-transform: uppercase; color: #e8fffc; text-shadow: 0 0 12px rgba(10, 200, 185, .8); }
+.lb-play em { font: 700 11px/1 var(--font-ui); font-style: normal; letter-spacing: .08em; color: #9ff3ea; font-variant-numeric: tabular-nums; }
+.lb-play:hover { filter: brightness(1.15) drop-shadow(0 0 12px rgba(10, 200, 185, .55)); }
+.lb-play:active { transform: scale(.97); }
+.lb-play__ring { position: absolute; inset: 0; z-index: -1; clip-path: inherit; background: linear-gradient(100deg, transparent 35%, rgba(255, 255, 255, .35) 50%, transparent 65%) -150% 0 / 60% 100% no-repeat; animation: lb-play-sheen 4.5s ease-in-out infinite; }
+@keyframes lb-play-sheen { 0%, 60% { background-position: -150% 0; } 100% { background-position: 260% 0; } }
+.lb-play.is-search::before { background: radial-gradient(ellipse 80% 120% at 50% 120%, rgba(10, 200, 185, .8), transparent 65%), linear-gradient(180deg, #0f4a58, #052630); animation: lb-play-pulse 1.4s ease-in-out infinite alternate; }
+.lb-play.is-search strong { font-size: 13px; }
+.lb-play.is-live::before { background: radial-gradient(ellipse 80% 120% at 50% 120%, rgba(240, 195, 91, .6), transparent 60%), linear-gradient(180deg, #3a2a0c, #1a1205); }
+.lb-play.is-live strong { color: #fff1c8; text-shadow: 0 0 12px rgba(240, 195, 91, .8); font-size: 14px; }
+@keyframes lb-play-pulse { to { filter: brightness(1.35); } }
+@media (prefers-reduced-motion: reduce) { .lb-play__ring, .lb-play.is-search::before { animation: none; } }
+
+/* nav: a lit rule that slides under the hovered tab */
+.lb-nav a::before { content: ""; position: absolute; left: 50%; right: 50%; bottom: 0; height: 2px; background: var(--gold-lo); transition: left .2s, right .2s; }
+.lb-nav a:hover::before { left: 20px; right: 20px; }
+.lb-nav a { letter-spacing: .14em; }
+
+/* calmer type: less tracking on the small caps everywhere */
+.btn { letter-spacing: .1em; }
+.lb-side__title, .eyebrow, .lb-label { letter-spacing: .16em; }
+
+/* the Play pages: the decks on a stage, light from below, pedestals */
+.play-setup.ds { position: relative; isolation: isolate; }
+.ds__stage { position: relative; }
+.ds__stage::before {
+  content: ""; position: absolute; left: 50%; top: 62%; width: min(1100px, 92%); height: 46%; translate: -50% 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(10, 200, 185, .16), rgba(10, 120, 140, .06) 45%, transparent 70%);
+  filter: blur(6px);
+}
+.ds__stage::after {
+  content: ""; position: absolute; left: 50%; top: 46%; width: 520px; height: 520px; translate: -50% -50%; z-index: -1; pointer-events: none; opacity: .5;
+  background:
+    radial-gradient(circle, transparent 58%, rgba(200, 170, 110, .22) 58.4%, transparent 59%),
+    radial-gradient(circle, transparent 68%, rgba(200, 170, 110, .12) 68.3%, transparent 68.8%),
+    repeating-conic-gradient(from 0deg, rgba(200, 170, 110, .12) 0deg 1deg, transparent 1deg 15deg);
+  -webkit-mask-image: radial-gradient(circle, #000 40%, transparent 70%); mask-image: radial-gradient(circle, #000 40%, transparent 70%);
+  animation: go-spin 120s linear infinite;
+}
+.ds-slot { position: relative; width: min(clamp(150px, calc(18 * var(--vw)), 280px), calc(36 * var(--vh))); }
+.ds-slot__card { position: relative; }
+.ds-slot__card::after {
+  content: ""; position: absolute; left: 6%; right: 6%; bottom: -26px; height: 34px; z-index: -1; pointer-events: none;
+  background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(10, 200, 185, .5), rgba(10, 200, 185, .1) 50%, transparent 72%);
+  filter: blur(2px);
+}
+.ds-slot.is-wait .ds-slot__card::after { background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(200, 170, 110, .3), transparent 70%); }
+.ds-slot.is-wait .ds-slot__back::after {
+  content: ""; position: absolute; inset: -40%; background: conic-gradient(from 0deg, transparent 0 80%, rgba(10, 200, 185, .45) 95%, transparent);
+  animation: go-spin 2.4s linear infinite; mix-blend-mode: screen;
+}
+.play-online__vs { transform: scale(1.25); filter: drop-shadow(0 0 16px rgba(200, 170, 110, .45)); }
+.play-online__vs::after { content: ""; position: absolute; inset: -14px; border: 1px solid rgba(200, 170, 110, .45); transform: rotate(45deg); animation: lb-vs 3s ease-in-out infinite; z-index: -2; }
+@keyframes lb-vs { 50% { inset: -22px; opacity: .3; } }
+/* the start: a bar along the bottom with the big button in its middle */
+.ds__start { position: relative; padding-top: 18px; }
+.ds__start::before { content: ""; position: absolute; left: 6%; right: 6%; top: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--gold-lo) 25%, var(--gold) 50%, var(--gold-lo) 75%, transparent); }
+.ds__start .btn--cta { min-width: 260px; padding: 18px 40px; font-size: 15px; letter-spacing: .18em; }
+
+/* panels: a bevel and a lit top edge */
+.lb-card, .lb-rank, .go-tile {
+  box-shadow: inset 0 1px 0 rgba(240, 230, 210, .08), inset 0 0 0 1px rgba(0, 0, 0, .35), 0 10px 30px rgba(0, 0, 0, .35);
+}
+.lb-rank { text-decoration: none; transition: border-color .2s, box-shadow .2s; }
+a.lb-rank:hover { border-color: var(--gold); box-shadow: 0 0 22px rgba(200, 170, 110, .25); }
+.dk-tile { transition: transform .25s cubic-bezier(.2, .7, .2, 1), box-shadow .25s, border-color .25s; }
+.dk-tile:hover { transform: translateY(-4px); border-color: var(--gold); box-shadow: 0 16px 36px rgba(0, 0, 0, .5), 0 0 24px rgba(200, 170, 110, .18); }
+/* deck tiles: the Legend's art fills the tile, the name and buttons on a shade at its foot */
+.dk-tile:not(.dk-tile--new):not(.dk-tile--empty) { position: relative; overflow: hidden; height: 340px; padding: 0; gap: 0; align-content: end; justify-items: stretch; isolation: isolate; }
+.dk-tile:not(.dk-tile--new):not(.dk-tile--empty) .dk-tile__art {
+  position: absolute; left: -32%; right: -32%; top: -16%; width: auto; margin: 0; z-index: -1; pointer-events: none;
+  filter: saturate(1.08); transition: transform .6s cubic-bezier(.2, .7, .2, 1);
+}
+.dk-tile:not(.dk-tile--new):not(.dk-tile--empty):hover .dk-tile__art { transform: scale(1.06) translateY(-2%); }
+.dk-tile:not(.dk-tile--new):not(.dk-tile--empty) .dk-tile__info {
+  padding: 70px 12px 14px; background: linear-gradient(180deg, transparent, rgba(2, 10, 20, .88) 42%, rgba(2, 10, 20, .97));
+}
+.dk-tile:not(.dk-tile--new):not(.dk-tile--empty) .dk-tile__info strong { font-size: 16px; text-shadow: 0 2px 6px #000; }
+.dk-tile--new { height: 340px; max-height: none; }
+/* the start bar of the Play pages: its rule right above the button */
+.ds__start { height: auto; padding: 20px 0 6px; margin-top: 10px; }
+.ds-slot.is-wait .ds-slot__back { isolation: isolate; }
+.ds-slot.is-wait .ds-slot__back::after { z-index: 2; }
