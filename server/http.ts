@@ -10,6 +10,7 @@ import type { Config } from './config.ts';
 import type { Db } from './db.ts';
 import { deckStore, economy, loadCatalog, readAccount, Refused, type Catalog } from './economy.ts';
 import type { Online } from './games/online.ts';
+import type { Director } from './tournament/director.ts';
 
 /*
  * The whole HTTP surface: the built app (with index.html for client
@@ -23,6 +24,7 @@ export interface Deps {
   catalog?: Catalog;
   /** Online play, for the standings. */
   online?: Online;
+  director?: Director;
 }
 
 export function cookies(req: IncomingMessage): Record<string, string> {
@@ -127,7 +129,7 @@ function limiter(perMinute: number) {
   };
 }
 
-export function handler({ cfg, db, fetch: f = fetch, catalog, online }: Deps) {
+export function handler({ cfg, db, fetch: f = fetch, catalog, online, director }: Deps) {
   const secure = cfg.publicUrl.startsWith('https://');
   const authLimit = limiter(20);
   const apiLimit = limiter(240);
@@ -183,7 +185,7 @@ export function handler({ cfg, db, fetch: f = fetch, catalog, online }: Deps) {
       }
 
       // ---- the signed-in player's account: changes are POST/PUT/DELETE from this site only ----
-      if (path.startsWith('/api/account') || path.startsWith('/api/decks') || path.startsWith('/api/admin')) {
+      if (path.startsWith('/api/account') || path.startsWith('/api/decks') || path.startsWith('/api/admin') || path.startsWith('/api/tournaments')) {
         const user = await userForSession(db, jar[SESSION_COOKIE]);
         if (!user) return json(res, 401, { error: 'Sign in first' });
         if (!apiLimit(user.id)) return json(res, 429, { error: 'Slow down a little' });
@@ -235,9 +237,31 @@ export function handler({ cfg, db, fetch: f = fetch, catalog, online }: Deps) {
           if (deck && req.method === 'PUT') return json(res, 200, { deck: await deckStore.save(db, user.id, deck[1], (await body(req)).deck) });
           if (deck && req.method === 'DELETE') { await deckStore.remove(db, user.id, deck[1]); return json(res, 200, { ok: true }); }
 
+          const tour = /^\/api\/tournaments(?:\/([^/]+))?(?:\/(join|leave))?$/.exec(path);
+          if (tour && director) {
+            if (req.method === 'GET' && !tour[1]) return json(res, 200, { tournaments: await director.list(user.id) });
+            if (req.method === 'GET' && !tour[2]) return json(res, 200, { tournament: await director.detail(tour[1], user.id) });
+            if (req.method === 'POST' && tour[2] === 'join') { await director.join(user.id, user.name, tour[1], String((await body(req)).deck ?? '')); return json(res, 200, { ok: true }); }
+            if (req.method === 'POST' && tour[2] === 'leave') { await director.leave(user.id, tour[1]); return json(res, 200, { ok: true }); }
+          }
+
           if (path.startsWith('/api/admin/')) {
             const admin = await db.query('SELECT is_admin FROM users WHERE id = $1', [user.id]);
             if (!admin.rows[0]?.is_admin) return json(res, 403, { error: 'Admins only' });
+            if (route === 'GET /api/admin/ledger') {
+              const r = await db.query(`SELECT l.coins, l.packs, l.reason, l.created_at, a.name AS actor FROM ledger l LEFT JOIN users a ON a.id = l.actor
+                WHERE l.user_id::text = $1 ORDER BY l.id DESC LIMIT 50`, [url.searchParams.get('userId') ?? '']);
+              return json(res, 200, { ledger: r.rows.map((x) => ({ coins: x.coins, packs: x.packs, reason: x.reason, at: new Date(x.created_at).getTime(), actor: x.actor })) });
+            }
+            const at = /^\/api\/admin\/tournaments(?:\/([^/]+)\/(start|cancel))?$/.exec(path);
+            if (at && director && req.method === 'POST') {
+              if (!at[1]) {
+                const b = await body(req);
+                return json(res, 200, { id: await director.create(user.id, b as never) });
+              }
+              if (at[2] === 'start') await director.start(at[1]); else await director.cancel(at[1]);
+              return json(res, 200, { ok: true });
+            }
             if (route === 'GET /api/admin/users') {
               const q = (url.searchParams.get('q') ?? '').slice(0, 64);
               const r = await db.query(`SELECT u.id, u.discord_id, u.name, coalesce(a.coins, 0) AS coins FROM users u LEFT JOIN accounts a ON a.user_id = u.id
