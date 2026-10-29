@@ -378,8 +378,8 @@ export const UNL_SET_DEFS = [
   legend('master-yi-wuju-master', '[Level 6][>] Your units have +1 [M].\n[Level 11][>] Your units enter ready.', [
     mightTo(1, friendly, { while: cond.level(6) }), always({ s: 'entersReady', to: friendly }, { while: cond.level(11) }),
   ]),
-  spell('mirror-image', '[Action]\nChoose a unit. Play a ready Reflection unit token to your base. Then do this: It becomes a copy of that unit. Give it [Temporary].', {
-    kw: [kw.action()], choose: [slot('a', unitSel())],
+  spell('mirror-image', 'Choose a unit. Play a ready Reflection unit token to your base. Then do this: It becomes a copy of that unit. Give it [Temporary].', {
+    choose: [slot('a', unitSel())],
     body: [playToken('reflection', 1, 'yourBase', { ready: true, copyOf: ref.slot('a'), give: [kw.temporary()] })],
   }),
 ];
