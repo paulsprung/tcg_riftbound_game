@@ -116,6 +116,9 @@ export interface GameSetup {
       names the player who chooses: the loser of a match's last game (TR 407.4)
       or the higher seed in a playoff (TR 407.2.a). */
   firstPlayer?: 'random-designee-chooses' | 'random' | PlayerId | { designee: PlayerId };
+  /** A Limited game (TR 602): Sealed decks need 25 cards, Draft decks 20; no Legend or
+      Chosen Champion is needed, and a deck with neither draws 1 more in its first Beginning Phase. */
+  limited?: 'sealed' | 'draft';
   /** Tutorials and tests: cards put on top of each deck after the shuffle
       [114], top first (a scripted lesson needs a known draw order). */
   stack?: [DeckStack?, DeckStack?];

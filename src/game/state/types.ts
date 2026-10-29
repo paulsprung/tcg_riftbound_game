@@ -130,6 +130,7 @@ export interface PlayerState {
   identity: Domain[];                 // from the legend [103.2.b] (informational in play)
   championTag: string;                // [133.8.b]
   chosenChampionName: string;         // [103.3.a.3]
+  limitedDraw: boolean;               // a Limited deck without Legend and Chosen Champion draws 1 more (TR 602.4.a.5.b)
   extra: Record<string, string[]>;    // deck-building choices, e.g. Neeko's 3 legends [103.1]
 }
 

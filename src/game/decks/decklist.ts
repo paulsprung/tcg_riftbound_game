@@ -4,7 +4,7 @@
  * precons (decks/precons.ts) all speak this shape. Tokens are never part of
  * a deck [185]; a precon's physical tokens are listed with the precon.
  */
-import type { DefId } from '../state/types.ts';
+import type { DefId, Domain } from '../state/types.ts';
 
 /** Copies of one card. */
 export interface DeckEntry { def: DefId; n: number }
@@ -12,11 +12,14 @@ export interface DeckEntry { def: DefId; n: number }
 export interface DeckList {
   name: string;
   source: 'precon' | 'generated' | 'custom';
+  /** '' for none: a Limited deck may play without a Legend (TR 602.4.a.5). */
   legend: DefId;
   /** Precon "Champion Options": the player designates one [103.3.a]. */
   championOptions?: DefId[];
-  /** One of the main deck's champion units [103.3.a]. */
+  /** One of the main deck's champion units [103.3.a]; '' for none in Limited. */
   chosenChampion: DefId;
+  /** Limited: the deck's domain identity, any three (TR 602.4.a.3); otherwise the Legend's. */
+  domains?: Domain[];
   /** 40 cards, the Chosen Champion's copy included (TR 402.1). */
   main: DeckEntry[];
   /** 12 runes [103.4]. */
@@ -43,7 +46,7 @@ export const copiesOf = (d: DeckList, def: DefId) => total(d.main.filter((e) => 
 /** Every card a deck names, once each: legend, main deck, runes,
     battlefields and deck-building choices. */
 export function deckDefs(d: DeckList): DefId[] {
-  const all = [d.legend, ...d.main.map((e) => e.def), ...d.runes.map((e) => e.def), ...d.battlefields,
+  const all = [...(d.legend ? [d.legend] : []), ...d.main.map((e) => e.def), ...d.runes.map((e) => e.def), ...d.battlefields,
     ...Object.values(d.extra ?? {}).flat()];
   return [...new Set(all)];
 }

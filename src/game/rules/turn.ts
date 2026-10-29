@@ -155,6 +155,8 @@ defineTask('awaken.readyAll', [(s, _f, x) => {
 defineTask('beginning.startEffects', [(s, _f, x) => {
   const p = s.turn.player;
   setField(s, s.history.beginningPhasesStarted, p, s.history.beginningPhasesStarted[p] + 1);
+  // a Limited deck with no Legend and no Chosen Champion: one card more, once (TR 602.4.a.5.b)
+  if (s.history.beginningPhasesStarted[p] === 1 && s.players[p].limitedDraw) drawCards(s, x, p, 1, 'TR 602.4.a.5.b');
   fire(s, x, { e: 'phase', at: 'beginning', p });
   return 'done';
 }]);

@@ -69,16 +69,18 @@ const localsOf = (f: SetupFrame) => f.locals as unknown as SetupLocals;
  * champion unit of the legend's champion (GameSetup.chosenChampion can name
  * one the deck's validation never saw).
  */
-function deckIssues(s: GameState, d: DeckList, p: PlayerId, chosen: DefId): string[] {
+function deckIssues(s: GameState, d: DeckList, p: PlayerId, chosen: DefId, limited: GameSetup['limited']): string[] {
   const out: string[] = [];
   const at = `P${p} '${d.name}'`;
   const total = (rows: { def: DefId; n: number }[]) => rows.reduce((t, r) => t + r.n, 0);
-  if (!d.legend) out.push(`${at}: no Champion Legend [103.2]`);
+  // Limited decks may play without a Legend and a Chosen Champion (TR 602.4.a.5)
+  if (!d.legend && !limited) out.push(`${at}: no Champion Legend [103.2]`);
+  if (!chosen && !limited) out.push(`${at}: no Chosen Champion [103.3.a]`);
   const unknown = deckDefs(d).filter((def) => def && !findCard(def));
   if (unknown.length > 0) out.push(`${at}: not cards in the oracle: ${unknown.join(', ')} [103]`);
   const wrong = (defs: DefId[], ok: (c: OracleCard) => boolean) =>
     [...new Set(defs)].filter((def) => { const c = findCard(def); return c !== undefined && !ok(c); });
-  const notLegend = wrong([d.legend], (c) => isType(c, 'legend'));
+  const notLegend = d.legend ? wrong([d.legend], (c) => isType(c, 'legend')) : [];
   if (notLegend.length > 0) out.push(`${at}: ${d.legend} is not a legend [103.2]`);
   const notMain = wrong(d.main.map((r) => r.def), isMainDeckCard);
   if (notMain.length > 0) out.push(`${at}: not units, gear or spells in the Main Deck: ${notMain.join(', ')} [133.4]`);
@@ -86,19 +88,23 @@ function deckIssues(s: GameState, d: DeckList, p: PlayerId, chosen: DefId): stri
   if (notRunes.length > 0) out.push(`${at}: not runes in the Rune Deck: ${notRunes.join(', ')} [103.4.a]`);
   const notFields = wrong(d.battlefields, (c) => isType(c, 'battlefield'));
   if (notFields.length > 0) out.push(`${at}: not battlefields: ${notFields.join(', ')} [103.5]`);
-  const legend = notLegend.length > 0 ? undefined : findCard(d.legend);
-  const champion = findCard(chosen);
-  if (champion && (!isChampionUnit(champion) || (legend && champion.championTag !== legend.championTag))) {
+  const legend = notLegend.length > 0 || !d.legend ? undefined : findCard(d.legend);
+  const champion = chosen ? findCard(chosen) : undefined;
+  // in Limited any champion unit of the deck's domains will do (TR 602.4.a.3.a)
+  if (champion && (!isChampionUnit(champion) || (!limited && legend && champion.championTag !== legend.championTag))) {
     out.push(`${at}: Chosen Champion ${chosen} is not a champion unit with the legend's champion tag [103.3.a.2]`);
   }
   if ([...d.main, ...d.runes].some((r) => !r.def || !Number.isInteger(r.n) || r.n < 1)) {
     out.push(`${at}: every row needs a card and a count of at least 1`);
   }
   const main = total(d.main), exactly = s.rules.deckSize === 'exactly40';
-  if (exactly ? main !== 40 : main < 40) {
+  if (limited) {
+    const min = limited === 'sealed' ? 25 : 20;
+    if (main < min) out.push(`${at}: ${main} Main Deck cards, at least ${min} needed (TR 602.4.${limited === 'sealed' ? 'a.2' : 'b.3'})`);
+  } else if (exactly ? main !== 40 : main < 40) {
     out.push(`${at}: ${main} Main Deck cards, ${exactly ? 'exactly' : 'at least'} 40 needed [103.3], TR 402.1`);
   }
-  if (!d.main.some((r) => r.def === chosen)) {
+  if (chosen && !d.main.some((r) => r.def === chosen)) {
     out.push(`${at}: Chosen Champion ${chosen} is not in the Main Deck [103.3.a], TR 402.1`);
   }
   if (d.championOptions && !d.championOptions.includes(chosen)) {
@@ -210,7 +216,7 @@ defineStart((s: GameState, setup: GameSetup, x: RunCtx) => {
     throw new SetupError([`the designated player P${fixed.designee} is not in the game (TR 407)`]);
   }
   const chosen = s.players.map((pl) => setup.chosenChampion?.[pl.id] ?? setup.decks[pl.id].chosenChampion);
-  const issues = s.players.flatMap((pl) => deckIssues(s, setup.decks[pl.id], pl.id, chosen[pl.id]));
+  const issues = s.players.flatMap((pl) => deckIssues(s, setup.decks[pl.id], pl.id, chosen[pl.id], setup.limited));
   if (issues.length > 0) throw new SetupError(issues);
   setField(s, s, 'defsHash', definitionsHash());
 
@@ -218,21 +224,24 @@ defineStart((s: GameState, setup: GameSetup, x: RunCtx) => {
     const p = pl.id, d = setup.decks[p];
     setField(s, pl, 'deckName', d.name);
     setField(s, pl, 'extra', d.extra ?? {});
-    const legend = oracleCard(d.legend);                                  // the deck's identity [103.2.b]
-    setField(s, pl, 'identity', legend.domains);
-    setField(s, pl, 'championTag', legend.championTag ?? '');             // [133.8.b]
-    setField(s, pl, 'chosenChampionName', oracleCard(chosen[p]).name);    // [103.3.a.3]
-    createObject(s, {                                                     // [111], [107.4]
-      def: d.legend, printing: printingOf(d, d.legend, 0), owner: p, zone: Z.legend(p),
-      exhausted: !s.rules.legendStartsReady,
-    });
-    createObject(s, { def: chosen[p], printing: printingOf(d, chosen[p], 0), owner: p, zone: Z.champion(p) });   // [112]
+    const legend = d.legend ? oracleCard(d.legend) : null;               // the deck's identity [103.2.b]
+    setField(s, pl, 'identity', d.domains ?? legend?.domains ?? []);      // Limited: its own three (TR 602.4.a.3)
+    setField(s, pl, 'championTag', legend?.championTag ?? '');            // [133.8.b]
+    setField(s, pl, 'chosenChampionName', chosen[p] ? oracleCard(chosen[p]).name : '');   // [103.3.a.3]
+    setField(s, pl, 'limitedDraw', !!setup.limited && !d.legend && !chosen[p]);           // TR 602.4.a.5.b
+    if (legend) {
+      createObject(s, {                                                   // [111], [107.4]
+        def: d.legend, printing: printingOf(d, d.legend, 0), owner: p, zone: Z.legend(p),
+        exhausted: !s.rules.legendStartsReady,
+      });
+    }
+    if (chosen[p]) createObject(s, { def: chosen[p], printing: printingOf(d, chosen[p], 0), owner: p, zone: Z.champion(p) });   // [112]
     // The other cards of the Main Deck. The Chosen Champion is one of the 40
     // and comes out once, even from a list that names it on two rows; it
     // took the first printing of its name.
     const main: { def: DefId; printing: string | null }[] = [];
-    const used: Record<DefId, number> = { [chosen[p]]: 1 };
-    let champion = 1;
+    const used: Record<DefId, number> = chosen[p] ? { [chosen[p]]: 1 } : {};
+    let champion = chosen[p] ? 1 : 0;
     for (const row of d.main) {
       for (let i = 0; i < row.n; i++) {
         if (row.def === chosen[p] && champion > 0) { champion--; continue; }

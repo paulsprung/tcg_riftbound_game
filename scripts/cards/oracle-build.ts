@@ -495,6 +495,10 @@ export function buildOracle(cardsJson: string): OracleBuild {
     if (deck.length > 0) card.deck = deck;
   }
 
+  // the blank battlefield of Limited play: no printing, the rules make it (TR 602.3.d)
+  cards.push({ id: 'blank-battlefield', name: 'Blank Battlefield', types: ['battlefield'], supertypes: [], tags: [], domains: [],
+    text: '', rules: '', keywords: [], source: 'rule', sets: [], printings: [] });
+
   const seen = new Map<DefId, string>();
   for (const c of cards) {
     if (seen.has(c.id)) problems.push(`'${c.name}' and '${seen.get(c.id)}' share the id '${c.id}'`);

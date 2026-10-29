@@ -18,7 +18,7 @@ export function emptyPool(): RunePool {
 function emptyPlayer(id: PlayerId): PlayerState {
   return {
     id, deckName: '', legend: [], champion: null, hand: [], deck: [], runeDeck: [], trash: [], banish: [], base: [],
-    pool: emptyPool(), points: 0, xp: 0, identity: [], championTag: '', chosenChampionName: '', extra: {},
+    pool: emptyPool(), points: 0, xp: 0, identity: [], championTag: '', chosenChampionName: '', limitedDraw: false, extra: {},
   };
 }
 

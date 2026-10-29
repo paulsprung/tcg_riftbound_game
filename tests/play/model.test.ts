@@ -61,7 +61,7 @@ describe('card index (the oracle\'s names, wording and printings)', () => {
 
   it('finds every card of the oracle, and shows one of the oracle\'s own printings', () => {
     const off = ORACLE.cards.filter((c) => !c.printings.includes(cardFor(ix, c.id)?.id ?? '')).map((c) => c.id);
-    expect(off).toEqual([]);
+    expect(off).toEqual(['blank-battlefield']);              // no printing: the rules make it (TR 602.3.d)
   });
 
   it('names legends with their champion tag, as the canonical name does [132]', () => {

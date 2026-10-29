@@ -365,7 +365,8 @@ describe('187 token templates', () => {
 describe('format legality (TR 601)', () => {
   it('601.3.c Standard is OGS, OGN, SFD, UNL, VEN and RAD; every card has a printing in one', () => {
     expect(STANDARD_SETS).toEqual(['ogs', 'ogn', 'sfd', 'unl', 'ven', 'rad']);
-    expect(ORACLE.cards.filter((c) => !c.sets.some((s) => STANDARD_SETS.includes(s))).map((c) => c.id)).toEqual([]);
+    // the blank battlefield of Limited play is the rules', with no printing (TR 602.3.d)
+    expect(ORACLE.cards.filter((c) => !c.sets.some((s) => STANDARD_SETS.includes(s))).map((c) => c.id)).toEqual(['blank-battlefield']);
   });
 
   it('601.3.c.6.a Radiance is legal from October 23rd, 2026', () => {
