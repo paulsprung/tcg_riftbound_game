@@ -333,8 +333,12 @@ export function moveObject(s: GameState, id: ObjId, to: Zone, o: MoveOptions = {
   } else {
     const controller = o.controller !== undefined ? o.controller : old.owner;
     if (o.reuseId !== undefined && s.objects[o.reuseId]) throw new EngineError(`moveObject: id ${o.reuseId} is taken`);
+    if (isBoard(from.z)) {
+      // A copy effect ends as its Equipment leaves the board [479.1]; the copy itself leaves as what it is [124].
+      for (const h of Object.values(s.objects)) if (h.copyFx?.via === id) { h.def = h.copyFx.orig; delete h.copyFx; }
+    }
     obj = {
-      id: o.reuseId ?? mint(s, 'obj'), card: old.card, def: old.def, printing: old.printing, token: old.token, owner: old.owner,
+      id: o.reuseId ?? mint(s, 'obj'), card: old.card, def: old.copyFx?.orig ?? old.def, printing: old.printing, token: old.token, owner: old.owner,
       controller, zone: copyJson(to), knownBy: o.knownBy ?? knownAfter(s, old, from, to, controller),
       ts: mint(s, 'ts'), enteredTurn: s.turn.n, ...freshStatus(), ...copyJson(o.carry ?? {}),
     };
@@ -345,6 +349,31 @@ export function moveObject(s: GameState, id: ObjId, to: Zone, o: MoveOptions = {
   insert(s, obj.zone, obj.id, o.pos);
   touch(s);
   return obj.id;
+}
+
+/** Shady Spectacles: `host` becomes a copy of `def` while the Equipment `via` is attached [479.1]; `def` null ends the
+    copy effect (its own traits again). Only the definition changes: status, damage, buffs stay [124.2]. */
+export function setCopy(s: GameState, host: ObjId, def: DefId | null, via: ObjId) {
+  const h = s.objects[host];
+  if (!h) throw new EngineError(`setCopy: no object ${host}`);
+  if (def === null) {
+    if (h.copyFx?.via !== via) return;
+    h.def = h.copyFx.orig;
+    delete h.copyFx;
+  } else {
+    const orig = h.copyFx?.orig ?? h.def;
+    h.def = def;
+    h.copyFx = { orig, via };
+  }
+  touch(s);
+}
+
+/** Orianna, Lady of Clockwork: a gear becomes a unit gear with this base Might (null: it stops being one) [137.3.b]. */
+export function setAsUnit(s: GameState, gear: ObjId, v: { might: number; by: ObjId } | null) {
+  const g = s.objects[gear];
+  if (!g) throw new EngineError(`setAsUnit: no object ${gear}`);
+  if (v === null) { if (!g.asUnit) return; delete g.asUnit; } else g.asUnit = { ...v };
+  touch(s);
 }
 
 /** A token that leaves the board for anywhere but the chain ceases to

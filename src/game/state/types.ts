@@ -179,6 +179,12 @@ export interface GameObject {
   links: { group: string; source: ObjId; zone: ZoneKind }[];   // "banished with this" [395–398], [428.3]
   named?: { kind: 'card' | 'tag' | 'type'; value: string };    // [759–763]
   copiedFrom?: DefId;                 // token created as a copy [446.3]
+  /** A copy effect on this object [479.1] (Shady Spectacles): `def` holds the copied traits while the Equipment `via`
+      stays attached; `orig` is what it is without the effect (restored as it ends, and when it leaves the board). */
+  copyFx?: { orig: DefId; via: ObjId };
+  /** A gear that is also a unit [137.3.b], [143.5] (Orianna, Lady of Clockwork): its base Might, and the legend whose
+      effect made it one ("until you choose another gear with me"). */
+  asUnit?: { might: number; by: ObjId };
   aliasOf?: ObjId;                    // Replace keeps identity for references [439.1.a]
 }
 

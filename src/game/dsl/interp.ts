@@ -909,6 +909,16 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
       addEffect(s, x, objs, { s: 'kwFromKw', kw: ins.kw, from: ins.from }, effOpts('479.3'));
       return ok;
     }
+    case 'allowPlay': {                                              // "Until your next Ending Phase, you may play that card"
+      const r = ref(ins.what);
+      if (r.ignored) return r.ignored;
+      const objs = r.objs.filter((id) => s.objects[id]?.zone.z === 'banish');
+      if (objs.length === 0) return negated;
+      // The window ends as the player's next Ending Phase begins (Radiance FAQ, Runeblade Anvil): during their turn before
+      // its Ending Phase, this turn's; during their Ending Phase or another player's turn, their next turn's.
+      addEffect(s, x, objs, { s: 'playFromBanish' }, { ...effOpts('391.4'), until: { untilEnding: p } });
+      return ok;
+    }
     case 'empower': case 'disempower': {                             // [442], [443]
       const r = ref(ins.what);
       if (r.ignored) return r.ignored;

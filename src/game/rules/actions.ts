@@ -25,7 +25,7 @@ import { emit, emitZone, knowers, newGroup } from '../core/events.ts';
 import { emptyPool } from '../state/blank.ts';
 import { fire, placeSelfLeave } from '../abilities/triggers.ts';
 import { bit } from '../state/ids.ts';
-import { append, deleteObject, mint, moveObject, replaceBattlefieldObj, setField, swapBackBattlefieldObj } from '../state/mut.ts';
+import { append, deleteObject, mint, moveObject, replaceBattlefieldObj, setAsUnit, setCopy, setField, swapBackBattlefieldObj } from '../state/mut.ts';
 import { shuffled, shuffleZone } from '../state/rng.ts';
 import { locOf, Z } from '../state/zones.ts';
 import type { Domain, GameObject, GameState, Json, Loc, ObjId, PlayerId, PowerReq, RunePool, Zone } from '../state/types.ts';
@@ -636,8 +636,9 @@ export function setEmpowered(s: GameState, x: X, objs: ObjId[], on: boolean, by:
 export function addEffect(s: GameState, x: X, objs: ObjId[], spec: { s: 'baseMight'; n: number } | { s: 'keyword'; kw: string;
   value: number } | { s: 'cantMove' } | { s: 'replaceDeath'; cost?: Json } | { s: 'preventNext' } | { s: 'doubleDamage' }
   | { s: 'banishIfDies' } | { s: 'kwFromKw'; kw: string; from: string } | { s: 'grantAbility'; ability: string }
-  | { s: 'preventAmount'; n: number } | { s: 'flowGrant' } | { s: 'noEnemyChoose' }, o: { controller: PlayerId; source: ObjId | null; item: number | null;
-  rule: string; until?: 'thisTurn' | 'thisCombat' | 'permanent' }) {
+  | { s: 'preventAmount'; n: number } | { s: 'flowGrant' } | { s: 'noEnemyChoose' } | { s: 'playFromBanish' },
+  o: { controller: PlayerId; source: ObjId | null; item: number | null;
+  rule: string; until?: 'thisTurn' | 'thisCombat' | 'permanent' | { untilEnding: PlayerId } }) {
   if (objs.length === 0) return;
   append(s, s.effects, {
     id: mint(s, 'eff'), ts: mint(s, 'ts'), controller: o.controller, source: o.source, item: o.item, rule: o.rule,
@@ -714,8 +715,13 @@ export function attach(s: GameState, x: X, obj: ObjId, to: ObjId, rule: string):
 export function detach(s: GameState, x: X, obj: ObjId, rule: string): boolean {
   const g = s.objects[obj];
   if (!g || g.attachedTo === null) return false;
+  const host = g.attachedTo;
   setField(s, g, 'attachedTo', null);
   emit(s, x, { k: 'detach', obj, rule });
+  if (s.objects[host]?.copyFx?.via === obj) {                        // Shady Spectacles: "for as long as this is attached"
+    setCopy(s, host, null, obj);
+    emit(s, x, { k: 'becomeCopy', obj: host, def: s.objects[host].def, rule: '479.1' });
+  }
   requestCleanup(s);
   return true;
 }

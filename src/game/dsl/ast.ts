@@ -888,6 +888,9 @@ export type InstrAst = { id?: string; link?: string } & (
   | { op: 'killAllBut'; sel: SelAst; keep: string[] }
   /** "Empower me" [442], "Disempower" [443]. */
   | { op: 'empower' | 'disempower'; what: RefAst }
+  /** "Until your next Ending Phase, you may play that card" (Akali, Brash; Runeblade Anvil): the instruction's player may
+      play these banished cards (paying their costs) until the next of their Ending Phases begins (Radiance FAQ). */
+  | { op: 'allowPlay'; what: RefAst; until: 'nextEnding' }
 );
 /** How long an effect lasts [479]. */
 export type Until = 'thisTurn' | 'thisCombat' | 'permanent';

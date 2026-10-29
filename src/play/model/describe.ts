@@ -244,6 +244,8 @@ export function describeAll(events: readonly ObservedEvent[], c: DescribeCtx): L
       case 'counter': add(e, 'A spell is countered.', 'game'); break;
       case 'spendBuff': add(e, `${listOf(e.objs.map(unitName))} spend${e.objs.length === 1 ? 's' : ''} a buff.`, 'game'); break;
       case 'becomeMighty': add(e, `${unitName(e.obj)} becomes Mighty.`, 'game'); break;
+      case 'becomeCopy': add(e, `${unitName(e.obj)} becomes ${c.nameOf(e.def)}.`, 'game'); break;
+      case 'becomeUnit': add(e, `${unitName(e.obj)} ${e.unit ? 'becomes a unit' : 'stops being a unit'}.`, 'game'); break;
       case 'keywordsChanged': {
         const last = out[out.length - 1];
         if (last?.rule === e.rule && last.seq === e.seq - 1 && last.text.includes('keywords')) break;

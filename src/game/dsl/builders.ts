@@ -436,6 +436,8 @@ export const putOnTop = (what: RefAst): InstrAst => ({ op: 'putOnTop', what });
 /** "Banish the top card of your Main Deck" [428], bound by name. */
 export const banishTop = (n: number, bind: string): InstrAst => ({ op: 'banishTop', n, bind });
 export const empower = (what: RefAst): InstrAst => ({ op: 'empower', what });
+/** "Until your next Ending Phase, you may play that card" (the banished card, paying its costs). */
+export const allowPlay = (what: RefAst): InstrAst => ({ op: 'allowPlay', what, until: 'nextEnding' });
 export const grantAbility = (ability: string, to: RefAst, until: Until = 'thisTurn'): InstrAst => ({ op: 'grantAbility', ability, to, until });
 export const killAllBut = (sel: SelAst, keep: string[]): InstrAst => ({ op: 'killAllBut', sel, keep });
 export const kwFromKw = (to: RefAst, k: KeywordId, from: KeywordId): InstrAst => ({ op: 'kwFromKw', to, kw: k, from });

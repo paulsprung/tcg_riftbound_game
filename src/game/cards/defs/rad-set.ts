@@ -8,6 +8,7 @@ import {
   mightTo, modal, mode, move, named, onPlay, permanentSel, pickWhere, playerEffect, playFree, playToken, points, pred, predict, prog,
   ready, recycleAllBut, recycleRest, ref, returnToHand, revealTop, runeSel, slot, spell, unit, unitSel, val, when, cantMove,
   counter, kwFromKw, legendSel, playSelf, spellSel, stun, baseMight, gold, cardSel as cards, fight, recycle, spendBuffsOf, statik, choiceBy, dealSplit, discardHand,
+  allowPlay,
 } from '../../dsl/builders.ts';
 
 const friendly = unitSel({ rel: 'friendly' });
@@ -453,5 +454,17 @@ export const RAD_SET_DEFS = [
   unit('ziggs-short-fused', 'When you play me, play a Bomb gear token to a battlefield.\nAbilities of friendly gear deal 1 Bonus Damage.', {
     abilities: [onPlay(prog([playToken('bomb', 1, 'choose')])), always({ s: 'bonusDamage', n: 1, from: 'friendlyGear' })],
   }),
-];
 
+  // ---- rulings pass (docs/CARD-RULINGS.md) ----
+  // "Until your next Ending Phase": until the next of your Ending Phases begins (Radiance FAQ, Runeblade Anvil).
+  unit('akali-brash', 'The first time I move each turn, [Add] [1][A].\nThe second time I move each turn, banish the top card of your Main Deck. Until your next Ending Phase, you may play that card.', {
+    abilities: [when({ on: 'moved', who: 'self' }, prog([{ op: 'add', energy: 1, power: 1 }]), { first: 'turn' }),
+      when({ on: 'moved', who: 'self' }, prog([banishTop(1, 'b'), allowPlay(ref.bound('b'))]), { if: cond.self(pred.moves(2)) })],
+  }),
+  ...(() => {
+    const anvil = prog([banishTop(1, 'b'), allowPlay(ref.bound('b'))]);
+    return [gear('runeblade-anvil', 'When you play this or when this leaves the board, banish the top card of your Main Deck. Until your next Ending Phase, you may play that card.\n[2][P], [E]: Kill this.', {
+      abilities: [onPlay(anvil), when({ on: 'leaves', who: 'self' }, anvil), activated({ energy: 2, power: ['fury'], exhaustSelf: true }, prog([kill(ref.self)]))],
+    })];
+  })(),
+];

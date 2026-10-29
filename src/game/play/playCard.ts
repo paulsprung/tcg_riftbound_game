@@ -274,7 +274,10 @@ export function playableCards(s: GameState, p: PlayerId, w: Window = 'main'): Ob
     && a.spec.s === 'playFromTrash' && (!a.while || evalCond(s, a.while, { controller: p, source: id, origin: 'trash' }))));
   // Endless Riches: "You may play cards from your trash."
   const allTrash = staticsFor(s, null, 'playAllFromTrash').some(({ st }) => st.ctl === p) ? pl.trash.filter((id) => !fromTrash.includes(id)) : [];
-  const from = [...pl.hand, ...(pl.champion === null ? [] : [pl.champion]), ...facedown, ...fromTrash, ...allTrash];
+  // Akali, Brash; Runeblade Anvil: "Until your next Ending Phase, you may play that card" (a banished card).
+  const fromBanish = pl.banish.filter((id) => s.effects.some((e) => (e.spec as { s?: string } | null)?.s === 'playFromBanish'
+    && e.controller === p && 'objs' in e.affects && e.affects.objs.includes(id)));
+  const from = [...pl.hand, ...(pl.champion === null ? [] : [pl.champion]), ...facedown, ...fromTrash, ...allTrash, ...fromBanish];
   // Fallen Feline: "While I'm at a battlefield, opponents can't play spells with that name."
   const namedOut = staticsFor(s, null, 'opponentsCantPlayNamed').filter(({ st }) => st.ctl !== p && s.objects[st.host]?.named?.kind === 'card')
     .map(({ st }) => s.objects[st.host].named!.value);

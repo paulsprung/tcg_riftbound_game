@@ -62,6 +62,12 @@ export function enterPhase(s: GameState, x: X, phase: Phase, step: Step) {
   setField(s, s.turn, 'step', step);
   setField(s, s.turn, 'priority', null);
   emit(s, x, { k: 'phase', phase, step, rule: RULE[step] ?? RULE[phase] ?? '314' });
+  if (phase === 'ending' && step === 'endingStep') {
+    // "Until your next Ending Phase": such permissions end as the Turn Player's Ending Phase begins (Radiance FAQ).
+    const p = s.turn.player;
+    const ends = (e: (typeof s.effects)[number]) => typeof e.until === 'object' && (e.until as { untilEnding?: number }).untilEnding === p;
+    if (s.effects.some(ends)) setField(s, s, 'effects', s.effects.filter((e) => !ends(e)));
+  }
   const tasks: Task[] = [{ t: 'cleanup', v: 'normal' }];
   for (const id of TASKS[`${phase}/${step}`] ?? []) tasks.push({ t: 'phase', id });
   if (phase === 'ending' && step === 'expiration') {
