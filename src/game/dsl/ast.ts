@@ -45,8 +45,8 @@ export interface KeywordAst { kw: KeywordId; value?: number;
 
 /** "[Show Off] a card with Energy cost [7] or more" [832.1.b]. */
 export interface ShowOffAst { minEnergy?: number; withKeyword?: KeywordId;
-  /** "[Show Off] a gear": a card of this type. */
-  type?: CardType }
+  /** "[Show Off] a gear": a card of this type; "a Mech": with this tag. */
+  type?: CardType; tag?: string }
 
 /** Where a triggered ability works when it isn't on the board [385.2]. */
 export type ZoneScope = 'board' | ('trash' | 'hand' | 'deck')[];
@@ -139,7 +139,9 @@ export type StaticAst =
       every player, or this battlefield's controller only. */
   | { s: 'facedownCapacity'; n: number; for: 'any' | 'controller' }
   /** Annie, Fiery ("Your spells and abilities"), Void Gate ("to units here") [712–715]. */
-  | { s: 'bonusDamage'; n: number; by?: 'you'; to?: 'here' }
+  | { s: 'bonusDamage'; n: number; by?: 'you'; to?: 'here';
+      /** "Abilities of friendly gear deal 1 Bonus Damage". */
+      from?: 'friendlyGear' }
   /** Gives an ability this definition holds (grantedOnly) to other objects. */
   | { s: 'grantAbility'; ability: string; to: SelAst }
   /** Heimerdinger, Inventor: "I have all [E] abilities of …". */
@@ -147,8 +149,13 @@ export type StaticAst =
   /** Where it may be played besides the usual [355.2]: an open battlefield,
       an occupied enemy battlefield. */
   | { s: 'playTo'; where: 'open' | 'occupiedEnemy' | 'attacking' | 'enemyAlone' }
-  /** Mageseeker Investigator: moving more than one unit here at once costs [A] each beyond the first. */
-  | { s: 'moveTax' }
+  /** Mageseeker Investigator: moving more than one unit here at once costs [A] each beyond the first; `cost`: "Opponents must
+      pay [1][A] to move one or more units to this battlefield" (once per Standard Move). */
+  | { s: 'moveTax'; cost?: { energy: number; power: number } }
+  /** "Your gear with [Deploy] have [Action]", "your spells have [Reaction]": a timing for the controller's cards. */
+  | { s: 'giveTiming'; timing: 'action' | 'reaction'; types: CardType[]; keyword?: KeywordId }
+  /** "I don't take damage" (while the ability's condition holds). */
+  | { s: 'noDamage' }
   /** "This enters exhausted" (gear) [359.2.d]. */
   | { s: 'entersExhausted' }
   /** "Increase the points needed to win the game by 1" (Aspirant's Climb) [194.3]. */
@@ -165,6 +172,11 @@ export type StaticAst =
   | { s: 'noMoveToBase'; anywhere?: true;
       /** "I can't move to base": only its source. */
       self?: true }
+  /** Mordekaiser, Twice-Slain: "Once each turn, if I would die, you may kill a friendly unit to heal me, exhaust me, and recall me
+      instead" (applied whenever another friendly unit can be killed: the one with the least Might). */
+  | { s: 'saveSelfByKill' }
+  /** Seraphic Wyvern: "If you would channel runes, channel that many runes plus 1 exhausted rune instead." */
+  | { s: 'channelExtra' }
   /** "Units can't be played here." */
   | { s: 'noPlayHere' }
   /** "While I'm at a battlefield, opponents can't gain points." */
@@ -256,6 +268,8 @@ export interface NonStdCostAst {
   banishSelf?: true;
   /** "Disempower me" [443]. */
   disempowerSelf?: true;
+  /** "Banish a unit or gear from your trash". */
+  banishTrash?: { types?: CardType[]; n: number };
 }
 /** "I cost [2] less" [356.4]: a fixed amount, or one per object a selector
     picks as the cost is determined (locked [356.4.g]); `min`: "to a minimum
@@ -268,7 +282,9 @@ export interface DiscountAst { energy: ValueAst; min?: number; power?: number;
   /** Only when the spell chooses the discount's source ("Your spells that choose me"). */
   ifChoosesSource?: true;
   /** Only when one of its targets fits these ("This costs [2] less if you choose a Bird, Cat, Dog, or Poro"). */
-  ifTarget?: PredAst[] }
+  ifTarget?: PredAst[];
+  /** Hunters' Circle: "For each player, the first unit or gear they play here on their turn costs [1] less". */
+  firstHere?: true }
 
 /** Costs [201–206]. Energy and Power are paid from the Rune Pool; "[E]"
     exhausts the source [135.2.e.2]; the other parts are non-standard. */
@@ -344,6 +360,8 @@ export type CondAst =
   | { c: 'phase'; phase: 'beginning' | 'main'; yours?: true }
   /** "If you've gained XP this turn". */
   | { c: 'xpGained' }
+  /** "if you control this battlefield" (the source's battlefield). */
+  | { c: 'controlsHere' }
   /** "While I'm in a showdown": a showdown is going on at the source's battlefield. */
   | { c: 'selfInShowdown' }
   /** The card being played comes from this zone ("play me from your trash for …"). */
@@ -455,7 +473,21 @@ export type PredAst =
   /** Has the tag the source named as it was played (The List). */
   | { p: 'namedTag' }
   /** [Empowered] [442]. */
-  | { p: 'empowered' };
+  | { p: 'empowered' }
+  /** Moved at least N times this turn ("If I have moved twice this turn"). */
+  | { p: 'minMoves'; n: number }
+  /** A champion card [133]. */
+  | { p: 'champion' }
+  /** Owned by the item's controller (cards in decks have no controller). */
+  | { p: 'ownedByYou' }
+  /** "with Might greater than each other unit on the board". */
+  | { p: 'mightiest' }
+  /** Dealt damage this turn. */
+  | { p: 'damagedThisTurn' }
+  /** At the battlefield where a showdown is going on ("a friendly unit in a showdown"). */
+  | { p: 'inShowdown' }
+  /** At the battlefield the trigger's unit moved to or from ("a battlefield I moved to or from"). */
+  | { p: 'atMoveEnds' };
 
 export type ValueAst = number
   | { v: 'count'; of: SelAst }
@@ -494,6 +526,16 @@ export type ValueAst = number
   | { v: 'cardDeals' }
   /** How many battlefields the controller conquered this turn. */
   | { v: 'conquered' }
+  /** A number under a condition ("costs [3] less if you control 4 or fewer runes"). */
+  | { v: 'if'; cond: CondAst; then: ValueAst; else: ValueAst }
+  /** The least Energy cost among the cards a name is bound to ("a card with the lowest Energy cost"). */
+  | { v: 'minEnergyBound'; name: string }
+  /** The Might of the unit shown off ("deal damage equal to that unit's Might") [832.1.d]. */
+  | { v: 'shownMight' }
+  /** The Energy cost of what the play's non-standard costs took ("equal to the Energy cost of the gear you returned"). */
+  | { v: 'paidEnergy' }
+  /** A keyword's value on a referenced object ("double the [Shield] of a unit"). */
+  | { v: 'kwOf'; of: RefAst; kw: KeywordId }
   /** The number chosen for the item's "pay any amount of Power" cost (CostAbilityAst.xPower). */
   | { v: 'xCost' }
 /** What an instruction acts on: its source, a chosen slot, a bound name,
@@ -573,7 +615,9 @@ export type InstrAst = { id?: string; link?: string } & (
   | { op: 'look'; n: number; bind: string }                                      // [425]: the top N of your Main Deck
   | { op: 'pick'; from: string; n: number; bind: string;                       // a resolution-time choice [355.18]
       /** "You may …": none at all is an answer; only cards that fit `where` and Might up to `mightMax`. */
-      min?: number; where?: PredAst[]; mightMax?: ValueAst }
+      min?: number; where?: PredAst[]; mightMax?: ValueAst;
+      /** Only cards with Energy cost up to this ("If you revealed a card with the lowest Energy cost"). */
+      energyMax?: ValueAst }
   | { op: 'recycleRest'; from: string; minus: string }                           // [417]
   | { op: 'discard'; n: number }                                                 // [423]
   | { op: 'channel'; n: ValueAst; exhausted?: true; caster?: true }              // [431]; caster: the item's controller
@@ -612,7 +656,9 @@ export type InstrAst = { id?: string; link?: string } & (
       /** Referents captured now for the delayed ability ("that unit", "this battlefield") [391.5]. */
       capture?: Record<string, RefAst | 'eventBf' | 'hereBf'>;
       /** Not only this turn: until it has triggered its uses ("When they hold, return it to their hand"). */
-      lasting?: true }
+      lasting?: true;
+      /** Numbers captured now ("play that many Bomb tokens"), read by ValueAst info. */
+      captureN?: Record<string, ValueAst> }
   | { op: 'draws'; n: number; who: { controllerOf: RefAst } | 'opponents' | 'caster' }   // "Its controller draws 2"
   | { op: 'move'; what: RefAst | SelAst; to: MoveToAst }                         // [421]
   | { op: 'returnToHand'; what: RefAst | SelAst }                                // to its owner's hand
@@ -629,7 +675,7 @@ export type InstrAst = { id?: string; link?: string } & (
   | { op: 'revealTop'; bind: string; n?: number }                               // [425]
   | { op: 'toHand'; what: RefAst }                                               // a revealed card to your hand
   | { op: 'gainXp'; n: ValueAst }                                                // [730.1]
-  | { op: 'add'; energy?: number; power?: number; onlyFor?: 'spells' | 'gear';    // [430] (power: [A])
+  | { op: 'add'; energy?: number; power?: number; onlyFor?: 'spells' | 'gear' | 'permanents';    // [430] (power: [A])
       /** Power of one domain ("[Add] [R]") instead of [A]. */
       domain?: Domain }
   | { op: 'win' }                                                                // [194.5]
@@ -666,12 +712,14 @@ export type InstrAst = { id?: string; link?: string } & (
       /** "with the same controller". */
       sameController?: true;
       /** Exactly this many, read now ("Banish that many units you control"). */
-      count?: ValueAst }
+      count?: ValueAst;
+      /** Only objects with less Might than this ("a unit with less Might than that unit had"). */
+      mightBelow?: ValueAst }
   /** Each player in turn (from the controller, or from the next player), the body executed as that player:
       "you", "your", "friendly" are theirs [MP]; names bound inside are theirs (`name#p<id>`). */
   | { op: 'forEach'; who: 'each' | 'opponents'; from: 'you' | 'next'; body: InstrAst[] }
   /** A player picks one of the modes: the instruction's player, or a referenced object's controller. */
-  | { op: 'choiceBy'; who: 'self' | { controllerOf: RefAst }; modes: { label: string; body: InstrAst[] }[] }
+  | { op: 'choiceBy'; who: 'self' | 'opponent' | { controllerOf: RefAst }; modes: { label: string; body: InstrAst[] }[] }
   /** Each opponent reveals their hand [425]. */
   | { op: 'revealHand' }
   /** Their owners discard these cards [423]. */
@@ -742,6 +790,10 @@ export type InstrAst = { id?: string; link?: string } & (
   | { op: 'banishIfDies'; what: RefAst }
   /** "Banish the top card of your Main Deck" [428]: the banished cards are bound. */
   | { op: 'banishTop'; n: number; bind: string }
+  /** K'Sante: "Give a friendly unit 'I have [Assault] equal to my [Shield]' this turn" (layer 3, read all the time). */
+  | { op: 'kwFromKw'; to: RefAst; kw: KeywordId; from: KeywordId }
+  /** "Kill the rest": every object of a selector but the kept ones. */
+  | { op: 'killAllBut'; sel: SelAst; keep: string[] }
   /** "Empower me" [442], "Disempower" [443]. */
   | { op: 'empower' | 'disempower'; what: RefAst }
 );
@@ -759,7 +811,9 @@ export type TriggerAst =
         /** "another Dragon": with this tag. */
         tag?: string;
         /** "a token unit". */
-        token?: true };
+        token?: true;
+        /** "a gear with [Deploy]": printing this keyword. */
+        keyword?: KeywordId };
       to?: 'here';                                                               // [420.4.a]; card: not a token [052]
       /** "For each player, the first time they …" [383.1.b]. */
       firstPerPlayer?: true }
@@ -768,7 +822,13 @@ export type TriggerAst =
   | { on: 'attack' | 'defend'; who: 'self' | 'friendly' | 'you' | 'enemy'; at?: 'here' | 'yours' }
   /** [383.4.c–d]; 'any': wherever ("When you conquer"); 'score': either. */
   | { on: 'conquer' | 'hold' | 'score'; who: 'you' | 'opponent'; at: 'here' | 'any' }
-  | { on: 'becomesExhausted'; what: 'self' }                                     // an Exhaust action only [415]
+  | { on: 'becomesExhausted'; what: 'self' | 'friendlyOther' }                    // an Exhaust action only [415]
+  /** "When you draw 1 or more cards with 9 or more other cards in your hand". */
+  | { on: 'drewWithHand'; others: number }
+  /** "When a combat that I was in ends". */
+  | { on: 'combatEnded'; who: 'self' }
+  /** "When I become [Empowered]" (self); "When you empower something else" (other) [442]. */
+  | { on: 'empowered'; who: 'self' | 'other' }
   | { on: 'exhaustBatch'; by: 'you'; min: number }                               // friendly units in one Exhaust action
   | { on: 'unitDies'; nonToken?: true; at: 'here' | 'any' | 'battlefield'; who?: 'friendlyOther' | 'friendly' | 'enemy';
       /** Other permanents than units ("When a friendly gear … dies"). */

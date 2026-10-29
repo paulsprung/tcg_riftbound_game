@@ -85,7 +85,9 @@ export type TriggerEvent =
   | { e: 'hid'; p: PlayerId; bf: number }                            // [422]
   | { e: 'showdown'; bf: number }                                    // a showdown begins [341]
   | { e: 'drew'; p: PlayerId; before: number; after: number }        // cards drawn this turn, before and after a draw
-  | { e: 'mightReduced'; by: PlayerId; objs: ObjId[] };             // an effect of `by` lowered these units' Might [479.4]
+  | { e: 'mightReduced'; by: PlayerId; objs: ObjId[] }
+  | { e: 'combatEnded'; bf: number; units: ObjId[] }                 // [468.7]
+  | { e: 'empowered'; by: PlayerId | null; objs: ObjId[] };          // [442]             // an effect of `by` lowered these units' Might [479.4]
 
 const sameLoc = (a: Loc | null | undefined, b: Loc | null | undefined) => !!a && !!b && a.z === b.z
   && (a.z === 'base' ? a.p === (b as typeof a).p : a.bf === (b as typeof a).bf);
@@ -151,6 +153,7 @@ function meets(s: GameState, w: TriggerAst, ev: TriggerEvent, o: GameObject | nu
       if (w.what?.minSpent !== undefined && (ev.spent ?? 0) < w.what.minSpent) break;   // "if you spent [4] or more"
       if (w.what?.tag !== undefined && !(findCard(ev.def)?.tags ?? []).includes(w.what.tag)) break;
       if (w.what?.token && ev.isCard) break;
+      if (w.what?.keyword && !(findCard(ev.def)?.keywords ?? []).some((l) => l.keywords.some((k) => k.kw === w.what!.keyword))) break;
       if (w.to === 'here' && (!o || !sameLoc(ev.to, here))) break;
       if (w.firstPerPlayer) {                                        // [383.1.b]
         const k = key(ev.p);
@@ -210,7 +213,27 @@ function meets(s: GameState, w: TriggerAst, ev: TriggerEvent, o: GameObject | nu
       break;
     }
     case 'becomesExhausted':
-      if (o && ev.e === 'exhausted' && ev.objs.includes(o.id)) instances.push({ p: ev.p, info: { subject: o.id } });
+      if (!o || ev.e !== 'exhausted') break;
+      if (w.what === 'self') { if (ev.objs.includes(o.id)) instances.push({ p: ev.p, info: { subject: o.id } }); break; }
+      for (const id of ev.objs) {                                    // "When another friendly unit becomes exhausted"
+        if (id !== o.id && s.objects[id] && isType(s.objects[id], 'unit') && ctlOf(s, id) === c(ctlOf(s, id)) && ctlOf(s, id) !== null) {
+          instances.push({ p: ctlOf(s, id), info: { subject: id } });
+        }
+      }
+      break;
+    case 'combatEnded':
+      if (o && ev.e === 'combatEnded' && ev.units.includes(o.id)) instances.push({ p: o.controller, info: { subject: o.id, bf: ev.bf } });
+      break;
+    case 'empowered':
+      if (!o || ev.e !== 'empowered') break;
+      if (w.who === 'self' ? ev.objs.includes(o.id) : ev.by !== null && c(ev.by) === ev.by && ev.objs.some((id) => id !== o.id)) {
+        instances.push({ p: o.controller, info: { subject: o.id } });
+      }
+      break;
+    case 'drewWithHand':                                             // "with 9 or more other cards in your hand"
+      if (ev.e === 'drew' && c(ev.p) === ev.p && s.players[ev.p].hand.length - (ev.after - ev.before) >= w.others) {
+        instances.push({ p: ev.p, info: { p: ev.p } });
+      }
       break;
     case 'exhaustBatch': {
       if (ev.e !== 'exhausted') break;

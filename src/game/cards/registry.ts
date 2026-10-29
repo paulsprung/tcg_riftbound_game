@@ -99,6 +99,7 @@ function costOfKeyword(c: OracleCost | undefined): CostAst {
     if (m) out.discard = Number(m[1]);
     const r = /^Recycle (\d+) cards? from your trash$/i.exec(o);
     if (r) out.recycleTrash = { n: Number(r[1]) };
+    if (/^Kill a friendly unit$/i.test(o)) out.kill = { sel: { k: 'unit', rel: 'friendly' }, n: 1 };   // "[Empower] — Kill a friendly unit"
     const xp = /^Spend (\d+) XP$/i.exec(o);                        // "[Equip] — Spend 1 XP"
     if (xp) out.xp = Number(xp[1]);
   }
@@ -151,9 +152,14 @@ export function keywordAbility(def: DefId, kw: KeywordId): AbilityAst | undefine
         body: [{ op: 'attach', what: self, to: { slot: 'u' } }],
       } };
     }
-    case 'empower':                                                  // "[Cost]: Empower me. Use only if not Empowered." [442]
-      return { id, kind: 'activated', cost: keywordCost(def, 'empower') ?? {}, while: { c: 'is', ref: self, pred: { p: 'not', of: { p: 'empowered' } } },
-        effect: { body: [{ op: 'empower', what: self }] } };
+    case 'empower': {                                                // "[Cost]: Empower me. Use only if not Empowered." [442]
+      const cost = keywordCost(def, 'empower') ?? {};
+      const less = cardDef(def)?.keywords.find((k) => k.kw === 'empower')?.equipLessBy;   // "This ability costs [1] less for each …"
+      return { id, kind: 'activated', cost: less ? { ...cost, energyLessBy: less } : cost,
+        while: { c: 'is', ref: self, pred: { p: 'not', of: { p: 'empowered' } } }, effect: { body: [{ op: 'empower', what: self }] } };
+    }
+    case 'flow':                                                     // [Flow]: "You may play this from your trash for its Flow cost. Then banish it."
+      return { id, kind: 'cost', alt: keywordCost(def, 'flow') ?? {}, while: { c: 'origin', z: 'trash' } };
     case 'accelerate':                                               // [805.1.b]: [1][C], then I enter ready
       return { id, kind: 'cost', optional: true, add: { energy: 1, power: ['C'] } };
     case 'repeat': {                                                 // [820.1.d]
@@ -229,7 +235,7 @@ export type Coverage = 'defined' | 'partial' | 'vanilla' | 'keywords' | 'undefin
 /** The keywords whose rules the engine implements. */
 export const IMPLEMENTED_KEYWORDS: readonly KeywordId[] = ['tank', 'backline', 'deploy', 'disarm', 'action', 'reaction',
   'deflect', 'shield', 'assault', 'deathknell', 'showOff', 'accelerate', 'ganking', 'hidden', 'vision', 'temporary',
-  'equip', 'quickDraw', 'repeat', 'weaponmaster', 'ambush', 'hunt', 'legion', 'level', 'unique', 'empower'];
+  'equip', 'quickDraw', 'repeat', 'weaponmaster', 'ambush', 'hunt', 'legion', 'level', 'unique', 'empower', 'flow'];
 
 export function coverageOf(def: DefId): Coverage {
   const d = cardDef(def);

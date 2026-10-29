@@ -30,6 +30,8 @@ export interface SelCtx {
   lkiHere?: Loc | null;
   /** What the item's slots chose ("each other enemy unit there"). */
   slotObjs?: Record<string, ObjId[]>;
+  /** Where the trigger's unit moved from. */
+  eventFrom?: Loc | null;
   /** The cost of the object a cost of the item killed ("costs no more … than the killed unit"). */
   paidCost?: { energy: number; power: number } | null;
 }
@@ -198,6 +200,17 @@ export function predOk(s: GameState, p: PredAst, id: ObjId, c: SelCtx): boolean 
       return friendly.length === 1 && friendly[0] === want;
     }
     case 'empowered': return o.empowered > 0;
+    case 'minMoves': return o.moves >= p.n;
+    case 'ownedByYou': return o.owner === c.controller;
+    case 'damagedThisTurn': return (s.log.damaged ?? []).includes(id);
+    case 'inShowdown': return s.showdown !== null && o.zone.z === 'bf' && o.zone.bf === s.showdown.bf;
+    case 'atMoveEnds': {                                             // "a battlefield I moved to or from"
+      const at = locOf(o);
+      if (!at || at.z !== 'bf') return false;
+      return (c.eventBf !== undefined && c.eventBf !== null && at.bf === c.eventBf) || (c.eventFrom?.z === 'bf' && c.eventFrom.bf === at.bf);
+    }
+    case 'mightiest': return permanents(s).every((u) => u === id || !isType(s.objects[u], 'unit') || mightOf(s, u) < mightOf(s, id));
+    case 'champion': return (findCard(o.def)?.supertypes ?? []).includes('champion');
     case 'namedTag': {                                               // The List: "a unit with the named tag"
       const src = c.source === null ? undefined : s.objects[c.source];
       const tag = src?.named?.kind === 'tag' ? src.named.value : undefined;

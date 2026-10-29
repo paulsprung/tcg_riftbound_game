@@ -132,7 +132,7 @@ export function staticApplies(s: GameState, st: StaticInst, spec: { to?: SelAst 
 
 /** Statics about an object: "I have …" or "… have …" (a `to` selector). */
 const TARGETED: readonly StaticAst['s'][] = ['might', 'keyword', 'entersReady', 'grantAbility', 'maxBuffs', 'tag', 'saveHost',
-  'doubleMightBonus', 'holdIsConquer', 'noEnemyChoose', 'noTemporaryTrigger', 'noCombatDamage', 'cantBeReadied'];
+  'doubleMightBonus', 'holdIsConquer', 'noEnemyChoose', 'noTemporaryTrigger', 'noCombatDamage', 'cantBeReadied', 'noDamage', 'saveSelfByKill'];
 
 /** The statics of a kind that apply to an object now (for the kinds that
     are about objects), or every active one of that kind whose condition
@@ -200,6 +200,12 @@ function core(s: GameState, o: GameObject, withStatics: boolean): Derived {
       : spec.kw.value ?? 1);
     for (const { st, spec } of statics) if (!spec.ifNot) keywords[spec.kw.kw] = (keywords[spec.kw.kw] ?? 0) + kv(st, spec);
     for (const { st, spec } of statics) if (spec.ifNot && !keywords[spec.kw.kw]) keywords[spec.kw.kw] = kv(st, spec);   // "if they didn't already"
+  }
+  for (const e of s.effects) {                                       // "I have [Assault] equal to my [Shield]" (read now)
+    const spec = e.spec as { s?: string; kw?: KeywordId; from?: KeywordId } | null;
+    if (spec?.s !== 'kwFromKw' || !('objs' in e.affects) || !e.affects.objs.includes(o.id) || !spec.kw || !spec.from) continue;
+    const n = keywords[spec.from] ?? 0;
+    if (n > 0) keywords[spec.kw] = (keywords[spec.kw] ?? 0) + n;
   }
   if (base === null) return { might: null, baseMight: null, keywords };
   delta += o.buffs * buffValueOf(s, o);                              // one per buff [703]

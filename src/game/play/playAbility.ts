@@ -38,7 +38,7 @@ import { snapshotOf } from '../rules/chars.ts';
 import { goldBonus, paymentPlans } from '../rules/resources.ts';
 import { selectAll, slotLocsOf, stillLegal } from '../rules/targets.ts';
 import { abilityTiming, timingOk, windowAllows, type Window } from '../rules/timing.ts';
-import { choicesPossible, chooseNext, slotsOf } from './choices.ts';
+import { choicesPossible, chooseNext, slotObjsOf, slotsOf } from './choices.ts';
 import { payStep } from './pay.ts';
 import { deflectFor } from './cost.ts';
 import { enemyThing, resourceCost } from './playCard.ts';
@@ -77,9 +77,9 @@ export function canActivate(s: GameState, p: PlayerId, src: ObjId, a: ActivatedA
   if (!nonStdPossible(s, nonStdOf(a.cost), src, p)) return false;   // [415.4], [203.3]
   const c = resourceCost(a.cost, domainsOf(s, src));
   const less = a.cost.energyLessBy;
-  if (less && typeof less === 'object' && less.v === 'count') {     // "[1] less for each …": known now
-    c.energy = Math.max(0, c.energy - selectAll(s, less.of, { controller: p, source: src }).length);
-  } else if (less) c.energy = 0;                                     // reduced by the unit chosen: checked as it is paid
+  const known = less === undefined ? 0 : lessByNow(s, less, p, src);
+  if (known === null) c.energy = 0;                                  // reduced by the unit chosen: checked as it is paid
+  else c.energy = Math.max(0, c.energy - known);                     // "[1] less for each …": known now
   if (paymentPlans(s, p, c, { limit: 1 }).length === 0) return false;
   if (a.limit && (s.usage[usageKey(src, a.id, a.anyPlayer ? p : '*')] ?? 0) >= a.limit.n) return false;   // "Use only once per turn"
   if (a.modesOncePerTurn && a.effect.modes) {
@@ -87,6 +87,18 @@ export function canActivate(s: GameState, p: PlayerId, src: ObjId, a: ActivatedA
     if (left < a.effect.modes.pick) return false;
   }
   return choicesPossible(s, a.effect, { controller: p, source: src });
+}
+
+/** An ability's Energy reduction known before its targets ("[1] less for each rune you control", "[3] less if …"); null
+    when it depends on a target (Hextech Gauntlets). */
+function lessByNow(s: GameState, v: import('../dsl/ast.ts').ValueAst, p: PlayerId, src: ObjId | null): number | null {
+  if (typeof v === 'number') return v;
+  if (v.v === 'count') return selectAll(s, v.of, { controller: p, source: src }).length;
+  if (v.v === 'if') {
+    const r = evalCond(s, v.cond, { controller: p, source: src }) ? v.then : v.else;
+    return lessByNow(s, r, p, src);
+  }
+  return null;
 }
 
 /** The abilities p could activate now: `act:<obj>#<sub>` (objAbilities.ts). */
@@ -189,9 +201,9 @@ const STEPS: StepTable<AbilityFrame> = [
       const t = typeof of === 'object' && 'slot' in of ? it.play.choices.executions[0].targets[of.slot]?.[0] : undefined;
       if (t?.k === 'obj' && s.objects[t.id]) c.energy = Math.max(0, c.energy - Math.max(0, mightOf(s, t.id)));
     }
-    if (a.cost?.energyLessBy && typeof a.cost.energyLessBy === 'object' && a.cost.energyLessBy.v === 'count') {
+    if (a.cost?.energyLessBy && !(typeof a.cost.energyLessBy === 'object' && a.cost.energyLessBy.v === 'might')) {
       // "This ability costs [1] less for each friendly unit with [Temporary]" (Lillia, Bashful Bloom).
-      c.energy = Math.max(0, c.energy - selectAll(s, a.cost.energyLessBy.of, { controller: it.controller, source: it.source ?? null }).length);
+      c.energy = Math.max(0, c.energy - (lessByNow(s, a.cost.energyLessBy, it.controller, it.source ?? null) ?? 0));
     }
     // Deflect: [A] per time it chooses an opponent's Deflect object [809.1.c], [356.2.a.2].
     const deflect = Object.values(it.play.choices.executions[0].targets).flat()
@@ -241,7 +253,10 @@ const STEPS: StepTable<AbilityFrame> = [
     setField(s, it.play, 'step', 5);
     const a = abilityOf(s, f);
     const ex = it.play.choices.executions[0];
-    const c = { controller: it.controller, source: it.source ?? null, slotLoc: slotLocsOf(s, ex), lkiHere: it.sourceLki?.loc ?? null };
+    const c = { controller: it.controller, source: it.source ?? null, slotLoc: slotLocsOf(s, ex), lkiHere: it.sourceLki?.loc ?? null,
+      slotObjs: slotObjsOf(ex), subject: typeof it.trigger?.subject === 'number' ? it.trigger.subject : null,
+      eventBf: typeof it.trigger?.bf === 'number' ? it.trigger.bf : null,
+      eventFrom: it.trigger?.from && typeof it.trigger.from === 'object' ? it.trigger.from as unknown as import('../state/types.ts').Loc : null };
     const bad = slotsOf(a.effect, ex.modes).some((sl) => (ex.targets[sl.id] ?? []).some((t) => !stillLegal(s, t, sl, c)));
     if (bad || !timingOk(s, it)) return a.kind === 'triggered' ? removeTrigger(s, f, x, 'illegal') : rollback(s, f, x, 'illegal');
     return next(f);

@@ -223,6 +223,13 @@ export const pred = {
   choosesOnly: (slot: string): PredAst => ({ p: 'choosesOnly', slot }),
   namedTag: { p: 'namedTag' } as PredAst,
   empowered: { p: 'empowered' } as PredAst,
+  minMoves: (n: number): PredAst => ({ p: 'minMoves', n }),
+  champion: { p: 'champion' } as PredAst,
+  ownedByYou: { p: 'ownedByYou' } as PredAst,
+  mightiest: { p: 'mightiest' } as PredAst,
+  damagedThisTurn: { p: 'damagedThisTurn' } as PredAst,
+  inShowdown: { p: 'inShowdown' } as PredAst,
+  atMoveEnds: { p: 'atMoveEnds' } as PredAst,
 };
 /** The four tags of Ivern's friends. */
 export const PETS = ['Bird', 'Cat', 'Dog', 'Poro'];
@@ -268,6 +275,7 @@ export const cond = {
   xpGained: { c: 'xpGained' } as CondAst,
   selfInShowdown: { c: 'selfInShowdown' } as CondAst,
   origin: (z: 'trash' | 'hand' | 'banish'): CondAst => ({ c: 'origin', z }),
+  controlsHere: { c: 'controlsHere' } as CondAst,
   runeDeck: (op: '<' | '<=' | '=' | '>=' | '>', n: number): CondAst => ({ c: 'runeDeck', op, n }),
 };
 export const ref = {
@@ -301,6 +309,11 @@ export const val = {
   sumMight: (of: SelAst): ValueAst => ({ v: 'sumMight', of }),
   cardDeals: { v: 'cardDeals' } as ValueAst,
   conquered: { v: 'conquered' } as ValueAst,
+  kwOf: (of: RefAst, k: KeywordId): ValueAst => ({ v: 'kwOf', of, kw: k }),
+  minEnergyBound: (name: string): ValueAst => ({ v: 'minEnergyBound', name }),
+  shownMight: { v: 'shownMight' } as ValueAst,
+  paidEnergy: { v: 'paidEnergy' } as ValueAst,
+  if: (c: CondAst, then: ValueAst, otherwise: ValueAst): ValueAst => ({ v: 'if', cond: c, then, else: otherwise }),
   xCost: { v: 'xCost' } as ValueAst,
 };
 
@@ -332,9 +345,9 @@ export const iff = (c: CondAst, then: InstrAst[], otherwise?: InstrAst[]): Instr
   (otherwise ? { op: 'if', cond: c, then, else: otherwise } : { op: 'if', cond: c, then });
 /** A delayed triggered ability for the rest of this turn, `uses` times [390–393]. */
 export const delayed = (uses: number, trigger: TriggerAst, effect: ProgAst,
-  o: { capture?: Record<string, RefAst | 'eventBf' | 'hereBf'>; may?: true; lasting?: true } = {}): InstrAst =>
+  o: { capture?: Record<string, RefAst | 'eventBf' | 'hereBf'>; may?: true; lasting?: true; captureN?: Record<string, ValueAst> } = {}): InstrAst =>
   ({ op: 'delayed', uses, ability: { kind: 'triggered', when: trigger, effect, ...(o.may ? { may: true as const } : {}) },
-    ...(o.capture ? { capture: o.capture } : {}), ...(o.lasting ? { lasting: true as const } : {}) });
+    ...(o.capture ? { capture: o.capture } : {}), ...(o.lasting ? { lasting: true as const } : {}), ...(o.captureN ? { captureN: o.captureN } : {}) });
 export const draws = (n: number, controllerOf: RefAst): InstrAst => ({ op: 'draws', n, who: { controllerOf } });
 /** Names an instruction ("if you do", links). */
 export const named = (id: string, i: InstrAst): InstrAst => ({ ...i, id });
@@ -373,9 +386,9 @@ export const spendBuff = (from: SelAst | RefAst): InstrAst => ({ op: 'spendBuff'
 export const spendBuffsOf = (from: RefAst): InstrAst => ({ op: 'spendBuff', from, all: true });
 /** A resolution-time choice of objects, bound by name [355.18]. */
 export const choose = (sel: SelAst | SelAst[], bind: string, o: { min?: number; max?: number; sumMightMax?: number; notSlots?: string[];
-  oneEachLoc?: true; sameController?: true; count?: ValueAst } = {}):
+  oneEachLoc?: true; sameController?: true; count?: ValueAst; mightBelow?: ValueAst } = {}):
   InstrAst => ({ op: 'choose', sel: Array.isArray(sel) ? sel : [sel], min: o.min ?? 1, max: o.max ?? o.min ?? 1, bind,
-    ...(o.count !== undefined ? { count: o.count } : {}),
+    ...(o.count !== undefined ? { count: o.count } : {}), ...(o.mightBelow !== undefined ? { mightBelow: o.mightBelow } : {}),
     ...(o.sumMightMax !== undefined ? { sumMightMax: o.sumMightMax } : {}), ...(o.notSlots ? { notSlots: o.notSlots } : {}),
     ...(o.oneEachLoc ? { oneEachLoc: true as const } : {}), ...(o.sameController ? { sameController: true as const } : {}) });
 export const exhaust = (what: RefAst | SelAst): InstrAst => ({ op: 'exhaust', what });
@@ -394,7 +407,7 @@ export const opponentsDraw = (n: number): InstrAst => ({ op: 'draws', n, who: 'o
 /** "you" (the item's controller) draw inside a "for each player" block. */
 export const casterDraws = (n: number): InstrAst => ({ op: 'draws', n, who: 'caster' });
 export const forEach = (who: 'each' | 'opponents', from: 'you' | 'next', body: InstrAst[]): InstrAst => ({ op: 'forEach', who, from, body });
-export const choiceBy = (who: 'self' | { controllerOf: RefAst }, modes: { label: string; body: InstrAst[] }[]): InstrAst =>
+export const choiceBy = (who: 'self' | 'opponent' | { controllerOf: RefAst }, modes: { label: string; body: InstrAst[] }[]): InstrAst =>
   ({ op: 'choiceBy', who, modes });
 export const revealHand: InstrAst = { op: 'revealHand' };
 export const discardCards = (what: RefAst): InstrAst => ({ op: 'discardCards', what });
@@ -411,6 +424,8 @@ export const putOnTop = (what: RefAst): InstrAst => ({ op: 'putOnTop', what });
 /** "Banish the top card of your Main Deck" [428], bound by name. */
 export const banishTop = (n: number, bind: string): InstrAst => ({ op: 'banishTop', n, bind });
 export const empower = (what: RefAst): InstrAst => ({ op: 'empower', what });
+export const killAllBut = (sel: SelAst, keep: string[]): InstrAst => ({ op: 'killAllBut', sel, keep });
+export const kwFromKw = (to: RefAst, k: KeywordId, from: KeywordId): InstrAst => ({ op: 'kwFromKw', to, kw: k, from });
 /** "You can look at their facedown cards" [425]. */
 export const lookAt = (what: SelAst): InstrAst => ({ op: 'lookAt', what });
 /** "If it would die this turn, banish it instead" [367]. */
@@ -421,7 +436,7 @@ export const swap = (a: RefAst, b: RefAst): InstrAst => ({ op: 'swap', a, b });
 export const returnChampion: InstrAst = { op: 'returnChampion' };
 export const activateConquer: InstrAst = { op: 'activateConquer' };
 /** "You may … a unit from among them": a pick of up to n that fit. */
-export const pickWhere = (from: string, n: number, bind: string, o: { min?: number; where?: PredAst[]; mightMax?: ValueAst } = {}): InstrAst =>
+export const pickWhere = (from: string, n: number, bind: string, o: { min?: number; where?: PredAst[]; mightMax?: ValueAst; energyMax?: ValueAst } = {}): InstrAst =>
   ({ op: 'pick', from, n, bind, ...o });
 
 export const kw = {
@@ -433,7 +448,7 @@ export const kw = {
   deflect: (value = 1): KeywordAst => ({ kw: 'deflect', value }),
   shield: (value = 1): KeywordAst => ({ kw: 'shield', value }),
   assault: (value = 1): KeywordAst => ({ kw: 'assault', value }),
-  showOff: (o: { minEnergy?: number; withKeyword?: KeywordId; type?: import('../state/types.ts').CardType } = {}): KeywordAst => ({ kw: 'showOff', showOff: o }),
+  showOff: (o: { minEnergy?: number; withKeyword?: KeywordId; type?: import('../state/types.ts').CardType; tag?: string } = {}): KeywordAst => ({ kw: 'showOff', showOff: o }),
   ganking: (): KeywordAst => ({ kw: 'ganking' }),
   temporary: (): KeywordAst => ({ kw: 'temporary' }),
   vision: (): KeywordAst => ({ kw: 'vision' }),

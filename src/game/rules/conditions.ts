@@ -102,6 +102,10 @@ export function evalCond(s: GameState, c: CondAst, x: CondCtx): boolean {
       return s.showdown !== null && !!o && o.zone.z === 'bf' && o.zone.bf === s.showdown.bf;
     }
     case 'origin': return x.origin === c.z;
+    case 'controlsHere': {
+      const o = x.source === null ? undefined : s.objects[x.source];
+      return !!o && o.zone.z === 'bf' && s.bfs[o.zone.bf].controller === x.controller;
+    }
     case 'runeDeck': return cmp(s.players[x.controller].runeDeck.length, c.op, c.n);
     case 'legion': {                                                 // another card finalized by you this turn [812.1.c]
       const me = x.source === null ? undefined : s.objects[x.source]?.card;
@@ -123,7 +127,7 @@ export function evalCond(s: GameState, c: CondAst, x: CondCtx): boolean {
       let n = 0;
       switch (c.what) {
         case 'discarded': n = s.log.discards[p]; break;
-        case 'unitDied': n = s.log.deaths.filter((d) => d.snap.chars.types.includes('unit') && (c.rel === undefined
+        case 'unitDied': n = s.log.deaths.filter((d) => (types ?? ['unit']).some((t) => d.snap.chars.types.includes(t)) && (c.rel === undefined
           || (c.rel === 'friendly' ? d.snap.controller === p : d.snap.controller !== null && d.snap.controller !== p))
           && (!c.yourBeginning || (d.phase === 'beginning' && s.turn.player === p))).length; break;
         case 'played': n = s.log.played.filter((r) => r.p === p && r.isCard && typed(r.types)
@@ -158,6 +162,7 @@ export function evalCond(s: GameState, c: CondAst, x: CondCtx): boolean {
       if (!l) return false;
       if (c.pred.p === 'mighty') return (l.chars.might ?? 0) >= 5;
       if (c.pred.p === 'might') return cmp(l.chars.might ?? 0, c.pred.op, c.pred.n);
+      if (c.pred.p === 'empowered') return (l.empowered ?? 0) > 0;
       return false;
     }
   }

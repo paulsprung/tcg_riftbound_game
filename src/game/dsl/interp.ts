@@ -25,7 +25,7 @@
  * trash and counts as played [359.3.d], [420.4.a] (even if every
  * instruction was ignored [359.3.e.10]); the item leaves the chain [319.5].
  */
-import { abilityIn, cardDef, keywordCost } from '../cards/registry.ts';
+import { abilityIn, cardDef, keywordCost, keywordsOf } from '../cards/registry.ts';
 import { K, parseKey, type Option } from '../core/decisions.ts';
 import { endGame } from '../core/end.ts';
 import { emit, emitZone, knowers } from '../core/events.ts';
@@ -45,7 +45,7 @@ import {
   replaceBattlefield, setEmpowered, spendBuffs, spendXp, stunUnits, swapBackBattlefield, toZone,
 } from '../rules/actions.ts';
 import { itemById, markFepr, removeItem } from '../rules/chain.ts';
-import { energyCostOf, keywordOf, mightOf, snapshotOf, tagsOf, typesOf } from '../rules/chars.ts';
+import { energyCostOf, isType, keywordOf, mightOf, snapshotOf, tagsOf, typesOf } from '../rules/chars.ts';
 import { evalCond, tagsAmong, type CondCtx } from '../rules/conditions.ts';
 import { mint } from '../state/mut.ts';
 import { hereOf, matches, predOk, sameLoc, selectAll, slotLocsOf, stillLegal, type SelCtx } from '../rules/targets.ts';
@@ -303,6 +303,26 @@ function value(s: GameState, it: ChainItem, env: Env, v: ValueAst, st: Step, c: 
       return card === undefined ? 0 : (s.log.cardDeals ?? []).filter((k) => k === card).length;
     }
     case 'conquered': return conqueredBfs(s, c.controller);
+    case 'if': return evalCond(s, v.cond, { ...condCtx(s, it), bound: env.bound }) ? value(s, it, env, v.then, st, c) : value(s, it, env, v.else, st, c);
+    case 'minEnergyBound': {
+      const ids = boundObjs(env, v.name).filter((id) => s.objects[id]);
+      return ids.length === 0 ? 0 : Math.min(...ids.map((id) => energyCostOf(s.objects[id])));
+    }
+    case 'paidEnergy': {                                             // what a non-standard cost of the play took
+      const facts = condCtx(s, it).facts;
+      return Object.values(facts?.costObjects ?? {}).flat().filter((sn) => sn.id !== it.source)
+        .reduce((n, sn) => n + (sn.chars.cost?.energy ?? 0), 0);
+    }
+    case 'shownMight': {
+      const pick = (condCtx(s, it).facts?.showOff ?? []).flatMap((r) => r.picks)[0];
+      return Math.max(0, pick?.chars.might ?? 0);
+    }
+    case 'kwOf': {
+      const id = firstOf(s, it, env, v.of, st, c);
+      if (id === null) return 0;
+      if (s.objects[id] && onBoard(s, id)) return keywordOf(s, id, v.kw);
+      return it.play.lookBack[id]?.chars.keywords[v.kw]?.value ?? 0;
+    }
     case 'xCost': {
       const n = Object.entries(it.play.choices.asPlayed).find(([k]) => k.startsWith('xpow:'))?.[1];
       return typeof n === 'number' ? n : 0;
@@ -332,6 +352,12 @@ function bonusDamage(s: GameState, it: ChainItem, target: ObjId): number {
   let n = 0;
   for (const { st, spec } of staticsFor(s, null, 'bonusDamage')) {
     if (spec.by === 'you' && st.ctl !== it.controller) continue;
+    if (spec.from === 'friendlyGear') {                              // "Abilities of friendly gear deal 1 Bonus Damage"
+      const src = it.source === undefined ? undefined : s.objects[it.source] ?? null;
+      const gear = it.kind !== 'card' && (src ? isType(src, 'gear') && src.controller === st.ctl
+        : it.sourceLki?.chars.types.includes('gear') === true && it.sourceLki.controller === st.ctl);
+      if (!gear) continue;
+    }
     if (spec.to === 'here') {
       const h = hereOf(s, st.host), at = locOf(s.objects[target]);
       if (!h || !at || !sameLoc(h, at)) continue;
@@ -365,6 +391,7 @@ defineSteps('resolve', (s, f, x) => {
   const slotObjs = Object.fromEntries(Object.entries(ex?.targets ?? {}).map(([k, ts]) => [k, ts.flatMap((t) => (t.k === 'obj' ? [t.id] : []))]));
   const killed = Object.values(it.play.facts.costObjects ?? {}).flat().find((sn) => sn.chars.types.includes('unit') && !s.objects[sn.id]);
   const c: SelCtx = { controller: st.as ?? it.controller, source: it.source ?? null, slotLoc: slotLocs(s, it, st.exec), eventBf, subject,
+    eventFrom: it.trigger?.from && typeof it.trigger.from === 'object' ? it.trigger.from as unknown as Loc : null,
     lkiHere: it.sourceLki?.loc ?? null, slotObjs,
     paidCost: killed ? { energy: killed.chars.cost?.energy ?? 0, power: killed.chars.cost?.power.length ?? 0 } : null };
   const got = takeRet(f);
@@ -541,6 +568,7 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
         else if (r === 'hereBf') { const h = hereOf(s, it.source ?? null); info[k] = h?.z === 'bf' ? h.bf : -1; }
         else info[k] = firstOf(s, it, f.env, r, st, c);
       }
+      for (const [k, v] of Object.entries(ins.captureN ?? {})) info[k] = val(v);   // "that many"
       info.item = it.id;
       append(s, s.delayed, { id, controller: p, createdBy: it.id, createdTurn: s.turn.n,
         ability: { ...ins.ability, id: `eff:${id}#0` } as unknown as Json,
@@ -616,7 +644,9 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
         min = n; max = n;
       }
       const not = (ins.notSlots ?? []).flatMap((sl) => targetsOf(it, st, sl).flatMap((t) => (t.k === 'obj' ? [t.id] : [])));
-      const cands = [...new Set(ins.sel.flatMap((sel) => selectAll(s, sel, c)))].filter((id) => !not.includes(id));
+      const below = ins.mightBelow === undefined ? undefined : val(ins.mightBelow);
+      const cands = [...new Set(ins.sel.flatMap((sel) => selectAll(s, sel, c)))].filter((id) => !not.includes(id)
+        && (below === undefined || mightOf(s, id) < below));
       if (got === undefined) {
         if (cands.length === 0) { bind(s, f, ins.bind, []); return negated; }
         if (cands.length <= min && min === max) { bind(s, f, ins.bind, cands); return ok; }
@@ -688,8 +718,9 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
     }
     case 'pick': {
       const mightMax = ins.mightMax === undefined ? undefined : val(ins.mightMax);
+      const energyMax = ins.energyMax === undefined ? undefined : val(ins.energyMax);
       const from = boundObjs(f.env, ins.from).filter((id) => s.objects[id] && (ins.where ?? []).every((w) => predOk(s, w, id, c))
-        && (mightMax === undefined || mightOf(s, id) <= mightMax));
+        && (mightMax === undefined || mightOf(s, id) <= mightMax) && (energyMax === undefined || energyCostOf(s.objects[id]) <= energyMax));
       if (ins.min !== undefined && ins.min < ins.n) {                // "you may …": none is an answer
         if (got === undefined) {
           if (from.length === 0) { bind(s, f, ins.bind, []); return negated; }
@@ -817,13 +848,29 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
       bind(s, f, ins.bind, banish(s, x, top, '428'));
       return ok;
     }
+    case 'killAllBut': {                                             // "Kill the rest"
+      const keep = new Set(ins.keep.flatMap((k) => boundObjs({ ...f.env, as: undefined }, k)));
+      const objs = selectAll(s, ins.sel, { ...c, controller: it.controller }).filter((id) => !keep.has(id));
+      if (objs.length === 0) return negated;
+      lookBack(s, it, objs);
+      kill(s, x, objs, { rule: '429', inCombat: () => false, by: p, spell: it.kind === 'card' });
+      return ok;
+    }
+    case 'kwFromKw': {                                               // "I have [Assault] equal to my [Shield]" this turn
+      const r = ref(ins.to);
+      if (r.ignored) return r.ignored;
+      const objs = r.objs.filter((id) => onBoard(s, id));
+      if (objs.length === 0) return negated;
+      addEffect(s, x, objs, { s: 'kwFromKw', kw: ins.kw, from: ins.from }, effOpts('479.3'));
+      return ok;
+    }
     case 'empower': case 'disempower': {                             // [442], [443]
       const r = ref(ins.what);
       if (r.ignored) return r.ignored;
       const objs = r.objs.filter((id) => (onBoard(s, id) || s.objects[id].zone.z === 'legend')
         && (ins.op === 'empower' ? s.objects[id].empowered === 0 : s.objects[id].empowered > 0));
       if (objs.length === 0) return negated;
-      setEmpowered(s, x, objs, ins.op === 'empower');
+      setEmpowered(s, x, objs, ins.op === 'empower', p);
       return ok;
     }
     case 'move': {
@@ -1070,7 +1117,8 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
     case 'choiceBy': {
       if (got === undefined) {
         let who: PlayerId | null = p;
-        if (ins.who !== 'self') {
+        if (ins.who === 'opponent') who = opponentsOf(s, p)[0] ?? null;   // "Choose an opponent. They …" (a Duel)
+        else if (ins.who !== 'self') {
           const id = firstOf(s, it, f.env, ins.who.controllerOf, st, c);
           who = id === null ? null : s.objects[id] && onBoard(s, id) ? s.objects[id].controller : it.play.lookBack[id]?.controller ?? null;
         }
@@ -1325,7 +1373,9 @@ function finishResolve(s: GameState, x: X, f: ResolveFrame): StepOut {
     if (it.kind === 'card') {
       const card = s.objects[it.obj!];
       const types = typesOf(card);
-      const to = it.onLeaveChain === 'banish' ? Z.banish(it.owner) : it.onLeaveChain === 'recycle' ? Z.deck(it.owner) : Z.trash(it.owner);
+      // [Flow]: played from the trash for its Flow cost, "Then banish it".
+      const flow = it.play.origin.z === 'trash' && keywordsOf(card.def).some((k) => k.kw === 'flow') && it.play.mode === 'discretionary';
+      const to = it.onLeaveChain === 'banish' || flow ? Z.banish(it.owner) : it.onLeaveChain === 'recycle' ? Z.deck(it.owner) : Z.trash(it.owner);
       const left = toZone(s, x, card.id, to, { why: 'resolved', rule: '359.3.d', ...(to.z === 'deck' ? { pos: 'bottom' as const } : {}) });
       emit(s, x, { k: 'played', item: it.id, def: card.def, p: it.controller, rule: '420.4.a' });
       append(s, s.log.played, { p: it.controller, card: card.card, def: card.def, isCard: true, types, from: it.play.origin.z,

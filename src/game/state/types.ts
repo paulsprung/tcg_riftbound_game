@@ -137,7 +137,7 @@ export interface RunePool {
   universal: number;                  // [A] added (Gold, Gutter Guardian) [135.2.e.5.b]
   restricted: { amount: number; kind: 'energy' | Domain | 'universal'; onlyFor: SpendRestriction; source: DefId }[];
 }
-export type SpendRestriction = 'spells' | 'gear' | 'showdown' | { cardsWithTag: string };   // Kai'Sa, Ornn, Diana …
+export type SpendRestriction = 'spells' | 'gear' | 'permanents' | 'showdown' | { cardsWithTag: string };   // Kai'Sa, Ornn, Diana …
 
 // ---- 3.4 Game objects ----
 // One shape for cards, tokens, runes, legends and battlefields. Board-only
@@ -204,6 +204,8 @@ export interface Snapshot {           // last-known information [383.2.c.3.b], l
   id: ObjId; card: CardRef; def: DefId; owner: PlayerId; controller: PlayerId | null;
   zone: Zone; loc: Loc | null; chars: Chars; damage: number; buffs: number;
   exhausted: boolean; stunned: boolean; attached: ObjId[]; knownBy: Mask; epoch: number;
+  /** [Empowered] as it was [442]. */
+  empowered?: number;
 }
 export type RevealWindow = { until: 'itemLeavesChain'; item: ItemId } | { until: 'endOfInstruction'; item: ItemId }
                          | { until: 'moved' };
@@ -411,6 +413,8 @@ export interface TurnLog {             // reset at turn start; the per-turn memo
   draws: number[]; discards: number[]; xpGained: number[]; powerSpent: number[];   // per player
   /** Cards (by CardRef) whose spell or ability dealt damage this turn, one entry per Deal (Dancing Grenade). */
   cardDeals?: CardRef[];
+  /** Objects dealt damage this turn ("if I haven't been dealt damage this turn"). */
+  damaged?: ObjId[];
 }
 export interface GameHistory {
   turnsTaken: number[];                // per player: "first turn" (Otterpus, Ol' Poro)

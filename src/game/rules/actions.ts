@@ -35,7 +35,7 @@ import { friendsAt } from './targets.ts';
 import { maxBuffs, victoryScore } from './defaults.ts';
 import { requestCleanup } from './tasks.ts';
 import { staticsFor } from '../layers/derive.ts';
-import { executePlan, paymentPlans } from './resources.ts';
+import { executePlan, paymentPlans, restrictionOk } from './resources.ts';
 import { copyJson } from '../state/clone.ts';
 
 type X = { present: boolean };
@@ -130,6 +130,10 @@ export function channelRunes(s: GameState, x: X, p: PlayerId, n: number, rule: s
   if (objs.length > 0) {
     emit(s, x, { k: 'channel', p, objs, rule, group });
     requestCleanup(s);                                               // entering the board [319.6]
+    // Seraphic Wyvern: "If you would channel runes, channel that many runes plus 1 exhausted rune instead."
+    const extra = staticsFor(s, null, 'channelExtra').filter(({ st }) => st.ctl === p).length;
+    const top = s.players[p].runeDeck[0];
+    if (extra > 0 && top !== undefined && rule !== '431.x') channelRunes(s, x, p, extra, '431.x', true);
   }
   return objs.length;
 }
@@ -201,6 +205,18 @@ function savedFromDeath(s: GameState, x: X, id: ObjId, dying: ObjId[]): boolean 
       return true;
     }
   }
+  for (const { st } of staticsFor(s, id, 'saveSelfByKill')) {       // Mordekaiser: "Once each turn … kill a friendly unit to …"
+    const key = `${id}|${st.a.id}|*`;
+    if ((s.usage[key] ?? 0) > 0) continue;
+    const others = unitsAll(s).filter((u) => u !== id && !dying.includes(u) && s.objects[u].controller === p);
+    if (others.length === 0) continue;
+    const victim = others.reduce((a, b) => (mightOfUnit(s, b) < mightOfUnit(s, a) ? b : a));
+    setField(s, s, 'usage', { ...s.usage, [key]: 1 });
+    emit(s, x, { k: 'replaced', source: id, event: 'die', rule: '369.1' });
+    kill(s, x, [victim], { rule: '429', inCombat: () => false });
+    healExhaustRecall(s, x, id);
+    return true;
+  }
   for (const { st } of staticsFor(s, id, 'saveHost')) {             // Guardian Angel: "kill this instead"
     if (st.via === undefined || !s.objects[st.via] || dying.includes(st.via)) continue;
     emit(s, x, { k: 'replaced', source: st.via, event: 'die', rule: '369.1' });
@@ -248,6 +264,10 @@ function savedFromDeath(s: GameState, x: X, id: ObjId, dying: ObjId[]): boolean 
   return false;
 }
 
+/** Every unit on the board. */
+const unitsAll = (s: GameState): ObjId[] => [...s.players.flatMap((pl) => pl.base), ...s.bfs.flatMap((b) => b.here)]
+  .filter((id) => isType(s.objects[id], 'unit'));
+
 /** Pays a cost of a replacement at once with the cheapest plan, if there is one. */
 function payNow(s: GameState, x: X, p: PlayerId, c: { energy?: number; power?: string[] }): boolean {
   const cost = { energy: c.energy ?? 0, power: (c.power ?? []).map((r): PowerReq => (r === 'A' || r === 'C' ? { k: 'any' }
@@ -276,7 +296,7 @@ export function addToPool(s: GameState, x: X, p: PlayerId, energy: number, power
  * universal Power [163.2.b], [135.2.e.6.c]. The caller made sure the pool
  * covers it (rules/resources.ts). Returns the Power spent per domain.
  */
-export function payFromPool(s: GameState, x: X, p: PlayerId, energy: number, power: PowerReq[], rule: string, spell: boolean | 'gear' = false) {
+export function payFromPool(s: GameState, x: X, p: PlayerId, energy: number, power: PowerReq[], rule: string, spell: boolean | 'gear' | 'unit' = false) {
   const pool = s.players[p].pool;
   const plain = Math.min(pool.energy, energy);
   setField(s, pool, 'energy', pool.energy - plain);
@@ -295,7 +315,7 @@ export function payFromPool(s: GameState, x: X, p: PlayerId, energy: number, pow
     if (d) { setField(s, pool.power, d, pool.power[d] - 1); continue; }
     // [A] only for spells (Kai'Sa, Daughter of the Void) before unrestricted [A].
     const r = pool.restricted.findIndex((x) => x.kind === 'universal' && x.amount > 0
-      && (x.onlyFor === 'spells' ? spell === true : x.onlyFor === 'gear' ? spell === 'gear' : false));
+      && restrictionOk(x.onlyFor, spell));
     if (r >= 0) {
       setField(s, pool, 'restricted', pool.restricted.map((x, i) => (i === r ? { ...x, amount: x.amount - 1 } : x))
         .filter((x) => x.amount > 0));
@@ -353,11 +373,13 @@ export function deal(s: GameState, x: X, hits: { to: ObjId; n: number }[], o: {
       continue;
     }
     const u = s.objects[h.to];
+    if (staticsFor(s, h.to, 'noDamage').length > 0) continue;        // "I don't take damage" (Kayn)
     // "Double all damage that would be dealt to it this turn" (Lotus Trap) [433].
     const doubled = s.effects.filter((e) => (e.spec as { s?: string } | null)?.s === 'doubleDamage' && 'objs' in e.affects
       && e.affects.objs.includes(h.to)).length;
     if (doubled > 0) h.n *= 2 ** doubled;
     append(s, u.damage, { amount: h.n, by: o.by, sources: o.sources, combat: o.combat, group });
+    if (!(s.log.damaged ?? []).includes(h.to)) setField(s, s.log, 'damaged', [...(s.log.damaged ?? []), h.to]);
     setField(s, u, 'lastDamage', { item: o.item ?? null, sources: o.sources, by: o.by, combat: o.combat,
       ...(o.spell ? { spell: true } : {}) });
     emit(s, x, { k: 'deal', to: h.to, n: h.n, sources: o.sources, combat: o.combat, rule: o.rule, group });
@@ -575,9 +597,10 @@ export function addMight(s: GameState, x: X, units: ObjId[], n: number, o: { con
 }
 
 /** Empowers or disempowers objects [442], [443]. */
-export function setEmpowered(s: GameState, x: X, objs: ObjId[], on: boolean) {
+export function setEmpowered(s: GameState, x: X, objs: ObjId[], on: boolean, by: PlayerId | null = null) {
   for (const id of objs) setField(s, s.objects[id], 'empowered', on ? 1 : 0);
   emit(s, x, { k: on ? 'empower' : 'disempower', objs: objs.slice(), rule: on ? '442' : '443' });
+  if (on) fire(s, x, { e: 'empowered', by, objs: objs.slice() });
 }
 
 /** A continuous effect on a locked set of objects for the rest of the turn
@@ -585,7 +608,7 @@ export function setEmpowered(s: GameState, x: X, objs: ObjId[], on: boolean) {
     3). The objects are fixed now [479.4.b]. */
 export function addEffect(s: GameState, x: X, objs: ObjId[], spec: { s: 'baseMight'; n: number } | { s: 'keyword'; kw: string;
   value: number } | { s: 'cantMove' } | { s: 'replaceDeath'; cost?: Json } | { s: 'preventNext' } | { s: 'doubleDamage' }
-  | { s: 'banishIfDies' }, o: { controller: PlayerId; source: ObjId | null; item: number | null;
+  | { s: 'banishIfDies' } | { s: 'kwFromKw'; kw: string; from: string }, o: { controller: PlayerId; source: ObjId | null; item: number | null;
   rule: string; until?: 'thisTurn' | 'thisCombat' | 'permanent' }) {
   if (objs.length === 0) return;
   append(s, s.effects, {
@@ -747,7 +770,7 @@ export function spendXp(s: GameState, x: X, p: PlayerId, n: number, rule: string
 }
 
 /** Adds universal Power ([A]) or Energy only for spells to a pool [430], [163.2.b]. */
-export function addSpecial(s: GameState, x: X, p: PlayerId, o: { energy?: number; universal?: number; onlyFor?: 'spells' | 'gear';
+export function addSpecial(s: GameState, x: X, p: PlayerId, o: { energy?: number; universal?: number; onlyFor?: 'spells' | 'gear' | 'permanents';
   source: string; domain?: Domain }, rule: string) {
   const pool = s.players[p].pool;
   if (o.universal && o.domain) setField(s, pool.power, o.domain, pool.power[o.domain] + o.universal);   // "[Add] [R]"

@@ -62,12 +62,14 @@ export const noMoveToBase = (s: GameState, bf: number, unit?: ObjId) => staticsF
 
 /** Mageseeker Investigator: an opponent moving several units here at once
     pays [A] for each unit beyond the first, per instance [204.4]. */
-export function moveTax(s: GameState, by: PlayerId, units: ObjId[], dest: Loc): number {
-  if (dest.z !== 'bf' || units.length < 2) return 0;
-  let n = 0;
-  for (const { st } of staticsFor(s, null, 'moveTax')) {
+export function moveTax(s: GameState, by: PlayerId, units: ObjId[], dest: Loc): { energy: number; power: number } {
+  const n = { energy: 0, power: 0 };
+  if (dest.z !== 'bf') return n;
+  for (const { st, spec } of staticsFor(s, null, 'moveTax')) {
     const h = s.objects[st.host];
-    if (h.zone.z === 'bf' && h.zone.bf === dest.bf && st.ctl !== by) n += units.length - 1;
+    if (h.zone.z !== 'bf' || h.zone.bf !== dest.bf || st.ctl === by) continue;
+    if (spec.cost) { n.energy += spec.cost.energy; n.power += spec.cost.power; }   // Gravity Field: once per move
+    else if (units.length >= 2) n.power += units.length - 1;
   }
   return n;
 }
@@ -131,8 +133,8 @@ const STEPS: StepTable<MoveFrame> = [
   // then move [448], then a cleanup [455].
   (s, f, x) => {
     const tax = moveTax(s, f.by, f.units, f.dest!);
-    if (tax > 0) {
-      const r = payStep(s, f, x, { payer: f.by, cost: { energy: 0, power: Array.from({ length: tax }, () => ({ k: 'any' as const })) },
+    if (tax.energy + tax.power > 0) {
+      const r = payStep(s, f, x, { payer: f.by, cost: { energy: tax.energy, power: Array.from({ length: tax.power }, () => ({ k: 'any' as const })) },
         what: 'move', back: true, onBack: () => 'done', onDecline: () => 'done', rule: '204.4' });
       if (typeof r === 'string') return r;
     }

@@ -12,6 +12,10 @@ Oracle text is quoted from `src/game/cards/oracle.gen.json` (rules text, errata 
 | Card | Oracle text | Question | Options considered |
 |---|---|---|---|
 | akali-brash | The first time I move each turn, [Add] [1][A]. / The second time I move each turn, banish the top card of your Main Deck. Until your next Ending Phase, you may play that card. (You still pay its costs.) | When does "Until your next Ending Phase" end if the card is banished during your own turn before your Ending Phase: at this turn's Ending Phase, or at the Ending Phase of your next turn? | (a) this turn's Ending Phase (the next one to happen); (b) the Ending Phase of your next turn (otherwise the text would say "this turn") |
+| runeblade-anvil | When you play this or when this leaves the board, banish the top card of your Main Deck. Until your next Ending Phase, you may play that card. (You still pay its costs.) / [2][P], [E]: Kill this. | Same as Akali, Brash: which Ending Phase ends the window? | as for akali-brash |
+| neeko-blending-in | If Neeko is in your deck, choose up to 3 different legends in addition to your starting legend. / When you play me, choose one of those Legends and add it to your Legend Zone while I'm on the board. | Deck building: where do the extra legends sit before the game (revealed? domain identity?), and what does an added legend do in the Legend Zone (its abilities active, its own exhaust state, does it leave when Neeko leaves)? | (a) extra legends only add their abilities while Neeko is on the board; (b) they count for deck identity too |
+| orianna-lady-of-clockwork | At the start of your Main Phase, you may pay [1] to choose a friendly gear. It becomes a unit gear with Might equal to its Energy cost until you choose another gear with me. | How does a "unit gear" behave: does it move, attack and defend, take damage and die, keep its gear abilities; a Deploy gear at a battlefield — is it a unit there; an attached Equipment — does it detach? | (a) full unit rules plus gear; (b) only Might and combat |
+| the-ball | [Deploy] / [Ganking] / When you play or move this, choose one — • Draw 1. • Deal 2 to enemy units here. | Can a gear with [Ganking] make Standard Moves between battlefields (gear normally can't move), and what exhausts? | (a) it moves like a unit (Standard Move, exhausting); (b) Ganking only matters when an effect moves it |
 
 ## Implemented provisionally — review
 
@@ -50,3 +54,8 @@ Oracle text is quoted from `src/game/cards/oracle.gen.json` (rules text, errata 
 | chronobreak | As an additional cost to play this, pay any amount of Power. Banish that many units you control, then … | Units chosen as it resolves (not as targets). | as described |
 | black-market | [A][A]: Draw 1. Each player may use this ability once on their turn. | — | Any player on their own turn, once per turn each |
 | ekko-boy-who-shattered-time | Disempower me, [E]: Reduce the cost of the next unit you play this turn by [2][A] and give it "Kill me at end of turn." | "end of turn": the end of the turn it is played in. Tokens don't count as "the next unit". | as described |
+| mechanical-bandit | … If you revealed a card with the lowest Energy cost, draw it. … | Ties | Every card with the lowest Energy cost counts (you draw yours on a tie) |
+| mordekaiser-twice-slain | Once each turn, if I would die, you may kill a friendly unit to heal me, exhaust me, and recall me instead. | The "may" and which unit | Applied automatically when another friendly unit exists; the one with the least Might is killed |
+| scrutinizing-scope | They guess a card type. | Which types can be guessed | Unit, Spell, Gear (Main Deck types) |
+| titanic-shrine | … exhaust me to draw 1. | Optional? | A cost of the trigger, paid automatically (as Dockside Lock-Up) |
+| seraphic-wyvern | If you would channel runes, channel that many runes plus 1 exhausted rune instead. | Channel Phase too? | Every channel (the Channel Phase included), once per channel |

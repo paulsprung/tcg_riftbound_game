@@ -21,7 +21,7 @@ export interface CostObjectOpts {
   back: boolean; onBack: () => StepOut; onImpossible: () => StepOut;
 }
 
-type Kind = 'exhaust' | 'kill' | 'discard' | 'recycle' | 'spend' | 'bounce';
+type Kind = 'exhaust' | 'kill' | 'discard' | 'recycle' | 'spend' | 'bounce' | 'banishTrash';
 
 /** The candidates and the number to choose for one part of the cost. */
 function part(s: GameState, it: ChainItem, src: ObjId | null, pay: NonStdCostAst, what: Kind): { n: number; cands: ObjId[] } | null {
@@ -33,13 +33,14 @@ function part(s: GameState, it: ChainItem, src: ObjId | null, pay: NonStdCostAst
     case 'recycle': return pay.recycleTrash ? { n: pay.recycleTrash.n, cands: trashCandidates(s, p, pay.recycleTrash.types) } : null;
     case 'bounce': return pay.bounce ? { n: pay.bounce.n, cands: costCandidates(s, pay.bounce.sel, p, src, false) } : null;
     case 'spend': return pay.spendBuff ? { n: pay.spendBuff.n, cands: buffCandidates(s, pay.spendBuff.sel, p, src) } : null;
+    case 'banishTrash': return pay.banishTrash ? { n: pay.banishTrash.n, cands: trashCandidates(s, p, pay.banishTrash.types) } : null;
   }
 }
 
 /** Asks for the next object of the cost, or 'complete' once all are chosen. */
 export function chooseCostObjects(s: GameState, f: Frame, x: RunCtx, o: CostObjectOpts): 'complete' | StepOut {
   const it = o.item;
-  for (const what of ['exhaust', 'kill', 'discard', 'recycle', 'spend', 'bounce'] as const) {
+  for (const what of ['exhaust', 'kill', 'discard', 'recycle', 'spend', 'bounce', 'banishTrash'] as const) {
     const need = part(s, it, o.src, o.pay, what);
     if (!need) continue;
     const slot = `cost:${o.key}:${what}`;
@@ -71,18 +72,18 @@ export function chooseCostObjects(s: GameState, f: Frame, x: RunCtx, o: CostObje
 export function performCostObjects(s: GameState, x: RunCtx, it: ChainItem, key: string, src: ObjId | null, pay: NonStdCostAst): boolean {
   const p = it.controller;
   const got = (what: Kind) => (it.play.choices.asPlayed[`cost:${key}:${what}`] ?? []) as number[];
-  const ex = got('exhaust'), kl = got('kill'), dc = got('discard'), rc = got('recycle'), sp = got('spend'), bc = got('bounce');
+  const ex = got('exhaust'), kl = got('kill'), dc = got('discard'), rc = got('recycle'), sp = got('spend'), bc = got('bounce'), bt = got('banishTrash');
   const me = src === null ? undefined : s.objects[src];
   const toExhaust = [...(pay.exhaustSelf && src !== null ? [src] : []), ...ex];
   const toKill = [...(pay.killSelf && src !== null ? [src] : []), ...kl];
   if (toExhaust.some((id) => !s.objects[id] || s.objects[id].exhausted)) return false;
   if (toKill.some((id) => !s.objects[id] || !['base', 'bf'].includes(s.objects[id].zone.z))) return false;
-  if (dc.some((id) => s.objects[id]?.zone.z !== 'hand') || rc.some((id) => s.objects[id]?.zone.z !== 'trash')) return false;
+  if (dc.some((id) => s.objects[id]?.zone.z !== 'hand') || [...rc, ...bt].some((id) => s.objects[id]?.zone.z !== 'trash')) return false;
   if (pay.spendBuffSelf && (!me || me.buffs === 0)) return false;
   if (pay.disempowerSelf && (!me || me.empowered === 0)) return false;
   if (sp.some((id) => !s.objects[id] || s.objects[id].buffs === 0)) return false;
   if (pay.xp && s.players[p].xp < pay.xp) return false;
-  const snaps = [...new Set([...toExhaust, ...toKill])].map((id) => snapshotOf(s, id));
+  const snaps = [...new Set([...toExhaust, ...toKill, ...bc])].map((id) => snapshotOf(s, id));   // what they were (Spirit of the Forge)
   if (toExhaust.length > 0) exhaust(s, x, p, toExhaust, '357.2', true);
   if (pay.spendBuffSelf && src !== null) spendBuffs(s, x, [src], '357.2');
   if (sp.length > 0) spendBuffs(s, x, sp, '357.2');
@@ -92,6 +93,7 @@ export function performCostObjects(s: GameState, x: RunCtx, it: ChainItem, key: 
   if (pay.xp) spendXp(s, x, p, pay.xp, '357.2');
   if (dc.length > 0) discard(s, x, p, dc, '357.2');
   if (rc.length > 0) recycleCards(s, x, p, rc, '357.2');
+  if (bt.length > 0) banish(s, x, bt, '357.2');                     // "Banish a unit or gear from your trash"
   if (toKill.length > 0) kill(s, x, toKill, { rule: '357.2', inCombat: () => false });
   append(s, it.play.paid, { what: key, replaced: false, objs: snaps, energy: 0, power: 0 });
   setField(s, it.play.facts.costObjects, key, snaps);

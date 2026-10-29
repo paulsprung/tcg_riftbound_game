@@ -73,6 +73,7 @@ export function costOffers(s: GameState, def: string, types: CardType[], p: Play
       const ctl = o.controller;
       if (ctl === null || (whose === 'you' && ctl !== p) || (whose === 'enemy' && ctl === p)) continue;
       if (a.while && !evalCond(s, a.while, { controller: ctl, source: o.id, ...(origin ? { origin } : {}) })) continue;
+      if (a.limit && (s.usage[`${o.id}|${a.id}|*`] ?? 0) >= a.limit.n) continue;   // "Once each turn" [383.3.e]
       out.push({ key: `${a.id}@${o.id}`, a, src: o.id });
     }
   }
@@ -108,6 +109,7 @@ export function nonStdPossible(s: GameState, pay: NonStdCostAst | undefined, src
   if (pay.bounce && costCandidates(s, pay.bounce.sel, p, src, false).length < pay.bounce.n) return false;
   if (pay.banishSelf && !me) return false;
   if (pay.disempowerSelf && (!me || me.empowered === 0)) return false;
+  if (pay.banishTrash && trashCandidates(s, p, pay.banishTrash.types).length < pay.banishTrash.n) return false;
   return true;
 }
 
@@ -127,7 +129,7 @@ export function nonStdOf(c: CostAst | NonStdCostAst | undefined): NonStdCostAst 
   if (!c) return undefined;
   const out: NonStdCostAst = {};
   for (const k of ['exhaustSelf', 'killSelf', 'spendBuffSelf', 'exhaust', 'kill', 'discard', 'recycleTrash', 'xp', 'spendBuff', 'bounce', 'banishSelf',
-    'disempowerSelf'] as const) {
+    'disempowerSelf', 'banishTrash'] as const) {
     if (c[k] !== undefined) (out as Record<string, unknown>)[k] = c[k];
   }
   return Object.keys(out).length > 0 ? out : undefined;
@@ -175,6 +177,10 @@ export function totalCost(s: GameState, o: { def: string; types: CardType[]; p: 
   xs?: Record<string, number>; origin?: string;
   /** The amount of Power chosen for each "pay any amount of Power" cost ability (CostAbilityAst.xPower), by its key. */
   xpow?: Record<string, number>;
+  /** Where it is being played, once chosen. */
+  location?: import('../state/types.ts').Loc | null;
+  /** An instruction fixed the cost ("ignoring its cost", "for [A]"): no alternative cost replaces it. */
+  fixedBase?: boolean;
   /** Estimate the reduction of a cost read from the objects it kills (Atakhan) with the most expensive candidate. */
   estimatePaid?: boolean }): ResourceCost {
   let energy = o.base.energy;
@@ -182,7 +188,7 @@ export function totalCost(s: GameState, o: { def: string; types: CardType[]; p: 
   const domains = findCard(o.def)?.domains ?? [];
   const offers = costOffers(s, o.def, o.types, o.p, o.origin).filter((off) => !off.a.optional || o.chosen.includes(off.key));
   for (const off of offers) {                                        // an alternative cost instead of the base cost [204.1.b]
-    if (!off.a.alt) continue;
+    if (!off.a.alt || o.fixedBase) continue;
     energy = off.a.alt.energy ?? 0;
     power = powerOf(off.a.alt, domains);
   }
@@ -231,6 +237,13 @@ export function totalCost(s: GameState, o: { def: string; types: CardType[]; p: 
     }
     const d = off.a.discount;
     if (!d) continue;
+    if (d.firstHere) {                                               // Hunters' Circle: the first unit or gear played here on your turn
+      const h = off.src === null ? undefined : s.objects[off.src];
+      const bf = h && h.zone.z === 'bf' ? h.zone.bf : -1;
+      if (s.turn.player !== o.p || bf < 0) continue;
+      if (s.log.played.some((r) => r.p === o.p && r.to?.z === 'bf' && r.to.bf === bf && r.types.some((t) => t === 'unit' || t === 'gear'))) continue;
+      if (o.location ? !(o.location.z === 'bf' && o.location.bf === bf) : !o.estimatePaid) continue;
+    }
     if (d.all) { energy = 0; power = []; continue; }
     // "This costs [2] less if you choose a Bird, Cat, Dog, or Poro": read once targets are chosen (the estimate assumes it).
     if (d.ifTarget && !(o.estimatePaid && (o.targets ?? []).length === 0) && !(o.targets ?? []).some((t) => t.k === 'obj' && s.objects[t.id]
@@ -295,6 +308,7 @@ export function showOffCandidates(s: GameState, it: ChainItem): { obj: ObjId; fr
   if (!kw) return [];
   const fits = (id: ObjId) => (kw.minEnergy === undefined || energyCostOf(s.objects[id]) >= kw.minEnergy)
     && (kw.type === undefined || isType(s.objects[id], kw.type))
+    && (kw.tag === undefined || (findCard(s.objects[id].def)?.tags ?? []).includes(kw.tag))
     && (kw.withKeyword === undefined || (findCard(s.objects[id].def)?.keywords ?? []).some((l) => l.keywords.some((k) => k.kw === kw.withKeyword)));
   const p = it.controller;
   const out: { obj: ObjId; fromHand: boolean }[] = [];

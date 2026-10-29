@@ -259,6 +259,7 @@ defineTask('combat.end', [(s, _f, x) => {
   setField(s, s, 'combat', null);
   setField(s, s, 'showdown', null);
   emit(s, x, { k: 'combatEnd', bf: c.bf, rule: '468.7' });
+  fire(s, x, { e: 'combatEnded', bf: c.bf, units: [...new Set([...c.everAttacker, ...c.everDefender])] });   // "When a combat that I was in ends"
   requestCleanup(s);
   return 'done';
 }]);

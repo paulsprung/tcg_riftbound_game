@@ -182,7 +182,8 @@ export function chooseNext(s: GameState, f: Frame, x: RunCtx, it: ChainItem, pro
   const c: SelCtx = { controller: it.controller, source: it.source ?? null, slotLoc: slotLocsOf(s, ex), slotObjs: slotObjsOf(ex),
     lkiHere: it.sourceLki?.loc ?? null,                              // "here" of a Deathknell: where its source died
     subject: typeof it.trigger?.subject === 'number' ? it.trigger.subject : null,
-    eventBf: typeof it.trigger?.bf === 'number' ? it.trigger.bf : null };
+    eventBf: typeof it.trigger?.bf === 'number' ? it.trigger.bf : null,
+    eventFrom: it.trigger?.from && typeof it.trigger.from === 'object' ? it.trigger.from as unknown as Loc : null };
   const usedModes = (o.modesUsed ?? []);
 
   // Modes [355.3].

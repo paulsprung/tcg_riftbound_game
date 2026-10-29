@@ -107,7 +107,7 @@ export function snapshotOf(s: GameState, id: ObjId): Snapshot {
   return {
     id, card: o.card, def: o.def, owner: o.owner, controller: o.controller, zone: copyJson(o.zone),
     loc: locOf(o), damage: damageOf(o), buffs: o.buffs, exhausted: o.exhausted, stunned: o.stunned, attached: [],
-    knownBy: o.knownBy, epoch: s.epoch,
+    knownBy: o.knownBy, epoch: s.epoch, ...(o.empowered > 0 ? { empowered: o.empowered } : {}),
     chars: {
       name: c?.name ?? t?.name ?? o.def, types: typesOf(o), supertypes: c?.supertypes ?? [], tags: c?.tags ?? t?.tags ?? [],
       domains: c?.domains ?? [], cost: c?.cost ? { energy: c.cost.energy, power: c.cost.power } : null, might,

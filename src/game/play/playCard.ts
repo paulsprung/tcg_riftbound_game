@@ -69,7 +69,7 @@ import { evalCond } from '../rules/conditions.ts';
 import { staticsFor } from '../layers/derive.ts';
 import { paymentPlans, type ResourceCost } from '../rules/resources.ts';
 import { isAlone, slotLocsOf, stillLegal } from '../rules/targets.ts';
-import { cardTiming, timingOk, windowAllows, type Timing, type Window } from '../rules/timing.ts';
+import { cardTiming, givenTiming, timingOk, windowAllows, type Timing, type Window } from '../rules/timing.ts';
 import { requestCleanup } from '../rules/tasks.ts';
 import { choicesPossible, chooseNext, modeLegal, slotObjsOf, slotsOf } from './choices.ts';
 import { payStep } from './pay.ts';
@@ -225,7 +225,7 @@ export function playable(s: GameState, id: ObjId): boolean {
 export function timingFrom(s: GameState, id: ObjId): Timing {
   const o = s.objects[id];
   if (o.zone.z === 'facedown') return { action: false, reaction: true };
-  const t = cardTiming(o.def);
+  const t = givenTiming(s, id, o.owner, cardTiming(o.def));
   // "Your Equipment everywhere have [Quick-Draw]" (Jax, Unmatched): its Reaction timing [819].
   if (tagsOf(o).includes('Equipment') && staticsFor(s, null, 'equipmentQuickDraw').some(({ st }) => st.ctl === o.owner)) t.reaction = true;
   return t;
@@ -261,7 +261,8 @@ export function playableCards(s: GameState, p: PlayerId, w: Window = 'main'): Ob
       && !sealed(o.facedown.bf);
   });
   // Undying Legion: "You may play me from your trash for …" (while its condition holds).
-  const fromTrash = pl.trash.filter((id) => (cardDef(s.objects[id].def)?.abilities ?? []).some((a) => a.kind === 'static'
+  const fromTrash = pl.trash.filter((id) => printed(s.objects[id].def, 'flow')              // [Flow]
+    || (cardDef(s.objects[id].def)?.abilities ?? []).some((a) => a.kind === 'static'
     && a.spec.s === 'playFromTrash' && (!a.while || evalCond(s, a.while, { controller: p, source: id, origin: 'trash' }))));
   const from = [...pl.hand, ...(pl.champion === null ? [] : [pl.champion]), ...facedown, ...fromTrash];
   // "Its controller can't play spells this turn" (Lilting Lullaby).
@@ -273,7 +274,8 @@ export function playableCards(s: GameState, p: PlayerId, w: Window = 'main'): Ob
     // Ambush: [Reaction] while being played to a battlefield where you have units [822.1.b].
     const ambush = isType(o, 'unit') && printed(o.def, 'ambush') && ambushLocations(s, p).length > 0;
     if (!windowAllows(w, timingFrom(s, id)) && !(ambush && w !== 'main')) return false;
-    if (paymentPlans(s, p, cheapestCost(s, id, p, costOf(s, id)), { limit: 1, spell: isType(o, 'spell') }).length === 0) return false;
+    const kind = isType(o, 'spell') ? true : isType(o, 'gear') ? 'gear' as const : isType(o, 'unit') ? 'unit' as const : false;
+    if (paymentPlans(s, p, cheapestCost(s, id, p, costOf(s, id)), { limit: 1, spell: kind }).length === 0) return false;
     if (!mandatoryCostsPossible(s, id, p)) return false;
     const origin = o.zone.z === 'facedown' ? o.zone : undefined;
     if (isType(o, 'spell')) {
@@ -398,7 +400,8 @@ const xpowOf = (it: ChainItem): Record<string, number> => Object.fromEntries(Obj
 function playCost(s: GameState, it: ChainItem, extra: TargetRef[] = []): ResourceCost {
   const o = s.objects[it.obj!];
   return totalCost(s, { def: o.def, types: typesOf(o), p: it.controller, base: baseCost(s, it), chosen: chosenOptional(it), xs: xsOf(it), origin: it.play.origin.z,
-    targets: [...chosenTargets(it), ...extra], xpow: xpowOf(it) });
+    targets: [...chosenTargets(it), ...extra], xpow: xpowOf(it), location: it.play.choices.location ?? null,
+    fixedBase: overridesOf(it).cost !== undefined });
 }
 
 /** Whether choosing this target still leaves a cost the player can pay:
@@ -719,7 +722,7 @@ const STEPS: StepTable<PlayFrame> = [
     const r = payStep(s, f, x, {
       payer: it.controller, cost, what: s.objects[f.obj].def, item: it.id, source: f.obj, back: backOk(s, f),
       onBack: () => rollback(s, f, x, 'back'), onDecline: () => rollback(s, f, x, 'declined'), rule: '357',
-      spell: isSpellItem(s, it) ? true : isType(s.objects[f.obj], 'gear') ? 'gear' : false,
+      spell: isSpellItem(s, it) ? true : isType(s.objects[f.obj], 'gear') ? 'gear' : isType(s.objects[f.obj], 'unit') ? 'unit' : false,
     });
     if (typeof r === 'string') return r;
     setField(s, it.play, 'step', 4);
@@ -730,7 +733,11 @@ const STEPS: StepTable<PlayFrame> = [
       setField(s, s.log.powerSpent, it.controller, s.log.powerSpent[it.controller] + r.power);
     }
     for (const c of other) if (!payNonStd(s, x, it, c)) return rollback(s, f, x, 'illegal');   // impossible now [203.3]
-    for (const key of chosenOptional(it)) append(s, it.play.facts.paidOptional, key);   // decided = paid [356.4.f.1]
+    for (const key of chosenOptional(it)) {
+      append(s, it.play.facts.paidOptional, key);                    // decided = paid [356.4.f.1]
+      const [aid, src] = key.split('@');
+      if (src !== undefined && (abilityById(aid) as { limit?: unknown } | undefined)?.limit) countUsage(s, usageKey(Number(src), aid, '*'));
+    }
     return next(f);
   },
 
@@ -890,7 +897,7 @@ function enteringExhausted(s: GameState, it: ChainItem, obj: ObjId, unit: boolea
     if (!a.while || evalCond(s, a.while, { controller: p, source: obj, facts })) ready = true;
   }
   for (const { spec, st } of staticsFor(s, null, 'entersReady')) {   // Magma Wurm: "Other friendly units enter ready"
-    if (spec.to && st.host !== obj && matchesEntering(s, spec.to, o, p, st.ctl)) ready = true;
+    if (spec.to && st.host !== obj && matchesEntering(s, spec.to, o, p, st.ctl, loc)) ready = true;
   }
   for (const e of s.effects) {                                       // Confront: "Units you play this turn enter ready"
     const spec = e.spec as { s?: string; types?: CardType[]; uses?: number } | null;
@@ -904,8 +911,10 @@ function enteringExhausted(s: GameState, it: ChainItem, obj: ObjId, unit: boolea
 
 /** Whether a card entering the board fits a static's selector (its kind,
     whose it is, its tags; not where it is, it isn't anywhere yet). */
-function matchesEntering(_s: GameState, sel: SelAst, o: GameObject, p: PlayerId, ctl: PlayerId): boolean {
+function matchesEntering(s: GameState, sel: SelAst, o: GameObject, p: PlayerId, ctl: PlayerId, loc: Loc): boolean {
   if (sel.k === 'unit' && !isType(o, 'unit')) return false;
+  // "Units you play to battlefields you control enter ready" (Riven, the Exile).
+  if (sel.at === 'battlefield' && !(loc.z === 'bf' && s.bfs[loc.bf].controller === p)) return false;
   if (sel.rel === 'friendly' && p !== ctl) return false;
   if (sel.rel === 'enemy' && p === ctl) return false;
   return (sel.where ?? []).every((w) => w.p !== 'tag' || tagsOf(o).includes(w.tag));

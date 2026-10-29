@@ -55,15 +55,16 @@ const accepts = (req: PowerReq, d: Domain) =>
 
 /** Energy in the pool that may pay for this: restricted Energy only for
     what it is restricted to ("Spend this Energy only to play spells"). */
-const restrictedEnergy = (pool: RunePool, spell: boolean | 'gear') =>
+const restrictedEnergy = (pool: RunePool, spell: boolean | 'gear' | 'unit') =>
   pool.restricted.reduce((n, r) => n + (r.kind === 'energy' && (r.onlyFor !== 'spells' || spell === true) ? r.amount : 0), 0);
 
 /** Whether a restriction lets this payment use it: spells only, gear only (Ornn) [430]. */
-export const restrictionOk = (onlyFor: unknown, spell: boolean | 'gear') =>
-  onlyFor === 'spells' ? spell === true : onlyFor === 'gear' ? spell === 'gear' : false;
+export const restrictionOk = (onlyFor: unknown, spell: boolean | 'gear' | 'unit') =>
+  onlyFor === 'spells' ? spell === true : onlyFor === 'gear' ? spell === 'gear'
+    : onlyFor === 'permanents' ? spell === 'gear' || spell === 'unit' : false;   // "only to play units or gear"
 
 /** What the pool pays of the cost before any rune is touched. */
-function fromPool(pool: RunePool, cost: ResourceCost, spell: boolean | 'gear' = false): { spend: PoolSpend; energy: number; power: PowerReq[] } {
+function fromPool(pool: RunePool, cost: ResourceCost, spell: boolean | 'gear' | 'unit' = false): { spend: PoolSpend; energy: number; power: PowerReq[] } {
   const plain = Math.min(pool.energy, cost.energy);
   const extra = Math.min(restrictedEnergy(pool, spell), cost.energy - plain);
   const spend: PoolSpend = { energy: plain + extra, power: {}, universal: 0, restricted: extra > 0 ? [extra] : [] };
@@ -124,7 +125,7 @@ const zero = () => Object.fromEntries(DOMAINS.map((d) => [d, 0])) as Record<Doma
  * can't pay it [203.3]. A cost of nothing has one plan with no steps.
  */
 export function paymentPlans(s: GameState, p: PlayerId, cost: ResourceCost,
-  o: { limit?: number; reserveFor?: Domain[]; spell?: boolean | 'gear' } = {}): PaymentPlan[] {
+  o: { limit?: number; reserveFor?: Domain[]; spell?: boolean | 'gear' | 'unit' } = {}): PaymentPlan[] {
   const pool = s.players[p].pool;
   const base0 = fromPool(pool, cost, o.spell);
   const golds = goldsOf(s, p);
@@ -297,7 +298,7 @@ export function runeAbilities(s: GameState, p: PlayerId): { obj: ObjId; ability:
 }
 
 /** Whether the pool alone covers a cost now. */
-export function poolCovers(s: GameState, p: PlayerId, cost: ResourceCost, spell: boolean | 'gear' = false): boolean {
+export function poolCovers(s: GameState, p: PlayerId, cost: ResourceCost, spell: boolean | 'gear' | 'unit' = false): boolean {
   const base = fromPool(s.players[p].pool, cost, spell);
   return base.energy === 0 && base.power.length === 0;
 }
@@ -308,7 +309,7 @@ export function poolCovers(s: GameState, p: PlayerId, cost: ResourceCost, spell:
  * cost leaves the pool. Returns the Energy and Power spent.
  */
 export function executePlan(s: GameState, x: { present: boolean }, p: PlayerId, plan: PaymentPlan, cost: ResourceCost,
-  spell: boolean | 'gear' = false): { energy: number; power: number } {
+  spell: boolean | 'gear' | 'unit' = false): { energy: number; power: number } {
   const summary = planSummary(s, plan);
   for (const st of plan.steps) {
     if (st.ability === 'gold#0') activateGold(s, x, p, st.obj);
@@ -337,7 +338,7 @@ export function activateGold(s: GameState, x: { present: boolean }, p: PlayerId,
 }
 
 /** Pays a cost out of the pool, which covers it [357.1], [445.1]. */
-export function payCost(s: GameState, x: { present: boolean }, p: PlayerId, cost: ResourceCost, summary: string, spell: boolean | 'gear' = false) {
+export function payCost(s: GameState, x: { present: boolean }, p: PlayerId, cost: ResourceCost, summary: string, spell: boolean | 'gear' | 'unit' = false) {
   payFromPool(s, x, p, cost.energy, cost.power, '357.1', spell);
   emit(s, x, { k: 'payment', p, summary, rule: '357' });
   return { energy: cost.energy, power: cost.power.length };

@@ -17,7 +17,20 @@
  */
 import { abilityById, hasPrintedKeyword } from '../cards/registry.ts';
 import type { ChainItem, DefId, GameState } from '../state/types.ts';
-import { defHasKeyword, isType } from './chars.ts';
+import { defHasKeyword, isType, typesOf } from './chars.ts';
+import { staticsFor } from '../layers/derive.ts';
+
+/** Timing a static gives p's cards ("Your gear with [Deploy] have [Action]", "your spells have [Reaction]"). */
+export function givenTiming(s: GameState, id: number, p: number, t: Timing): Timing {
+  const o = s.objects[id];
+  if (!o) return t;
+  for (const { st, spec } of staticsFor(s, null, 'giveTiming')) {
+    if (st.ctl !== p || !spec.types.some((x) => typesOf(o).includes(x))) continue;
+    if (spec.keyword && !hasPrintedKeyword(o.def, spec.keyword)) continue;
+    if (spec.timing === 'action') t.action = true; else t.reaction = true;
+  }
+  return t;
+}
 
 export type Window = 'main' | 'chain' | 'showdown';
 
@@ -48,7 +61,7 @@ export function windowAllows(w: Window, t: Timing): boolean {
     [822.1.b] (`ignoreAmbush`: the timing without that). */
 export function timingOk(s: GameState, it: ChainItem, o: { ignoreAmbush?: boolean } = {}): boolean {
   if (it.kind === 'triggered') return true;                          // [383.3.c]
-  const t = it.kind === 'activated' ? abilityTiming(it.ability!) : cardTiming(s.objects[it.obj!].def);
+  const t = it.kind === 'activated' ? abilityTiming(it.ability!) : givenTiming(s, it.obj!, it.controller, cardTiming(s.objects[it.obj!].def));
   if (it.kind === 'card' && it.play.origin.z === 'facedown') t.reaction = true;
   const loc = it.play.choices.location;
   if (!o.ignoreAmbush && it.kind === 'card' && loc?.z === 'bf' && hasPrintedKeyword(s.objects[it.obj!].def, 'ambush')
