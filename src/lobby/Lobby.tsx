@@ -38,6 +38,8 @@ export function LobbyTop({ route }: { route: string }) {
         {NAV.map((n) => (
           <a key={n.id} href={`#${n.id}`} aria-current={route === n.id ? 'page' : undefined}>{n.label}</a>
         ))}
+        {/* the preview's look at the ranks and their animations */}
+        {DEMO && <a href="#ranks" aria-current={route === 'ranks' ? 'page' : undefined}>Ranks</a>}
       </nav>
       <div className="lb-top__right">
         <HoloSwitches />

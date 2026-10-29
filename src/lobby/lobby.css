@@ -1093,3 +1093,10 @@ a.lb-rank:hover { border-color: var(--gold); box-shadow: 0 0 22px rgba(200, 170,
 .ds__start { height: auto; padding: 20px 0 6px; margin-top: 10px; }
 .ds-slot.is-wait .ds-slot__back { isolation: isolate; }
 .ds-slot.is-wait .ds-slot__back::after { z-index: 2; }
+/* the preview's way to the ranks' look */
+.demo-ranks {
+  position: fixed; left: 16px; bottom: 34px; z-index: 60; padding: 10px 16px; text-decoration: none;
+  font: 700 12px/1 var(--font-ui); letter-spacing: .12em; text-transform: uppercase; color: #e8fffc;
+  background: linear-gradient(180deg, #0f4a58, #052630); border: 1px solid var(--gold); box-shadow: 0 0 18px rgba(10, 200, 185, .35);
+}
+.demo-ranks:hover { filter: brightness(1.2); }

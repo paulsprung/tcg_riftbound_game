@@ -76,11 +76,16 @@ export function App() {
     <div className="app">
       <FoilDefs />
       <Ambient />
+      {/* the preview: a way to the ranks' look from anywhere, the onboarding too */}
+      {DEMO && route !== 'ranks' && <a className="demo-ranks" href="#ranks">Rank animations</a>}
       {route === 'ranks' && DEMO ? (
         // the preview's look at the ranks, past the onboarding
-        <main className="main"><div className="lb-view lb-scroll">
-          <Suspense fallback={<p className="status">Loading…</p>}><RankDemo /></Suspense>
-        </div></main>
+        <>
+          <LobbyTop route={route} />
+          <main className="main"><div className="lb-view lb-scroll">
+            <Suspense fallback={<p className="status">Loading…</p>}><RankDemo /></Suspense>
+          </div></main>
+        </>
       ) : state.status === 'ready' && onboarding ? (
         <main className="main">
           <div className="lb-view">
