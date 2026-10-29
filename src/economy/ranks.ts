@@ -2,14 +2,15 @@
  * The ranked ladder's tiers, shared by the server (server/rating.ts, which
  * turns a rating into ladder points) and the app (the emblems and bars).
  *
- * Eight tiers of four divisions each (IV lowest … I highest), the top one
- * without divisions. The first tier spans 600 points (150 a division), each
- * later one 200 (50 a division); the top tier starts at 2000.
+ * Eight tiers of five divisions each (V lowest … I highest), the top one
+ * without divisions. The first tier spans 600 points (120 a division), each
+ * later one 200 (40 a division); the top tier starts at 2000.
  */
 
 export const TIERS = ['Initiate', 'Adept', 'Vanguard', 'Sentinel', 'Warden', 'Ascendant', 'Exalted', 'Paragon'] as const;
 export type Tier = (typeof TIERS)[number];
-export type Division = 1 | 2 | 3 | 4;
+export type Division = 1 | 2 | 3 | 4 | 5;
+export const DIVISIONS = 5;
 
 /** Placement games before a tier is shown. */
 export const PLACEMENT_GAMES = 5;
@@ -32,21 +33,25 @@ export const TIER_LOOK: Record<Tier, { metal: string; light: string; gem: string
 /** The tier and division of ladder points. The top tier has no divisions. */
 export function tierOf(points: number): { tier: Tier; division: Division | null } {
   if (points >= TOP) return { tier: 'Paragon', division: null };
-  if (points < FIRST) return { tier: 'Initiate', division: (4 - Math.min(3, Math.floor(Math.max(0, points) / 150))) as Division };
+  if (points < FIRST) return { tier: 'Initiate', division: (DIVISIONS - Math.min(DIVISIONS - 1, Math.floor(Math.max(0, points) / 120))) as Division };
   const i = Math.min(6, Math.floor((points - FIRST) / 200) + 1);
   const within = points - (FIRST + (i - 1) * 200);
-  return { tier: TIERS[i], division: (4 - Math.min(3, Math.floor(within / 50))) as Division };
+  return { tier: TIERS[i], division: (DIVISIONS - Math.min(DIVISIONS - 1, Math.floor(within / 40))) as Division };
 }
 
 /** How far into its division a score is, 0 to 1 (the top tier is always full). */
 export function divisionProgress(points: number): number {
   if (points >= TOP) return 1;
-  const size = points < FIRST ? 150 : 50;
+  const size = points < FIRST ? 120 : 40;
   const floor = points < FIRST ? 0 : FIRST;
   return (((Math.max(0, points) - floor) % size) / size);
 }
 
-export const roman = (d: Division | number | null) => (d ? ['I', 'II', 'III', 'IV'][d - 1] : '');
+export const roman = (d: Division | number | null) => (d ? ['I', 'II', 'III', 'IV', 'V'][d - 1] : '');
+
+/** Where a rank stands on the whole ladder, for comparing two: higher is better. */
+export const rankStep = (tier: string, division: number | null) =>
+  Math.max(0, TIERS.indexOf(tier as Tier)) * DIVISIONS + (division ? DIVISIONS - division : DIVISIONS - 1);
 
 /** "Sentinel II", or "Paragon". */
 export const rankName = (tier: string, division: number | null) => (division ? `${tier} ${roman(division)}` : tier);

@@ -366,7 +366,8 @@ export function GameScreen({ host, cards, db, names, onNewGame, onChangeDecks, o
           <GameOver
             tone={hot ? 'neutral' : stage.result.winner === null ? 'draw' : stage.result.winner === view.me ? 'win' : 'loss'}
             title={hot ? hotResult(stage.result.winner, names) : stage.result.winner === null ? 'Draw' : stage.result.winner === view.me ? 'Victory' : 'Defeat'}
-            detail={`${resultHow(stage.result, hot ? null : view.me)} [${stage.result.rule}]`} turn={view.turn.n}
+            detail={`${resultHow(stage.result, hot ? null : view.me)} [${stage.result.rule}]`}
+            eyebrow={`${online ? `${online.mode} · ` : ''}Turn ${view.turn.n}`}
             names={[seatNames.me, seatNames.opponent]} points={[board.me.points, board.opponent.points]}
             legends={[board.me.legend[0], board.opponent.legend[0]]} cards={cards}
             buttons={<>

@@ -76,15 +76,17 @@ describe.skipIf(!url)('server economy', () => {
   });
 
   it('buying needs the coins; ten requests at once cannot spend them twice', async () => {
-    expect((await call('POST', '/api/account/buy', alice, { setId: 'ogn', n: 1 })).status).toBe(400);
+    expect((await call('POST', '/api/account/buy', alice, { setId: 'ogn', n: Math.floor(DAILY_COINS / PACK_PRICE) + 1 })).status).toBe(400);
     await economy.grant(db, aliceId, aliceId, PACK_PRICE * 3, {}, 'test');
     const all = await Promise.all(Array.from({ length: 10 }, () => call('POST', '/api/account/buy', alice, { setId: 'rad', n: 1 })));
-    expect(all.filter((r) => r.ok)).toHaveLength(3);
+    // the daily coins and the grant, spent pack by pack
+    const n = Math.floor((DAILY_COINS + PACK_PRICE * 3) / PACK_PRICE);
+    expect(all.filter((r) => r.ok)).toHaveLength(n);
     const acc = (await (await call('GET', '/api/account', alice)).json()).account;
-    expect(acc.coins).toBe(DAILY_COINS);
-    expect(acc.packs.rad).toBe(4);
+    expect(acc.coins).toBe(DAILY_COINS + PACK_PRICE * 3 - PACK_PRICE * n);
+    expect(acc.packs.rad).toBe(1 + n);
     const spent = await db.query("SELECT sum(coins)::int AS s FROM ledger WHERE user_id = $1 AND reason = 'buy packs'", [aliceId]);
-    expect(spent.rows[0].s).toBe(-PACK_PRICE * 3);
+    expect(spent.rows[0].s).toBe(-PACK_PRICE * n);
   });
 
   it('opening a pack takes it from the inventory and puts its cards in the collection', async () => {

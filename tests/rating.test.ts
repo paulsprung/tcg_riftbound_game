@@ -29,7 +29,7 @@ describe('glicko-2', () => {
   it('ladder points start low and tiers climb in order', () => {
     expect(ladderPoints(START)).toBe(800);
     expect(tierOf(0).tier).toBe('Initiate');
-    expect(tierOf(800)).toEqual({ tier: 'Vanguard', division: 4 });
+    expect(tierOf(800)).toEqual({ tier: 'Vanguard', division: 5 });
     expect(tierOf(990)).toEqual({ tier: 'Vanguard', division: 1 });
     expect(tierOf(2400)).toEqual({ tier: 'Paragon', division: null });
   });

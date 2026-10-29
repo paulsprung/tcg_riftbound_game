@@ -1,5 +1,5 @@
 import { randomInt, randomUUID } from 'node:crypto';
-import { FIRST_WIN_COINS, LOSS_COINS, MATCH_COINS_PER_DAY, MIN_REWARD_TURNS, WIN_COINS } from '../../src/economy/rules.ts';
+import { FIRST_WIN_COINS, LOSS_COINS, MIN_REWARD_TURNS, WIN_COINS } from '../../src/economy/rules.ts';
 import { missingCards, ownedDefs, ownPrintings } from '../../src/decks/ownership.ts';
 import { STARTERS, validateDeck, type DeckList, type GameRecord, type PlayerId, type PlayerView } from '../../src/game/index.ts';
 import type { Db } from '../db.ts';
@@ -24,8 +24,7 @@ import type { EnginePool } from './pool.ts';
  * The record so far (setup and every answer) is written to live_games every
  * few seconds, so a restart replays the games and carries on. At the end the
  * match goes to `matches` with its record, ratings move (Glicko-2, per
- * mode) and both players get coins, up to a daily limit, and the day's
- * first win a bonus on top.
+ * mode) and both players get coins, the day's first win a bonus on top.
  */
 
 const MODES: QueueMode[] = ['ranked', 'casual'];
@@ -644,15 +643,11 @@ export class Online {
         await c.query('UPDATE ratings SET r = $3, rd = $4, vol = $5, games = games + 1, wins = wins + $6 WHERE user_id = $1 AND mode = $2',
           [g.players[s], g.mode, next.r, next.rd, next.vol, score === 1 ? 1 : 0]);
         if (g.mode === 'ranked') outcome.rating[s] = { before: infoOf(me.rating, me.games), after: infoOf(next, me.games + 1) };
-        // coins, up to the daily limit
+        // coins for every game that went on long enough
         if (rewarded) {
-          const today = (await c.query(`SELECT coalesce(sum(coins), 0)::int AS n FROM ledger WHERE user_id = $1 AND reason LIKE 'match %'
-            AND created_at > now() - interval '1 day'`, [g.players[s]])).rows[0].n as number;
-          const coins = Math.max(0, Math.min(score === 1 ? WIN_COINS : LOSS_COINS, MATCH_COINS_PER_DAY - today));
-          if (coins > 0) {
-            await c.query('UPDATE accounts SET coins = coins + $2 WHERE user_id = $1', [g.players[s], coins]);
-            await c.query('INSERT INTO ledger (user_id, coins, reason) VALUES ($1, $2, $3)', [g.players[s], coins, `match ${score === 1 ? 'win' : 'played'} ${g.id}`]);
-          }
+          const coins = score === 1 ? WIN_COINS : LOSS_COINS;
+          await c.query('UPDATE accounts SET coins = coins + $2 WHERE user_id = $1', [g.players[s], coins]);
+          await c.query('INSERT INTO ledger (user_id, coins, reason) VALUES ($1, $2, $3)', [g.players[s], coins, `match ${score === 1 ? 'win' : 'played'} ${g.id}`]);
           outcome.coins[s] = coins;
           // the first win of the day pays extra
           if (score === 1) {
