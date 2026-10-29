@@ -1,3 +1,4 @@
+import { CardBack } from '../card/CardBack.tsx';
 import { useEffect, useMemo, useState } from 'react';
 import { HoloCard } from '../card/HoloCard.tsx';
 import { Slab } from '../showcase/Slab.tsx';
@@ -28,7 +29,8 @@ function Side({ db }: { db: CardDb }) {
             )}
           </div>
         ) : (
-          <span className="home-feat__empty">Put a card in your showcase</span>
+          // a card back stands in until you pick your show card
+          <div className="home-feat__card home-feat__card--back"><CardBack /><span className="home-feat__plus" aria-hidden>+</span></div>
         )}
       </a>
 

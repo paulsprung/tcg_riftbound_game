@@ -5,9 +5,9 @@ import { useCollection } from '../collection/store.ts';
 import { defaultFinish } from '../data/cardInfo.ts';
 import type { Card, CardDb } from '../data/types.ts';
 import { missingCards, ownedDefs } from '../decks/ownership.ts';
-import { decks as deckStore, useDecks, type SavedDeck } from '../decks/store.ts';
+import { decks as deckStore, emptyDeck, useDecks, type SavedDeck } from '../decks/store.ts';
 import { loadStarters, type StarterChoice } from '../economy/starter.ts';
-import { findCard, validateDeck } from '../game/index.ts';
+import { findCard, STARTERS, validateDeck } from '../game/index.ts';
 
 const SECTIONS: { id: string; label: string; types: string[] }[] = [
   { id: 'legend', label: 'Legend', types: ['Legend'] },
@@ -86,6 +86,15 @@ export function DecksView({ db, onInspect }: { db: CardDb; onInspect: (t: Inspec
     return () => { alive = false; };
   }, [db, own.starter]);
   const byId = useMemo(() => new Map(db.cards.map((c) => [c.id, c])), [db]);
+  // the starter can't be changed; a copy of it can, in the builder
+  const copyStarter = () => {
+    const s = STARTERS.find((x) => x.id === own.starter);
+    if (!s) return;
+    const d = { ...emptyDeck(s.deck.legend, `${s.deck.name.replace(/^[^:]*: /, '')} (copy)`.slice(0, 40)), main: s.deck.main, runes: s.deck.runes,
+      battlefields: s.deck.battlefields, chosenChampion: s.deck.chosenChampion };
+    deckStore.save(d);
+    location.hash = `collection/decks/edit/${d.id}`;
+  };
   const legend: Card | undefined = deck?.legendCard ? byId.get(deck.legendCard) : undefined;
 
   return (
@@ -99,8 +108,11 @@ export function DecksView({ db, onInspect }: { db: CardDb; onInspect: (t: Inspec
             <div className="dk-tile__art">{legend ? <HoloCard card={legend} finish="none" width="100%" imageWidth={360} /> : <div className="starter__ph" />}</div>
             <div className="dk-tile__info">
               <strong>{deck?.title ?? 'Starter deck'}</strong>
-              <span className="muted small">{deck ? `${deck.size} cards` : '…'}</span>
-              <button type="button" className="btn btn--cta btn--small" disabled={!deck} onClick={() => setShowing(deck)}>Show me this deck</button>
+              <span className="small dk-ready">Starter</span>
+              <span className="dk-tile__btns">
+                <button type="button" className="btn btn--cta btn--small" disabled={!deck} onClick={() => setShowing(deck)}>Show</button>
+                <button type="button" className="btn btn--ghost btn--small" onClick={copyStarter}>Copy</button>
+              </span>
             </div>
           </article>
         ) : (

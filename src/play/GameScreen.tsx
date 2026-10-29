@@ -298,7 +298,7 @@ export function GameScreen({ host, cards, db, names, onNewGame, onChangeDecks, o
             </label>
             <button type="button" role="menuitem" onClick={() => { close(); setReport(true); }}>Report a rules problem</button>
             {tutorial && <div className="gmenu__tut">{tutorial.actions}</div>}
-            {!tutorial && playing && stage.k !== 'over' && (
+            {!tutorial && stage.k !== 'over' && (
               confirmConcede ? (
                 <div className="gmenu__confirm">
                   <button type="button" className="btn btn--small btn--danger" onClick={() => { setConfirmConcede(false); close(); host.concede(viewer); }}>Concede now</button>
