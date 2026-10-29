@@ -49,6 +49,8 @@ export function mulliganMax(_s: GameState, _p: PlayerId): number {
 export function channelCount(s: GameState, p: PlayerId): number {
   const order = turnOrder(s);
   const extraFor = s.mode.firstTurn.extraRuneFor === 'second' ? order[1] : order[order.length - 1];
+  // Sandstone Chimera: "players only channel 1 rune at the start of their Channel Phase".
+  if (staticsFor(s, null, 'channelPhaseOne').length > 0) return 1;
   return 2 + (p === extraFor && s.history.channelPhasesTaken[p] === 0 ? 1 : 0);
 }
 

@@ -190,6 +190,8 @@ defineTask('channel.channel', [(s, _f, x) => {
 
 /** [315.4.b]: draw 1; an empty Main Deck burns out, then the draw goes on [315.4.b.1–2]. */
 defineTask('draw.draw', [(s, _f, x) => {
+  // Endless Riches: "Skip your Draw Phase."
+  if (staticsFor(s, null, 'skipDraw').some(({ st }) => st.ctl === s.turn.player)) return 'done';
   drawCards(s, x, s.turn.player, drawCount(s, s.turn.player), '315.4.b');
   return 'done';
 }]);

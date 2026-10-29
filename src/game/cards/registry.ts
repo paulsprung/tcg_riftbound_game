@@ -51,6 +51,12 @@ const TOKEN_DEFS: CardDef[] = [
         { op: 'kill', what: { k: 'gear', rel: 'friendly', at: 'here', other: true, where: [{ p: 'name', name: 'Bomb' }] } }],
     } },
   ] },
+  // [187.11]
+  { id: 'shadowClone', text: 'When I attack, you may banish a unit from your trash. If you do, give me [Assault 4] this turn.', keywords: [], abilities: [
+    { id: 'shadowClone#0', kind: 'triggered', when: { on: 'attack', who: 'self' }, may: true, cost: { banishTrash: { types: ['unit'], n: 1 } },
+      effect: { body: [{ op: 'grant', kw: { kw: 'assault', value: 4 }, to: 'self', until: 'thisTurn' }] } },
+  ] },
+  { id: 'tentacle', text: '', keywords: [], abilities: [] },
   // [187.9]
   { id: 'baronPit', text: 'Units can move here from anywhere.', keywords: [], abilities: [
     { id: 'baronPit#0', kind: 'static', spec: { s: 'moveHereFromAnywhere' } },
@@ -99,6 +105,9 @@ function costOfKeyword(c: OracleCost | undefined): CostAst {
     if (m) out.discard = Number(m[1]);
     const r = /^Recycle (\d+) cards? from your trash$/i.exec(o);
     if (r) out.recycleTrash = { n: Number(r[1]) };
+    const dt = /^Discard an? (spell|unit|gear)$/i.exec(o);         // "[Empower] — Discard a spell"
+    if (dt) { out.discard = 1; out.discardTypes = [dt[1].toLowerCase() as 'spell' | 'unit' | 'gear']; }
+    if (/^Discard 1$/i.test(o)) out.discard = 1;
     if (/^Kill a friendly unit$/i.test(o)) out.kill = { sel: { k: 'unit', rel: 'friendly' }, n: 1 };   // "[Empower] — Kill a friendly unit"
     const xp = /^Spend (\d+) XP$/i.exec(o);                        // "[Equip] — Spend 1 XP"
     if (xp) out.xp = Number(xp[1]);
@@ -156,7 +165,7 @@ export function keywordAbility(def: DefId, kw: KeywordId): AbilityAst | undefine
       const cost = keywordCost(def, 'empower') ?? {};
       const less = cardDef(def)?.keywords.find((k) => k.kw === 'empower')?.equipLessBy;   // "This ability costs [1] less for each …"
       return { id, kind: 'activated', cost: less ? { ...cost, energyLessBy: less } : cost,
-        while: { c: 'is', ref: self, pred: { p: 'not', of: { p: 'empowered' } } }, effect: { body: [{ op: 'empower', what: self }] } };
+        while: { c: 'is', ref: self, pred: { p: 'canEmpower' } }, effect: { body: [{ op: 'empower', what: self }] } };
     }
     case 'flow':                                                     // [Flow]: "You may play this from your trash for its Flow cost. Then banish it."
       return { id, kind: 'cost', alt: keywordCost(def, 'flow') ?? {}, while: { c: 'origin', z: 'trash' } };
@@ -177,6 +186,12 @@ function keywordAbilities(def: DefId): AbilityAst[] {
   for (const k of keywordsOf(def)) {
     const a = keywordAbility(def, k.kw);
     if (a && !out.some((b) => b.id === a.id)) out.push(a);
+  }
+  // "[Empower] — [1] or [O]": each further Empower cost its own ability.
+  const emp = findCard(def) ? printedKeywords(findCard(def)!).find((k) => k.kw === 'empower') : undefined;
+  for (let i = 1; i < (emp?.costs?.length ?? 0); i++) {
+    const base = keywordAbility(def, 'empower');
+    if (base?.kind === 'activated') out.push({ ...base, id: `${def}#kw:empower${i + 1}`, cost: costOfKeyword(emp!.costs![i]) });
   }
   // "[Repeat] — [1] / [A] / [1][A]": each further Repeat cost its own ability, paid once each (Curtain Call).
   const repeats = keywordsOf(def).filter((k) => k.kw === 'repeat').length;

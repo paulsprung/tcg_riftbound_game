@@ -85,7 +85,9 @@ export interface GameState {
   combat: CombatState | null;
   effects: ContinuousEffect[];        // created by resolved instructions ("this turn", prevents, grants)
   delayed: DelayedAbility[];          // [390–393]
-  usage: Record<string, number>;      // `${ObjId}|${AbilityId}|${PlayerId|'*'}` → times this turn [383.3.e], [386]
+  usage: Record<string, number>;
+  /** Thresholds objects are at or above ("When my Might becomes 10 or more"): `${ObjId}|${n}` → 1. */
+  marks?: Record<string, number>;      // `${ObjId}|${AbilityId}|${PlayerId|'*'}` → times this turn [383.3.e], [386]
   log: TurnLog;                       // per-turn history (§3.9)
   history: GameHistory;               // whole-game history (§3.9)
   frames: Frame[];                    // suspended procedures, top = last (§3.10)
@@ -137,7 +139,7 @@ export interface RunePool {
   universal: number;                  // [A] added (Gold, Gutter Guardian) [135.2.e.5.b]
   restricted: { amount: number; kind: 'energy' | Domain | 'universal'; onlyFor: SpendRestriction; source: DefId }[];
 }
-export type SpendRestriction = 'spells' | 'gear' | 'permanents' | 'showdown' | { cardsWithTag: string };   // Kai'Sa, Ornn, Diana …
+export type SpendRestriction = 'spells' | 'gear' | 'permanents' | 'units' | 'showdown' | { cardsWithTag: string };   // Kai'Sa, Ornn, Diana …
 
 // ---- 3.4 Game objects ----
 // One shape for cards, tokens, runes, legends and battlefields. Board-only

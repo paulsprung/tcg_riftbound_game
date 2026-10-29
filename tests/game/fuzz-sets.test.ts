@@ -19,9 +19,9 @@ import { randomDeck } from './helpers/randomDeck.ts';
  *   FUZZ_SET_AI=20 npx vitest run tests/game/fuzz-sets.test.ts              (Normal-vs-Beginner games per set)
  */
 
-const SETS = ['ogn', 'sfd', 'unl', 'rad'];
-/** Sets still being defined: their decks take only executable cards. */
-const PARTIAL = ['rad'];
+const SETS = ['ogn', 'sfd', 'unl', 'rad', 'ven'];
+/** Sets with cards left undefined (unsure, docs/CARDS-UNSURE.md): their decks take only executable cards. */
+const PARTIAL = ['rad', 'ven'];
 const GAMES = Number(process.env.FUZZ_SET_GAMES ?? 8);
 const AI_GAMES = Number(process.env.FUZZ_SET_AI ?? 2);
 

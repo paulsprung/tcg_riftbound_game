@@ -110,6 +110,9 @@ export function inCombat(s: GameState, id: ObjId): boolean {
 export const hasChosenTag = (o: GameObject, tag: string) => o.named?.kind === 'tag' && o.named.value === tag
   && locOf(o) !== null && (cardDefOf(o.def)?.abilities ?? []).some((a) => a.kind === 'static' && a.spec.s === 'chooseTag' && a.spec.gain !== false);
 
+/** How many times an object can be [Empowered]: once [442.1.c.1], or as its own text says (Kayle). */
+export const maxEmpowerOf = (s: GameState, id: ObjId) => Math.max(1, ...staticsFor(s, id, 'maxEmpower').map(({ spec }) => spec.n));
+
 const unitsHere = (s: GameState, bf: number) => s.bfs[bf].here.filter((u) => isType(s.objects[u], 'unit'));
 
 export function predOk(s: GameState, p: PredAst, id: ObjId, c: SelCtx): boolean {
@@ -182,7 +185,8 @@ export function predOk(s: GameState, p: PredAst, id: ObjId, c: SelCtx): boolean 
     }
     case 'mightVsSlot': {                                            // "with less Might than the chosen unit"
       const other = c.slotObjs?.[p.slot]?.[0];
-      return other !== undefined && !!s.objects[other] && locOf(s.objects[other]) !== null && cmp(mightOf(s, id), p.op, mightOf(s, other));
+      if (other === undefined) return c.slotObjs === undefined;      // judged once that slot is chosen
+      return !!s.objects[other] && locOf(s.objects[other]) !== null && cmp(mightOf(s, id), p.op, mightOf(s, other));
     }
     case 'notAtSlot': {                                              // "at a different location"
       const other = c.slotObjs?.[p.slot]?.[0];
@@ -200,8 +204,29 @@ export function predOk(s: GameState, p: PredAst, id: ObjId, c: SelCtx): boolean 
       return friendly.length === 1 && friendly[0] === want;
     }
     case 'empowered': return o.empowered > 0;
+    case 'empoweredAtLeast': return o.empowered >= p.n;
+    case 'attachedToSource': return c.source !== null && o.attachedTo === c.source;
+    case 'atSource': {
+      const h = hereOf(s, c.source), at = locOf(o);
+      return !!h && !!at && sameLoc(h, at);
+    }
+    case 'energyAtMostSourceMight': {
+      const src = c.source === null ? undefined : s.objects[c.source];
+      return !!src && energyCostOf(o) <= Math.max(0, mightOf(s, c.source!));
+    }
+    case 'canEmpower': return o.empowered < maxEmpowerOf(s, id);
+    case 'unitCount': {
+      const bf = s.bfs.findIndex((b) => b.obj === id);
+      return bf >= 0 && unitsHere(s, bf).length === p.n;
+    }
     case 'minMoves': return o.moves >= p.n;
     case 'ownedByYou': return o.owner === c.controller;
+    case 'domain': return (findCard(o.def)?.domains ?? []).includes(p.d);
+    case 'inCombatWithDomain': return inCombat(s, id) && s.bfs[(o.zone as { bf: number }).bf].here.some((u) => u !== id
+      && inCombat(s, u) && s.objects[u].controller !== o.controller && (findCard(s.objects[u].def)?.domains ?? []).includes(p.d));
+    case 'chosenBySpellOfDomain': return s.chain.some((it) => it.kind === 'card' && it.obj !== undefined && it.controller !== c.controller
+      && (findCard(s.objects[it.obj]?.def ?? '')?.domains ?? []).includes(p.d)
+      && it.play.choices.executions.some((ex) => Object.values(ex.targets).flat().some((t) => t.k === 'obj' && t.id === id)));
     case 'damagedThisTurn': return (s.log.damaged ?? []).includes(id);
     case 'inShowdown': return s.showdown !== null && o.zone.z === 'bf' && o.zone.bf === s.showdown.bf;
     case 'atMoveEnds': {                                             // "a battlefield I moved to or from"

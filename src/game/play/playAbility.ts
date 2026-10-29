@@ -38,6 +38,7 @@ import { snapshotOf } from '../rules/chars.ts';
 import { goldBonus, paymentPlans } from '../rules/resources.ts';
 import { selectAll, slotLocsOf, stillLegal } from '../rules/targets.ts';
 import { abilityTiming, timingOk, windowAllows, type Window } from '../rules/timing.ts';
+import { staticsFor } from '../layers/derive.ts';
 import { choicesPossible, chooseNext, slotObjsOf, slotsOf } from './choices.ts';
 import { payStep } from './pay.ts';
 import { deflectFor } from './cost.ts';
@@ -77,7 +78,9 @@ export function canActivate(s: GameState, p: PlayerId, src: ObjId, a: ActivatedA
   if (!nonStdPossible(s, nonStdOf(a.cost), src, p)) return false;   // [415.4], [203.3]
   const c = resourceCost(a.cost, domainsOf(s, src));
   const less = a.cost.energyLessBy;
-  const known = less === undefined ? 0 : lessByNow(s, less, p, src);
+  const known = (less === undefined ? 0 : lessByNow(s, less, p, src)) ?? null;
+  if (known !== null) c.energy = Math.max(0, c.energy - forgeLess(s, p, src));
+  altarLess(s, a.id, p, src, c);
   if (known === null) c.energy = 0;                                  // reduced by the unit chosen: checked as it is paid
   else c.energy = Math.max(0, c.energy - known);                     // "[1] less for each …": known now
   if (paymentPlans(s, p, c, { limit: 1 }).length === 0) return false;
@@ -99,6 +102,26 @@ function lessByNow(s: GameState, v: import('../dsl/ast.ts').ValueAst, p: PlayerI
     return lessByNow(s, r, p, src);
   }
   return null;
+}
+
+/** Risen Altar: "[Empower] costs of your units here cost [1] or [A] less" (Energy first). */
+function altarLess(s: GameState, id: string, p: PlayerId, src: ObjId | null, c: { energy: number; power: import('../state/types.ts').PowerReq[] }) {
+  const o = src === null ? undefined : s.objects[src];
+  if (!o || !/#kw:empower\d*$/.test(id) || !isType(o, 'unit') || o.zone.z !== 'bf') return;
+  const bf = o.zone.bf;
+  const n = staticsFor(s, null, 'empowerLessHere').filter(({ st }) => st.ctl === p && s.objects[st.host]?.zone.z === 'bf'
+    && (s.objects[st.host].zone as { bf: number }).bf === bf).length;
+  for (let i = 0; i < n; i++) {
+    if (c.energy > 0) c.energy -= 1;
+    else { const j = c.power.findIndex((r) => r.k === 'any'); if (j >= 0) c.power.splice(j, 1); }
+  }
+}
+
+/** Piltovan Forge: "the first friendly gear activated ability played each turn costs [1] less". */
+function forgeLess(s: GameState, p: PlayerId, src: ObjId | null): number {
+  const o = src === null ? undefined : s.objects[src];
+  if (!o || !isType(o, 'gear') || (s.usage[`gearAbility|p${p}`] ?? 0) > 0) return 0;
+  return staticsFor(s, null, 'gearAbilityLess').filter(({ st }) => st.ctl === p).reduce((n, { spec }) => n + spec.n, 0);
 }
 
 /** The abilities p could activate now: `act:<obj>#<sub>` (objAbilities.ts). */
@@ -205,6 +228,8 @@ const STEPS: StepTable<AbilityFrame> = [
       // "This ability costs [1] less for each friendly unit with [Temporary]" (Lillia, Bashful Bloom).
       c.energy = Math.max(0, c.energy - (lessByNow(s, a.cost.energyLessBy, it.controller, it.source ?? null) ?? 0));
     }
+    if (it.kind === 'activated') c.energy = Math.max(0, c.energy - forgeLess(s, it.controller, it.source ?? null));   // Piltovan Forge
+    if (it.kind === 'activated') altarLess(s, a.id, it.controller, it.source ?? null, c);
     // Deflect: [A] per time it chooses an opponent's Deflect object [809.1.c], [356.2.a.2].
     const deflect = Object.values(it.play.choices.executions[0].targets).flat()
       .reduce((n, t) => n + deflectFor(s, t, it.controller), 0);
@@ -237,7 +262,8 @@ const STEPS: StepTable<AbilityFrame> = [
       item: it.id, ...(it.source !== undefined ? { source: it.source } : {}), back: backOk(s, f),
       onBack: () => rollback(s, f, x, 'back'),
       onDecline: () => (trig ? removeTrigger(s, f, x, 'unpaid') : rollback(s, f, x, 'declined')), rule: trig ? '405.2' : '405.1',
-      spell: it.source !== undefined && s.objects[it.source] && isType(s.objects[it.source], 'gear') ? 'gear' : false,
+      spell: it.source !== undefined && s.objects[it.source] && isType(s.objects[it.source], 'gear') ? 'gear'
+        : it.source !== undefined && s.objects[it.source] && isType(s.objects[it.source], 'unit') ? 'unitAbility' : false,
     });
     if (typeof r === 'string') return r;
     if (ns && !performCostObjects(s, x, it, f.ability!, it.source ?? null, ns)) {
@@ -277,11 +303,16 @@ const STEPS: StepTable<AbilityFrame> = [
         .flatMap((t) => (t.k === 'obj' && s.objects[t.id] ? [t.id] : [])))];
       if (isType(srcObj, 'unit')) for (const obj of chosen) append(s, s.log.targeted, { item: it.id, by: it.controller, obj, spell: false, enemy: enemyThing(s, obj, it.controller) });
       if (chosen.length > 0) fire(s, x, { e: 'chosen', p: it.controller, objs: chosen, spell: false });
-      if (a.kind === 'activated' && isType(srcObj, 'gear')) fire(s, x, { e: 'gearAbility', p: it.controller, source: srcObj.id });
+      if (a.kind === 'activated' && isType(srcObj, 'gear')) {
+        countUsage(s, `gearAbility|p${it.controller}`);              // the first gear activated ability of the turn (Piltovan Forge)
+        fire(s, x, { e: 'gearAbility', p: it.controller, source: srcObj.id });
+      }
     }
     if (a.modesOncePerTurn && it.source !== undefined) {
       for (const m of it.play.choices.executions[0].modes) countUsage(s, usageKey(it.source, `${a.id}:mode${m}`, '*'));
     }
+    // "When you play … an activated ability with Energy cost [7] or more" (Nasus, Curator of the Sands).
+    if (a.kind === 'activated' && (a.cost.energy ?? 0) > 0) fire(s, x, { e: 'abilityPlayed', p: it.controller, energy: a.cost.energy ?? 0 });
     if (a.kind === 'activated' && a.isAdd) {
       if (a.id === 'gold#0' && goldBonus(s, it.controller)) addSpecial(s, x, it.controller, { energy: 1, source: 'gold' }, '430.2');
       for (const ins of a.effect.body) {

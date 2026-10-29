@@ -25,7 +25,8 @@
  */
 import { K, parseKey, type Option } from '../core/decisions.ts';
 import { answer, ask, defineSteps, next, ret, type FrameOf, type StepTable } from '../core/frames.ts';
-import type { GameState, ObjId } from '../state/types.ts';
+import type { GameState, ObjId, PlayerId } from '../state/types.ts';
+import { staticsFor } from '../layers/derive.ts';
 import { unitsAt } from './board.ts';
 import { damageOf, hasKeyword, lethalThreshold } from './chars.ts';
 
@@ -50,8 +51,11 @@ export function lethalAssign(s: GameState, id: ObjId): number {
 
 /** 0 Tank, 1 neither, 2 Backline; a unit with both takes the tier its
     assigner picked [467.2.c.8]. */
-export function tierOf(s: GameState, f: Pick<AssignFrame, 'tier'>, id: ObjId): number {
-  const tank = hasKeyword(s, id, 'tank'), back = hasKeyword(s, id, 'backline');
+export function tierOf(s: GameState, f: Pick<AssignFrame, 'tier'> & { by?: PlayerId }, id: ObjId): number {
+  // Dune Surfer: "You ignore [Tank] while assigning combat damage here."
+  const ignore = f.by !== undefined && !!s.combat && staticsFor(s, null, 'ignoreTank').some(({ st }) => st.ctl === f.by
+    && s.objects[st.host]?.zone.z === 'bf' && (s.objects[st.host].zone as { bf: number }).bf === s.combat!.bf);
+  const tank = !ignore && hasKeyword(s, id, 'tank'), back = hasKeyword(s, id, 'backline');
   if (tank && back) return f.tier[id] === 'backline' ? 2 : 0;
   return tank ? 0 : back ? 2 : 1;
 }

@@ -87,7 +87,11 @@ export type TriggerEvent =
   | { e: 'drew'; p: PlayerId; before: number; after: number }        // cards drawn this turn, before and after a draw
   | { e: 'mightReduced'; by: PlayerId; objs: ObjId[] }
   | { e: 'combatEnded'; bf: number; units: ObjId[] }                 // [468.7]
-  | { e: 'empowered'; by: PlayerId | null; objs: ObjId[] };          // [442]             // an effect of `by` lowered these units' Might [479.4]
+  | { e: 'becameReady'; objs: ObjId[] }                              // by anything [416]
+  | { e: 'abilityPlayed'; p: PlayerId; energy: number }              // an activated ability finalized [407]
+  | { e: 'mightReached'; objs: { id: ObjId; n: number }[] }          // "When my Might becomes 10 or more"
+  | { e: 'empowered'; by: PlayerId | null; objs: ObjId[] }
+  | { e: 'banished'; by: PlayerId; objs: ObjId[] };          // [442]             // an effect of `by` lowered these units' Might [479.4]
 
 const sameLoc = (a: Loc | null | undefined, b: Loc | null | undefined) => !!a && !!b && a.z === b.z
   && (a.z === 'base' ? a.p === (b as typeof a).p : a.bf === (b as typeof a).bf);
@@ -153,6 +157,7 @@ function meets(s: GameState, w: TriggerAst, ev: TriggerEvent, o: GameObject | nu
       if (w.what?.minSpent !== undefined && (ev.spent ?? 0) < w.what.minSpent) break;   // "if you spent [4] or more"
       if (w.what?.tag !== undefined && !(findCard(ev.def)?.tags ?? []).includes(w.what.tag)) break;
       if (w.what?.token && ev.isCard) break;
+      if (w.what?.notFromHand && ev.from === 'hand') break;
       if (w.what?.keyword && !(findCard(ev.def)?.keywords ?? []).some((l) => l.keywords.some((k) => k.kw === w.what!.keyword))) break;
       if (w.to === 'here' && (!o || !sameLoc(ev.to, here))) break;
       if (w.firstPerPlayer) {                                        // [383.1.b]
@@ -220,6 +225,15 @@ function meets(s: GameState, w: TriggerAst, ev: TriggerEvent, o: GameObject | nu
           instances.push({ p: ctlOf(s, id), info: { subject: id } });
         }
       }
+      break;
+    case 'mightReaches':
+      if (o && ev.e === 'mightReached' && ev.objs.some((r) => r.id === o.id && r.n === w.n)) instances.push({ p: o.controller, info: { subject: o.id } });
+      break;
+    case 'abilityPlayed':
+      if (ev.e === 'abilityPlayed' && c(ev.p) === ev.p && ev.energy >= w.minEnergy) instances.push({ p: ev.p, info: { p: ev.p } });
+      break;
+    case 'becomesReady':
+      if (o && ev.e === 'becameReady' && ev.objs.includes(o.id)) instances.push({ p: o.controller, info: { subject: o.id } });
       break;
     case 'combatEnded':
       if (o && ev.e === 'combatEnded' && ev.units.includes(o.id)) instances.push({ p: o.controller, info: { subject: o.id, bf: ev.bf } });
@@ -374,6 +388,7 @@ function meets(s: GameState, w: TriggerAst, ev: TriggerEvent, o: GameObject | nu
     case 'readied':
       if (ev.e !== 'readied' || c(ev.by) !== ev.by) break;
       for (const id of ev.objs) {
+        if (w.who === 'self' && id !== o?.id) continue;
         if (ctlOf(s, id) === ev.by && s.objects[id] && isType(s.objects[id], 'unit')) instances.push({ p: ev.by, info: { subject: id } });
       }
       break;
@@ -394,6 +409,11 @@ function meets(s: GameState, w: TriggerAst, ev: TriggerEvent, o: GameObject | nu
       break;
     case 'attached':
       if (o && ev.e === 'attached' && ev.to === o.id && ev.by !== null && c(ev.by) === ev.by) instances.push({ p: ev.by, info: { subject: ev.obj } });
+      break;
+    case 'banished':                                                 // "When you banish a card you own"
+      if (ev.e === 'banished' && c(ev.by) === ev.by && (!w.owned || ev.objs.some((id) => s.objects[id]?.owner === ev.by))) {
+        instances.push({ p: ev.by, info: { p: ev.by } });
+      }
       break;
     case 'recycled': case 'runeRecycled':
       if (ev.e === 'recycled' && ev.rune === (w.on === 'runeRecycled') && c(ev.p) === ev.p) instances.push({ p: ev.p, info: { p: ev.p } });

@@ -39,7 +39,9 @@ export interface ChoiceCtx { controller: PlayerId; source?: ObjId | null;
 export function candidatesFor(s: GameState, slot: SlotAst, it: ChoiceCtx, c: SelCtx): ObjId[] {
   // "I can't be chosen by enemy spells and abilities" (Ruin Runner).
   const all = slotCandidates(s, slot, c).filter((id) => s.objects[id].controller === it.controller
-    || staticsFor(s, id, 'noEnemyChoose').length === 0);
+    || (staticsFor(s, id, 'noEnemyChoose').length === 0
+      // Twilight Shroud: "It can't be chosen by enemy spells and abilities this turn."
+      && !s.effects.some((e) => (e.spec as { s?: string } | null)?.s === 'noEnemyChoose' && 'objs' in e.affects && e.affects.objs.includes(id))));
   if (it.restrictBf === undefined || slot.freeFromHidden) return all;
   const bf = it.restrictBf;
   return all.filter((id) => {
@@ -86,7 +88,7 @@ export function choicesPossible(s: GameState, prog: ProgAst | undefined, it: Cho
 /** Where the units a destination slot's `of` slot chose may move [355.4.a],
     [449.2]: any other location (their controller's base, a battlefield), as
     the slot limits it. */
-export function destCandidates(s: GameState, slot: SlotAst, units: ObjId[]): Loc[] {
+export function destCandidates(s: GameState, slot: SlotAst, units: ObjId[], p?: PlayerId): Loc[] {
   const d = slot.dest!;
   const u = units[0] === undefined ? undefined : s.objects[units[0]];
   if (!u) return [];
@@ -111,6 +113,8 @@ export function destCandidates(s: GameState, slot: SlotAst, units: ObjId[]): Loc
       if (d.to === 'open' && (b.controller !== null || b.here.some((id) => isType(s.objects[id], 'unit')))) return;   // [170.11.c]
       if (d.to === 'controlled' && (b.controller === null || b.controller !== u.controller)) return;   // "a battlefield you control"
       // "an occupied enemy battlefield": controlled by an opponent, with units [170.11.a].
+      // "a battlefield where you have units" (the choosing player).
+      if (d.to === 'yourUnits' && !b.here.some((id) => isType(s.objects[id], 'unit') && s.objects[id].controller === (p ?? u.controller))) return;
       if (d.to === 'occupiedEnemy' && (b.controller === null || b.controller === u.controller
         || !b.here.some((id) => isType(s.objects[id], 'unit')))) return;
       out.push({ z: 'bf', bf });
@@ -131,7 +135,7 @@ export const slotObjsOf = (ex: { targets: Record<string, TargetRef[]> } | undefi
 function leavesChoices(s: GameState, slots: SlotAst[], slot: SlotAst, id: ObjId, it: ChoiceCtx, c: SelCtx): boolean {
   for (const sl of slots) {
     if (sl === slot || slotMin(sl) === 0 || !slotActive(s, sl, it)) continue;
-    if (sl.dest?.of === slot.id && slotMin(slot) <= 1 && destCandidates(s, sl, [id]).length === 0) return false;
+    if (sl.dest?.of === slot.id && slotMin(slot) <= 1 && destCandidates(s, sl, [id], it.controller).length === 0) return false;
     if (!sl.dest && sl.sel.some((x) => typeof x.at === 'object' && x.at.slot === slot.id)) {
       const bf = s.bfs.findIndex((b) => b.obj === id);
       const o = s.objects[id];
@@ -222,7 +226,7 @@ export function chooseNext(s: GameState, f: Frame, x: RunCtx, it: ChainItem, pro
     }
     if (slot.dest) {
       const units = (ex.targets[slot.dest.of] ?? []).flatMap((t) => (t.k === 'obj' ? [t.id] : []));
-      const dests = destCandidates(s, slot, units);
+      const dests = destCandidates(s, slot, units, it.controller);
       if (units.length === 0 || dests.length === 0) {
         if (units.length > 0 && slotMin(slot) > 0) return o.onImpossible();
         setField(s, it.play.choices.asPlayed, done(slot.id), true);

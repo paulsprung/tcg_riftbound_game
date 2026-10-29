@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import type { CardDb } from '../../src/data/types.ts';
 import { explainUnavailable, observe, viewFor } from '../../src/game/index.ts';
 import { affordances } from '../../src/play/model/affordances.ts';
+import { coverageReport } from '../../src/game/cards/registry.ts';
+import { findCard } from '../../src/game/cards/oracle.ts';
 import { boardOf } from '../../src/play/model/board.ts';
 import { cardIndex, isRune, nameOf } from '../../src/play/model/cards.ts';
 import { describeAll } from '../../src/play/model/describe.ts';
@@ -63,10 +65,13 @@ describe('the chain on the table', () => {
     const g = start(53);
     runes(g, 0, []);
     const nova = inHand(g, 'supernova');
-    const seeker = inHand(g, 'wild-claw');                           // a spell not defined yet (VEN; replace once it is)
+    // A spell without a definition: none is left, so a defined one stands in (no §9.1 reason) unless one turns up.
+    const undef = coverageReport().find((c) => c.coverage === 'undefined' && findCard(c.id)?.types.includes('spell'));
+    const seeker = inHand(g, undef?.id ?? 'wild-claw');
     reask(g);
     const v = viewFor(g.s, 0);
     expect(explainUnavailable(v, nova).map((r) => r.rule)).toContain('203.3');
-    expect(explainUnavailable(v, seeker).map((r) => r.rule)).toContain('§9.1');   // its text isn't in
+    if (undef) expect(explainUnavailable(v, seeker).map((r) => r.rule)).toContain('§9.1');   // its text isn't in
+    else expect(explainUnavailable(v, seeker).map((r) => r.rule)).not.toContain('§9.1');
   });
 });

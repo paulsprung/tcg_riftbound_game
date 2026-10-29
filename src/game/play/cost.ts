@@ -69,6 +69,7 @@ export function costOffers(s: GameState, def: string, types: CardType[], p: Play
     for (const a of abilitiesOf(o.def)) {
       if (a.kind !== 'cost' || !a.grant || !a.grant.types.some((t) => types.includes(t))) continue;
       if (a.grant.tag && !(findCard(def)?.tags ?? []).includes(a.grant.tag)) continue;
+      if (a.grant.keyword && !(findCard(def)?.keywords ?? []).some((l) => l.keywords.some((k) => k.kw === a.grant!.keyword))) continue;
       const whose = a.grant.whose ?? 'you';
       const ctl = o.controller;
       if (ctl === null || (whose === 'you' && ctl !== p) || (whose === 'enemy' && ctl === p)) continue;
@@ -102,7 +103,7 @@ export function nonStdPossible(s: GameState, pay: NonStdCostAst | undefined, src
   if (pay.spendBuffSelf && (!me || me.buffs === 0)) return false;
   if (pay.exhaust && costCandidates(s, pay.exhaust.sel, p, src, true).length < pay.exhaust.n) return false;
   if (pay.kill && costCandidates(s, pay.kill.sel, p, src, false).length < pay.kill.n) return false;
-  if (pay.discard && s.players[p].hand.length < pay.discard) return false;
+  if (pay.discard && s.players[p].hand.filter((id) => !pay.discardTypes || pay.discardTypes.some((t) => isType(s.objects[id], t))).length < pay.discard) return false;
   if (pay.recycleTrash && trashCandidates(s, p, pay.recycleTrash.types).length < pay.recycleTrash.n) return false;
   if (pay.xp && s.players[p].xp < pay.xp) return false;
   if (pay.spendBuff && buffCandidates(s, pay.spendBuff.sel, p, src).length < pay.spendBuff.n) return false;
@@ -129,7 +130,7 @@ export function nonStdOf(c: CostAst | NonStdCostAst | undefined): NonStdCostAst 
   if (!c) return undefined;
   const out: NonStdCostAst = {};
   for (const k of ['exhaustSelf', 'killSelf', 'spendBuffSelf', 'exhaust', 'kill', 'discard', 'recycleTrash', 'xp', 'spendBuff', 'bounce', 'banishSelf',
-    'disempowerSelf', 'banishTrash'] as const) {
+    'disempowerSelf', 'banishTrash', 'discardTypes'] as const) {
     if (c[k] !== undefined) (out as Record<string, unknown>)[k] = c[k];
   }
   return Object.keys(out).length > 0 ? out : undefined;
@@ -192,14 +193,26 @@ export function totalCost(s: GameState, o: { def: string; types: CardType[]; p: 
     energy = off.a.alt.energy ?? 0;
     power = powerOf(off.a.alt, domains);
   }
-  const deflect = (o.targets ?? []).reduce((n, t) => n + deflectFor(s, t, o.p), 0) + (o.extraAny ?? 0);
+  // "Ignore [Deflect] while paying this spell's cost"; Heisho: for spells choosing something here.
+  const noDeflect = offers.some((off) => off.a.ignoreDeflect);
+  const deflect = noDeflect ? 0 : (o.targets ?? []).reduce((n, t) => n + deflectFor(s, t, o.p), 0) + (o.extraAny ?? 0);
   for (let i = 0; i < deflect; i++) power.push({ k: 'any' });       // [809.1.c.1]
   for (const off of offers) {                                        // additional costs, increases [356.2–356.3]
     if (off.a.xPower) for (let i = 0; i < (o.xpow?.[off.key] ?? 0); i++) power.push({ k: 'any' });   // "pay any amount of Power"
+    // Ezreal, Prodigy: "Optional additional costs you pay cost [1] or [A] less" (Energy first).
+    const less = off.a.optional && off.a.add && !off.a.repeat ? staticsFor(s, null, 'optionalLess').filter(({ st }) => st.ctl === o.p).length : 0;
     for (const c of [off.a.add, off.a.increase]) {
       if (!c) continue;
-      energy += c.energy ?? 0;
-      power.push(...powerOf(c, domains));
+      let e = c.energy ?? 0;
+      const pw = powerOf(c, domains);
+      if (c === off.a.add) {
+        for (let i = 0; i < less; i++) {
+          if (e > 0) e -= 1;
+          else { const j = pw.findIndex((r) => r.k === 'any'); pw.splice(j >= 0 ? j : pw.length - 1, pw.length > 0 ? 1 : 0); }
+        }
+      }
+      energy += e;
+      power.push(...pw);
     }
   }
   for (const e of s.effects) {                                       // "Your non-token units cost [1] more to play this turn"
@@ -212,6 +225,8 @@ export function totalCost(s: GameState, o: { def: string; types: CardType[]; p: 
     const spec = e.spec as { s?: string; types?: CardType[]; energy?: number } | null;
     if (spec?.s !== 'costLess' || !('player' in e.affects) || e.affects.player !== o.p) continue;
     if (!(spec.types ?? []).some((t) => o.types.includes(t)) || o.def === '') continue;
+    const max = (spec as { maxEnergy?: number }).maxEnergy;
+    if (max !== undefined && (findCard(o.def)?.cost?.energy ?? 0) > max) continue;
     energy -= spec.energy ?? 0;
     for (let i = 0; i < ((spec as { power?: number }).power ?? 0) && power.length > 0; i++) {   // "by [2][A]"
       const j = power.findIndex((r) => r.k === 'any');
@@ -242,7 +257,8 @@ export function totalCost(s: GameState, o: { def: string; types: CardType[]; p: 
       const bf = h && h.zone.z === 'bf' ? h.zone.bf : -1;
       if (s.turn.player !== o.p || bf < 0) continue;
       if (s.log.played.some((r) => r.p === o.p && r.to?.z === 'bf' && r.to.bf === bf && r.types.some((t) => t === 'unit' || t === 'gear'))) continue;
-      if (o.location ? !(o.location.z === 'bf' && o.location.bf === bf) : !o.estimatePaid) continue;
+      // The estimate (no location yet) assumes it only where the player could play: a battlefield they control.
+      if (o.location ? !(o.location.z === 'bf' && o.location.bf === bf) : !o.estimatePaid || s.bfs[bf].controller !== o.p) continue;
     }
     if (d.all) { energy = 0; power = []; continue; }
     // "This costs [2] less if you choose a Bird, Cat, Dog, or Poro": read once targets are chosen (the estimate assumes it).
@@ -272,6 +288,9 @@ export function deflectFor(s: GameState, t: TargetRef, p: PlayerId): number {
   if (t.k !== 'obj') return 0;
   const o = s.objects[t.id];
   if (!o || o.controller === null || o.controller === p || (o.zone.z !== 'base' && o.zone.z !== 'bf')) return 0;
+  // Heisho: "Players ignore [Deflect] while paying for spells and abilities choosing something here."
+  if (o.zone.z === 'bf' && staticsFor(s, null, 'ignoreDeflectHere').some(({ st }) => s.objects[st.host]?.zone.z === 'bf'
+    && (s.objects[st.host].zone as { bf: number }).bf === (o.zone as { bf: number }).bf)) return 0;
   return keywordOf(s, t.id, 'deflect');
 }
 

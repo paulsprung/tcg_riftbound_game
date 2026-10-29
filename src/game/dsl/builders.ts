@@ -69,6 +69,7 @@ function checkProg(where: string, p: ProgAst) {
         if (i.op === 'recycleRest' && (!bound.has(i.from) || !bound.has(i.minus))) throw new DefError(`${where}: unbound name`);
         if (i.op === 'look' || i.op === 'pick' || i.op === 'revealTop' || i.op === 'choose' || i.op === 'revealRune'
           || i.op === 'payX' || i.op === 'banishTop') bound.add(i.bind);
+        if (i.op === 'burn' && i.bind) bound.add(i.bind);
         if (i.op === 'revealUntil') { bound.add(i.bind); bound.add(i.rest); }
         if ((i.op === 'discard' || i.op === 'banish' || i.op === 'gainControl') && i.id !== undefined) bound.add(i.id);
         if (i.op === 'forEach') walk(i.body);
@@ -172,7 +173,8 @@ export const gearSel = (o: Omit<SelAst, 'k'> = {}): SelAst => ({ k: 'gear', ...o
 export const permanentSel = (o: Omit<SelAst, 'k'> = {}): SelAst => ({ k: 'permanent', ...o });
 export const bfSel = (o: Omit<SelAst, 'k'> = {}): SelAst => ({ k: 'battlefield', ...o });
 /** A destination slot for the units another slot chose [355.4]. */
-export const destSlot = (id: string, of: string, to: 'base' | 'bf' | 'open' | 'any' | 'toOrFromBase' | 'withFriends' | 'controlled' | 'occupiedEnemy' = 'any',
+export const destSlot = (id: string, of: string, to: 'base' | 'bf' | 'open' | 'any' | 'toOrFromBase' | 'withFriends' | 'controlled' | 'occupiedEnemy'
+  | 'yourUnits' = 'any',
   o: { min?: number } = {}): SlotAst =>
   ({ id, sel: [], dest: { of, to }, ...o });
 export const runeSel = (o: Omit<SelAst, 'k'> = {}): SelAst => ({ k: 'rune', ...o });
@@ -223,6 +225,12 @@ export const pred = {
   choosesOnly: (slot: string): PredAst => ({ p: 'choosesOnly', slot }),
   namedTag: { p: 'namedTag' } as PredAst,
   empowered: { p: 'empowered' } as PredAst,
+  empoweredAtLeast: (n: number): PredAst => ({ p: 'empoweredAtLeast', n }),
+  canEmpower: { p: 'canEmpower' } as PredAst,
+  unitCount: (n: number): PredAst => ({ p: 'unitCount', n }),
+  energyAtMostSourceMight: { p: 'energyAtMostSourceMight' } as PredAst,
+  attachedToSource: { p: 'attachedToSource' } as PredAst,
+  atSource: { p: 'atSource' } as PredAst,
   minMoves: (n: number): PredAst => ({ p: 'minMoves', n }),
   champion: { p: 'champion' } as PredAst,
   ownedByYou: { p: 'ownedByYou' } as PredAst,
@@ -230,6 +238,7 @@ export const pred = {
   damagedThisTurn: { p: 'damagedThisTurn' } as PredAst,
   inShowdown: { p: 'inShowdown' } as PredAst,
   atMoveEnds: { p: 'atMoveEnds' } as PredAst,
+  domain: (d: import('../state/types.ts').Domain): PredAst => ({ p: 'domain', d }),
 };
 /** The four tags of Ivern's friends. */
 export const PETS = ['Bird', 'Cat', 'Dog', 'Poro'];
@@ -250,7 +259,7 @@ export const cond = {
   is: (r: RefAst, p: PredAst): CondAst => ({ c: 'is', ref: r, pred: p }),
   self: (p: PredAst): CondAst => ({ c: 'is', ref: 'self', pred: p }),
   thisTurn: (what: 'discarded' | 'unitDied' | 'playedToBf' | 'finalized' | 'played', o: { types?: import('../state/types.ts').CardType[];
-    op?: '<' | '<=' | '=' | '>=' | '>'; n?: number; rel?: 'friendly' | 'enemy'; tag?: string; minSpent?: number; yourBeginning?: true } = {}): CondAst =>
+    op?: '<' | '<=' | '=' | '>=' | '>'; n?: number; rel?: 'friendly' | 'enemy'; tag?: string; minSpent?: number; yourBeginning?: true; who?: 'opponent' } = {}): CondAst =>
     ({ c: 'thisTurn', what, ...o }),
   opponentNearWin: (within = 3): CondAst => ({ c: 'opponentNearWin', within }),
   firstBeginning: { c: 'firstBeginning' } as CondAst,
@@ -276,6 +285,7 @@ export const cond = {
   selfInShowdown: { c: 'selfInShowdown' } as CondAst,
   origin: (z: 'trash' | 'hand' | 'banish'): CondAst => ({ c: 'origin', z }),
   controlsHere: { c: 'controlsHere' } as CondAst,
+  fewerRunes: { c: 'fewerRunes' } as CondAst,
   runeDeck: (op: '<' | '<=' | '=' | '>=' | '>', n: number): CondAst => ({ c: 'runeDeck', op, n }),
 };
 export const ref = {
@@ -313,6 +323,8 @@ export const val = {
   minEnergyBound: (name: string): ValueAst => ({ v: 'minEnergyBound', name }),
   shownMight: { v: 'shownMight' } as ValueAst,
   paidEnergy: { v: 'paidEnergy' } as ValueAst,
+  empowerCount: { v: 'empowerCount' } as ValueAst,
+  damageOn: (of: RefAst): ValueAst => ({ v: 'damageOn', of }),
   if: (c: CondAst, then: ValueAst, otherwise: ValueAst): ValueAst => ({ v: 'if', cond: c, then, else: otherwise }),
   xCost: { v: 'xCost' } as ValueAst,
 };
@@ -326,7 +338,7 @@ export const kill = (what: RefAst | SelAst): InstrAst => ({ op: 'kill', what });
 export const stun = (what: RefAst | SelAst): InstrAst => ({ op: 'stun', what });
 export const buff = (what: RefAst | SelAst): InstrAst => ({ op: 'buff', what });
 export const ready = (what: RefAst | SelAst): InstrAst => ({ op: 'ready', what });
-export const burn = (n: number): InstrAst => ({ op: 'burn', n });
+export const burn = (n: number, bind?: string): InstrAst => (bind ? { op: 'burn', n, bind } : { op: 'burn', n });
 export const might = (n: ValueAst, to: RefAst | SelAst, sign: 1 | -1 = 1, o: { until?: Until; floor?: number } = {}): InstrAst =>
   ({ op: 'might', n, sign, to, until: o.until ?? 'thisTurn', ...(o.floor !== undefined ? { floor: o.floor } : {}) });
 export const playToken = (token: TokenId, n: ValueAst, at: LocAst, o: { ready?: true; exhausted?: true; caster?: true; readyFirst?: number;
@@ -424,6 +436,7 @@ export const putOnTop = (what: RefAst): InstrAst => ({ op: 'putOnTop', what });
 /** "Banish the top card of your Main Deck" [428], bound by name. */
 export const banishTop = (n: number, bind: string): InstrAst => ({ op: 'banishTop', n, bind });
 export const empower = (what: RefAst): InstrAst => ({ op: 'empower', what });
+export const grantAbility = (ability: string, to: RefAst, until: Until = 'thisTurn'): InstrAst => ({ op: 'grantAbility', ability, to, until });
 export const killAllBut = (sel: SelAst, keep: string[]): InstrAst => ({ op: 'killAllBut', sel, keep });
 export const kwFromKw = (to: RefAst, k: KeywordId, from: KeywordId): InstrAst => ({ op: 'kwFromKw', to, kw: k, from });
 /** "You can look at their facedown cards" [425]. */

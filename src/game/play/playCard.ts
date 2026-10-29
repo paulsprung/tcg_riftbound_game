@@ -38,7 +38,7 @@
  * had there; a token whose play fails ceases to exist (Spec D §8.5, OQ-6).
  */
 import { abilityById, cardDef } from '../cards/registry.ts';
-import { ALL_TAGS, findCard } from '../cards/oracle.ts';
+import { ALL_TAGS, findCard, ORACLE } from '../cards/oracle.ts';
 import { K, parseKey, type Option } from '../core/decisions.ts';
 import { emit, emitZone, knowers } from '../core/events.ts';
 import { allMask } from '../state/ids.ts';
@@ -146,8 +146,12 @@ const hasUnitsAt = (s: GameState, p: PlayerId, bf: number, except: ObjId | null 
   s.bfs[bf].here.some((u) => u !== except && isType(s.objects[u], 'unit') && s.objects[u].controller === p);
 
 /** Battlefields an Ambush unit may be played to: where p has units [822.1.b]. */
-export const ambushLocations = (s: GameState, p: PlayerId): Loc[] =>
-  s.bfs.flatMap((_, bf): Loc[] => (hasUnitsAt(s, p, bf) ? [{ z: 'bf', bf }] : []));
+export const ambushLocations = (s: GameState, p: PlayerId, def?: string): Loc[] =>
+  s.bfs.flatMap((b, bf): Loc[] => (hasUnitsAt(s, p, bf) || (def !== undefined && ambushEnemy(def)
+    && b.here.some((u) => isType(s.objects[u], 'unit') && s.objects[u].controller !== p)) ? [{ z: 'bf', bf }] : []));
+
+/** Rengar, Trophy Hunter: "I can [Ambush] to a battlefield where there are enemy units, even if you don't have units there." */
+const ambushEnemy = (def: string) => (cardDef(def)?.abilities ?? []).some((a) => a.kind === 'static' && a.spec.s === 'ambushEnemy');
 
 /** Whether a definition prints a keyword now (a card off the board). */
 const printed = (def: string, kw: KeywordId) => keywordsOf(def).some((k) => k.kw === kw);
@@ -179,7 +183,7 @@ export function playLocations(s: GameState, id: ObjId, p: PlayerId, origin?: Cha
   if (isType(o, 'unit')) {
     const out = unitLocations(s, p);
     const add = (l: Loc) => { if (!out.some((m) => m.z === l.z && (m.z === 'base' || m.bf === (l as typeof m).bf))) out.push(l); };
-    if (printed(o.def, 'ambush')) ambushLocations(s, p).forEach(add);
+    if (printed(o.def, 'ambush')) ambushLocations(s, p, o.def).forEach(add);
     const others = staticsFor(s, null, 'othersPlayTo').filter(({ st, spec }) => st.ctl === p && st.host !== id
       && spec.types.some((t) => typesOf(o).includes(t))).map(({ spec }) => spec.where);
     for (const w of baseOnly(s, p) ? [] : [...ownPlayTo(o.def), ...others]) {
@@ -211,6 +215,10 @@ function itemLocations(s: GameState, it: ChainItem, obj: ObjId): Loc[] {
   if (overridesOf(it).locs) return overridesOf(it).locs!;
   return playLocations(s, obj, it.controller, it.play.origin);
 }
+
+/** A card in a trash given [Flow] this turn ("Flow equal to its cost"). */
+const hasFlowGrant = (s: GameState, id: ObjId) => s.effects.some((e) => (e.spec as { s?: string } | null)?.s === 'flowGrant'
+  && 'objs' in e.affects && e.affects.objs.includes(id));
 
 /** A spell needs a definition to be played: without one it has nothing to
     execute. Units and gear without one are vanilla bodies. */
@@ -261,18 +269,27 @@ export function playableCards(s: GameState, p: PlayerId, w: Window = 'main'): Ob
       && !sealed(o.facedown.bf);
   });
   // Undying Legion: "You may play me from your trash for …" (while its condition holds).
-  const fromTrash = pl.trash.filter((id) => printed(s.objects[id].def, 'flow')              // [Flow]
+  const fromTrash = pl.trash.filter((id) => printed(s.objects[id].def, 'flow') || hasFlowGrant(s, id)   // [Flow]
     || (cardDef(s.objects[id].def)?.abilities ?? []).some((a) => a.kind === 'static'
     && a.spec.s === 'playFromTrash' && (!a.while || evalCond(s, a.while, { controller: p, source: id, origin: 'trash' }))));
-  const from = [...pl.hand, ...(pl.champion === null ? [] : [pl.champion]), ...facedown, ...fromTrash];
+  // Endless Riches: "You may play cards from your trash."
+  const allTrash = staticsFor(s, null, 'playAllFromTrash').some(({ st }) => st.ctl === p) ? pl.trash.filter((id) => !fromTrash.includes(id)) : [];
+  const from = [...pl.hand, ...(pl.champion === null ? [] : [pl.champion]), ...facedown, ...fromTrash, ...allTrash];
+  // Fallen Feline: "While I'm at a battlefield, opponents can't play spells with that name."
+  const namedOut = staticsFor(s, null, 'opponentsCantPlayNamed').filter(({ st }) => st.ctl !== p && s.objects[st.host]?.named?.kind === 'card')
+    .map(({ st }) => s.objects[st.host].named!.value);
   // "Its controller can't play spells this turn" (Lilting Lullaby).
   const barred = playerEffects(s, p, 'cantPlayTypes').flatMap((e) => (e.spec as { types?: CardType[] }).types ?? []);
   return from.filter((id) => {
     const o = s.objects[id];
     if (!playable(s, id)) return false;
     if (typesOf(o).some((t) => barred.includes(t))) return false;
+    if (isType(o, 'spell') && namedOut.includes(findCard(o.def)?.name ?? '')) return false;
+    // Ol' Poro: "I can't be played on your first, second, or third turns."
+    if ((cardDef(o.def)?.abilities ?? []).some((a) => a.kind === 'static' && a.spec.s === 'cantBePlayed'
+      && (!a.while || evalCond(s, a.while, { controller: p, source: id })))) return false;
     // Ambush: [Reaction] while being played to a battlefield where you have units [822.1.b].
-    const ambush = isType(o, 'unit') && printed(o.def, 'ambush') && ambushLocations(s, p).length > 0;
+    const ambush = isType(o, 'unit') && printed(o.def, 'ambush') && ambushLocations(s, p, o.def).length > 0;
     if (!windowAllows(w, timingFrom(s, id)) && !(ambush && w !== 'main')) return false;
     const kind = isType(o, 'spell') ? true : isType(o, 'gear') ? 'gear' as const : isType(o, 'unit') ? 'unit' as const : false;
     if (paymentPlans(s, p, cheapestCost(s, id, p, costOf(s, id)), { limit: 1, spell: kind }).length === 0) return false;
@@ -548,8 +565,10 @@ const STEPS: StepTable<PlayFrame> = [
       id: item, seq: item, kind: 'card', sub: 'normal', status: 'pending', controller: p, owner: card.owner, obj: -1,
       isAdd: false, outcomes: {}, play: playContext(s, { mode: 'discretionary', origin, item, by: p }),
     };
+    const flow = origin.z === 'trash' && hasFlowGrant(s, f.obj);    // Kennen: "give a spell in your trash [Flow]"
     const obj = moveObject(s, f.obj, { z: 'chain', item }, { controller: p });
     addItem(s, x, { ...it, obj }, { played: true });
+    if (flow) setField(s, itemById(s, item)!.play.choices.asPlayed, 'flow', true);
     append(s, s.log.playActions, { p, item, card: card.card, isCard: true });   // [420.5]
     emitZone(s, x, { obj, prev: f.obj, from: origin, to: { z: 'chain', item }, why: 'play', rule: '354', before });
     f.obj = obj;
@@ -620,7 +639,30 @@ const STEPS: StepTable<PlayFrame> = [
         ctx: { item: it.id, source: f.obj, rule: '355.1' }, options: tags.map((_, i) => ({ key: K.mode(i) })), privateOptions: false,
         back: backOk(s, f), mustAsk: true });
     }
+    // Fallen Feline: "When you play me, name a spell" — named as it is played.
+    const naming = (cardDef(o.def)?.abilities ?? []).find((a) => a.kind === 'static' && a.spec.s === 'nameCard');
+    if (naming && naming.kind === 'static' && naming.spec.s === 'nameCard' && asPlayed.namedCard === undefined) {
+      const types = naming.spec.types;
+      const names = [...new Set(ORACLE.cards.filter((c) => c.types.some((t) => types.includes(t))).map((c) => c.name))].sort();
+      const key = answer(f);
+      if (key === K.back) return rollback(s, f, x, 'back');
+      if (key !== undefined) {
+        setField(s, asPlayed, 'namedCard', names[parseKey(key)!.n!]);
+        return 'continue';
+      }
+      return ask(s, f, x, { player: it.controller, kind: 'mode', prompt: { t: 'mode', card: o.def, pick: 1, chosen: [], labels: names },
+        ctx: { item: it.id, source: f.obj, rule: '355.1' }, options: names.map((_, i) => ({ key: K.mode(i) })), privateOptions: false,
+        back: backOk(s, f), mustAsk: true });
+    }
     if (!spell && !it.play.choices.location) {
+      // Dragon Roost: "If they do, they play it to this battlefield."
+      const here = costOffers(s, o.def, typesOf(o), it.controller, it.play.origin.z).find((c) => c.a.playHere && chosenOptional(it).includes(c.key));
+      const hb = here?.src !== undefined && here.src !== null && s.objects[here.src]?.zone.z === 'bf' ? (s.objects[here.src].zone as { bf: number }).bf : -1;
+      if (hb >= 0) {
+        setField(s, it.play.choices, 'location', { z: 'bf', bf: hb });
+        setField(s, asPlayed, 'fixedLoc', true);
+        return 'continue';
+      }
       const fixed = overridesOf(it).at;
       if (fixed) {
         setField(s, it.play.choices, 'location', fixed);
@@ -631,8 +673,16 @@ const STEPS: StepTable<PlayFrame> = [
       let locs = itemLocations(s, it, f.obj);
       // Played where only Ambush allows it now: to a battlefield where you have units [822.1.b].
       if (!timingOk(s, it, { ignoreAmbush: true }) && printed(o.def, 'ambush')) {
-        locs = locs.filter((l) => l.z === 'bf' && hasUnitsAt(s, it.controller, l.bf));
+        const amb = ambushLocations(s, it.controller, o.def);
+        locs = locs.filter((l) => l.z === 'bf' && amb.some((m) => m.z === 'bf' && m.bf === l.bf));
       }
+      // A location whose cost can't be paid is not offered (Hunters' Circle's discount only here) (§4.6).
+      const payable = (l: Loc) => {
+        const c = totalCost(s, { def: o.def, types: typesOf(o), p: it.controller, base: baseCost(s, it), chosen: chosenOptional(it), xs: xsOf(it),
+          origin: it.play.origin.z, xpow: xpowOf(it), location: l, fixedBase: overridesOf(it).cost !== undefined, estimatePaid: true });
+        return paymentPlans(s, it.controller, c, { limit: 1, spell: isType(o, 'gear') ? 'gear' : 'unit' }).length > 0;
+      };
+      if (locs.some(payable)) locs = locs.filter(payable);
       if (locs.length === 0) return rollback(s, f, x, 'illegal');
       if (key === undefined) {
         const options: Option[] = locs.map((l) => ({ key: l.z === 'base' ? K.locBase : K.locBf(l.bf), refs: [{ loc: l }] }));
@@ -747,7 +797,7 @@ const STEPS: StepTable<PlayFrame> = [
     const it = itemOf(s, f);
     setField(s, it.play, 'step', 5);
     const loc = it.play.choices.location;
-    if (loc && !overridesOf(it).at) {
+    if (loc && !overridesOf(it).at && it.play.choices.asPlayed.fixedLoc !== true) {
       const ok = itemLocations(s, it, f.obj).some((l) => l.z === loc.z
         && (l.z === 'base' ? l.p === (loc as typeof l).p : l.bf === (loc as typeof l).bf));
       if (!ok) return rollback(s, f, x, 'illegal');
@@ -825,8 +875,10 @@ const STEPS: StepTable<PlayFrame> = [
     // "It becomes a copy of that unit" [446]: a token keeps being a token [185.1.a], with the copied card's traits.
     if (ov.copyOf && card.token) setField(s, card, 'def', ov.copyOf);
     const chosenTag = it.play.choices.asPlayed.chosenTag;
+    const namedCard = it.play.choices.asPlayed.namedCard;
     const obj = moveObject(s, f.obj, to, { controller: p, exhausted, carry: { played: facts, ...(ov.copyOf ? { copiedFrom: ov.copyOf } : {}),
-      ...(typeof chosenTag === 'string' ? { named: { kind: 'tag' as const, value: chosenTag } } : {}) } });
+      ...(typeof chosenTag === 'string' ? { named: { kind: 'tag' as const, value: chosenTag } } : {}),
+      ...(typeof namedCard === 'string' ? { named: { kind: 'card' as const, value: namedCard } } : {}) } });
     if (ov.give && ov.give.length > 0) {
       for (const k of ov.give) addEffect(s, x, [obj], { s: 'keyword', kw: k.kw, value: k.value ?? 1 },
         { controller: p, source: obj, item: it.id, rule: '479.3', until: 'permanent' });

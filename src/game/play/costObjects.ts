@@ -13,7 +13,7 @@ import type { NonStdCostAst } from '../dsl/ast.ts';
 import { append, setField } from '../state/mut.ts';
 import type { ChainItem, Frame, GameState, ObjId } from '../state/types.ts';
 import { banish, discard, exhaust, kill, recycleCards, returnToHand, setEmpowered, spendBuffs, spendXp } from '../rules/actions.ts';
-import { snapshotOf } from '../rules/chars.ts';
+import { isType, snapshotOf } from '../rules/chars.ts';
 import { buffCandidates, costCandidates, trashCandidates } from './cost.ts';
 
 export interface CostObjectOpts {
@@ -29,7 +29,8 @@ function part(s: GameState, it: ChainItem, src: ObjId | null, pay: NonStdCostAst
   switch (what) {
     case 'exhaust': return pay.exhaust ? { n: pay.exhaust.n, cands: costCandidates(s, pay.exhaust.sel, p, src, true) } : null;
     case 'kill': return pay.kill ? { n: pay.kill.n, cands: costCandidates(s, pay.kill.sel, p, src, false) } : null;
-    case 'discard': return pay.discard ? { n: pay.discard, cands: s.players[p].hand.slice() } : null;
+    case 'discard': return pay.discard ? { n: pay.discard, cands: s.players[p].hand.filter((id) => !pay.discardTypes
+      || pay.discardTypes.some((t) => isType(s.objects[id], t))) } : null;
     case 'recycle': return pay.recycleTrash ? { n: pay.recycleTrash.n, cands: trashCandidates(s, p, pay.recycleTrash.types) } : null;
     case 'bounce': return pay.bounce ? { n: pay.bounce.n, cands: costCandidates(s, pay.bounce.sel, p, src, false) } : null;
     case 'spend': return pay.spendBuff ? { n: pay.spendBuff.n, cands: buffCandidates(s, pay.spendBuff.sel, p, src) } : null;
@@ -88,12 +89,12 @@ export function performCostObjects(s: GameState, x: RunCtx, it: ChainItem, key: 
   if (pay.spendBuffSelf && src !== null) spendBuffs(s, x, [src], '357.2');
   if (sp.length > 0) spendBuffs(s, x, sp, '357.2');
   if (bc.length > 0) returnToHand(s, x, bc, '357.2');
-  if (pay.banishSelf && src !== null && s.objects[src]) banish(s, x, [src], '357.2');
+  if (pay.banishSelf && src !== null && s.objects[src]) banish(s, x, [src], '357.2', undefined, p);
   if (pay.disempowerSelf && src !== null && s.objects[src]) setEmpowered(s, x, [src], false);   // [443]
   if (pay.xp) spendXp(s, x, p, pay.xp, '357.2');
   if (dc.length > 0) discard(s, x, p, dc, '357.2');
   if (rc.length > 0) recycleCards(s, x, p, rc, '357.2');
-  if (bt.length > 0) banish(s, x, bt, '357.2');                     // "Banish a unit or gear from your trash"
+  if (bt.length > 0) banish(s, x, bt, '357.2', undefined, p);                     // "Banish a unit or gear from your trash"
   if (toKill.length > 0) kill(s, x, toKill, { rule: '357.2', inCombat: () => false });
   append(s, it.play.paid, { what: key, replaced: false, objs: snaps, energy: 0, power: 0 });
   setField(s, it.play.facts.costObjects, key, snaps);

@@ -38,6 +38,7 @@ import { emptyPools, heal, kill, recall, setController, clearContested, applyCon
 import { playersWithUnitsAt, turnOrderFromTurnPlayer, turnState, unitsAt, unitsOfAt, unitsOnBoard } from './board.ts';
 import { hasKeyword, isLethal, isType, mightOf } from './chars.ts';
 import { fire } from '../abilities/triggers.ts';
+import { triggeredOn } from '../abilities/objAbilities.ts';
 import { designate, designationFor, openCombat } from './combat.ts';
 import { checkWin } from './scoring.ts';
 import { beginShowdown } from './showdown.ts';
@@ -180,6 +181,20 @@ const STEPS: StepTable<CleanupFrame> = [
       setField(s, s.objects[id], 'mighty', now);
       if (now && was === false) rose.push(id);
     }
+    // "When my Might becomes 10 or more" (Renekton): thresholds crossed upward fire once until they're crossed downward.
+    const reach: { id: number; n: number }[] = [];
+    for (const id of unitsOnBoard(s)) {
+      for (const a of triggeredOn(s, s.objects[id])) {
+        if (a.when.on !== 'mightReaches') continue;
+        const k = `${id}|${a.when.n}`, now = mightOf(s, id) >= a.when.n, was = (s.marks ?? {})[k] === 1;
+        if (now === was) continue;
+        const marks = { ...(s.marks ?? {}) };
+        if (now) marks[k] = 1; else delete marks[k];
+        setField(s, s, 'marks', marks);
+        if (now) reach.push({ id, n: a.when.n });
+      }
+    }
+    if (reach.length > 0) fire(s, x, { e: 'mightReached', objs: reach });
     if (rose.length > 0) {
       for (const id of rose) emit(s, x, { k: 'becomeMighty', obj: id, rule: '709' });
       fire(s, x, { e: 'mighty', objs: rose });

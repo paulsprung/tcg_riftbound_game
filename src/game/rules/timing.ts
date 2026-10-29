@@ -15,7 +15,7 @@
  * instructing effect's permission (RulesConfig.limitedPlaysBypassTiming,
  * Spec C Q5); triggered abilities go on the chain in any state [383.3.c].
  */
-import { abilityById, hasPrintedKeyword } from '../cards/registry.ts';
+import { abilityById, cardDef as cardDefOf, hasPrintedKeyword } from '../cards/registry.ts';
 import type { ChainItem, DefId, GameState } from '../state/types.ts';
 import { defHasKeyword, isType, typesOf } from './chars.ts';
 import { staticsFor } from '../layers/derive.ts';
@@ -65,7 +65,8 @@ export function timingOk(s: GameState, it: ChainItem, o: { ignoreAmbush?: boolea
   if (it.kind === 'card' && it.play.origin.z === 'facedown') t.reaction = true;
   const loc = it.play.choices.location;
   if (!o.ignoreAmbush && it.kind === 'card' && loc?.z === 'bf' && hasPrintedKeyword(s.objects[it.obj!].def, 'ambush')
-    && s.bfs[loc.bf].here.some((u) => u !== it.obj && isType(s.objects[u], 'unit') && s.objects[u].controller === it.controller)) {
+    && s.bfs[loc.bf].here.some((u) => u !== it.obj && isType(s.objects[u], 'unit') && (s.objects[u].controller === it.controller
+      || (s.objects[u].controller !== null && (cardDefOf(s.objects[it.obj!].def)?.abilities ?? []).some((a) => a.kind === 'static' && a.spec.s === 'ambushEnemy'))))) {
     t.reaction = true;
   }
   if (it.isAdd && t.reaction) return true;                           // [430.3]

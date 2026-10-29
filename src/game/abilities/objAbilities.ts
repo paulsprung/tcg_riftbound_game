@@ -89,6 +89,12 @@ export function activatedOn(s: GameState, id: ObjId): ActivatedOn[] {
       }
     }
   }
+  for (const e of s.effects) {                                       // Dominus: "give it '[A][A]: Ready me.'" this turn
+    const spec = e.spec as { s?: string; ability?: string } | null;
+    if (spec?.s !== 'grantAbility' || !('objs' in e.affects) || !e.affects.objs.includes(id) || !spec.ability) continue;
+    const a = abilityById(spec.ability);
+    if (a?.kind === 'activated' && !given.includes(a)) given.push(a);
+  }
   given.forEach((a, i) => out.push({ a, sub: `g${i}` }));
   return out;
 }

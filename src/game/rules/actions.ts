@@ -105,6 +105,13 @@ export function gainPoints(s: GameState, x: X, p: PlayerId, n: number, why: 'con
   if (n <= 0) return;
   // "While I'm at a battlefield, opponents can't gain points" (Tianna Crownguard).
   if (staticsFor(s, null, 'noPointsForOpponents').some(({ st }) => st.ctl !== p)) return;
+  // Otterpus: "If a player would score 1 point from conquering or holding during their first or second turn, they draw 1 instead."
+  if (n === 1 && (why === 'conquer' || why === 'hold') && s.turn.player === p && s.history.turnsTaken[p] <= 2
+    && staticsFor(s, null, 'earlyPointsToDraw').length > 0) {
+    emit(s, x, { k: 'replaced', source: staticsFor(s, null, 'earlyPointsToDraw')[0].st.host, event: 'points', rule: '369.1' });
+    drawCards(s, x, p, 1, '414');
+    return;
+  }
   const total = s.players[p].points + n;
   setField(s, s.players[p], 'points', total);
   append(s, s.log.points, { p, n, why });
@@ -173,6 +180,7 @@ export function ready(s: GameState, x: X, objs: ObjId[], rule: string, by: Playe
   for (const id of tired) setField(s, s.objects[id], 'exhausted', false);
   emit(s, x, { k: 'ready', objs: tired, rule });
   requestCleanup(s);
+  fire(s, x, { e: 'becameReady', objs: tired });                     // "When I become ready"
   if (by !== null) fire(s, x, { e: 'readied', objs: tired, by });     // "When you ready a friendly unit"
 }
 
@@ -296,14 +304,14 @@ export function addToPool(s: GameState, x: X, p: PlayerId, energy: number, power
  * universal Power [163.2.b], [135.2.e.6.c]. The caller made sure the pool
  * covers it (rules/resources.ts). Returns the Power spent per domain.
  */
-export function payFromPool(s: GameState, x: X, p: PlayerId, energy: number, power: PowerReq[], rule: string, spell: boolean | 'gear' | 'unit' = false) {
+export function payFromPool(s: GameState, x: X, p: PlayerId, energy: number, power: PowerReq[], rule: string, spell: boolean | 'gear' | 'unit' | 'unitAbility' = false) {
   const pool = s.players[p].pool;
   const plain = Math.min(pool.energy, energy);
   setField(s, pool, 'energy', pool.energy - plain);
   let rest = energy - plain;                                         // restricted Energy pays the rest [430]
   if (rest > 0) {
     const restricted = pool.restricted.map((r) => {
-      if (rest <= 0 || r.kind !== 'energy' || (r.onlyFor === 'spells' && spell !== true)) return r;
+      if (rest <= 0 || r.kind !== 'energy' || (r.onlyFor !== undefined && !restrictionOk(r.onlyFor, spell))) return r;
       const take = Math.min(rest, r.amount);
       rest -= take;
       return { ...r, amount: r.amount - take };
@@ -372,8 +380,20 @@ export function deal(s: GameState, x: X, hits: { to: ObjId; n: number }[], o: {
       emit(s, x, { k: 'replaced', source: pv.source ?? h.to, event: 'deal', rule: '438' });
       continue;
     }
+    // Ki Barrier: "Prevent the next 7 damage that would be dealt to it this turn" [438].
+    const pa = s.effects.find((e) => (e.spec as { s?: string } | null)?.s === 'preventAmount' && 'objs' in e.affects && e.affects.objs.includes(h.to));
+    if (pa) {
+      const left = (pa.spec as { n: number }).n;
+      const used = Math.min(left, h.n);
+      h.n -= used;
+      setField(s, s, 'effects', left - used > 0 ? s.effects.map((e) => (e.id === pa.id ? { ...e, spec: { s: 'preventAmount', n: left - used } } : e))
+        : s.effects.filter((e) => e.id !== pa.id));
+      emit(s, x, { k: 'replaced', source: pa.source ?? h.to, event: 'deal', rule: '438' });
+      if (h.n < 1) continue;
+    }
     const u = s.objects[h.to];
-    if (staticsFor(s, h.to, 'noDamage').length > 0) continue;        // "I don't take damage" (Kayn)
+    // "I don't take damage" (Kayn); "prevent all damage that enemy spells and abilities would deal to me" (Esteemed Hierophant).
+    if (staticsFor(s, h.to, 'noDamage').some(({ st, spec }) => !spec.from || (!o.combat && o.by !== null && o.by !== st.ctl))) continue;
     // "Double all damage that would be dealt to it this turn" (Lotus Trap) [433].
     const doubled = s.effects.filter((e) => (e.spec as { s?: string } | null)?.s === 'doubleDamage' && 'objs' in e.affects
       && e.affects.objs.includes(h.to)).length;
@@ -447,10 +467,15 @@ export function kill(s: GameState, x: X, units0: ObjId[], o: { rule: string; inC
  * going anywhere but the chain ceases to exist instead [186.1]. Returns the
  * new id, or null for a token that is gone.
  */
-export function toZone(s: GameState, x: X, id: ObjId, to: Zone, o: { why: string; rule: string; group?: number;
+export function toZone(s: GameState, x: X, id: ObjId, to0: Zone, o: { why: string; rule: string; group?: number;
   pos?: 'top' | 'bottom' }): ObjId | null {
+  let to = to0;
   const u = s.objects[id];
   const from = copyJson(u.zone);
+  // Endless Riches: "If a card would go to your trash from anywhere other than your Main Deck, banish it instead."
+  if (to.z === 'trash' && from.z !== 'deck' && !u.token && staticsFor(s, null, 'trashToBanish').some(({ st }) => st.ctl === u.owner)) {
+    to = Z.banish(u.owner);
+  }
   if (locOf(u) !== null) detachAll(s, x, id, '719.5');              // attachments stay on the board [719.5]
   if (u.token && to.z !== 'chain') {
     deleteObject(s, id);
@@ -464,7 +489,7 @@ export function toZone(s: GameState, x: X, id: ObjId, to: Zone, o: { why: string
 }
 
 /** Banishes cards [428]: each to its owner's banishment [428.1], [056]. */
-export function banish(s: GameState, x: X, objs: ObjId[], rule: string, link?: string): ObjId[] {
+export function banish(s: GameState, x: X, objs: ObjId[], rule: string, link?: string, by?: PlayerId): ObjId[] {
   if (objs.length === 0) return [];
   const group = newGroup(s);
   const out: ObjId[] = [];
@@ -476,6 +501,7 @@ export function banish(s: GameState, x: X, objs: ObjId[], rule: string, link?: s
     if (n !== null && link) setField(s, s.objects[n], 'links', [...s.objects[n].links, { group: link, source: n, zone: 'banish' }]);
   }
   if (out.length > 0) emit(s, x, { k: 'banish', p: s.objects[out[0]].owner, objs: out, rule, group });
+  if (out.length > 0 && by !== undefined) fire(s, x, { e: 'banished', by, objs: out });   // "When you banish a card you own"
   if (fromBoard) requestCleanup(s);                                  // [319.6]
   return out;
 }
@@ -483,7 +509,7 @@ export function banish(s: GameState, x: X, objs: ObjId[], rule: string, link?: s
 /** Burns n [441]: from the top of the Main Deck to the trash, as many as
     possible; an empty deck burns out first, then the burn goes on
     [441.4], [432.1.b]. */
-export function burn(s: GameState, x: X, p: PlayerId, n: number, rule: string) {
+export function burn(s: GameState, x: X, p: PlayerId, n: number, rule: string): ObjId[] {
   const group = newGroup(s);
   const burned: ObjId[] = [];
   let burnOuts = 0;
@@ -496,6 +522,7 @@ export function burn(s: GameState, x: X, p: PlayerId, n: number, rule: string) {
     burned.push(toZone(s, x, top, Z.trash(p), { why: 'burn', rule, group })!);
   }
   if (burned.length > 0) emit(s, x, { k: 'burn', p, objs: burned, rule, group });
+  return burned;
 }
 
 /** Discards cards from a hand to the trash [423.1]. */
@@ -598,7 +625,7 @@ export function addMight(s: GameState, x: X, units: ObjId[], n: number, o: { con
 
 /** Empowers or disempowers objects [442], [443]. */
 export function setEmpowered(s: GameState, x: X, objs: ObjId[], on: boolean, by: PlayerId | null = null) {
-  for (const id of objs) setField(s, s.objects[id], 'empowered', on ? 1 : 0);
+  for (const id of objs) setField(s, s.objects[id], 'empowered', on ? s.objects[id].empowered + 1 : 0);   // Kayle: up to three times
   emit(s, x, { k: on ? 'empower' : 'disempower', objs: objs.slice(), rule: on ? '442' : '443' });
   if (on) fire(s, x, { e: 'empowered', by, objs: objs.slice() });
 }
@@ -608,7 +635,8 @@ export function setEmpowered(s: GameState, x: X, objs: ObjId[], on: boolean, by:
     3). The objects are fixed now [479.4.b]. */
 export function addEffect(s: GameState, x: X, objs: ObjId[], spec: { s: 'baseMight'; n: number } | { s: 'keyword'; kw: string;
   value: number } | { s: 'cantMove' } | { s: 'replaceDeath'; cost?: Json } | { s: 'preventNext' } | { s: 'doubleDamage' }
-  | { s: 'banishIfDies' } | { s: 'kwFromKw'; kw: string; from: string }, o: { controller: PlayerId; source: ObjId | null; item: number | null;
+  | { s: 'banishIfDies' } | { s: 'kwFromKw'; kw: string; from: string } | { s: 'grantAbility'; ability: string }
+  | { s: 'preventAmount'; n: number } | { s: 'flowGrant' } | { s: 'noEnemyChoose' }, o: { controller: PlayerId; source: ObjId | null; item: number | null;
   rule: string; until?: 'thisTurn' | 'thisCombat' | 'permanent' }) {
   if (objs.length === 0) return;
   append(s, s.effects, {
@@ -770,7 +798,7 @@ export function spendXp(s: GameState, x: X, p: PlayerId, n: number, rule: string
 }
 
 /** Adds universal Power ([A]) or Energy only for spells to a pool [430], [163.2.b]. */
-export function addSpecial(s: GameState, x: X, p: PlayerId, o: { energy?: number; universal?: number; onlyFor?: 'spells' | 'gear' | 'permanents';
+export function addSpecial(s: GameState, x: X, p: PlayerId, o: { energy?: number; universal?: number; onlyFor?: 'spells' | 'gear' | 'permanents' | 'units';
   source: string; domain?: Domain }, rule: string) {
   const pool = s.players[p].pool;
   if (o.universal && o.domain) setField(s, pool.power, o.domain, pool.power[o.domain] + o.universal);   // "[Add] [R]"

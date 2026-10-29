@@ -132,7 +132,7 @@ export function staticApplies(s: GameState, st: StaticInst, spec: { to?: SelAst 
 
 /** Statics about an object: "I have …" or "… have …" (a `to` selector). */
 const TARGETED: readonly StaticAst['s'][] = ['might', 'keyword', 'entersReady', 'grantAbility', 'maxBuffs', 'tag', 'saveHost',
-  'doubleMightBonus', 'holdIsConquer', 'noEnemyChoose', 'noTemporaryTrigger', 'noCombatDamage', 'cantBeReadied', 'noDamage', 'saveSelfByKill'];
+  'doubleMightBonus', 'holdIsConquer', 'noEnemyChoose', 'noTemporaryTrigger', 'noCombatDamage', 'cantBeReadied', 'noDamage', 'saveSelfByKill', 'noEnemyMove', 'chosenImmune', 'maxEmpower'];
 
 /** The statics of a kind that apply to an object now (for the kinds that
     are about objects), or every active one of that kind whose condition
@@ -155,6 +155,9 @@ export function staticsFor<S extends StaticAst['s']>(s: GameState, id: ObjId | n
 function value(s: GameState, v: ValueAst, host: ObjId, ctl: PlayerId): number {
   if (typeof v === 'number') return v;
   if (v.v === 'count') return selectAll(s, v.of, { controller: ctl, source: host }).length;
+  if (v.v === 'points') return s.players[ctl].points;                // "My Might is increased by your points"
+  if (v.v === 'empowerCount') return s.objects[host]?.empowered ?? 0;
+  if (v.v === 'sum') return v.of.reduce((n: number, w) => n + value(s, w, host, ctl), 0);   // "+2 [M] for each time I'm [Empowered]"
   return 0;
 }
 

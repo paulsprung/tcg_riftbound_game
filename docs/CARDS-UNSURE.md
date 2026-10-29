@@ -16,6 +16,7 @@ Oracle text is quoted from `src/game/cards/oracle.gen.json` (rules text, errata 
 | neeko-blending-in | If Neeko is in your deck, choose up to 3 different legends in addition to your starting legend. / When you play me, choose one of those Legends and add it to your Legend Zone while I'm on the board. | Deck building: where do the extra legends sit before the game (revealed? domain identity?), and what does an added legend do in the Legend Zone (its abilities active, its own exhaust state, does it leave when Neeko leaves)? | (a) extra legends only add their abilities while Neeko is on the board; (b) they count for deck identity too |
 | orianna-lady-of-clockwork | At the start of your Main Phase, you may pay [1] to choose a friendly gear. It becomes a unit gear with Might equal to its Energy cost until you choose another gear with me. | How does a "unit gear" behave: does it move, attack and defend, take damage and die, keep its gear abilities; a Deploy gear at a battlefield — is it a unit there; an attached Equipment — does it detach? | (a) full unit rules plus gear; (b) only Might and combat |
 | the-ball | [Deploy] / [Ganking] / When you play or move this, choose one — • Draw 1. • Deal 2 to enemy units here. | Can a gear with [Ganking] make Standard Moves between battlefields (gear normally can't move), and what exhausts? | (a) it moves like a unit (Standard Move, exhausting); (b) Ganking only matters when an effect moves it |
+| shady-spectacles | [Equip] [1][Y] / As this is attached to a unit, choose another friendly unit. The equipped unit becomes a copy of that unit for as long as this is attached to it. | What does the equipped unit keep while it is a copy (its damage, buffs, Empowered state, other Equipment, its own name for Unique/champion rules), is the copied unit chosen once or again on each re-attach, and what happens when the copied unit leaves the board or Spectacles is attached to a unit that is already a copy? | (a) copies printed traits only (as Leblanc's Reflection), status kept, chosen once per attach; (b) also copies the other unit's modifications |
 
 ## Implemented provisionally — review
 
@@ -59,3 +60,13 @@ Oracle text is quoted from `src/game/cards/oracle.gen.json` (rules text, errata 
 | scrutinizing-scope | They guess a card type. | Which types can be guessed | Unit, Spell, Gear (Main Deck types) |
 | titanic-shrine | … exhaust me to draw 1. | Optional? | A cost of the trigger, paid automatically (as Dockside Lock-Up) |
 | seraphic-wyvern | If you would channel runes, channel that many runes plus 1 exhausted rune instead. | Channel Phase too? | Every channel (the Channel Phase included), once per channel |
+
+### VEN
+
+| Card | Oracle text | Question | Implemented as |
+|---|---|---|---|
+| stargazer | Spells with [Flow] you play from your trash cost [2] less, to a minimum of [1]. | Spells given [Flow] by an effect (Kennen, Storm of Shuriken)? | Only spells printing [Flow] |
+| zed-master-of-shadows | When you banish a card you own, empower me. | What counts as "you banish"? | Banishes by your spells, abilities and costs (Shadow Clone's cost included), and a [Flow] card you played being banished as it leaves the chain; "banish it instead" of dying (replacements) doesn't count |
+| wild-claw | … play it, reducing its Energy cost by [5]. Recycle the rest. Then you may do this: Empower it. | The played card is still on the chain while Wild Claw finishes. | "Empower it" is asked when it enters the board (the next unit or gear you play) |
+| threshold-of-the-gray | When combat starts here, the attacker and defender each [Add] [1]. | When exactly does "combat starts" fire? | As the attacker and the defender are designated (the "when you attack / defend here" moments) |
+| temporal-breach | Banish a unit, then its owner plays it to the same location, ignoring its cost. | A unit at another player's base (control changed)? | Back to the same battlefield; from a base, its owner's base |

@@ -102,6 +102,11 @@ export function evalCond(s: GameState, c: CondAst, x: CondCtx): boolean {
       return s.showdown !== null && !!o && o.zone.z === 'bf' && o.zone.bf === s.showdown.bf;
     }
     case 'origin': return x.origin === c.z;
+    case 'fewerRunes': {
+      const runesOf = (q: number) => s.players[q].base.filter((id) => s.objects[id].def.endsWith('-rune')).length;
+      return s.players.some((pl) => pl.id !== x.controller && runesOf(x.controller) < runesOf(pl.id));
+    }
+    case 'ownTurns': return cmp(s.history.turnsTaken[x.controller], c.op, c.n);
     case 'controlsHere': {
       const o = x.source === null ? undefined : s.objects[x.source];
       return !!o && o.zone.z === 'bf' && s.bfs[o.zone.bf].controller === x.controller;
@@ -130,7 +135,7 @@ export function evalCond(s: GameState, c: CondAst, x: CondCtx): boolean {
         case 'unitDied': n = s.log.deaths.filter((d) => (types ?? ['unit']).some((t) => d.snap.chars.types.includes(t)) && (c.rel === undefined
           || (c.rel === 'friendly' ? d.snap.controller === p : d.snap.controller !== null && d.snap.controller !== p))
           && (!c.yourBeginning || (d.phase === 'beginning' && s.turn.player === p))).length; break;
-        case 'played': n = s.log.played.filter((r) => r.p === p && r.isCard && typed(r.types)
+        case 'played': n = s.log.played.filter((r) => (c.who === 'opponent' ? r.p !== p : r.p === p) && r.isCard && typed(r.types)
           && (!c.tag || (findCard(r.def)?.tags ?? []).includes(c.tag)) && (c.minSpent === undefined || r.energySpent >= c.minSpent)).length; break;
         case 'playedToBf': n = s.log.played.filter((r) => r.p === p && r.to?.z === 'bf' && typed(r.types)).length; break;
         case 'finalized': n = s.log.finalized.filter((r) => r.p === p && r.isCard && typed(r.types)).length; break;
