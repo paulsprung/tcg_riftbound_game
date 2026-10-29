@@ -46,8 +46,8 @@ function OnlineMode({ db, mode }: { db: CardDb; mode: (typeof ONLINE)[number] })
   const signedIn = session.status === 'online' && !!session.user;
   const playable = mode.id === 'ranked' || mode.id === 'casual';
   const queued = ol.queue && ol.queue.mode === mode.id ? ol.queue : null;
-  const note = session.status === 'offline' ? 'Online matches need the server: not in this preview'
-    : !signedIn ? 'Sign in with Discord to play online' : !playable ? 'Brackets open soon' : ol.status !== 'open' ? 'Connecting…' : null;
+  const note = session.status === 'offline' ? 'Not in the preview'
+    : !signedIn ? 'Sign in with Discord' : !playable ? 'Soon' : ol.status !== 'open' ? 'Connecting…' : null;
 
   return (
     <section className="play-setup ds">

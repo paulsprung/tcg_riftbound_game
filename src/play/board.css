@@ -203,8 +203,6 @@ html:not([data-scaled]) .play__stage { min-height: 760px; overflow: visible; }
 .rail__clock.is-theirs { color: var(--muted); border-color: var(--gold-dim); background: none; }
 @keyframes pulse { to { opacity: .6; } }
 .online-outcome { display: grid; gap: 6px; justify-items: center; margin: 4px 0 10px; }
-.online-outcome__head { margin: 0; font: 800 22px/1.2 var(--font-display); letter-spacing: .14em; text-transform: uppercase; color: var(--gold-hi); }
-.online-outcome__head.is-win { color: var(--teal); text-shadow: 0 0 18px rgba(10, 200, 185, .5); }
-.online-outcome__head.is-loss { color: #f2a7b0; }
+
 .online-outcome__rating, .online-outcome__coins { margin: 0; display: flex; align-items: center; gap: 6px; }
 .online-outcome .is-up { color: var(--teal); } .online-outcome .is-down { color: #f2a7b0; }

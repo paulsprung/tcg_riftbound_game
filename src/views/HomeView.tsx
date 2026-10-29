@@ -56,7 +56,7 @@ export function HomeView({ db }: { db: CardDb }) {
       <div className="lb-card home-tile home-tile--daily">
         <div>
           <b>Daily coins</b>
-          <span className="muted small">{wait === 0 ? `${DAILY_COINS} coins are waiting.` : `Next in ${hhmm(wait)}.`}</span>
+          <span className="muted small">{wait === 0 ? 'Ready' : `Next in ${hhmm(wait)}`}</span>
         </div>
         <button type="button" className="btn btn--primary btn--small" disabled={wait > 0}
           onClick={() => { collection.claimDaily(); setNow(Date.now()); }}>Claim {DAILY_COINS}</button>

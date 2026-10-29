@@ -27,7 +27,6 @@ export function PacksTab({ db }: { db: CardDb }) {
       {mine.length === 0 && !pending ? (
         <div className="empty">
           <p>No unopened packs.</p>
-          <p className="muted small">Packs come from starter decks, the tutorial and the shop.</p>
           <a className="btn btn--primary" href="#shop">Go to the shop</a>
         </div>
       ) : (

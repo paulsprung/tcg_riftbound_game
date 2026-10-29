@@ -353,7 +353,6 @@ export function GameScreen({ host, cards, db, names, onNewGame, onChangeDecks, o
               Final score: {seatNames.me} {board.me.points}, {seatNames.opponent} {board.opponent.points}
               <span className="muted small"> [{stage.result.rule}]</span>
             </p>
-            {!hot && snap.aiMode && <p className="muted small">The computer knew your deck list (built-in decks are public, TR 401.5).</p>}
             {online?.outcome}
             <div className="sheet__buttons">
               {online ? <button type="button" className="btn btn--primary" onClick={onChangeDecks}>Back to the lobby</button>

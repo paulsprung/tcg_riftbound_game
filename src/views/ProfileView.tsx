@@ -50,7 +50,8 @@ export function ProfileView({ db, onInspect }: { db: CardDb; onInspect: (t: Insp
   }, [user]);
   const games = st ? st.ranked.games + st.casual.games : 0;
   const wins = st ? st.ranked.wins + st.casual.wins : 0;
-  const rank = st && !st.ranked.placement ? `${st.ranked.tier}${st.ranked.division ? ` ${['I', 'II', 'III', 'IV'][st.ranked.division - 1]}` : ''}` : null;
+  const rank = !st || st.ranked.games === 0 ? null : st.ranked.placement ? `Placement ${st.ranked.games}/5`
+    : `${st.ranked.tier}${st.ranked.division ? ` ${['I', 'II', 'III', 'IV'][st.ranked.division - 1]}` : ''}`;
 
   const collected = useMemo(() => {
     const ids = new Set(Object.entries(own.cards).filter(([, o]) => o.normal + o.foil > 0).map(([id]) => id));

@@ -131,7 +131,7 @@ export function TutorialReward({ db, granted, won, onReplay, onExit, onFinish }:
       <h1 id="tutorial-reward-title">{title}</h1>
       <p className="tutorial-reward__lead">
         {granted
-          ? 'Your reward: one booster pack from each set. They are waiting for you, ready to open.'
+          ? 'One booster pack from each set'
           : 'You already took the tutorial reward. Play it again any time to practise.'}
       </p>
       {granted && (

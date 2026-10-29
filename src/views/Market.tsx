@@ -93,7 +93,7 @@ function SellForm({ card, foil, have, onDone }: { card: Card; foil: boolean; hav
         <label>Copies<input className="input" type="number" min={1} max={have} value={qty} onChange={(e) => setQty(Math.min(have, Math.max(1, Math.floor(Number(e.target.value) || 1))))} /></label>
         <label>Price per copy<input className="input" type="number" min={1} value={price} onChange={(e) => setPrice(Math.max(1, Math.floor(Number(e.target.value) || 1)))} /></label>
       </div>
-      <span className="small">You get <Coin /> {fmt(get)} when all sell ({Math.round(MARKET_FEE * 100)} % to the market). Up for {LISTING_DAYS} days.</span>
+      <span className="small">You get <Coin /> {fmt(get)} <span className="muted">(−{Math.round(MARKET_FEE * 100)} %, {LISTING_DAYS} days)</span></span>
       <div className="mk-sell__row">
         <button type="button" className="btn btn--cta" onClick={list}>List for sale</button>
         <button type="button" className="btn btn--ghost" onClick={onDone}>Cancel</button>
@@ -139,7 +139,7 @@ export function Market({ db, onInspect }: { db: CardDb; onInspect: (t: InspectTa
     return (
       <section className="shop-soon">
         <h1>Marketplace</h1>
-        <p className="muted">{session.status === 'offline' ? 'The marketplace needs the server: not in this preview.' : 'Sign in with Discord to buy and sell cards.'}</p>
+        <p className="muted">{session.status === 'offline' ? 'Not in the preview' : 'Sign in with Discord'}</p>
       </section>
     );
   }

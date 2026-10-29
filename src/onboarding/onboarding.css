@@ -8,7 +8,7 @@
 .ob__bar::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; background: linear-gradient(90deg, transparent, var(--gold-lo) 12%, var(--gold) 50%, var(--gold-lo) 88%, transparent); }
 .ob__bar--float { position: absolute; top: 0; left: 0; right: 0; background: linear-gradient(180deg, rgba(1, 10, 19, .8), transparent); border: 0; }
 .ob__bar--float::after { display: none; }
-.ob__brand { font: 800 17px/1 var(--font-display); letter-spacing: .3em; text-transform: uppercase; background: linear-gradient(180deg, #f0e6d2, #c8aa6e 60%, #a07f3a); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
 .ob__steps { display: flex; align-items: center; gap: 8px; list-style: none; margin: 0; padding: 0; }
 .ob__steps li { display: flex; align-items: center; gap: 10px; padding: 0 14px; color: var(--muted); font: 700 11px/1 var(--font-ui); letter-spacing: .18em; text-transform: uppercase; }
 .ob__steps li + li::before { content: ""; width: 34px; height: 1px; margin-right: 14px; background: var(--gold-dim); }

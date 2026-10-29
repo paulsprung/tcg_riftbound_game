@@ -16,7 +16,7 @@ const tierText = (r: RatingInfo) => (r.placement ? `Placement ${r.games}/5` : `$
 
 function Outcome({ end, tournament }: { end: Extract<ServerMsg, { t: 'end' }> | null; tournament: boolean }) {
   if (!end) return <p className="muted small">Saving the result…</p>;
-  if (tournament) return <p className="muted small">The result is in the tournament. If the match goes on, the next game opens by itself.</p>;
+  if (tournament) return null;
   const r = end.rating;
   // in placement the points are not shown yet: only how many games are played
   const delta = r && !r.after.placement ? r.after.points - r.before.points : null;
@@ -28,8 +28,7 @@ function Outcome({ end, tournament }: { end: Extract<ServerMsg, { t: 'end' }> | 
           {delta !== null && <span className={delta >= 0 ? 'is-up' : 'is-down'}> ({delta >= 0 ? '+' : ''}{delta} LP)</span>}
         </p>
       )}
-      <p className="online-outcome__coins"><span className="lb-coin" aria-hidden /> +{end.coins} coins
-        {end.coins === 0 && <span className="muted small"> (short games and the daily limit pay nothing)</span>}</p>
+      <p className="online-outcome__coins"><span className="lb-coin" aria-hidden /> +{end.coins} coins</p>
     </div>
   );
 }

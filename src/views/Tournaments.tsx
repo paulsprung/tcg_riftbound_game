@@ -74,25 +74,23 @@ function TournamentPage({ id, db, onBack }: { id: string; db: CardDb; onBack: ()
         <div className="tn-me lb-card">
           {t.status === 'open' && !t.joined && (
             <>
-              <p className="muted small">Your deck is locked when you sign up, as a decklist.</p>
               <button type="button" className="btn btn--cta" disabled={decks.length === 0} onClick={() => setPicking(true)}>Sign up</button>
-              {decks.length === 0 && <p className="muted small">You need a legal deck of your own cards.</p>}
+              {decks.length === 0 && <p className="muted small">No legal deck yet</p>}
             </>
           )}
           {t.status === 'open' && t.joined && (
             <>
-              <p><b>You are in.</b> The first round starts at {when(t.startsAt)}. Be online then: a no-show loses after {t.settings.noShowMinutes} minutes.</p>
+              <p><b>Signed up</b> · {when(t.startsAt)}</p>
               <button type="button" className="btn btn--ghost btn--small" onClick={() => act(`/api/tournaments/${id}/leave`)}>Leave{t.settings.entryFee ? ' (fee back)' : ''}</button>
             </>
           )}
           {t.status === 'running' && me && (
             <>
-              <p>{me.dropped ? 'You dropped out.' : myMatch ? <>Your match: <b>{myMatch.a.me ? myMatch.b?.name ?? 'Bye' : myMatch.a.name}</b> · {myMatch.wins[myMatch.a.me ? 0 : 1]}–{myMatch.wins[myMatch.a.me ? 1 : 0]}. The table opens by itself.</> : 'Waiting for the round to finish.'}</p>
+              <p>{me.dropped ? 'You dropped out.' : myMatch ? <>vs <b>{myMatch.a.me ? myMatch.b?.name ?? 'Bye' : myMatch.a.name}</b> · {myMatch.wins[myMatch.a.me ? 0 : 1]}–{myMatch.wins[myMatch.a.me ? 1 : 0]}</> : 'Round in progress'}</p>
               {!me.dropped && <button type="button" className="btn btn--ghost btn--small" onClick={() => act(`/api/tournaments/${id}/leave`)}>Drop</button>}
             </>
           )}
           {t.status === 'done' && me && <p>You finished <b>#{me.rank}</b>.</p>}
-          {!me && t.status !== 'open' && <p className="muted">You are watching.</p>}
         </div>
       </div>
 
@@ -103,7 +101,7 @@ function TournamentPage({ id, db, onBack }: { id: string; db: CardDb; onBack: ()
       </div>
       <div className="tn-body lb-scroll">
         {tab === 'standings' && (
-          t.standings.length === 0 || t.round === 0 ? <p className="muted">Standings appear after the first round.</p> : (
+          t.standings.length === 0 || t.round === 0 ? <p className="muted">No standings yet.</p> : (
             <table className="tn-table">
               <thead><tr><th>#</th><th>Player</th><th>Points</th><th>Record</th><th title="Opponents' match-win %">OMW%</th><th title="Game-win %">GW%</th><th title="Opponents' game-win %">OGW%</th></tr></thead>
               <tbody>{t.standings.map((s) => (
@@ -134,7 +132,7 @@ function TournamentPage({ id, db, onBack }: { id: string; db: CardDb; onBack: ()
           <ul className="tn-players">{t.players.map((p, i) => <li key={i} className={p.me ? 'is-me' : ''}>{p.rank ? `#${p.rank} ` : ''}{p.name}{p.dropped ? <em> · dropped</em> : null}</li>)}</ul>
         )}
         {tab === 'prizes' && (
-          t.settings.prizes.length === 0 ? <p className="muted">No prizes: for the glory.</p> : (
+          t.settings.prizes.length === 0 ? <p className="muted">No prizes.</p> : (
             <table className="tn-table"><tbody>{t.settings.prizes.map((p, i) => <tr key={i}><td>#{i + 1}</td><td>{prizeText(p)}</td></tr>)}</tbody></table>
           )
         )}
@@ -166,7 +164,7 @@ export function Tournaments({ db }: { db: CardDb }) {
     return (
       <section className="tn lb-col">
         <div className="lb-head"><h1>Tournaments</h1></div>
-        <p className="muted">{session.status === 'offline' ? 'Tournaments need the server: not in this preview.' : 'Sign in with Discord to enter tournaments.'}</p>
+        <p className="muted">{session.status === 'offline' ? 'Not in the preview' : 'Sign in with Discord'}</p>
       </section>
     );
   }
@@ -176,7 +174,7 @@ export function Tournaments({ db }: { db: CardDb }) {
       <div className="lb-head"><h1>Tournaments</h1></div>
       <div className="tn-list lb-scroll">
         {list === null && <p className="muted">Loading…</p>}
-        {list?.length === 0 && <p className="muted">No tournaments right now. Watch this space.</p>}
+        {list?.length === 0 && <p className="muted">No tournaments right now.</p>}
         {list?.map((t) => (
           <button key={t.id} type="button" className={`tn-item lb-card${t.joined ? ' is-joined' : ''}`} onClick={() => go(t.id)}>
             <span className={`tn-status tn-status--${t.status}`}>{STATUS[t.status] ?? t.status}</span>

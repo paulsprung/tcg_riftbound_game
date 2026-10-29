@@ -70,7 +70,6 @@ function DeckStep({ db, onTaken }: { db: CardDb; onTaken: () => void }) {
         <div className="ob__title">
           <p className="lb-label">Step 1</p>
           <h1>Choose your starter deck</h1>
-          <p className="muted">Every deck is ready to play: a legend, 40 cards, 12 runes and its battlefields, plus the booster pack from its box. The others you can win and collect later.</p>
         </div>
         <div className="ds-tabs ob-deck__tabs" role="tablist" aria-label="Product">
           {groups.map((g) => (
@@ -143,7 +142,6 @@ export function Onboarding({ db, onDone }: { db: CardDb; onDone: (to: 'shop' | '
           <div className="ob-ready__text">
             <p className="lb-label">Step 2</p>
             <h1>Your deck is ready</h1>
-            <p className="muted">A short guided match teaches you the board, your runes, units, battlefields, combat and spells. Finish it and five booster packs, one from each set, are yours.</p>
             <button type="button" className="btn btn--cta" onClick={() => setStep('tutorial')}>Start the tutorial</button>
           </div>
         </div>
@@ -156,11 +154,10 @@ export function Onboarding({ db, onDone }: { db: CardDb; onDone: (to: 'shop' | '
       <HeroBanner db={db} bleed plain>
         <div className="lb-card ob-intro__card">
           <h1>Welcome</h1>
-          <p className="muted">Open packs, build your collection and play the card game of League of Legends. Three steps to get going:</p>
           <ol className="ob-intro__steps">
-            <li><Icon name="deck" size={22} /><div><b>Choose a starter deck</b><span>Every official starter deck is ready to play.</span></div></li>
-            <li><Icon name="book" size={22} /><div><b>Play the tutorial</b><span>A guided match, about ten minutes.</span></div></li>
-            <li><Icon name="gift" size={22} /><div><b>Get five booster packs</b><span>One from each set, to start your collection.</span></div></li>
+            <li><Icon name="deck" size={22} /><div><b>Choose a starter deck</b><span>Ready to play</span></div></li>
+            <li><Icon name="book" size={22} /><div><b>Play the tutorial</b><span>About ten minutes</span></div></li>
+            <li><Icon name="gift" size={22} /><div><b>Get five booster packs</b><span>One from each set</span></div></li>
           </ol>
           <button type="button" className="btn btn--cta" onClick={() => setStep('deck')}>Begin</button>
         </div>

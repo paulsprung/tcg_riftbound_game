@@ -64,7 +64,7 @@ function LegendPick({ ix, db, own, onPick, onBack }: {
         <h1>Choose a legend</h1>
       </header>
       <div className="db-legends lb-scroll">
-        {list.length === 0 && <p className="muted">You don't own a legend yet. Open packs to find one.</p>}
+        {list.length === 0 && <p className="muted">No legend yet.</p>}
         {list.map((l) => {
           const card = cardFor(ix, l.id);
           return (
@@ -90,7 +90,7 @@ function PoolCard({ c, card, inDeck, have, cap, onAdd, onRemove, onInspect }: {
   return (
     <div className={`db-pc${none ? ' is-unowned' : ''}${room <= 0 && !none ? ' is-full' : ''}`}
       onContextMenu={(e) => { e.preventDefault(); onRemove(); }}>
-      <button type="button" className="db-pc__card" onClick={onAdd} disabled={room <= 0}
+      <button type="button" className="db-pc__card" onClick={onAdd} disabled={room <= 0} title="Click: add · right-click: remove"
         aria-label={`Add ${c.name}${none ? ' (not owned)' : ''}`}>
         {card ? <HoloCard card={card} finish="none" width="100%" tilt="off" upright={card.orientation === 'landscape'} imageWidth={260} /> : <span className="db-pc__ph">{c.name}</span>}
       </button>
@@ -254,7 +254,7 @@ function Builder({ initial, db, ix, onInspect, onDone }: {
             )}
           </div>
           <div className={`db-pool__grid lb-scroll${pool === 'battlefields' ? ' is-wide' : ''}`}>
-            {poolCards.length === 0 && <p className="muted">No cards of yours match. Open packs to find more.</p>}
+            {poolCards.length === 0 && <p className="muted">No cards match.</p>}
             {poolCards.slice(0, shown).map((c) => {
               const have = available(own, c.id);
               const inDeck = pool === 'runes' ? runeN(c.id) : pool === 'battlefields' ? Number(d.battlefields.includes(c.id)) : count(c.id);
@@ -270,7 +270,6 @@ function Builder({ initial, db, ix, onInspect, onDone }: {
               <div className="more"><button type="button" className="btn btn--ghost btn--small" onClick={() => setShown((n) => n + 60)}>Show more ({poolCards.length - shown})</button></div>
             )}
           </div>
-          <p className="db-pool__hint muted small">Click a card to add it, right-click to take one out.</p>
         </section>
 
         {/* ---- the deck ---- */}
@@ -304,7 +303,6 @@ function Builder({ initial, db, ix, onInspect, onDone }: {
 
           <div className="db-deck__list lb-scroll">
             <p className="db-sec">Main deck <span className={mainSize === MAIN_SIZE ? 'is-ok' : ''}>{mainSize}/{MAIN_SIZE}</span></p>
-            {groups.length === 0 && <p className="muted small">Add units, spells and gear from the left.</p>}
             {groups.map((g) => (
               <div key={g.k}>
                 <p className="db-sub">{g.k === 'Gear' ? 'Gear' : `${g.k}s`} <span>{g.rows.reduce((a, r) => a + r.n, 0)}</span></p>
