@@ -68,6 +68,7 @@ const isUnitDef = (def: string) => {
 };
 
 function printedMight(o: GameObject): number | null {
+  if (o.asUnit && !isUnitDef(o.def)) return o.asUnit.might;          // a unit gear: Might equal to its Energy cost (Orianna)
   if (!isUnitDef(o.def)) return null;
   return token(o.def)?.might ?? findCard(o.def)?.might ?? 0;
 }

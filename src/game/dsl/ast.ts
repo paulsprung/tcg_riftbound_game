@@ -291,7 +291,10 @@ export type StaticAst =
       gain?: false }
   /** Undying Legion: "You may play me from your trash" (a play action from the trash while the ability's `while` holds,
       read for the card in the trash). */
-  | { s: 'playFromTrash' };
+  | { s: 'playFromTrash' }
+  /** Shady Spectacles: "As this is attached to a unit, choose another friendly unit. The equipped unit becomes a copy of that
+      unit for as long as this is attached to it" (read by the attach instructions, dsl/interp.ts). */
+  | { s: 'copyOnAttach' };
 
 /** The events replacements of the deck change: playing a token [440.2.c]. */
 export interface ReplaceEventAst { ev: 'playToken'; by: 'you'; type: CardType }
@@ -891,6 +894,9 @@ export type InstrAst = { id?: string; link?: string } & (
   /** "Until your next Ending Phase, you may play that card" (Akali, Brash; Runeblade Anvil): the instruction's player may
       play these banished cards (paying their costs) until the next of their Ending Phases begins (Radiance FAQ). */
   | { op: 'allowPlay'; what: RefAst; until: 'nextEnding' }
+  /** Orianna, Lady of Clockwork: "It becomes a unit gear with Might equal to its Energy cost until you choose another gear
+      with me": the gears this source made units before stop being units as the new choice is made (finalization). */
+  | { op: 'becomeUnit'; what: RefAst }
 );
 /** How long an effect lasts [479]. */
 export type Until = 'thisTurn' | 'thisCombat' | 'permanent';

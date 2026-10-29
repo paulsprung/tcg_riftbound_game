@@ -32,7 +32,7 @@ import { emit, emitZone, knowers } from '../core/events.ts';
 import { answer, ask, defineSteps, ret, takeRet, type FrameOf, type StepOut } from '../core/frames.ts';
 import { EngineError } from '../core/errors.ts';
 import { allMask } from '../state/ids.ts';
-import { append, moveObject, pushFrame, setField } from '../state/mut.ts';
+import { append, moveObject, pushFrame, setCopy, setField } from '../state/mut.ts';
 import { Z, locOf } from '../state/zones.ts';
 import type {
   ChainItem, Env, GameState, Json, Loc, ObjId, Outcome, PlayerId, PowerReq, TargetRef,
@@ -42,10 +42,10 @@ import { collect, fire, placeAll, placeSelfLeave } from '../abilities/triggers.t
 import {
   addEffect, addMight, addSpecial, attach, banish, buffUnits, burn, cantMove, channelRunes, deal, detach, discard, drawCard,
   drawCards, exhaust, gainPoints, gainXp, heal, kill, look, mill, moveUnits, ready, recall, recycleCards, recyclePermanent, recycleRune, returnToHand,
-  replaceBattlefield, setEmpowered, spendBuffs, spendXp, stunUnits, swapBackBattlefield, toZone,
+  endUnitGears, makeUnitGear, replaceBattlefield, setEmpowered, spendBuffs, spendXp, stunUnits, swapBackBattlefield, toZone,
 } from '../rules/actions.ts';
 import { itemById, markFepr, removeItem } from '../rules/chain.ts';
-import { energyCostOf, isType, keywordOf, mightOf, snapshotOf, tagsOf, typesOf } from '../rules/chars.ts';
+import { energyCostOf, isType, isUnitOnBoard, keywordOf, mightOf, snapshotOf, tagsOf, typesOf } from '../rules/chars.ts';
 import { evalCond, tagsAmong, type CondCtx } from '../rules/conditions.ts';
 import { mint } from '../state/mut.ts';
 import { hereOf, matches, maxEmpowerOf, predOk, sameLoc, selectAll, slotLocsOf, stillLegal, type SelCtx } from '../rules/targets.ts';
@@ -460,6 +460,27 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
   };
   const ref = (r: RefAst | SelAst) => resolveRef(s, it, f.env, r, st, c);
   const val = (v: ValueAst) => value(s, it, f.env, v, st, c);
+  /** Shady Spectacles: "As this is attached to a unit, choose another friendly unit. The equipped unit becomes a copy of
+      that unit for as long as this is attached to it." Applied right after the attach event, not as a chain item
+      (Vendetta FAQ: a replacement that adds the copy after the attach) [479.1]. */
+  const copyOnAttach = (g: ObjId, u: ObjId): Outcome | 'asked' => {
+    if (!(cardDef(s.objects[g]?.def ?? '')?.abilities ?? []).some((a) => a.kind === 'static' && a.spec.s === 'copyOnAttach')) return ok;
+    const who = s.objects[g].controller ?? p;
+    const cands = Object.values(s.objects).filter((o) => o.id !== u && o.controller === who && isUnitOnBoard(o)).map((o) => o.id);
+    if (cands.length === 0) return ok;
+    bind(s, f, `copy:${st.key}`, [g, u]);
+    return choice('choose', { objs: cands, min: 1, max: 1, who, sum: null });
+  };
+  const copyChosen = (ans: Json | undefined): Outcome => {
+    const [g, u] = boundObjs(f.env, `copy:${st.key}`);
+    const pick = objsOf(ans ?? null)[0];
+    if (pick !== undefined && s.objects[pick] && s.objects[u] && s.objects[g]?.attachedTo === u) {
+      setCopy(s, u, s.objects[pick].def, g);
+      emit(s, x, { k: 'becomeCopy', obj: u, def: s.objects[u].def, rule: '479.1' });
+      requestCleanup(s);                                             // its Might may have changed [319.7]
+    }
+    return ok;
+  };
   const effOpts = (rule: string) => ({ controller: p, source: it.source ?? it.obj ?? null, item: it.id, rule });
   const playedFromFacedown = it.kind === 'card' && it.play.origin.z === 'facedown' ? it.play.origin.bf : null;
   /** Gangplank: "If a spell or ability that chooses me would stun me, give me -[M], or return me to hand, give me +3 [M] this turn
@@ -909,6 +930,14 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
       addEffect(s, x, objs, { s: 'kwFromKw', kw: ins.kw, from: ins.from }, effOpts('479.3'));
       return ok;
     }
+    case 'becomeUnit': {                                             // Orianna, Lady of Clockwork
+      const r = ref(ins.what);
+      if (r.ignored) return r.ignored;
+      const g = r.objs.find((id) => onBoard(s, id));
+      if (g === undefined || it.source === undefined) return negated;
+      endUnitGears(s, x, it.source, '137.3.b');                      // already ended at finalization; kept for safety
+      return makeUnitGear(s, x, g, it.source, '137.3.b') ? ok : negated;
+    }
     case 'allowPlay': {                                              // "Until your next Ending Phase, you may play that card"
       const r = ref(ins.what);
       if (r.ignored) return r.ignored;
@@ -1022,13 +1051,14 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
       return ok;
     }
     case 'attach': {
+      if (f.env.bound[`copy:${st.key}`] !== undefined) return copyChosen(got);
       const a = ref(ins.what), b = ref(ins.to);
       if (a.ignored) return a.ignored;
       if (b.ignored) return b.ignored;
       const g = a.objs[0], u = b.objs[0];
       if (g === undefined || u === undefined) return negated;
       if (s.objects[g].controller !== s.objects[u].controller) return negated;   // only to a unit with the same controller [435]
-      return attach(s, x, g, u, '435') ? ok : negated;
+      return attach(s, x, g, u, '435') ? copyOnAttach(g, u) : negated;
     }
     case 'detach': {
       const r = ref(ins.from);
@@ -1095,6 +1125,7 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
       return (got as { paid?: boolean }).paid ? ok : { o: 'negated', why: 'declined' };
     }
     case 'equipToSelf': {
+      if (f.env.bound[`copy:${st.key}`] !== undefined) return copyChosen(got);
       const r = ref(ins.what);
       if (r.ignored) return r.ignored;
       const gear = r.objs[0], me = f.env.self;
@@ -1106,7 +1137,7 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
           return choice('pay', { who: p, item: it.id, energy: cost.energy, power: cost.power as unknown as Json });
         }
       } else if (!(got as { paid?: boolean }).paid) return { o: 'negated', why: 'declined' };
-      return attach(s, x, gear, me, '821.1.c') ? ok : negated;      // can't: it stays where it is [821.1.c.5]
+      return attach(s, x, gear, me, '821.1.c') ? copyOnAttach(gear, me) : negated;   // can't: it stays where it is [821.1.c.5]
     }
     case 'playerEffect': {
       let whom = ins.who === 'opponents' ? opponentsOf(s, p) : ins.who === 'all' ? s.players.map((q) => q.id) : [p];

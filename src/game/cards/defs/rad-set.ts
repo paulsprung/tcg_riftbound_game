@@ -467,4 +467,17 @@ export const RAD_SET_DEFS = [
       abilities: [onPlay(anvil), when({ on: 'leaves', who: 'self' }, anvil), activated({ energy: 2, power: ['fury'], exhaustSelf: true }, prog([kill(ref.self)]))],
     })];
   })(),
+  // Radiance patch notes: a unit gear is a gear and a unit (moves, fights, takes damage, dies); attached, it detaches as it
+  // becomes one; the previous one stops being a unit as the next gear is chosen (finalization) [137.3.b], [143.5].
+  legend('orianna-lady-of-clockwork', 'At the start of your Main Phase, you may pay [1] to choose a friendly gear. It becomes a unit gear with Might equal to its Energy cost until you choose another gear with me.', [
+    when({ on: 'phase', at: 'mainStart', whose: 'your' }, prog([{ op: 'becomeUnit', what: ref.slot('g') }], [slot('g', gearSel({ rel: 'friendly' }))]),
+      { may: true, cost: { energy: 1 } }),
+  ]),
+  // [Ganking] works only while this is a unit (Orianna): a Standard Move from battlefield to battlefield [810.1.a], [144.4.c].
+  gear('the-ball', '[Deploy]\n[Ganking]\nWhen you play or move this, choose one —\n• Draw 1.\n• Deal 2 to enemy units here.', {
+    abilities: [...(() => {
+      const m = modal(1, [mode('Draw 1', [draw(1)]), mode('Deal 2 to enemy units here', [deal(2, unitSel({ rel: 'enemy', at: 'here' }))])]);
+      return [onPlay(m), when({ on: 'moved', who: 'self' }, m)];
+    })()],
+  }),
 ];

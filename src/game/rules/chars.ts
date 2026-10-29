@@ -14,14 +14,14 @@ import { copyJson } from '../state/clone.ts';
 
 const token = (def: string) => (Object.hasOwn(TOKENS, def) ? TOKENS[def as TokenId] : undefined);
 
-/** The card types of an object [133]. */
-export function typesOf(o: Pick<GameObject, 'def'>): CardType[] {
+/** The card types of an object [133]; a unit gear (Orianna, Lady of Clockwork) is a gear and a unit [137.3.b]. */
+export function typesOf(o: Pick<GameObject, 'def'> & { asUnit?: GameObject['asUnit'] }): CardType[] {
   const t = token(o.def);
-  if (t) return [t.type];
-  return findCard(o.def)?.types ?? [];
+  const types = t ? [t.type] : findCard(o.def)?.types ?? [];
+  return o.asUnit && !types.includes('unit') ? [...types, 'unit'] : types;
 }
 
-export const isType = (o: Pick<GameObject, 'def'>, t: CardType) => typesOf(o).includes(t);
+export const isType = (o: Pick<GameObject, 'def'> & { asUnit?: GameObject['asUnit'] }, t: CardType) => typesOf(o).includes(t);
 
 /** An object's tags [133.6]: printed, or its token template's. */
 export function tagsOf(o: Pick<GameObject, 'def'>): string[] {

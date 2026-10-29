@@ -624,4 +624,10 @@ export const VEN_SET_DEFS = [
       activated({ energy: 1, power: ['C'] }, prog([swap(ref.self, ref.slot('c'))], [slot('c', unitSel({ rel: 'friendly', where: [pred.name('Shadow Clone')] }))]),
         { timing: 'action' })],
   }),
+  // ---- rulings pass (docs/CARD-RULINGS.md) ----
+  // Vendetta FAQ: a copy effect of the printed (or copied) traits; status, buffs, damage, Empowered stay; chosen on each
+  // attach, right after it; it ends as this is detached or leaves the board [479.1].
+  gear('shady-spectacles', '[Equip] [1][Y]\nAs this is attached to a unit, choose another friendly unit. The equipped unit becomes a copy of that unit for as long as this is attached to it.', {
+    abilities: [always({ s: 'copyOnAttach' })],
+  }),
 ];

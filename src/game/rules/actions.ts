@@ -30,7 +30,7 @@ import { shuffled, shuffleZone } from '../state/rng.ts';
 import { locOf, Z } from '../state/zones.ts';
 import type { Domain, GameObject, GameState, Json, Loc, ObjId, PlayerId, PowerReq, RunePool, Zone } from '../state/types.ts';
 import { opponentsOf } from './board.ts';
-import { isType, mightOf as mightOfUnit, snapshotOf } from './chars.ts';
+import { energyCostOf, isType, mightOf as mightOfUnit, snapshotOf } from './chars.ts';
 import { friendsAt } from './targets.ts';
 import { maxBuffs, victoryScore } from './defaults.ts';
 import { requestCleanup } from './tasks.ts';
@@ -724,6 +724,33 @@ export function detach(s: GameState, x: X, obj: ObjId, rule: string): boolean {
   }
   requestCleanup(s);
   return true;
+}
+
+/** Orianna, Lady of Clockwork: a gear becomes a unit gear with Might equal to its Energy cost [137.3.b]. An attached
+    one detaches as it becomes a unit and stays where it is [143.5.b], [436.4]; at a battlefield its controller doesn't
+    control it applies Contested like any unit that becomes present there [190.3.a] (Radiance patch notes). */
+export function makeUnitGear(s: GameState, x: X, gear: ObjId, by: ObjId, rule: string): boolean {
+  const g = s.objects[gear];
+  if (!g || locOf(g) === null || !isType(g, 'gear') || isType(g, 'unit')) return false;
+  if (g.attachedTo !== null) detach(s, x, gear, '143.5.b');
+  setAsUnit(s, gear, { might: energyCostOf(g), by });
+  emit(s, x, { k: 'becomeUnit', obj: gear, unit: true, rule });
+  const at = locOf(s.objects[gear]);
+  if (at?.z === 'bf') applyContested(s, x, at.bf, g.controller ?? g.owner);
+  requestCleanup(s);
+  return true;
+}
+
+/** "… until you choose another gear with me": the unit gears `by` made stop being units (Equipment attached to them
+    stay attached [718.6]; a non-Deploy gear at a battlefield is recalled by the next cleanup [459.1]). */
+export function endUnitGears(s: GameState, x: X, by: ObjId, rule: string) {
+  for (const g of Object.values(s.objects)) {
+    if (g.asUnit?.by !== by) continue;
+    setAsUnit(s, g.id, null);
+    if (g.designation !== null) setField(s, g, 'designation', null);
+    emit(s, x, { k: 'becomeUnit', obj: g.id, unit: false, rule });
+    requestCleanup(s);
+  }
 }
 
 /** Every card attached to a unit detaches (the unit leaves the board [719.5]). */

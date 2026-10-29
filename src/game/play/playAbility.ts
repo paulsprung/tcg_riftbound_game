@@ -23,7 +23,7 @@ import { activatedOn } from '../abilities/objAbilities.ts';
 import { evalCond } from '../rules/conditions.ts';
 import { chooseCostObjects, performCostObjects } from './costObjects.ts';
 import { nonStdOf, nonStdPossible } from './cost.ts';
-import { addSpecial } from '../rules/actions.ts';
+import { addSpecial, endUnitGears } from '../rules/actions.ts';
 import { countUsage, usageKey } from '../rules/chain.ts';
 import { isType, mightOf } from '../rules/chars.ts';
 import { K } from '../core/decisions.ts';
@@ -296,6 +296,8 @@ const STEPS: StepTable<AbilityFrame> = [
     countFinalized(s, it);                                           // [383.3.e]
     const a = abilityOf(s, f);
     const srcObj = it.source !== undefined ? s.objects[it.source] : undefined;
+    // Orianna, Lady of Clockwork: "until you choose another gear with me" ends as that choice is made (Radiance patch notes).
+    if (it.source !== undefined && a.effect.body.some((i) => i.op === 'becomeUnit')) endUnitGears(s, x, it.source, '137.3.b');
     if (a.kind === 'activated' && a.limit && it.source !== undefined) countUsage(s, usageKey(it.source, a.id, a.anyPlayer ? it.controller : '*'));   // "Use only once per turn"
     if (!it.isAdd && srcObj && (isType(srcObj, 'unit') || isType(srcObj, 'gear'))) {
       // What a unit's or gear's ability chose ("with spells or unit abilities", "When you choose a friendly unit").
