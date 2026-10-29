@@ -1,38 +1,34 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { FoilDefs } from './card/HoloCard.tsx';
-import { HoloSwitches } from './card/HoloSwitches.tsx';
-import { AccountButton } from './net/AccountButton.tsx';
 import { Inspector, type InspectTarget } from './card/Inspector.tsx';
 import { useCardDb } from './data/useCardDb.ts';
+import { Lobby, LobbyTop } from './lobby/Lobby.tsx';
 import { CollectionHub, type CollectionTab } from './views/CollectionHub.tsx';
 import { HomeView } from './views/HomeView.tsx';
 import { PacksView } from './views/PacksView.tsx';
+import { ProfileView } from './views/ProfileView.tsx';
 import { RulesView } from './views/RulesView.tsx';
 
 // The play table brings the engine with it: loaded only when opened.
-const PlayView = lazy(() => import('./play/PlayView.tsx').then((m) => ({ default: m.PlayView })));
+const PlayLobby = lazy(() => import('./views/PlayLobby.tsx').then((m) => ({ default: m.PlayLobby })));
 
-const ROUTES = [
-  { id: 'home', label: 'Home', short: 'Home' },
-  { id: 'collection', label: 'Collection', short: 'Collection' },
-  { id: 'shop', label: 'Shop', short: 'Shop' },
-  { id: 'play', label: 'Play', short: 'Play' },
-  { id: 'rules', label: 'Rules', short: 'Rules' },
-] as const;
-type Route = (typeof ROUTES)[number]['id'];
+const ROUTES = ['home', 'play', 'collection', 'shop', 'profile', 'rules'] as const;
+type Route = (typeof ROUTES)[number];
+const COLLECTION_TABS: CollectionTab[] = ['cards', 'packs', 'decks', 'showcase'];
 
-interface Where { route: Route; tab: CollectionTab; tutorial: boolean }
+interface Where { route: Route; tab: CollectionTab; sub: string; tutorial: boolean }
 
 /** Older addresses keep working: #packs is the shop, #showcase and #cards
     live in the collection. */
 function whereFromHash(): Where {
-  const [id, sub] = location.hash.replace(/^#\/?/, '').split('/');
-  if (id === 'packs') return { route: 'shop', tab: 'cards', tutorial: false };
-  if (id === 'showcase') return { route: 'collection', tab: 'showcase', tutorial: false };
-  if (id === 'cards') return { route: 'collection', tab: 'all', tutorial: false };
-  const route = (ROUTES.find((r) => r.id === id)?.id ?? 'home') as Route;
-  return { route, tab: route === 'collection' && (sub === 'showcase' || sub === 'all') ? sub : 'cards',
-    tutorial: route === 'play' && sub === 'tutorial' };
+  const [id, sub = ''] = location.hash.replace(/^#\/?/, '').split('/');
+  const at = (route: Route, tab: CollectionTab = 'cards'): Where => ({ route, tab, sub: '', tutorial: false });
+  if (id === 'packs') return at('shop');
+  if (id === 'showcase') return at('collection', 'showcase');
+  if (id === 'cards') return at('collection');
+  const route = ROUTES.find((r) => r === id) ?? 'home';
+  const tab = COLLECTION_TABS.find((t) => t === sub) ?? 'cards';
+  return { route, tab: route === 'collection' ? tab : 'cards', sub, tutorial: route === 'play' && sub === 'tutorial' };
 }
 
 export function App() {
@@ -47,32 +43,12 @@ export function App() {
     return () => window.removeEventListener('hashchange', on);
   }, []);
 
-  // on a phone the tabs scroll sideways: keep the current one in view
-  useEffect(() => {
-    document.querySelector('.nav__link[aria-current="page"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-  }, [route]);
-
-
   const onInspect = useCallback((t: InspectTarget) => setInspect(t), []);
 
   return (
     <div className="app">
       <FoilDefs />
-      <header className="top">
-        <a className="brand" href="#home">
-          <span className="brand__mark" aria-hidden>◆</span>
-          <span className="brand__name">Riftbound <em>Simulator</em></span>
-        </a>
-        <nav className="nav" aria-label="Sections">
-          {ROUTES.map((r) => (
-            <a key={r.id} href={`#${r.id}`} className="nav__link" aria-label={r.label} aria-current={route === r.id ? 'page' : undefined}>
-              <span className="nav__long">{r.label}</span><span className="nav__short">{r.short}</span>
-            </a>
-          ))}
-        </nav>
-        <HoloSwitches />
-        <AccountButton />
-      </header>
+      <LobbyTop route={route} />
 
       <main className="main">
         {state.status === 'loading' && <p className="status">Loading cards…</p>}
@@ -90,10 +66,11 @@ export function App() {
             {route === 'collection' && <CollectionHub db={state.db} tab={where.tab} onInspect={onInspect} />}
             {route === 'play' && (
               <Suspense fallback={<p className="status">Setting up the table…</p>}>
-                <PlayView key={where.tutorial ? 'tutorial' : 'play'} db={state.db} tutorial={where.tutorial} />
+                <PlayLobby db={state.db} mode={where.sub} />
               </Suspense>
             )}
-            {route === 'rules' && <RulesView />}
+            {route === 'profile' && <ProfileView db={state.db} onInspect={onInspect} />}
+            {route === 'rules' && <Lobby><RulesView /></Lobby>}
           </>
         )}
       </main>

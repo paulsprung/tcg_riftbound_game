@@ -60,7 +60,7 @@ function saveTo(store: SaveStore, seats: [Seat, Seat]) {
   };
 }
 
-export function PlayView({ db, tutorial = false }: { db: CardDb; tutorial?: boolean }) {
+export function PlayView({ db, tutorial = false, onInGame }: { db: CardDb; tutorial?: boolean; onInGame?: (inGame: boolean) => void }) {
   const cards = useMemo(() => cardIndex(db), [db]);
   const own = useCollection();
   const settings = usePlaySettings();
@@ -70,6 +70,7 @@ export function PlayView({ db, tutorial = false }: { db: CardDb; tutorial?: bool
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<SavedGame | null>(() => store.load());
   const ai = useRef<AiClient | null>(null);
+  useEffect(() => { onInGame?.(game !== null); }, [game, onInGame]);
 
   useEffect(() => {
     let alive = true;

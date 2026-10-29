@@ -1,111 +1,117 @@
 import { useMemo, useState } from 'react';
 import type { InspectTarget } from '../card/Inspector.tsx';
-import { collection, gradedCounts, useCollection } from '../collection/store.ts';
-import type { CardDb } from '../data/types.ts';
-import { BOOSTER_SETS } from '../pack/packConfig.ts';
+import { gradedCounts, useCollection } from '../collection/store.ts';
+import { VARIANT_LABEL } from '../data/cardInfo.ts';
+import type { Card, CardDb, Rarity } from '../data/types.ts';
+import { rank } from '../showcase/rank.ts';
 import { CardGrid } from './CardGrid.tsx';
 
-type Show = 'owned' | 'missing' | 'all';
+type Sort = 'rarity' | 'name' | 'set' | 'copies';
+const uniq = (xs: string[]) => [...new Set(xs.filter(Boolean))].sort();
 
-export function CollectionView({ db, onInspect }: { db: CardDb; onInspect: (t: InspectTarget) => void }) {
+/** Every card you own, with the filters of the sidebar; the rest greyed out on request. */
+export function CollectionView({ db, onInspect, rarities, showUnowned }: {
+  db: CardDb; onInspect: (t: InspectTarget) => void; rarities: Set<Rarity>; showUnowned: boolean;
+}) {
   const owned = useCollection();
-  const boosterIds = BOOSTER_SETS.map((b) => b.id);
-  const sets = db.sets.filter((s) => boosterIds.includes(s.id))
-    .sort((a, b) => boosterIds.indexOf(a.id) - boosterIds.indexOf(b.id));
-  const [setId, setSetId] = useState(() => sets.find((s) => owned.packsOpened[s.id])?.id ?? sets[0]?.id ?? '');
-  const [show, setShow] = useState<Show>('owned');
-  const [confirming, setConfirming] = useState(false);
-
-  const setCards = useMemo(() => db.cards.filter((c) => c.setId === setId), [db, setId]);
   const graded = useMemo(() => gradedCounts(owned), [owned]);
+  const [q, setQ] = useState('');
+  const [sort, setSort] = useState<Sort>('rarity');
+  const [set, setSet] = useState('');
+  const [type, setType] = useState('');
+  const [domain, setDomain] = useState('');
+  const [variant, setVariant] = useState('');
+
+  const types = useMemo(() => uniq(db.cards.map((c) => c.type)), [db]);
+  const domains = useMemo(() => uniq(db.cards.flatMap((c) => c.domains)), [db]);
   const rawCount = (id: string) => (owned.cards[id]?.normal ?? 0) + (owned.cards[id]?.foil ?? 0);
-  const has = (id: string) => rawCount(id) + (graded[id] ?? 0) > 0;
+  const copies = (id: string) => rawCount(id) + (graded[id] ?? 0);
 
-  const stats = useMemo(() => {
-    const unique = setCards.filter((c) => has(c.id)).length;
-    let copies = 0;
-    let foils = 0;
-    for (const c of setCards) {
-      const o = owned.cards[c.id];
-      copies += rawCount(c.id) + (graded[c.id] ?? 0);
-      if (o) foils += o.foil;
-    }
-    return { unique, copies, foils, total: setCards.length };
-  }, [setCards, owned, graded]);
+  const cards = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    const list = db.cards.filter((c) =>
+      (showUnowned || copies(c.id) > 0) &&
+      (rarities.size === 0 || rarities.has(c.rarity)) &&
+      (!set || c.setId === set) && (!type || c.type === type) && (!domain || c.domains.includes(domain)) &&
+      (!variant || c.variant === variant) &&
+      (!needle || c.name.toLowerCase().includes(needle) || c.code.toLowerCase().includes(needle) ||
+        c.text.toLowerCase().includes(needle) || c.tags.some((t) => t.toLowerCase().includes(needle))));
+    const by: Record<Sort, (a: Card, b: Card) => number> = {
+      rarity: (a, b) => rank(b, false) - rank(a, false) || a.name.localeCompare(b.name),
+      name: (a, b) => a.name.localeCompare(b.name),
+      set: (a, b) => a.setId.localeCompare(b.setId) || (a.number ?? 0) - (b.number ?? 0),
+      copies: (a, b) => copies(b.id) - copies(a.id) || a.name.localeCompare(b.name),
+    };
+    return list.sort(by[sort]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [db, owned, graded, q, sort, set, type, domain, variant, rarities, showUnowned]);
 
-  const cards = setCards.filter((c) => show === 'all' || (show === 'owned') === has(c.id));
-  const pct = stats.total ? Math.round((stats.unique / stats.total) * 100) : 0;
+  const total = Object.values(owned.cards).reduce((n, o) => n + o.normal + o.foil, 0) + owned.slabs.length;
+  const anyFilter = q || set || type || domain || variant;
 
   return (
     <section>
-      <div className="page-head">
-        <h1>Your collection</h1>
-        <p className="muted">Everything you pull is saved in this browser.</p>
-      </div>
-
-      <div className="set-tabs" role="tablist" aria-label="Set">
-        {sets.map((s) => (
-          <button key={s.id} type="button" role="tab" aria-selected={s.id === setId} className="set-tab" onClick={() => setSetId(s.id)}>
-            {s.name}
-            <span className="muted small">{owned.packsOpened[s.id] ?? 0} {owned.packsOpened[s.id] === 1 ? 'pack' : 'packs'}</span>
-          </button>
-        ))}
-      </div>
-
-      <div className="progress-card">
-        <div className="progress-card__nums">
-          <div><b>{stats.unique}</b><span className="muted"> / {stats.total} cards</span></div>
-          <div><b>{stats.copies}</b><span className="muted"> copies</span></div>
-          <div><b>{stats.foils}</b><span className="muted"> foils</span></div>
-          <div><b>{owned.packsOpened[setId] ?? 0}</b><span className="muted"> {owned.packsOpened[setId] === 1 ? 'pack' : 'packs'} opened</span></div>
-        </div>
-        <div className="bar" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Set completion">
-          <span style={{ width: `${pct}%` }} />
-        </div>
-        <div className="progress-card__row">
-          <div className="seg" role="group" aria-label="Show">
-            {(['owned', 'missing', 'all'] as const).map((v) => (
-              <button key={v} type="button" aria-pressed={show === v} onClick={() => setShow(v)}>{v[0].toUpperCase() + v.slice(1)}</button>
-            ))}
+      <div className="lb-head">
+        <h1>Your Collection <span className="muted small">{total.toLocaleString('en-US')} cards</span></h1>
+        <div className="lb-tools">
+          <div className="lb-search">
+            <input className="input" type="search" placeholder="Search cards…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search cards" />
           </div>
-          {confirming ? (
-            <div className="confirm" role="group" aria-label="Confirm reset">
-              <span>Delete every card in this browser?</span>
-              <button type="button" className="btn btn--danger btn--small" onClick={() => { collection.reset(); setConfirming(false); }}>
-                Delete all
-              </button>
-              <button type="button" className="btn btn--ghost btn--small" onClick={() => setConfirming(false)}>Keep</button>
-            </div>
-          ) : (
-            <button type="button" className="btn btn--ghost btn--small" onClick={() => setConfirming(true)}>Reset collection</button>
-          )}
+          <select className="input" value={sort} onChange={(e) => setSort(e.target.value as Sort)} aria-label="Sort">
+            <option value="rarity">Sort: Rarest</option>
+            <option value="name">Sort: Name</option>
+            <option value="set">Sort: Set</option>
+            <option value="copies">Sort: Copies</option>
+          </select>
         </div>
       </div>
+      <div className="filters">
+        <select className="input" value={set} onChange={(e) => setSet(e.target.value)} aria-label="Set">
+          <option value="">All sets</option>
+          {db.sets.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+        </select>
+        <select className="input" value={type} onChange={(e) => setType(e.target.value)} aria-label="Type">
+          <option value="">All types</option>
+          {types.map((t) => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <select className="input" value={domain} onChange={(e) => setDomain(e.target.value)} aria-label="Domain">
+          <option value="">All domains</option>
+          {domains.map((d) => <option key={d} value={d}>{d}</option>)}
+        </select>
+        <select className="input" value={variant} onChange={(e) => setVariant(e.target.value)} aria-label="Printing">
+          <option value="">All printings</option>
+          {Object.entries(VARIANT_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+        </select>
+        {anyFilter && <button type="button" className="btn btn--ghost" onClick={() => { setQ(''); setSet(''); setType(''); setDomain(''); setVariant(''); }}>Clear</button>}
+      </div>
 
-      {show === 'owned' && stats.unique === 0 ? (
+      {total === 0 && !showUnowned ? (
         <div className="empty">
-          <p>No cards from this set yet.</p>
+          <p>No cards yet.</p>
           <a className="btn btn--primary" href="#shop">Open a pack</a>
         </div>
       ) : (
-        <CardGrid
-          cards={cards}
-          onInspect={onInspect}
-          dim={(c) => !has(c.id)}
-          foil={(c) => (owned.cards[c.id]?.foil ?? 0) > 0}
-          badge={(c) => {
-            const o = owned.cards[c.id];
-            const g = graded[c.id] ?? 0;
-            if (!has(c.id)) return null;
-            return (
-              <span className="count-badge">
-                ×{rawCount(c.id) + g}
-                {(o?.foil ?? 0) > 0 && <span className="count-badge__foil" title={`${o!.foil} foil`}>✦{o!.foil}</span>}
-                {g > 0 && <span className="count-badge__foil" title={`${g} graded`}>▣{g}</span>}
-              </span>
-            );
-          }}
-        />
+        <>
+          <p className="muted small">{cards.length.toLocaleString('en-US')} shown</p>
+          <CardGrid
+            cards={cards}
+            onInspect={onInspect}
+            dim={(c) => copies(c.id) === 0}
+            foil={(c) => (owned.cards[c.id]?.foil ?? 0) > 0}
+            badge={(c) => {
+              const o = owned.cards[c.id];
+              const g = graded[c.id] ?? 0;
+              if (copies(c.id) === 0) return null;
+              return (
+                <span className="count-badge">
+                  ×{copies(c.id)}
+                  {(o?.foil ?? 0) > 0 && <span className="count-badge__foil" title={`${o!.foil} foil`}>✦{o!.foil}</span>}
+                  {g > 0 && <span className="count-badge__foil" title={`${g} graded`}>▣{g}</span>}
+                </span>
+              );
+            }}
+          />
+        </>
       )}
     </section>
   );

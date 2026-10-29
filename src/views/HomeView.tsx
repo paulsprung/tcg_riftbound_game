@@ -1,127 +1,116 @@
 import { useEffect, useMemo, useState } from 'react';
 import { HoloCard } from '../card/HoloCard.tsx';
 import { collection, DAILY_COINS, useCollection } from '../collection/store.ts';
-import type { CardDb } from '../data/types.ts';
-import { loadStarters, type StarterChoice } from '../economy/starter.ts';
-import { useSession } from '../net/session.ts';
+import { defaultFinish } from '../data/cardInfo.ts';
+import type { Card, CardDb } from '../data/types.ts';
+import { Lobby } from '../lobby/Lobby.tsx';
+import { NEWS } from '../lobby/news.ts';
+import { rank } from '../showcase/rank.ts';
+import { HeroBanner } from './HeroBanner.tsx';
+import { Starters } from './Starters.tsx';
 
 const hhmm = (ms: number) => `${Math.floor(ms / 3_600_000)} h ${Math.ceil((ms % 3_600_000) / 60_000)} min`;
 
-const PRODUCT_ORDER = ['ogs', 'ogn', 'sfd', 'unl', 'rad'];
+/** The player's best pulls, rarest first: what the featured slot cycles through. */
+function useFeatured(db: CardDb) {
+  const own = useCollection();
+  return useMemo(() => {
+    const byId = new Map(db.cards.map((c) => [c.id, c]));
+    const out: { card: Card; foil: boolean }[] = [];
+    for (const [id, o] of Object.entries(own.cards)) {
+      const card = byId.get(id);
+      if (!card || card.type === 'Rune' || card.type === 'Battlefield') continue;
+      if (o.foil > 0) out.push({ card, foil: true });
+      if (o.normal > 0) out.push({ card, foil: false });
+    }
+    return out.sort((a, b) => rank(b.card, b.foil) - rank(a.card, a.foil)).slice(0, 12);
+  }, [db, own.cards]);
+}
 
-function Starters({ db }: { db: CardDb }) {
-  const [starters, setStarters] = useState<StarterChoice[] | null>(null);
-  const [busy, setBusy] = useState<string | null>(null);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    let alive = true;
-    loadStarters(db).then((s) => { if (alive) setStarters(s); }).catch(() => { if (alive) setError('Could not load the starter decks. Reload the page.'); });
-    return () => { alive = false; };
-  }, [db]);
-
-  const pick = (s: StarterChoice) => {
-    setBusy(s.id);
-    collection.grantStarter(s.id, s.cards, { [s.booster]: 1 }, 0);
-    setBusy(null);
-  };
-
-  const groups = PRODUCT_ORDER
-    .map((set) => ({ set, items: (starters ?? []).filter((s) => s.set === set) }))
-    .filter((g) => g.items.length > 0);
-
+function Side({ db }: { db: CardDb }) {
+  const featured = useFeatured(db);
+  const [n, setN] = useState(0);
+  const pick = featured.length ? featured[n % featured.length] : null;
   return (
-    <section className="starters">
-      <h2>Choose your starter deck</h2>
-      <p className="muted">
-        Every official starter deck, ready to play: legend, 40 main deck cards, 12 runes and 3 battlefields (56 cards;
-        the Proving Grounds decks come with 1 battlefield), plus the booster pack from its box. You pick one to
-        begin; the rest you can win and collect.
-      </p>
-      {!starters && !error && <p className="muted">Loading the decks…</p>}
-      {error && <p className="muted">{error}</p>}
-      {groups.map((g) => (
-        <div key={g.set} className="starters__group">
-          <h3 className="starters__product">{g.items[0].product}</h3>
-          <div className="starters__grid">
-            {g.items.map((s) => {
-              const card = db.cards.find((c) => c.id === s.legendCard);
-              return (
-                <article key={s.id} className="starter">
-                  <div className="starter__card">
-                    {card ? <HoloCard card={card} finish="none" width="100%" imageWidth={360} /> : <div className="starter__ph" />}
-                  </div>
-                  <h4>{s.title}</h4>
-                  <p className="muted">{s.blurb}</p>
-                  <p className="muted small">{s.size} cards + 1 {s.booster.toUpperCase()} booster</p>
-                  <button type="button" className="btn btn--primary btn--small" disabled={busy !== null} onClick={() => pick(s)}>
-                    Take this deck
-                  </button>
-                </article>
-              );
-            })}
-          </div>
-        </div>
-      ))}
-    </section>
+    <>
+      <p className="lb-label">Featured Riftbound</p>
+      <div className="lb-card home-feat">
+        {pick ? (
+          <>
+            <HoloCard card={pick.card} finish={defaultFinish(pick.card, pick.foil)} width="100%" imageWidth={420} />
+            <div className="home-feat__info">
+              <strong>{pick.card.name}</strong>
+              <span className="muted small">{pick.card.setName} · {pick.card.rarity}</span>
+            </div>
+          </>
+        ) : (
+          <p className="muted small home-feat__empty">Open a pack: your best pull shows up here.</p>
+        )}
+      </div>
+      {featured.length > 1 && (
+        <button type="button" className="btn btn--ghost home-feat__change" onClick={() => setN((x) => x + 1)}>⇄ Change card</button>
+      )}
+
+      <p className="lb-label home-news__label">Latest news</p>
+      <div className="home-news">
+        {NEWS.map((x) => (
+          <article key={x.title} className="lb-card home-news__item">
+            <span className={`home-tag home-tag--${x.tone}`}>{x.tag}</span>
+            <strong>{x.title}</strong>
+            <p className="muted small">{x.body}</p>
+          </article>
+        ))}
+      </div>
+    </>
   );
 }
 
 export function HomeView({ db }: { db: CardDb }) {
   const own = useCollection();
-  const session = useSession();
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(t); }, []);
   const wait = collection.dailyIn(now);
   const unopened = useMemo(() => Object.values(own.packs).reduce((a, b) => a + b, 0), [own.packs]);
-  const name = session.status === 'online' && session.user ? session.user.name : null;
   const cards = Object.values(own.cards).reduce((a, o) => a + o.normal + o.foil, 0) + own.slabs.length;
 
   return (
-    <section className="home">
-      <div className="page-head">
-        <h1>{name ? `Welcome, ${name}` : 'Riftbound Simulator'}</h1>
-        <p className="muted">Open packs, build your collection, play.</p>
-      </div>
-
-      {!own.starter && <Starters db={db} />}
-
-      {own.starter && !own.tutorialDone && (
-        <section className="tutorial-step" aria-labelledby="tutorial-step-title">
-          <p className="tutorial-step__kicker small">Next step</p>
-          <h2 id="tutorial-step-title">Play the tutorial</h2>
-          <p className="muted">
-            Your deck is ready. A short guided match teaches the basics: runes, units, battlefields, combat, spells
-            and scoring. Finish it (or skip it) to get <b>5 booster packs</b>, one from each set.
-          </p>
-          <a className="btn btn--primary" href="#play/tutorial">Play the tutorial</a>
-        </section>
-      )}
-
-      {own.starter && (
-        <>
-          <div className="home__stats">
-            <div><b>{own.coins}</b><span className="muted"> coins</span></div>
-            <div><b>{unopened}</b><span className="muted"> unopened {unopened === 1 ? 'pack' : 'packs'}</span></div>
-            <div><b>{cards}</b><span className="muted"> cards</span></div>
+    <Lobby side={<Side db={db} />} className="wide-side">
+      <HeroBanner db={db}>
+        {!own.starter ? (
+          <p className="hero__cta-note">Choose your starter deck below to begin.</p>
+        ) : !own.tutorialDone ? (
+          <div className="hero__next">
+            <span className="hero__kicker">Next step</span>
+            <strong>Play the tutorial</strong>
+            <span className="muted">A short guided match. Finish it for 5 free booster packs, one from each set.</span>
+            <a className="btn btn--primary" href="#play/tutorial">Play the tutorial</a>
           </div>
-          <div className="home__actions">
-            <a className={`btn ${own.tutorialDone ? 'btn--primary' : 'btn--ghost'}`} href="#shop">{unopened > 0 ? 'Open packs' : 'Shop'}</a>
-            <a className="btn btn--ghost" href="#play">Play</a>
+        ) : (
+          <div className="hero__buttons">
+            <a className="btn btn--primary" href="#play">Play</a>
+            <a className="btn btn--ghost" href="#shop">{unopened > 0 ? `Open packs (${unopened})` : 'Shop'}</a>
             <a className="btn btn--ghost" href="#collection">Collection</a>
           </div>
-        </>
+        )}
+      </HeroBanner>
+
+      {own.starter && (
+        <div className="home-tiles">
+          <div className="lb-card home-tile"><b>{own.coins.toLocaleString('en-US')}</b><span className="muted">Coins</span></div>
+          <div className="lb-card home-tile"><b>{unopened}</b><span className="muted">Unopened {unopened === 1 ? 'pack' : 'packs'}</span></div>
+          <div className="lb-card home-tile"><b>{cards}</b><span className="muted">Cards owned</span></div>
+          <div className="lb-card home-tile home-tile--daily">
+            <div>
+              <b>Daily coins</b>
+              <span className="muted small">{wait === 0 ? `${DAILY_COINS} coins are waiting.` : `Next in ${hhmm(wait)}.`}</span>
+            </div>
+            <button type="button" className="btn btn--primary btn--small" disabled={wait > 0}
+              onClick={() => { collection.claimDaily(); setNow(Date.now()); }}>Claim {DAILY_COINS}</button>
+          </div>
+        </div>
       )}
 
-      <div className="daily">
-        <div>
-          <strong>Daily coins</strong>
-          <span className="muted"> {wait === 0 ? `${DAILY_COINS} coins are waiting.` : `Next in ${hhmm(wait)}.`}</span>
-        </div>
-        <button type="button" className="btn btn--ghost btn--small" disabled={wait > 0} onClick={() => { collection.claimDaily(); setNow(Date.now()); }}>
-          Claim {DAILY_COINS}
-        </button>
-      </div>
-    </section>
+      {!own.starter && <div className="home-starters"><Starters db={db} /></div>}
+    </Lobby>
   );
 }

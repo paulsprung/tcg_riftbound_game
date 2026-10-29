@@ -1,88 +1,129 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { InspectTarget } from '../card/Inspector.tsx';
 import { collection, PACK_PRICE, useCollection } from '../collection/store.ts';
-import type { CardDb } from '../data/types.ts';
-import { BOOSTER_SETS } from '../pack/packConfig.ts';
-import { PackOpening } from '../pack/PackOpening.tsx';
 import { packArt } from '../data/media.ts';
+import type { CardDb } from '../data/types.ts';
+import { Lobby, SideLink, SideTitle } from '../lobby/Lobby.tsx';
+import { PackOpening } from '../pack/PackOpening.tsx';
 import { heroCard, PackWrapper } from '../pack/PackWrapper.tsx';
 import { readPending } from '../pack/pending.ts';
+import { openPack, useBoosters } from './boosters.ts';
 
-// The pack being opened is in the address (#shop/rad), so the browser's
-// and the phone's back gesture return to the shelf.
-const setFromHash = () => /^#\/?shop\/([a-z0-9]+)/.exec(location.hash)?.[1] ?? null;
+// What is on screen is in the address: #shop is the store, #shop/market the
+// marketplace, #shop/rad the pack being opened, so the browser's and the
+// phone's back gesture return to the shelf.
+const subFromHash = () => /^#\/?shop\/([a-z0-9]+)/.exec(location.hash)?.[1] ?? null;
+
+const Coin = () => <span className="lb-coin" aria-hidden />;
 
 export function PacksView({ db, onInspect }: { db: CardDb; onInspect: (t: InspectTarget) => void }) {
-  const [openSet, setOpenSet] = useState<string | null>(setFromHash);
+  const [sub, setSub] = useState<string | null>(subFromHash);
   const own = useCollection();
-  const opened = own.packsOpened;
+  const sets = useBoosters(db);
   useEffect(() => {
-    const on = () => setOpenSet(setFromHash());
+    const on = () => setSub(subFromHash());
     window.addEventListener('hashchange', on);
     return () => window.removeEventListener('hashchange', on);
   }, []);
-  const open = (id: string | null) => { location.hash = id ? `shop/${id}` : 'shop'; };
-  const pending = openSet ? null : readPending();
+  const pending = sub ? null : readPending();
 
-  const sets = useMemo(
-    () => BOOSTER_SETS
-      .map((b) => ({ ...b, info: db.sets.find((s) => s.id === b.id), cards: db.cards.filter((c) => c.setId === b.id) }))
-      .filter((b) => b.info && b.cards.length > 0),
-    [db],
-  );
-
-  const active = sets.find((s) => s.id === openSet);
-  if (active?.info) {
+  const active = sets.find((s) => s.id === sub);
+  if (active) {
     return (
-      <PackOpening key={active.id} set={active.info} cards={active.cards} pack={active.pack} style={active.style}
-        onInspect={onInspect} onExit={() => open(null)} />
+      <Lobby bare>
+        <PackOpening key={active.id} set={active.info} cards={active.cards} pack={active.pack} style={active.style}
+          onInspect={onInspect} onExit={() => { location.hash = 'shop'; }} />
+      </Lobby>
     );
   }
 
-  return (
-    <section>
-      <div className="page-head">
-        <h1>Shop</h1>
-        <p className="muted">
-          Buy booster packs with coins, then open them. Packs follow each set's real slot layout. Riot publishes only
-          some of the odds; the rest are community estimates from box openings.
-        </p>
-      </div>
-      <div className="shop-bar">
-        <span><b>{own.coins}</b> <span className="muted">coins</span></span>
+  const market = sub === 'market';
+  const featured = sets[0];
+  const buy = (id: string, n: number) => { for (let i = 0; i < n; i++) collection.buyPack(id); };
+
+  const side = (
+    <>
+      <SideTitle>SHOP</SideTitle>
+      <SideLink href="#shop" icon="🛍" active={!market}>Store</SideLink>
+      <SideLink href="#shop/market" icon="⚖" active={market} soon>Marketplace</SideLink>
+      <div className="lb-side__gap" />
+      <SideTitle>YOUR BALANCE</SideTitle>
+      <div className="lb-balance">
+        <span><Coin /> <b>{own.coins.toLocaleString('en-US')}</b></span>
+        <span className="muted small">Coins are earned by playing and by selling cards. They can't be bought.</span>
         <a className="btn btn--ghost btn--small" href="#home">Daily coins</a>
-        {/* testing aid until coins come from the server */}
-        <button type="button" className="btn btn--ghost btn--small" onClick={() => collection.addCoins(1000)}>+1000 coins (test)</button>
       </div>
-      <div className="pack-shelf">
-        {sets.map((s) => (
-          <div key={s.id} className="pack-shelf__item">
-            {/* Same height for every pack; the real wrappers differ a little in width. */}
-            <PackWrapper set={s.info!} style={s.style} hero={heroCard(s.cards, s.style)}
-              width={Math.round(312 * (packArt(s.id)?.aspect ?? 1 / 1.72))}
-              onClick={() => ((own.packs[s.id] ?? 0) > 0 ? open(s.id) : collection.buyPack(s.id))} />
-            <div className="pack-shelf__label">
-              <strong>{s.info!.name}</strong>
-              <span className="muted">
-                {s.style.tagline} · {s.info!.cardCount} cards{opened[s.id] ? ` · ${opened[s.id]} opened` : ''}
-              </span>
-              <div className="shop-actions">
-                <button type="button" className="btn btn--primary btn--small" disabled={(own.packs[s.id] ?? 0) < 1} onClick={() => open(s.id)}>
-                  Open ({own.packs[s.id] ?? 0})
-                </button>
-                <button type="button" className="btn btn--ghost btn--small" disabled={own.coins < PACK_PRICE} onClick={() => collection.buyPack(s.id)}>
-                  Buy · {PACK_PRICE} coins
-                </button>
-              </div>
-              {pending?.setId === s.id && (
-                <button type="button" className="btn btn--primary btn--small" onClick={() => open(s.id)}>
-                  Continue opening ({pending.pulls.length - pending.index} left)
-                </button>
-              )}
+    </>
+  );
+
+  return (
+    <Lobby side={side}>
+      {market ? (
+        <section className="shop-soon">
+          <h1>Marketplace</h1>
+          <p className="muted">Sell cards you don't need and buy the ones you're missing, for coins. It opens together with accounts and online play.</p>
+          <span className="lb-soon-note">Coming soon</span>
+        </section>
+      ) : (
+        <section>
+          <div className="lb-head">
+            <h1>Featured Packs</h1>
+            <div className="lb-tools">
+              {/* testing aid until coins come from the server */}
+              <button type="button" className="btn btn--ghost btn--small" onClick={() => collection.addCoins(1000)}>+1000 coins (test)</button>
+              <a className="btn btn--ghost btn--small" href="#collection/packs">Your packs ({Object.values(own.packs).reduce((a, b) => a + b, 0)})</a>
             </div>
           </div>
-        ))}
-      </div>
-    </section>
+          {featured && (
+            <div className="shop-banner">
+              <div className="shop-banner__text">
+                <span className="hero__kicker">New set</span>
+                <h2>{featured.info.name} Booster Pack</h2>
+                <p>{featured.pack.slots.reduce((n, s) => n + s.count, 0)} cards · {featured.style.tagline}. Every slot as in the real pack.</p>
+                <div className="shop-actions">
+                  <button type="button" className="btn btn--primary" disabled={own.coins < PACK_PRICE} onClick={() => buy(featured.id, 1)}>
+                    <Coin /> Buy 1 · {PACK_PRICE}
+                  </button>
+                  <button type="button" className="btn btn--ghost" disabled={own.coins < PACK_PRICE * 5} onClick={() => buy(featured.id, 5)}>
+                    Buy 5 · {PACK_PRICE * 5}
+                  </button>
+                </div>
+              </div>
+              <div className="shop-banner__pack">
+                <PackWrapper set={featured.info} style={featured.style} hero={heroCard(featured.cards, featured.style)}
+                  width={Math.round(250 * (packArt(featured.id)?.aspect ?? 1 / 1.72))} onClick={() => buy(featured.id, 1)} />
+              </div>
+            </div>
+          )}
+
+          <p className="lb-label">All packs</p>
+          <div className="pack-shelf">
+            {sets.map((s) => (
+              <div key={s.id} className="pack-shelf__item">
+                <PackWrapper set={s.info} style={s.style} hero={heroCard(s.cards, s.style)}
+                  width={Math.round(250 * (packArt(s.id)?.aspect ?? 1 / 1.72))}
+                  onClick={() => ((own.packs[s.id] ?? 0) > 0 ? openPack(s.id) : buy(s.id, 1))} />
+                <div className="pack-shelf__label">
+                  <strong>{s.info.name}</strong>
+                  <span className="muted">{s.style.tagline} · {s.info.cardCount} cards{own.packsOpened[s.id] ? ` · ${own.packsOpened[s.id]} opened` : ''}</span>
+                  <span className="shop-price"><Coin /> {PACK_PRICE}</span>
+                  <div className="shop-actions">
+                    <button type="button" className="btn btn--primary btn--small" disabled={own.coins < PACK_PRICE} onClick={() => buy(s.id, 1)}>Buy</button>
+                    <button type="button" className="btn btn--ghost btn--small" disabled={(own.packs[s.id] ?? 0) < 1} onClick={() => openPack(s.id)}>
+                      Open ({own.packs[s.id] ?? 0})
+                    </button>
+                  </div>
+                  {pending?.setId === s.id && (
+                    <button type="button" className="btn btn--primary btn--small" onClick={() => openPack(s.id)}>
+                      Continue opening ({pending.pulls.length - pending.index} left)
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+    </Lobby>
   );
 }
