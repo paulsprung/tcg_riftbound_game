@@ -118,13 +118,14 @@ export function RankCard() {
   }, [signedIn, ol.end]);
   if (DEMO && !signedIn) {
     const t = tierOf(DEMO_PROFILE.rp);
+    // in the preview the sample rank opens the look at all of them
     return (
-      <div className="lb-rank">
+      <a className="lb-rank" href="#ranks" title="All ranks and the rank-up animations">
         <RankEmblem tier={t.tier} division={t.division} size={76} />
         <strong>{rankName(t.tier, t.division)}</strong>
         <span className="muted small">{DEMO_PROFILE.rp.toLocaleString('en-US')} LP</span>
         <div className="bar"><span style={{ width: `${Math.round(divisionProgress(DEMO_PROFILE.rp) * 100)}%` }} /></div>
-      </div>
+      </a>
     );
   }
   if (!r) {

@@ -315,7 +315,7 @@ html:not([data-scaled]) .play__stage { min-height: 760px; overflow: visible; }
 }
 .rk.is-down { --rk: #b9c6d8; --rk-2: rgba(140, 160, 190, .3); }
 .rk.is-up:not(.is-tier) { --rk: #8ff3ea; --rk-2: rgba(40, 220, 205, .45); }
-.rk__stage { position: relative; width: 380px; height: 380px; display: grid; place-items: center; align-self: center; }
+.rk__stage { position: relative; width: 440px; height: 440px; display: grid; place-items: center; align-self: center; }
 .rk__stage > * { grid-area: 1 / 1; }
 .rk__crest { transition: filter .8s, transform .8s; }
 .rk.is-charge .rk__crest:not(.is-new) { animation: rk-charge 1.2s ease-in both; }
@@ -336,8 +336,8 @@ html:not([data-scaled]) .play__stage { min-height: 760px; overflow: visible; }
 .rk__text > * { opacity: 0; }
 .rk.is-reveal .rk__verdict { animation: rk-word .6s ease-out both; }
 .rk.is-reveal .rk__name { animation: rk-name .9s .15s cubic-bezier(.2, 1.2, .3, 1) both; }
-.rk.is-reveal .rk__sub { animation: go-fade .6s .5s both; }
-.rk.is-reveal .rk__go { animation: go-fade .5s .9s both; }
+.rk.is-reveal .rk__sub { animation: rk-in .6s .5s both; }
+.rk.is-reveal .rk__go { animation: rk-in .5s .9s both; }
 .rk__verdict { margin: 0; font: 800 20px/1 var(--font-ui); letter-spacing: .45em; text-transform: uppercase; color: var(--rk); padding-left: .5em; }
 .rk__name {
   margin: 0; font: 900 clamp(40px, 6vw, 72px)/1 var(--font-display); letter-spacing: .1em; text-transform: uppercase;
@@ -348,14 +348,15 @@ html:not([data-scaled]) .play__stage { min-height: 760px; overflow: visible; }
 .rk__go { margin-top: 10px; min-width: 180px; }
 /* a piece locking: a ring and sparks from the middle */
 .rk-sparks { position: relative; width: 0; height: 0; place-self: center; }
-.rk-ring { position: absolute; left: -190px; top: -190px; width: 380px; height: 380px; border-radius: 50%; border: 3px solid var(--rk); opacity: 0; animation: rk-ring .7s var(--at) ease-out both; }
+.rk-ring { position: absolute; left: -220px; top: -220px; width: 440px; height: 440px; border-radius: 50%; border: 3px solid var(--rk); opacity: 0; animation: rk-ring .7s var(--at) ease-out both; }
 .rk-sparks i { position: absolute; left: 0; top: 0; width: 3px; height: 16px; margin: -8px 0 0 -1.5px; border-radius: 2px; background: #fff; box-shadow: 0 0 8px var(--rk); opacity: 0;
   transform: rotate(var(--a)) translateY(0); animation: rk-spark .6s var(--at) ease-out both; }
 @keyframes rk-charge { 60% { transform: scale(1.04) translateX(-2px); filter: brightness(1.5) drop-shadow(0 0 24px var(--rk-2)); }
   70% { transform: scale(1.05) translateX(3px); } 80% { transform: scale(1.06) translateX(-3px); } 100% { transform: scale(1.08); filter: brightness(2.6) drop-shadow(0 0 40px var(--rk)); } }
 @keyframes rk-gather { 0% { opacity: 0; transform: scale(1.4); } 40% { opacity: .9; } 100% { opacity: 0; transform: scale(.25); } }
 @keyframes rk-flash { 0% { opacity: 0; } 12% { opacity: .95; } 100% { opacity: 0; } }
-@keyframes rk-rays { from { opacity: 0; scale: .6; } to { opacity: 1; scale: 1; } }
+@keyframes rk-rays { from { opacity: 0; scale: .6; } to { opacity: .6; scale: 1; } }
+@keyframes rk-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes rk-float { 50% { transform: translateY(-10px); } }
 @keyframes rk-dim { from { filter: brightness(1.6); } to { filter: grayscale(.35) brightness(.85); } }
 @keyframes rk-word { from { opacity: 0; letter-spacing: 1.2em; } to { opacity: 1; } }
@@ -363,3 +364,17 @@ html:not([data-scaled]) .play__stage { min-height: 760px; overflow: visible; }
 @keyframes rk-ring { 0% { opacity: .9; transform: scale(.4); } 100% { opacity: 0; transform: scale(1.5); } }
 @keyframes rk-spark { 0% { opacity: 1; transform: rotate(var(--a)) translateY(-40px) scaleY(1.4); } 100% { opacity: 0; transform: rotate(var(--a)) translateY(calc(-40px - var(--l))) scaleY(.3); } }
 @media (prefers-reduced-motion: reduce) { .rk, .rk * { animation: none !important; } .rk__text > * { opacity: 1; } }
+
+/* ---- the preview's look at the ranks (RankDemo.tsx) ---- */
+.rank-demo { display: grid; gap: 22px; padding: 28px 32px 60px; max-width: 1400px; margin: 0 auto; }
+.rank-demo h1 { margin: 0; font: 800 28px/1 var(--font-display); letter-spacing: .12em; text-transform: uppercase; color: var(--gold-hi); }
+.rank-demo header p { margin: 6px 0 0; }
+.rank-demo__cases { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.rank-demo__custom { display: inline-flex; gap: 6px; align-items: center; margin-left: 8px; color: var(--muted); }
+.rank-demo__custom select { background: #0b1522; color: var(--text, #e8e2d0); border: 1px solid var(--gold-dim); padding: 6px 8px; }
+.rank-demo__grid { display: grid; gap: 10px; }
+.rank-demo__tier { display: grid; grid-template-columns: 130px 1fr; align-items: center; border-top: 1px solid rgba(200, 170, 110, .15); padding-top: 8px; }
+.rank-demo__tier h2 { margin: 0; font: 700 13px/1 var(--font-ui); letter-spacing: .2em; text-transform: uppercase; color: var(--gold); }
+.rank-demo__tier > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.rank-demo figure { margin: 0; display: grid; justify-items: center; gap: 2px; width: 130px; }
+.rank-demo figcaption { font-size: 12px; color: var(--muted); letter-spacing: .06em; }

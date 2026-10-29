@@ -4,6 +4,7 @@ import { Inspector, type InspectTarget } from './card/Inspector.tsx';
 import { collection, useCollection } from './collection/store.ts';
 import { useCardDb } from './data/useCardDb.ts';
 import { Ambient } from './lobby/Ambient.tsx';
+import { DEMO } from './lobby/demo.ts';
 import { seedDemoShowcase } from './lobby/demoSeed.ts';
 import { Lobby, LobbyTop } from './lobby/Lobby.tsx';
 import { Social } from './lobby/Social.tsx';
@@ -21,8 +22,9 @@ import { LegalView } from './views/LegalView.tsx';
 const Onboarding = lazy(() => import('./onboarding/Onboarding.tsx').then((m) => ({ default: m.Onboarding })));
 const AdminView = lazy(() => import('./views/AdminView.tsx').then((m) => ({ default: m.AdminView })));
 const PlayLobby = lazy(() => import('./views/PlayLobby.tsx').then((m) => ({ default: m.PlayLobby })));
+const RankDemo = lazy(() => import('./views/RankDemo.tsx').then((m) => ({ default: m.RankDemo })));
 
-const ROUTES = ['home', 'play', 'collection', 'shop', 'profile', 'rules', 'admin', 'privacy', 'imprint'] as const;
+const ROUTES = ['home', 'play', 'collection', 'shop', 'profile', 'rules', 'admin', 'privacy', 'imprint', 'ranks'] as const;
 type Route = (typeof ROUTES)[number];
 const COLLECTION_TABS: CollectionTab[] = ['cards', 'packs', 'decks'];
 
@@ -74,7 +76,12 @@ export function App() {
     <div className="app">
       <FoilDefs />
       <Ambient />
-      {state.status === 'ready' && onboarding ? (
+      {route === 'ranks' && DEMO ? (
+        // the preview's look at the ranks, past the onboarding
+        <main className="main"><div className="lb-view lb-scroll">
+          <Suspense fallback={<p className="status">Loading…</p>}><RankDemo /></Suspense>
+        </div></main>
+      ) : state.status === 'ready' && onboarding ? (
         <main className="main">
           <div className="lb-view">
             <Suspense fallback={<p className="status">Getting things ready…</p>}>

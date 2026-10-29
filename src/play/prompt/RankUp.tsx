@@ -66,11 +66,11 @@ export function RankUp({ before, after, onDone }: { before: RatingInfo; after: R
         <div className="rk__charge" aria-hidden />
         {/* before the change: the old crest; a tier up bursts it */}
         {(!changing || (newTier && up)) && (
-          <RankEmblem key="old" tier={placed ? null : before.tier} division={before.division} size={380}
+          <RankEmblem key="old" tier={placed ? null : before.tier} division={before.division} size={440}
             className={`rk__crest${changing ? ' is-gone' : ''}`} burst={changing && newTier && up} />
         )}
         {changing && (
-          <RankEmblem key="new" tier={after.tier} division={after.division} size={380} className="rk__crest is-new"
+          <RankEmblem key="new" tier={after.tier} division={after.division} size={440} className="rk__crest is-new"
             enter={up ? gained : undefined} leave={!up && !newTier ? lost : undefined} delay={newTier && up ? 350 : 0} />
         )}
         {changing && up && gained.map((p, i) => <Sparks key={p} at={(newTier ? 350 : 0) + i * PIECE_MS + 380} />)}
