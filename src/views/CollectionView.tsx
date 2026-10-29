@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { InspectTarget } from '../card/Inspector.tsx';
 import { Icon } from '../lobby/icons.tsx';
+import { Select } from '../lobby/Select.tsx';
 import { gradedCounts, useCollection } from '../collection/store.ts';
 import { VARIANT_LABEL } from '../data/cardInfo.ts';
 import type { Card, CardDb, Rarity } from '../data/types.ts';
@@ -59,31 +60,18 @@ export function CollectionView({ db, onInspect, rarities, showUnowned }: {
             <Icon name="search" size={16} />
             <input className="input" type="search" placeholder="Search cards…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search cards" />
           </div>
-          <select className="input" value={sort} onChange={(e) => setSort(e.target.value as Sort)} aria-label="Sort">
-            <option value="rarity">Sort: Rarest</option>
-            <option value="name">Sort: Name</option>
-            <option value="set">Sort: Set</option>
-            <option value="copies">Sort: Copies</option>
-          </select>
+          <Select label="Sort" value={sort} onChange={(v) => setSort(v as Sort)} options={[
+            { value: 'rarity', label: 'Sort: Rarest' }, { value: 'name', label: 'Sort: Name' },
+            { value: 'set', label: 'Sort: Set' }, { value: 'copies', label: 'Sort: Copies' }]} />
         </div>
       </div>
       <div className="filters">
-        <select className="input" value={set} onChange={(e) => setSet(e.target.value)} aria-label="Set">
-          <option value="">All sets</option>
-          {db.sets.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-        </select>
-        <select className="input" value={type} onChange={(e) => setType(e.target.value)} aria-label="Type">
-          <option value="">All types</option>
-          {types.map((t) => <option key={t} value={t}>{t}</option>)}
-        </select>
-        <select className="input" value={domain} onChange={(e) => setDomain(e.target.value)} aria-label="Domain">
-          <option value="">All domains</option>
-          {domains.map((d) => <option key={d} value={d}>{d}</option>)}
-        </select>
-        <select className="input" value={variant} onChange={(e) => setVariant(e.target.value)} aria-label="Printing">
-          <option value="">All printings</option>
-          {Object.entries(VARIANT_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-        </select>
+        <Select label="Set" value={set} onChange={setSet} className="sel--wide"
+          options={[{ value: '', label: 'All sets' }, ...db.sets.map((x) => ({ value: x.id, label: x.name }))]} />
+        <Select label="Type" value={type} onChange={setType} options={[{ value: '', label: 'All types' }, ...types.map((t) => ({ value: t, label: t }))]} />
+        <Select label="Domain" value={domain} onChange={setDomain} options={[{ value: '', label: 'All domains' }, ...domains.map((d) => ({ value: d, label: d }))]} />
+        <Select label="Printing" value={variant} onChange={setVariant}
+          options={[{ value: '', label: 'All printings' }, ...Object.entries(VARIANT_LABEL).map(([k, v]) => ({ value: k, label: v }))]} />
         {anyFilter && <button type="button" className="btn btn--ghost" onClick={() => { setQ(''); setSet(''); setType(''); setDomain(''); setVariant(''); }}>Clear</button>}
       </div>
 

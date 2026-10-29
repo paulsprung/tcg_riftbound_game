@@ -1,5 +1,6 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import { HoloCard } from '../../card/HoloCard.tsx';
+import { Icon } from '../../lobby/icons.tsx';
 import { DOMAIN_COLOR, defaultFinish, symbolFor } from '../../data/cardInfo.ts';
 import type { CardDb } from '../../data/types.ts';
 import type { DefId } from '../../game/index.ts';
@@ -131,8 +132,8 @@ function DeckPicker({ cards, db, title, current, owned, mine, onRandom, onPick, 
 }
 
 /** A deck slot on the table: the legend, big, and a button to change it. */
-function DeckSlot({ label, b, cards, db, owned, onOpen, caption }: {
-  label: string; b: BuiltInDeck; cards: CardIndex; db: CardDb; owned?: boolean; onOpen: () => void; caption?: string;
+function DeckSlot({ label, b, cards, db, owned, onOpen }: {
+  label: string; b: BuiltInDeck; cards: CardIndex; db: CardDb; owned?: boolean; onOpen: () => void;
 }) {
   const legend = cardFor(cards, b.deck.legend);
   return (
@@ -143,7 +144,6 @@ function DeckSlot({ label, b, cards, db, owned, onOpen, caption }: {
       </button>
       <figcaption>
         <strong>{shortName(b.deck)}{owned && <em className="ds-yours">Yours</em>}</strong>
-        <span className="muted small">{caption ?? nameOf(cards, b.deck.legend)}</span>
         <DomainChips domains={legend?.domains ?? []} db={db} />
         <button type="button" className="btn btn--small" onClick={onOpen}>Change deck</button>
       </figcaption>
@@ -159,6 +159,7 @@ export function DeckSetup({ cards, db, initial, error, onStart, saved, onResume,
 }) {
   const [c, setC] = useState<DeckSetupChoice>(initial);
   const [picking, setPicking] = useState<null | 'mine' | 'theirs'>(null);
+  const [settings, setSettings] = useState(false);
   const mine = deckById(c.mine), theirs = deckById(c.theirs);
   const problems = [
     ...deckProblems(mine.deck, c.champion).map((p) => `Your deck: ${p}`),
@@ -166,6 +167,7 @@ export function DeckSetup({ cards, db, initial, error, onStart, saved, onResume,
   ];
   const options = mine.deck.championOptions ?? [mine.deck.chosenChampion];
   const opp = OPPONENTS.find((o) => o.id === c.opponent)!;
+  const order = ORDERS.find((o) => o.id === c.order)!;
 
   return (
     <section className="play-setup ds">
@@ -187,9 +189,9 @@ export function DeckSetup({ cards, db, initial, error, onStart, saved, onResume,
         </section>
       )}
 
-      <header className="play-online__head ds__head">
-        <h1>Choose your decks</h1>
-        <p className="muted">Click a deck to change it. A 1v1 duel under the full rules, with any of the 13 official starter decks.</p>
+      <header className="ds__bar">
+        <h1>Custom game</h1>
+        <button type="button" className="btn btn--small" onClick={() => setSettings(true)}><Icon name="sliders" size={14} /> Settings</button>
       </header>
 
       <div className="ds__stage">
@@ -198,42 +200,62 @@ export function DeckSetup({ cards, db, initial, error, onStart, saved, onResume,
         <DeckSlot label={c.opponent === 'hotseat' ? 'Player 2' : 'Computer'} b={theirs} cards={cards} db={db} onOpen={() => setPicking('theirs')} />
       </div>
 
-      <div className="ds__options">
-        <div className="ds__opt">
-          <span className="lb-label">Opponent</span>
-          <div className="seg" role="radiogroup" aria-label="Opponent">
-            {OPPONENTS.map((o) => (
-              <button key={o.id} type="button" role="radio" aria-checked={o.id === c.opponent} aria-pressed={o.id === c.opponent}
-                onClick={() => setC({ ...c, opponent: o.id })}>{o.label.replace('Computer: ', '')}</button>
-            ))}
-          </div>
-          <span className="muted small ds__hint">{opp.text}</span>
-        </div>
-        <div className="ds__opt">
-          <span className="lb-label">First player</span>
-          <div className="seg" role="group" aria-label="First player">
-            {ORDERS.map((o) => (
-              <button key={o.id} type="button" aria-pressed={o.id === c.order} onClick={() => setC({ ...c, order: o.id })}>{o.label}</button>
-            ))}
-          </div>
-        </div>
-        {options.length > 1 && (
-          <div className="ds__opt">
-            <span className="lb-label">Chosen champion</span>
-            <div className="seg" role="group" aria-label="Chosen champion">
-              {options.map((def) => (
-                <button key={def} type="button" aria-pressed={def === c.champion} onClick={() => setC({ ...c, champion: def })}>{nameOf(cards, def)}</button>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
       <div className="ds__start">
+        <p className="muted small ds__summary">
+          {opp.label.replace('Computer: ', 'Computer · ')} · {order.label.replace(' (TR 407)', '')}
+          {options.length > 1 && <> · {nameOf(cards, c.champion)}</>}
+        </p>
         {problems.length > 0 && <ul className="play__error">{problems.map((p) => <li key={p}>{p}</li>)}</ul>}
         {error && <p className="play__error" role="alert">{error}</p>}
         <button type="button" className="btn btn--cta" disabled={problems.length > 0} onClick={() => onStart(c)}>Start game</button>
       </div>
+
+      {settings && (
+        <div className="ds-modal" role="dialog" aria-modal="true" aria-label="Game settings" onClick={() => setSettings(false)}>
+          <div className="ds-modal__panel ds-settings lb-card" onClick={(e) => e.stopPropagation()}>
+            <header className="ds-modal__head">
+              <h2>Game settings</h2>
+              <button type="button" className="icon-btn" onClick={() => setSettings(false)} aria-label="Close">✕</button>
+            </header>
+            <div className="ds-settings__group">
+              <span className="lb-label">Opponent</span>
+              <div className="ds-settings__opps" role="radiogroup" aria-label="Opponent">
+                {OPPONENTS.map((o) => (
+                  <button key={o.id} type="button" role="radio" aria-checked={o.id === c.opponent} className="ds-opp"
+                    onClick={() => setC({ ...c, opponent: o.id })}>
+                    <strong>{o.label}</strong>
+                    <span className="muted small">{o.text}</span>
+                  </button>
+                ))}
+                <div className="ds-opp is-soon" aria-disabled><strong>Friend <em className="lb-soon">soon</em></strong><span className="muted small">A private lobby with a friend, with the cards of your choice.</span></div>
+              </div>
+            </div>
+            <div className="ds-settings__row">
+              <div className="ds-settings__group">
+                <span className="lb-label">First player</span>
+                <div className="seg" role="group" aria-label="First player">
+                  {ORDERS.map((o) => (
+                    <button key={o.id} type="button" aria-pressed={o.id === c.order} onClick={() => setC({ ...c, order: o.id })}>{o.label}</button>
+                  ))}
+                </div>
+                <span className="muted small">By the Tournament Rules a random player chooses, after seeing both battlefields (TR 407).</span>
+              </div>
+              {options.length > 1 && (
+                <div className="ds-settings__group">
+                  <span className="lb-label">Chosen champion</span>
+                  <div className="seg" role="group" aria-label="Chosen champion">
+                    {options.map((def) => (
+                      <button key={def} type="button" aria-pressed={def === c.champion} onClick={() => setC({ ...c, champion: def })}>{nameOf(cards, def)}</button>
+                    ))}
+                  </div>
+                  <span className="muted small">It starts in your Champion Zone [103.3.a].</span>
+                </div>
+              )}
+            </div>
+            <footer className="ds-settings__foot"><button type="button" className="btn btn--cta" onClick={() => setSettings(false)}>Done</button></footer>
+          </div>
+        </div>
+      )}
 
       {picking && (
         <DeckPicker cards={cards} db={db} title={picking === 'mine' ? 'Your deck' : c.opponent === 'hotseat' ? "Player 2's deck" : "The computer's deck"}

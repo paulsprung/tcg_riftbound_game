@@ -4,7 +4,6 @@ import { useCollection } from '../collection/store.ts';
 import { logout, useSession } from '../net/session.ts';
 import { DEMO, DEMO_PROFILE } from './demo.ts';
 import { Icon, type IconName } from './icons.tsx';
-import { social, useSocial } from './social.ts';
 import './lobby.css';
 
 export const NAV = [
@@ -34,10 +33,8 @@ const Emblem = () => (
 export function LobbyTop({ route }: { route: string }) {
   const own = useCollection();
   const session = useSession();
-  const { open, friends } = useSocial();
   const user = session.status === 'online' ? session.user : null;
   const name = user?.name ?? (DEMO ? DEMO_PROFILE.name : 'You');
-  const online = friends.filter((f) => f.presence === 'online').length;
 
   // on a phone the tabs scroll sideways: keep the current one in view
   useEffect(() => {
@@ -57,13 +54,6 @@ export function LobbyTop({ route }: { route: string }) {
         <a className="lb-pill" href="#shop" title="Your coins" aria-label={`${own.coins} coins`}>
           <Coin /> {own.coins.toLocaleString('en-US')}
         </a>
-        {DEMO && (
-          <button type="button" className="lb-icon lb-icon--social" aria-label="Friends" aria-pressed={open} title="Friends"
-            onClick={() => social.setOpen(!open)}>
-            <Icon name="users" size={20} />
-            {online > 0 && <em>{online}</em>}
-          </button>
-        )}
         {session.status === 'online' && !user ? (
           <a className="btn btn--primary btn--small" href="/auth/discord">Sign in with Discord</a>
         ) : (

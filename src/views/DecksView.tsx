@@ -28,7 +28,7 @@ export function DecksView({ db }: { db: CardDb }) {
             <div className="dk-tile__info">
               <strong>{deck?.title ?? 'Starter deck'}</strong>
               <span className="muted small">{deck ? `${deck.size} cards · ${deck.product}` : 'Loading…'}</span>
-              <a className="btn btn--cta btn--small" href="#play/computer">Play with this deck</a>
+              <a className="btn btn--cta btn--small" href="#play/custom">Play with this deck</a>
             </div>
           </article>
         ) : (

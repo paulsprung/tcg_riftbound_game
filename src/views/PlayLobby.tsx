@@ -8,17 +8,12 @@ import { Lobby, RankCard, SideLink, SideTitle } from '../lobby/Lobby.tsx';
 import type { IconName } from '../lobby/icons.tsx';
 import { PlayView } from '../play/PlayView.tsx';
 
-type ModeId = 'ranked' | 'casual' | 'custom' | 'tournament' | 'computer' | 'tutorial';
+type ModeId = 'ranked' | 'casual' | 'tournament' | 'custom';
 
 const ONLINE: { id: ModeId; icon: IconName; label: string; blurb: string; match: string }[] = [
   { id: 'ranked', icon: 'trophy', label: 'Ranked', match: '1v1 Ranked Match', blurb: 'Climb the ladder. Wins earn Rank Points, coins and XP.' },
   { id: 'casual', icon: 'gamepad', label: 'Casual', match: '1v1 Casual Match', blurb: 'Unranked games with your deck. Win to earn coins and XP.' },
-  { id: 'custom', icon: 'sliders', label: 'Custom', match: 'Private Lobby', blurb: 'Invite a friend to a private match. Every card in the game is available, no deck needed.' },
   { id: 'tournament', icon: 'crown', label: 'Tournament', match: 'Bracket Tournament', blurb: 'Enter a bracket and play for exclusive prizes.' },
-];
-const OFFLINE: { id: ModeId; icon: IconName; label: string }[] = [
-  { id: 'computer', icon: 'chip', label: 'vs Computer' },
-  { id: 'tutorial', icon: 'book', label: 'Tutorial' },
 ];
 
 /** Online modes need the server: the page is built, the queue waits for it. */
@@ -35,7 +30,7 @@ function OnlineMode({ db, mode }: { db: CardDb; mode: (typeof ONLINE)[number] })
   return (
     <section className="play-online">
       <header className="play-online__head">
-        <h1>{mode.id === 'custom' ? 'Private lobby' : 'Select your deck'}</h1>
+        <h1>Select your deck</h1>
         <p className="muted">{mode.blurb}</p>
         <span className="lb-soon-note">Online matches arrive with the server update</span>
       </header>
@@ -45,8 +40,8 @@ function OnlineMode({ db, mode }: { db: CardDb; mode: (typeof ONLINE)[number] })
             {legend ? <HoloCard card={legend} finish="none" width="100%" imageWidth={480} /> : <CardBack />}
           </div>
           <figcaption>
-            <span className="play-online__tag">{mode.id === 'custom' ? 'You' : 'Solo'}</span>
-            <strong>{mode.id === 'custom' ? 'All cards available' : deck?.title ?? 'No deck yet'}</strong>
+            <span className="play-online__tag">Solo</span>
+            <strong>{deck?.title ?? 'No deck yet'}</strong>
             <span className="muted small">{mode.match}</span>
           </figcaption>
         </figure>
@@ -55,14 +50,13 @@ function OnlineMode({ db, mode }: { db: CardDb; mode: (typeof ONLINE)[number] })
           <div className="play-online__card"><CardBack /></div>
           <figcaption>
             <span className="play-online__tag play-online__tag--alt">Opponent</span>
-            <strong>{mode.id === 'custom' ? 'A friend' : 'Matchmaking'}</strong>
+            <strong>Matchmaking</strong>
             <span className="muted small">{mode.id === 'tournament' ? 'Brackets open soon' : 'Found for you'}</span>
           </figcaption>
         </figure>
       </div>
       <div className="play-online__actions">
-        <button type="button" className="btn btn--cta" disabled>{mode.id === 'custom' ? 'Create lobby' : mode.id === 'tournament' ? 'Browse tournaments' : 'Find match'}</button>
-        <a className="btn btn--ghost" href="#play/computer">Practice vs Computer</a>
+        <button type="button" className="btn btn--cta" disabled>{mode.id === 'tournament' ? 'Browse tournaments' : 'Find match'}</button>
       </div>
       {!own.starter && <p className="muted">Pick a starter deck on <a href="#home">Home</a> first.</p>}
     </section>
@@ -70,7 +64,9 @@ function OnlineMode({ db, mode }: { db: CardDb; mode: (typeof ONLINE)[number] })
 }
 
 export function PlayLobby({ db, mode }: { db: CardDb; mode: string }) {
-  const id = ([...ONLINE, ...OFFLINE].find((m) => m.id === mode)?.id ?? 'computer') as ModeId;
+  // #play, #play/computer and the older #play/tutorial all land on the custom game
+  const tutorial = mode === 'tutorial';
+  const id = (ONLINE.find((m) => m.id === mode)?.id ?? 'custom') as ModeId;
   const [inGame, setInGame] = useState(false);
   const online = ONLINE.find((m) => m.id === id);
 
@@ -80,19 +76,19 @@ export function PlayLobby({ db, mode }: { db: CardDb; mode: string }) {
       {ONLINE.map((m) => <SideLink key={m.id} href={`#play/${m.id}`} icon={m.icon} active={id === m.id} soon>{m.label}</SideLink>)}
       <div className="lb-side__gap" />
       <SideTitle>PLAY NOW</SideTitle>
-      {OFFLINE.map((m) => <SideLink key={m.id} href={`#play/${m.id}`} icon={m.icon} active={id === m.id}>{m.label}</SideLink>)}
+      <SideLink href="#play/custom" icon="sliders" active={id === 'custom'}>Custom game</SideLink>
       <SideTitle>YOUR RANK</SideTitle>
       <RankCard />
     </>
   );
 
-  // The tutorial and a running game take the whole width.
-  const bare = id === 'tutorial' || (id === 'computer' && inGame);
+  // a running game takes the whole width
+  const bare = tutorial || (id === 'custom' && inGame);
   return (
     <Lobby side={side} bare={bare}>
       {online ? <OnlineMode db={db} mode={online} /> : (
         <div className={bare ? 'lb-bare' : 'lb-play-scroll'}>
-          <PlayView key={id === 'tutorial' ? 'tutorial' : 'play'} db={db} tutorial={id === 'tutorial'} onInGame={setInGame} />
+          <PlayView key={tutorial ? 'tutorial' : 'play'} db={db} tutorial={tutorial} onInGame={setInGame} />
         </div>
       )}
     </Lobby>
