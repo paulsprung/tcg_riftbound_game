@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState, type CSSProperties } from 'react';
 import type { InspectTarget } from '../card/Inspector.tsx';
 import { collection, PACK_PRICE, useCollection } from '../collection/store.ts';
 import { packArt } from '../data/media.ts';
@@ -76,7 +76,8 @@ export function PacksView({ db, onInspect }: { db: CardDb; onInspect: (t: Inspec
             </div>
           </div>
           {featured && (
-            <div className="shop-banner">
+            <div className="shop-banner" style={{ '--w1': featured.style.wrapper[0], '--w2': featured.style.wrapper[1], '--w3': featured.style.wrapper[2] } as CSSProperties}>
+              <div className="shop-banner__glow" aria-hidden />
               <div className="shop-banner__text">
                 <span className="hero__kicker">New set</span>
                 <h2>{featured.info.name} Booster Pack</h2>
@@ -91,7 +92,7 @@ export function PacksView({ db, onInspect }: { db: CardDb; onInspect: (t: Inspec
               </div>
               <div className="shop-banner__pack">
                 <PackWrapper set={featured.info} style={featured.style} hero={heroCard(featured.cards, featured.style)}
-                  width={Math.round(150 * (packArt(featured.id)?.aspect ?? 1 / 1.72))} onClick={() => buy(featured.id, 1)} />
+                  width={Math.round(230 * (packArt(featured.id)?.aspect ?? 1 / 1.72))} onClick={() => buy(featured.id, 1)} />
               </div>
             </div>
           )}

@@ -1100,3 +1100,23 @@ a.lb-rank:hover { border-color: var(--gold); box-shadow: 0 0 22px rgba(200, 170,
   background: linear-gradient(180deg, #0f4a58, #052630); border: 1px solid var(--gold); box-shadow: 0 0 18px rgba(10, 200, 185, .35);
 }
 .demo-ranks:hover { filter: brightness(1.2); }
+/* the shop's featured set: its own colours, light behind the pack, the pack floating */
+.shop-banner { position: relative; isolation: isolate; min-height: 270px; overflow: hidden;
+  background: linear-gradient(110deg, rgba(2, 10, 20, .96) 30%, color-mix(in srgb, var(--w3, #0b3a52) 55%, #020a14) 70%, color-mix(in srgb, var(--w2, #0b3a52) 60%, #020a14)); }
+.shop-banner__glow { position: absolute; right: -124px; top: 50%; width: 520px; height: 520px; translate: 0 -50%; z-index: -1; pointer-events: none;
+  background: radial-gradient(circle, color-mix(in srgb, var(--w1, #fff) 55%, transparent), transparent 60%),
+    repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--w1, #fff) 22%, transparent) 0deg 3deg, transparent 3deg 16deg);
+  -webkit-mask-image: radial-gradient(circle, #000 20%, transparent 68%); mask-image: radial-gradient(circle, #000 20%, transparent 68%);
+  animation: go-spin 80s linear infinite; opacity: .75; }
+.shop-banner__pack { margin: -6px 70px -6px 0; animation: shop-float 5s ease-in-out infinite; filter: drop-shadow(0 24px 30px rgba(0, 0, 0, .6)); }
+@keyframes shop-float { 50% { transform: translateY(-10px) rotate(-1.5deg); } }
+.shop-banner h2 { font-size: clamp(24px, calc(3 * var(--vw)), 38px); }
+/* the shelf: each pack on a light */
+.pack-shelf__item { position: relative; }
+.pack-shelf__item::before { content: ""; position: absolute; left: 8%; right: 8%; top: 64%; height: 60px; z-index: -1; pointer-events: none;
+  background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(200, 170, 110, .35), transparent 72%); filter: blur(4px); }
+@media (prefers-reduced-motion: reduce) { .shop-banner__pack, .shop-banner__glow { animation: none; } }
+
+/* the profile: the rank's crest large beside the name */
+.profile__crest { flex: none; margin: -14px -6px -14px -4px; filter: drop-shadow(0 10px 18px rgba(0, 0, 0, .6)); }
+.profile__crest .rank-emblem { display: block; }
