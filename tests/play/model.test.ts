@@ -132,7 +132,7 @@ describe('card index (the oracle\'s names, wording and printings)', () => {
     expect(cardFor(ix, 'recruit')?.id).toBe(ORACLE.tokenArt.recruit[0]);
     expect(cardFor(ix, 'recruit')?.name).toBe('Recruit');               // a single face, not a double-faced record
     expect(nameOf(ix, 'sandSoldier')).toBe('Sand Soldier');
-    expect(cardFor(ix, 'tentacle')).toBeNull();                        // no art: a drawn frame (M1)
+    expect(cardFor(ix, 'tentacle')?.name).toBe('Tentacle');
   });
 });
 

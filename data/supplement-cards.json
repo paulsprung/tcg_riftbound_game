@@ -4717,5 +4717,406 @@
   "artist": "Kudos Productions // League Splash Team",
   "image": "https://static.dotgg.gg/riftbound/cards/UNL-T03.webp",
   "orientation": "portrait"
+ },
+ {
+  "id": "ven-t06",
+  "name": "Tentacle",
+  "setId": "ven",
+  "setName": "Vendetta",
+  "code": "VEN-T06",
+  "number": 6,
+  "rarity": "common",
+  "variant": "base",
+  "domains": [
+   "Colorless"
+  ],
+  "energy": null,
+  "power": null,
+  "orientation": "portrait",
+  "type": "Unit",
+  "supertype": "Token",
+  "might": 1,
+  "tags": [
+   "Bilgewater"
+  ],
+  "text": "",
+  "flavor": "An extension of the will of Nagakabouros.",
+  "artist": "Michal Ivan",
+  "image": "https://cdn.piltoverarchive.com/cards/VEN-T06.webp"
+ },
+ {
+  "id": "rad-t07",
+  "name": "Recruit",
+  "setId": "rad",
+  "setName": "Radiance",
+  "code": "RAD-T07",
+  "number": 7,
+  "rarity": "common",
+  "variant": "base",
+  "type": "Token",
+  "supertype": "Token",
+  "domains": [
+   "Colorless"
+  ],
+  "energy": null,
+  "might": null,
+  "power": null,
+  "tags": [
+   "Recruit"
+  ],
+  "text": "",
+  "flavor": "",
+  "artist": "Envar Studio",
+  "image": "https://static.dotgg.gg/riftbound/cards/RAD-T04.2.webp",
+  "orientation": "portrait"
+ },
+ {
+  "id": "sgn-t03",
+  "name": "Brush",
+  "setId": "sgn",
+  "setName": "Secret Garden",
+  "code": "SGN-T03",
+  "number": 3,
+  "rarity": "promo",
+  "variant": "promo",
+  "type": "Token",
+  "supertype": "Token",
+  "domains": [
+   "Colorless"
+  ],
+  "energy": null,
+  "might": null,
+  "power": null,
+  "tags": [
+   "Brush"
+  ],
+  "text": "Bird, Cat, Dog, Poro, and Ivern units here have +1 :rb_might:.\nWhen you score here, you may replace this with the battlefield it replaced.",
+  "flavor": "",
+  "artist": "Fireball Studio",
+  "image": "https://static.dotgg.gg/riftbound/cards/SGN-T01-P.2.webp",
+  "orientation": "landscape"
+ },
+ {
+  "id": "sgn-t06",
+  "name": "Gold",
+  "setId": "sgn",
+  "setName": "Secret Garden",
+  "code": "SGN-T06",
+  "number": 6,
+  "rarity": "promo",
+  "variant": "promo",
+  "type": "Token",
+  "supertype": "Token",
+  "domains": [
+   "Colorless"
+  ],
+  "energy": null,
+  "might": null,
+  "power": null,
+  "tags": [
+   "Gold"
+  ],
+  "text": "[Reaction][>] Kill this, :rb_exhaust:: [Add] :rb_rune_rainbow:. (Abilities that add resources can't be reacted to.)",
+  "flavor": "",
+  "artist": "Fireball Studio",
+  "image": "https://static.dotgg.gg/riftbound/cards/SGN-T04-P.2.webp",
+  "orientation": "portrait"
+ },
+ {
+  "id": "sgn-t08",
+  "name": "Sprite",
+  "setId": "sgn",
+  "setName": "Secret Garden",
+  "code": "SGN-T08",
+  "number": 8,
+  "rarity": "promo",
+  "variant": "promo",
+  "type": "Token",
+  "supertype": "Token",
+  "domains": [
+   "Colorless"
+  ],
+  "energy": null,
+  "might": null,
+  "power": null,
+  "tags": [
+   "Sprite"
+  ],
+  "text": "[Temporary] (Kill me at the start of your Beginning Phase, before scoring.)",
+  "flavor": "",
+  "artist": "Fireball Studio",
+  "image": "https://static.dotgg.gg/riftbound/cards/SGN-T02-P.2.webp",
+  "orientation": "portrait"
+ },
+ {
+  "id": "rad-172-star-167",
+  "name": "K'Sante, Pride of Nazumah",
+  "setId": "rad",
+  "setName": "Radiance",
+  "code": "RAD-172*/167",
+  "number": 172,
+  "rarity": "showcase",
+  "variant": "signature",
+  "type": "Legend",
+  "supertype": null,
+  "domains": [
+   "Calm",
+   "Body"
+  ],
+  "energy": null,
+  "might": null,
+  "power": null,
+  "tags": [
+   "K'Sante"
+  ],
+  "text": ":rb_energy_1:, :rb_exhaust:: Give a friendly unit \"I have [Assault] equal to my [Shield]\" this turn.",
+  "flavor": "",
+  "artist": "Valentine Tran",
+  "image": "https://static.dotgg.gg/riftbound/cards/RAD-172-STAR.webp",
+  "orientation": "portrait"
+ },
+ {
+  "id": "rad-173-star-167",
+  "name": "Riven, The Exile",
+  "setId": "rad",
+  "setName": "Radiance",
+  "code": "RAD-173*/167",
+  "number": 173,
+  "rarity": "showcase",
+  "variant": "signature",
+  "type": "Legend",
+  "supertype": null,
+  "domains": [
+   "Calm",
+   "Chaos"
+  ],
+  "energy": null,
+  "might": null,
+  "power": null,
+  "tags": [
+   "Riven"
+  ],
+  "text": "Units you play to battlefields you control enter ready.",
+  "flavor": "",
+  "artist": "",
+  "image": "https://static.dotgg.gg/riftbound/cards/RAD-173-STAR.webp",
+  "orientation": "portrait"
+ },
+ {
+  "id": "rad-175-star-167",
+  "name": "Evelynn, Agony's Embrace",
+  "setId": "rad",
+  "setName": "Radiance",
+  "code": "RAD-175*/167",
+  "number": 175,
+  "rarity": "showcase",
+  "variant": "signature",
+  "type": "Legend",
+  "supertype": null,
+  "domains": [
+   "Body",
+   "Chaos"
+  ],
+  "energy": null,
+  "might": null,
+  "power": null,
+  "tags": [
+   "Evelynn"
+  ],
+  "text": "Once each turn, when you play a card from face down, draw 1. Then, if it's not your turn, discard 1.",
+  "flavor": "",
+  "artist": "Suzaki",
+  "image": "https://static.dotgg.gg/riftbound/cards/RAD-175-STAR.webp",
+  "orientation": "portrait"
+ },
+ {
+  "id": "rad-176-star-167",
+  "name": "Jarvan IV, Exemplar of Demacia",
+  "setId": "rad",
+  "setName": "Radiance",
+  "code": "RAD-176*/167",
+  "number": 176,
+  "rarity": "showcase",
+  "variant": "signature",
+  "type": "Legend",
+  "supertype": null,
+  "domains": [
+   "Body",
+   "Order"
+  ],
+  "energy": null,
+  "might": null,
+  "power": null,
+  "tags": [
+   "Jarvan IV"
+  ],
+  "text": "When you play a gear with [Deploy], you may exhaust me and pay :rb_rune_rainbow: to move a friendly unit to that battlefield.",
+  "flavor": "",
+  "artist": "",
+  "image": "https://static.dotgg.gg/riftbound/cards/RAD-176-STAR.webp",
+  "orientation": "portrait"
+ },
+ {
+  "id": "rad-178-star-167",
+  "name": "K'Sante, Courageous",
+  "setId": "rad",
+  "setName": "Radiance",
+  "code": "RAD-178*/167",
+  "number": 178,
+  "rarity": "showcase",
+  "variant": "signature",
+  "type": "Unit",
+  "supertype": "Champion",
+  "domains": [
+   "Body"
+  ],
+  "energy": 5,
+  "might": 4,
+  "power": null,
+  "tags": [
+   "Shurima",
+   "K'Sante"
+  ],
+  "text": "[Accelerate]\n[Shield 2]\nWhen I hold, channel 1 rune.",
+  "flavor": "",
+  "artist": "Luscinia Studio",
+  "image": "https://static.dotgg.gg/riftbound/cards/RAD-178-STAR.webp",
+  "orientation": "portrait"
+ },
+ {
+  "id": "rad-179-star-167",
+  "name": "Aphelios, Exalted",
+  "setId": "rad",
+  "setName": "Radiance",
+  "code": "RAD-179*/167",
+  "number": 179,
+  "rarity": "showcase",
+  "variant": "signature",
+  "type": "Unit",
+  "supertype": "Champion",
+  "domains": [
+   "Calm"
+  ],
+  "energy": 4,
+  "might": 4,
+  "power": 1,
+  "tags": [
+   "Aphelios",
+   "Mount Targon"
+  ],
+  "text": "When you attach an Equipment to me, choose one that hasn't been chosen this turn —Ready 2 runes.Channel 1 rune exhausted.[Buff] a friendly unit.",
+  "flavor": "",
+  "artist": "Luscinia Studio",
+  "image": "https://static.dotgg.gg/riftbound/cards/RAD-179-STAR.webp",
+  "orientation": "portrait"
+ },
+ {
+  "id": "rad-180-star-167",
+  "name": "Ezreal, Dashing",
+  "setId": "rad",
+  "setName": "Radiance",
+  "code": "RAD-180*/167",
+  "number": 180,
+  "rarity": "showcase",
+  "variant": "signature",
+  "type": "Unit",
+  "supertype": "Champion",
+  "domains": [
+   "Mind"
+  ],
+  "energy": 4,
+  "might": 3,
+  "power": 1,
+  "tags": [
+   "Ezreal",
+   "Piltover"
+  ],
+  "text": "When I attack or defend, deal damage equal to my Might to an enemy unit here.\nI don't deal combat damage.\n:rb_rune_mind:: [Action] — Move me to your base.",
+  "flavor": "",
+  "artist": "Luscinia Studio",
+  "image": "https://static.dotgg.gg/riftbound/cards/RAD-180-STAR.webp",
+  "orientation": "portrait"
+ },
+ {
+  "id": "rad-181-star-167",
+  "name": "Yone, Blademaster",
+  "setId": "rad",
+  "setName": "Radiance",
+  "code": "RAD-181*/167",
+  "number": 181,
+  "rarity": "showcase",
+  "variant": "signature",
+  "type": "Unit",
+  "supertype": "Champion",
+  "domains": [
+   "Body"
+  ],
+  "energy": 5,
+  "might": 5,
+  "power": 1,
+  "tags": [
+   "Yone",
+   "Ionia",
+   "Demon"
+  ],
+  "text": "[Weaponmaster]\nWhen I conquer a battlefield that was uncontrolled, deal damage equal to my Might to an enemy unit in a base.",
+  "flavor": "",
+  "artist": "Luscinia Studio",
+  "image": "https://static.dotgg.gg/riftbound/cards/RAD-181-STAR.webp",
+  "orientation": "portrait"
+ },
+ {
+  "id": "rad-182-star-167",
+  "name": "Kayn, Unleashed",
+  "setId": "rad",
+  "setName": "Radiance",
+  "code": "RAD-182*/167",
+  "number": 182,
+  "rarity": "showcase",
+  "variant": "signature",
+  "type": "Unit",
+  "supertype": "Champion",
+  "domains": [
+   "Chaos"
+  ],
+  "energy": 6,
+  "might": 6,
+  "power": 1,
+  "tags": [
+   "Kayn",
+   "Ionia"
+  ],
+  "text": "[Ganking]\nIf I have moved twice this turn, I don't take damage.",
+  "flavor": "",
+  "artist": "Luscinia Studio",
+  "image": "https://static.dotgg.gg/riftbound/cards/RAD-182-STAR.webp",
+  "orientation": "portrait"
+ },
+ {
+  "id": "rad-183-star-167",
+  "name": "Sett, Kingpin",
+  "setId": "rad",
+  "setName": "Radiance",
+  "code": "RAD-183*/167",
+  "number": 183,
+  "rarity": "showcase",
+  "variant": "signature",
+  "type": "Unit",
+  "supertype": "Champion",
+  "domains": [
+   "Order"
+  ],
+  "energy": 4,
+  "might": 5,
+  "power": 1,
+  "tags": [
+   "Sett",
+   "Ionia"
+  ],
+  "text": "[Tank]\nI get +1 :rb_might: for each buffed friendly unit at my battlefield.",
+  "flavor": "",
+  "artist": "Luscinia Studio",
+  "image": "https://static.dotgg.gg/riftbound/cards/RAD-183-STAR.webp",
+  "orientation": "portrait"
  }
 ]

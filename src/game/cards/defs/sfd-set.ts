@@ -292,7 +292,7 @@ export const SFD_SET_DEFS = [
     gear(id, `[Reaction][>] [E]: [Add] [${sym}].`, {
       abilities: [activated({ exhaustSelf: true }, prog([addDomain(d)]), { timing: 'reaction', isAdd: true })],
     })),
-  battlefield('seat-of-power', 'When you conquer here, draw 1 for each other battlefield you or allies control..', [
+  battlefield('seat-of-power', 'When you conquer here, draw 1 for each other battlefield you or allies control.', [
     when(conquer, prog([draw(val.count(bfSel({ rel: 'friendly', other: true })))]), { controller: 'eventPlayer' }),
   ]),
   unit('simian-ancestor', 'When you buff me, ready me.', { abilities: [when({ on: 'buffed', who: 'self' }, prog([ready(ref.self)]))] }),

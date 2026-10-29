@@ -268,9 +268,9 @@ export function splitTokenFaces(cards: Card[]): Card[] {
  * whichever card it is printed on): each gets one card, `<set>-t<nn>`,
  * pictured by its own clean Riot render when there is one, else by a
  * printing that has it in front, else by the same token's render from
- * another set. A face with no picture anywhere (Vendetta's Tentacle) is left
- * out. Sets without token numbers (Origins' Recruits, the Buff promo) keep
- * their records under the front face's name.
+ * another set. A face with no picture anywhere is left out. Sets without
+ * token numbers (Origins' Recruits, the Buff promo) keep their records
+ * under the front face's name.
  */
 export function singleTokens(cards: Card[], faces: Card[]): Card[] {
   const twoFaced = cards.filter((c) => c.name.includes(' // '));
@@ -303,6 +303,7 @@ export function singleTokens(cards: Card[], faces: Card[]): Card[] {
       made.set(id, { rank, card: {
         ...d, id, name: names[i], code: `${set.toUpperCase()}-T${nn.padStart(2, '0')}`, number: Number(nn),
         type: 'Token', supertype: 'Token', text, tags: [names[i]], image: pick.image, orientation: pick.orientation,
+        artist: own?.artist ?? d.artist.split(' // ')[i]?.trim() ?? d.artist,
       } });
     }
   }

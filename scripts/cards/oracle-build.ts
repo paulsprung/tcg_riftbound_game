@@ -130,7 +130,8 @@ export function symbols(text: string): string {
 /**
  * Lays out one printed line. The data runs a modal list together ("Choose
  * two —Deal 2 to a unit.Play two …"); each mode goes on its own line,
- * marked "• " so it is never read as a keyword line. A line run together
+ * marked "• " so it is never read as a keyword line (normalizeText marks a
+ * list whose modes are already on lines of their own). A line run together
  * without a list opener is split too, and reported.
  */
 function layoutLine(line: string, note: (msg: string) => void): string[] {
@@ -167,6 +168,8 @@ export function normalizeText(raw: string, note: (msg: string) => void = () => {
     .map((l) => l.replace(/\[(Deathknell|Legion|Empowered|Level \d+)\]\s*—\s*/g, '[$1][>] '))
     .flatMap((l) => layoutLine(l, note))
     .filter((l) => l !== '')
+    // a modal list already on lines of its own: its modes are the rest of the text
+    .map((l, i, ls) => (i > 0 && !l.startsWith('• ') && ls.slice(0, i).some((p) => p.endsWith('—')) ? `• ${l}` : l))
     .join('\n');
 }
 

@@ -2092,5 +2092,137 @@
   "confidence": "confirmed",
   "product": "Unleashed packs",
   "notes": "Double-sided token, TCGplayer lists it with the Unleashed booster tokens. dotgg's image shows one face."
+ },
+ "ven-t06": {
+  "sources": [
+   "https://cdn.piltoverarchive.com/cards/VEN-T06.webp",
+   "https://static.dotgg.gg/riftbound/cards/VEN-T01t.2.webp",
+   "https://static.dotgg.gg/riftbound/cards/VEN-T05.2.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Vendetta booster tokens",
+  "notes": "The back face of Empowered // Tentacle and Shadow Clone // Tentacle. Picture: Piltover Archive render (dotgg shows the same face as the .2 back image)."
+ },
+ "rad-t07": {
+  "sources": [
+   "https://static.dotgg.gg/riftbound/cards/RAD-T04.2.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance booster tokens",
+  "notes": "The token face on its own; picture: dotgg's Empowered // Recruit (RAD-T04) back face image, which prints RAD • T07."
+ },
+ "sgn-t03": {
+  "sources": [
+   "https://static.dotgg.gg/riftbound/cards/SGN-T01-P.2.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Secret Garden",
+  "notes": "The token face on its own; picture: dotgg's Bird // Brush (SGN-T01) back face image, which prints SGN • T03."
+ },
+ "sgn-t06": {
+  "sources": [
+   "https://static.dotgg.gg/riftbound/cards/SGN-T04-P.2.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Secret Garden",
+  "notes": "The token face on its own; picture: dotgg's Brush // Gold (SGN-T04) back face image, which prints SGN • T06."
+ },
+ "sgn-t08": {
+  "sources": [
+   "https://static.dotgg.gg/riftbound/cards/SGN-T02-P.2.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Secret Garden",
+  "notes": "The token face on its own; picture: dotgg's Bird // Sprite (SGN-T02) back face image, which prints SGN • T08."
+ },
+ "rad-172-star-167": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-172-STAR.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance booster packs (release Oct 23, 2026)",
+  "notes": "Rules data copied from our rad-172-167 (RAD-172/167). Overnumber signature (Cardmarket: V2 Signed Showcase). Riot gallery lists the unsigned RAD-172/167 only."
+ },
+ "rad-173-star-167": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-173-STAR.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance booster packs (release Oct 23, 2026)",
+  "notes": "Rules data copied from our rad-173-167 (RAD-173/167). Overnumber signature (Cardmarket: V2 Signed Showcase). Riot gallery lists the unsigned RAD-173/167 only."
+ },
+ "rad-175-star-167": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-175-STAR.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance booster packs (release Oct 23, 2026)",
+  "notes": "Rules data copied from our rad-175-167 (RAD-175/167). Overnumber signature (Cardmarket: V2 Signed Showcase). Riot gallery lists the unsigned RAD-175/167 only."
+ },
+ "rad-176-star-167": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-176-STAR.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance booster packs (release Oct 23, 2026)",
+  "notes": "Rules data copied from our rad-176-167 (RAD-176/167). Overnumber signature (Cardmarket: V2 Signed Showcase). Riot gallery lists the unsigned RAD-176/167 only."
+ },
+ "rad-178-star-167": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-178-STAR.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance booster packs (release Oct 23, 2026)",
+  "notes": "Rules data copied from our rad-178-167 (RAD-178/167). Overnumber signature (Cardmarket: V2 Signed Showcase). Riot gallery lists the unsigned RAD-178/167 only."
+ },
+ "rad-179-star-167": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-179-STAR.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance booster packs (release Oct 23, 2026)",
+  "notes": "Rules data copied from our rad-179-167 (RAD-179/167). Overnumber signature (Cardmarket: V2 Signed Showcase). Riot gallery lists the unsigned RAD-179/167 only."
+ },
+ "rad-180-star-167": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-180-STAR.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance booster packs (release Oct 23, 2026)",
+  "notes": "Rules data copied from our rad-180-167 (RAD-180/167). Overnumber signature (Cardmarket: V2 Signed Showcase). Riot gallery lists the unsigned RAD-180/167 only."
+ },
+ "rad-181-star-167": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-181-STAR.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance booster packs (release Oct 23, 2026)",
+  "notes": "Rules data copied from our rad-181-167 (RAD-181/167). Overnumber signature (Cardmarket: V2 Signed Showcase). Riot gallery lists the unsigned RAD-181/167 only."
+ },
+ "rad-182-star-167": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-182-STAR.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance booster packs (release Oct 23, 2026)",
+  "notes": "Rules data copied from our rad-182-167 (RAD-182/167). Overnumber signature (Cardmarket: V2 Signed Showcase). Riot gallery lists the unsigned RAD-182/167 only."
+ },
+ "rad-183-star-167": {
+  "sources": [
+   "https://api.dotgg.gg/cgfw/getcards?game=riftbound&mode=indexed",
+   "https://static.dotgg.gg/riftbound/cards/RAD-183-STAR.webp"
+  ],
+  "confidence": "confirmed",
+  "product": "Radiance booster packs (release Oct 23, 2026)",
+  "notes": "Rules data copied from our rad-183-167 (RAD-183/167). Overnumber signature (Cardmarket: V2 Signed Showcase). Riot gallery lists the unsigned RAD-183/167 only."
  }
 }

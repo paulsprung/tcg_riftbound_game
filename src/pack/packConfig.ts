@@ -151,8 +151,7 @@ const UNLEASHED = pack([rarePlus(2, { ...LATER_RATES, ultPerPack: 0.0008, legend
 });
 
 const VENDETTA = pack([rarePlus(2, { ...LATER_RATES, legendPerBox: 12 })], {
-  // Tentacle (T06) has no picture anywhere: left out
-  tokens: ['VEN-T01', 'VEN-T02', 'VEN-T03', 'VEN-T04', 'VEN-T05'],
+  tokens: ['VEN-T01', 'VEN-T02', 'VEN-T03', 'VEN-T04', 'VEN-T05', 'VEN-T06'],
 });
 
 const RADIANCE = pack([

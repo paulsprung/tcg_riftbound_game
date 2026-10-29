@@ -351,13 +351,13 @@ describe('187 token templates', () => {
     expect(TOKEN_IDS.filter((t) => findCard(t))).toEqual([]);
   });
 
-  it('has art for every token but the Tentacle, from token records only', () => {
+  it('has art for every token, from token records only', () => {
     const ids = new Set([...db.cards, ...(db.tokenFaces ?? [])].map((c) => c.id));
     for (const t of TOKEN_IDS) {
       expect(ORACLE.tokenArt[t].filter((p) => !ids.has(p))).toEqual([]);
       expect(ORACLE.tokenArt[t].filter((p) => defOfPrinting(p))).toEqual([]);
     }
-    expect(TOKEN_IDS.filter((t) => ORACLE.tokenArt[t].length === 0)).toEqual(['tentacle']);
+    expect(TOKEN_IDS.filter((t) => ORACLE.tokenArt[t].length === 0)).toEqual([]);
     expect(ORACLE.tokenArt.recruit[0]).toBe('ven-t04');                 // the single face first
   });
 });
