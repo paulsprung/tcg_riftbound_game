@@ -121,7 +121,8 @@ async function main() {
   const art = new Map<string, string>();   // card id -> base64
   let done = 0;
   const missing: string[] = [];
-  await pool(db.cards, CONCURRENCY, async (card) => {
+  const faces = db.tokenFaces ?? [];
+  await pool([...db.cards, ...faces], CONCURRENCY, async (card) => {
     try {
       const bytes = await cardArt(card);
       if (bytes) art.set(card.id, bytes.toString('base64'));
@@ -130,7 +131,7 @@ async function main() {
       missing.push(card.id);
       console.warn(`\n  no art for ${card.code}: ${err instanceof Error ? err.message : err}`);
     }
-    if (++done % 50 === 0 || done === db.cards.length) process.stdout.write(`\rart: ${done}/${db.cards.length}`);
+    if (++done % 50 === 0 || done === db.cards.length + faces.length) process.stdout.write(`\rart: ${done}/${db.cards.length + faces.length}`);
   });
   process.stdout.write('\n');
 
@@ -154,6 +155,9 @@ async function main() {
     const cards = db.cards.filter((c) => c.setId === set.id && !covers.has(c.id));
     cards.forEach((c, i) => put(`${set.id}-${String(Math.floor(i / PER_BUNDLE)).padStart(2, '0')}`, c));
   }
+
+  // the single token faces get a bundle of their own
+  for (const c of faces) put('tokens', c);
 
   // 3. Symbols as data: URIs -----------------------------------------------
   for (const kind of ['rarities', 'domains'] as const) {
