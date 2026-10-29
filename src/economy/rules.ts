@@ -13,3 +13,12 @@ export const TUTORIAL_PACKS = ['ogn', 'sfd', 'unl', 'rad', 'ven'] as const;
 export const STARTER_COINS = 0;
 /** Packs bought at once, at most. */
 export const MAX_BUY = 10;
+
+// ---- online matches ----
+/** Coins for a win and for a loss, casual and ranked alike. */
+export const WIN_COINS = 20;
+export const LOSS_COINS = 5;
+/** Coins from matches a player can earn a day, at most (no farming with a friend). */
+export const MATCH_COINS_PER_DAY = 150;
+/** A match shorter than this (turns) pays nothing: a quick concession is not a game. */
+export const MIN_REWARD_TURNS = 3;

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { CardBack } from '../card/CardBack.tsx';
 import { useCollection } from '../collection/store.ts';
 import type { CardDb } from '../data/types.ts';
@@ -8,6 +8,10 @@ import { playerDecks } from '../play/host/decks.ts';
 import { useDecks } from '../decks/store.ts';
 import { cardIndex } from '../play/model/cards.ts';
 import { PlayView } from '../play/PlayView.tsx';
+import { useSession } from '../net/session.ts';
+import { online as socket, useOnline } from '../net/socket.ts';
+
+const OnlineGame = lazy(() => import('../play/OnlineGame.tsx').then((m) => ({ default: m.OnlineGame })));
 import { DeckPicker, DeckSlot, FormatSwitch } from '../play/setup/DeckSetup.tsx';
 
 type ModeId = 'ranked' | 'casual' | 'tournament' | 'custom';
@@ -17,6 +21,14 @@ const ONLINE: { id: ModeId; icon: IconName; label: string; blurb: string; match:
   { id: 'casual', icon: 'gamepad', label: 'Casual', match: '1v1 Casual Match', blurb: 'Unranked games with your deck. Win to earn coins and XP.' },
   { id: 'tournament', icon: 'crown', label: 'Tournament', match: 'Bracket Tournament', blurb: 'Enter a bracket and play for exclusive prizes.' },
 ];
+
+/** mm:ss since a moment. */
+function Waited({ since }: { since: number }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
+  const s = Math.max(0, Math.floor((now - since) / 1000));
+  return <>{Math.floor(s / 60)}:{String(s % 60).padStart(2, '0')}</>;
+}
 
 /** Online modes need the server: the page is built, the queue waits for it. Same frame as the custom game. */
 function OnlineMode({ db, mode }: { db: CardDb; mode: (typeof ONLINE)[number] }) {
@@ -28,6 +40,13 @@ function OnlineMode({ db, mode }: { db: CardDb; mode: (typeof ONLINE)[number] })
   const [chosen, setChosen] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
   const deck = decks.find((d) => d.id === chosen) ?? decks[0] ?? null;
+  const session = useSession();
+  const ol = useOnline();
+  const signedIn = session.status === 'online' && !!session.user;
+  const playable = mode.id === 'ranked' || mode.id === 'casual';
+  const queued = ol.queue && ol.queue.mode === mode.id ? ol.queue : null;
+  const note = session.status === 'offline' ? 'Online matches need the server: not in this preview'
+    : !signedIn ? 'Sign in with Discord to play online' : !playable ? 'Brackets open soon' : ol.status !== 'open' ? 'Connecting…' : null;
 
   return (
     <section className="play-setup ds">
@@ -35,7 +54,7 @@ function OnlineMode({ db, mode }: { db: CardDb; mode: (typeof ONLINE)[number] })
         <h1>{mode.label}</h1>
         <span className="ds__bar-right">
           {mode.id === 'casual' && <FormatSwitch />}
-          <span className="lb-soon-note">Online matches arrive with the server update</span>
+          {note && <span className="lb-soon-note">{note}</span>}
         </span>
       </header>
 
@@ -55,14 +74,22 @@ function OnlineMode({ db, mode }: { db: CardDb; mode: (typeof ONLINE)[number] })
             <span className="ds-slot__tag ds-slot__tag--alt">Opponent</span>
           </div>
           <figcaption>
-            <strong>Matchmaking</strong>
-            <span className="muted small">{mode.id === 'tournament' ? 'Brackets open soon' : 'Found for you'}</span>
+            <strong>{queued ? 'Searching…' : 'Matchmaking'}</strong>
+            <span className="muted small">{mode.id === 'tournament' ? 'Brackets open soon' : queued ? <>Waiting <Waited since={queued.since} /></> : 'Found for you'}</span>
           </figcaption>
         </figure>
       </div>
 
       <div className="ds__start">
-        <button type="button" className="btn btn--cta" disabled>{mode.id === 'tournament' ? 'Browse tournaments' : 'Find match'}</button>
+        {ol.error && <p className="play__error" role="alert">{ol.error}</p>}
+        {queued ? (
+          <button type="button" className="btn btn--ghost" onClick={() => socket.send({ t: 'leave' })}>Cancel search</button>
+        ) : (
+          <button type="button" className="btn btn--cta" disabled={!!note || !deck}
+            onClick={() => { socket.clearError(); if (deck && playable) socket.send({ t: 'queue', mode: mode.id as 'ranked' | 'casual', deck: deck.id }); }}>
+            {mode.id === 'tournament' ? 'Browse tournaments' : 'Find match'}
+          </button>
+        )}
       </div>
       {picking && deck && (
         <DeckPicker cards={cards} db={db} title="Your deck" only={decks} current={deck.id} owned={own.starter}
@@ -78,6 +105,19 @@ export function PlayLobby({ db, mode }: { db: CardDb; mode: string }) {
   const id = (ONLINE.find((m) => m.id === mode)?.id ?? 'custom') as ModeId;
   const [inGame, setInGame] = useState(false);
   const online = ONLINE.find((m) => m.id === id);
+  const ol = useOnline();
+  // an online game (or its end screen) takes the page, whatever tab is open
+  if (ol.start && (ol.game === ol.start.gameId || ol.end?.gameId === ol.start.gameId)) {
+    return (
+      <Lobby bare>
+        <div className="lb-bare">
+          <Suspense fallback={<p className="status">Setting up the table…</p>}>
+            <OnlineGame key={ol.start.gameId} db={db} start={ol.start} end={ol.end?.gameId === ol.start.gameId ? ol.end : null} />
+          </Suspense>
+        </div>
+      </Lobby>
+    );
+  }
 
   const side = (
     <>
@@ -85,7 +125,7 @@ export function PlayLobby({ db, mode }: { db: CardDb; mode: string }) {
       <RankCard />
       <div className="lb-side__gap" />
       <SideTitle>GAME MODE</SideTitle>
-      {ONLINE.map((m) => <SideLink key={m.id} href={`#play/${m.id}`} icon={m.icon} active={id === m.id} soon>{m.label}</SideLink>)}
+      {ONLINE.map((m) => <SideLink key={m.id} href={`#play/${m.id}`} icon={m.icon} active={id === m.id} soon={m.id === 'tournament'}>{m.label}</SideLink>)}
       <div className="lb-side__gap" />
       <SideTitle>PLAY NOW</SideTitle>
       <SideLink href="#play/custom" icon="sliders" active={id === 'custom'}>Custom game</SideLink>

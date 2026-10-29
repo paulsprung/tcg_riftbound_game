@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ENGINE_VERSION, type GameRecord } from '../../game/index.ts';
-import type { GameHost, HostSnapshot } from '../host/GameHost.ts';
+import type { HostSnapshot, TableHost } from '../host/GameHost.ts';
 import { nameOf, type CardIndex } from '../model/cards.ts';
 import { copyText } from '../model/report.ts';
 
@@ -13,7 +13,7 @@ import { copyText } from '../model/report.ts';
  */
 
 export function DevPanel({ host, snap, cards, onLoad, onClose }: {
-  host: GameHost; snap: HostSnapshot; cards: CardIndex; onLoad: (r: GameRecord) => void; onClose: () => void;
+  host: TableHost; snap: HostSnapshot; cards: CardIndex; onLoad: (r: GameRecord) => void; onClose: () => void;
 }) {
   const [load, setLoad] = useState('');
   const [msg, setMsg] = useState('');

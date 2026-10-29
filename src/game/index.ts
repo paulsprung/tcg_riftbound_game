@@ -16,6 +16,8 @@ export { choose, concede } from './core/run.ts';
 export { knows, observe, viewFor, viewKeywords, viewMight } from './core/view.ts';
 export { cloneState, hashState } from './state/clone.ts';
 export { replay, RecordMismatchError } from './record.ts';
+// a view completed with a sample of what it hides: an online table previews a batch draft on it
+export { determinize } from './ai/determinize.ts';
 
 /** Why an object can't be used right now, for UI tooltips; runs on the
     viewer's own information (§12.7). */

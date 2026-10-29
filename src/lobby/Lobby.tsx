@@ -1,7 +1,10 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { HoloSwitches } from '../card/HoloSwitches.tsx';
 import { useCollection } from '../collection/store.ts';
+import { api } from '../net/api.ts';
+import type { RatingInfo } from '../net/protocol.ts';
 import { logout, useSession } from '../net/session.ts';
+import { useOnline } from '../net/socket.ts';
 import { DEMO, DEMO_PROFILE } from './demo.ts';
 import { Icon, type IconName } from './icons.tsx';
 import './lobby.css';
@@ -21,6 +24,7 @@ export function LobbyTop({ route }: { route: string }) {
   const session = useSession();
   const user = session.status === 'online' ? session.user : null;
   const name = user?.name ?? (DEMO ? DEMO_PROFILE.name : 'You');
+  const ol = useOnline();
 
   // on a phone the tabs scroll sideways: keep the current one in view
   useEffect(() => {
@@ -35,6 +39,7 @@ export function LobbyTop({ route }: { route: string }) {
         ))}
       </nav>
       <div className="lb-top__right">
+        {ol.game && <a className="lb-pill lb-pill--live" href="#play/ranked">● Back to your game</a>}
         <HoloSwitches />
         <a className="lb-pill" href="#shop" title="Your coins" aria-label={`${own.coins} coins`}>
           <Coin /> {own.coins.toLocaleString('en-US')}
@@ -97,7 +102,18 @@ export function SideLink({ href, active, icon, children, soon = false, onClick }
 
 /** Rank panel: sample in the preview, a greyed "unranked" elsewhere. */
 export function RankCard() {
-  if (DEMO) {
+  const session = useSession();
+  const ol = useOnline();
+  const signedIn = session.status === 'online' && !!session.user;
+  const [r, setR] = useState<(RatingInfo & { wins: number }) | null>(null);
+  // the standing again after each game
+  useEffect(() => {
+    if (!signedIn) return;
+    let alive = true;
+    api<{ ranked: RatingInfo & { wins: number } }>('GET', '/api/account/standing').then((x) => { if (alive) setR(x.ranked); }).catch(() => undefined);
+    return () => { alive = false; };
+  }, [signedIn, ol.end]);
+  if (DEMO && !signedIn) {
     return (
       <div className="lb-rank">
         <span className="lb-rank__badge" aria-hidden>◈</span>
@@ -107,11 +123,24 @@ export function RankCard() {
       </div>
     );
   }
+  if (!r) {
+    return (
+      <div className="lb-rank is-off">
+        <span className="lb-rank__badge" aria-hidden>◈</span>
+        <strong>Unranked</strong>
+        <span className="muted small">{signedIn ? 'Play ranked to get a rank' : 'Sign in to play ranked'}</span>
+      </div>
+    );
+  }
+  const roman = r.division ? ` ${['I', 'II', 'III', 'IV'][r.division - 1]}` : '';
+  // within a division: 50 points from its floor
+  const pct = r.tier === 'Master' ? 100 : Math.round(((r.points % 50) / 50) * 100);
   return (
-    <div className="lb-rank is-off">
+    <div className={`lb-rank${r.placement ? ' is-off' : ''}`}>
       <span className="lb-rank__badge" aria-hidden>◈</span>
-      <strong>Unranked</strong>
-      <span className="muted small">Ranked play comes with online matches</span>
+      <strong>{r.placement ? 'Placement' : `${r.tier}${roman}`}</strong>
+      <span className="muted small">{r.placement ? `${r.games} of 5 games` : `${r.points.toLocaleString('en-US')} LP`} · {r.wins}W {r.games - r.wins}L</span>
+      {!r.placement && <div className="bar"><span style={{ width: `${pct}%` }} /></div>}
     </div>
   );
 }

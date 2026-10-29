@@ -99,6 +99,23 @@ export interface Preview { decision: Decision | null; complete: boolean }
 
 const other = (p: PlayerId): PlayerId => (p === 0 ? 1 : 0);
 
+/** What the table (GameScreen) needs of a game: this host for a game on
+    the device, RemoteHost for one the server runs. */
+export interface TableHost {
+  readonly setup: Pick<GameSetup, 'seed' | 'decks'>;
+  readonly hotseat: boolean;
+  subscribe(l: () => void): () => void;
+  getSnapshot(): HostSnapshot;
+  start(): void;
+  stop(): void;
+  preview(keys: readonly string[]): Preview;
+  commit(keys: readonly string[]): boolean;
+  concede(p?: PlayerId): void;
+  takeOver(): void;
+  record(): GameRecord;
+  devState(): GameState | null;
+}
+
 /** A human's decision the host answers for them (§4.8): pass when passing
     is all they can do. */
 export function autoAnswer(d: Decision): string | null {
@@ -109,7 +126,7 @@ export function autoAnswer(d: Decision): string | null {
 /** Plans (a whole Standard Move) are followed only inside the move. */
 const PLAN_KINDS = ['moveUnits', 'moveDest'];
 
-export class GameHost {
+export class GameHost implements TableHost {
   readonly setup: GameSetup;
   readonly seats: [Seat, Seat];
   /** The human seat (the first, in hot-seat). */

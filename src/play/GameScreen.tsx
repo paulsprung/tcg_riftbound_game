@@ -5,7 +5,7 @@ import './board.css';
 import type { CardDb } from '../data/types.ts';
 import { explainUnavailable, type GameRecord } from '../game/index.ts';
 import { DevPanel } from './dev/DevPanel.tsx';
-import type { GameHost } from './host/GameHost.ts';
+import type { TableHost } from './host/GameHost.ts';
 import { useHost } from './host/useHost.ts';
 import { isAssign, rowOf, suggestKey } from './model/assign.ts';
 import { boardOf, type CardSlot } from './model/board.ts';
@@ -53,10 +53,31 @@ export interface SeatNames { me: string; opponent: string }
     its own ending). */
 export interface TutorialFrame { subtitle: string; actions: ReactNode }
 
-export function GameScreen({ host, cards, db, names, onNewGame, onChangeDecks, onLoadRecord, coach, tutorial }: {
-  host: GameHost; cards: CardIndex; db: CardDb; names: [string, string];
+/** A game against another player through the server: its mode, the clock on the pending decision, and what the end brought. */
+export interface OnlineFrame {
+  mode: string;
+  clock: () => { mine: number | null; theirs: number | null };
+  /** Rating and coins, once the server has said. */
+  outcome: ReactNode;
+}
+
+/** Seconds left on a decision: the player's own, and the opponent's when they take long. */
+function DecisionClock({ clock }: { clock: OnlineFrame['clock'] }) {
+  const [, tick] = useState(0);
+  useEffect(() => { const t = setInterval(() => tick((n) => n + 1), 500); return () => clearInterval(t); }, []);
+  const { mine, theirs } = clock();
+  const left = (at: number | null) => (at === null ? null : Math.max(0, Math.ceil((at - Date.now()) / 1000)));
+  const me = left(mine), them = left(theirs);
+  if (me !== null) return <p className={`rail__clock${me <= 15 ? ' is-low' : ''}`}>Your time: {me}s</p>;
+  if (them !== null && them <= 45) return <p className="rail__clock is-theirs">Opponent's time: {them}s</p>;
+  return null;
+}
+
+export function GameScreen({ host, cards, db, names, onNewGame, onChangeDecks, onLoadRecord, coach, tutorial, online }: {
+  host: TableHost; cards: CardIndex; db: CardDb; names: [string, string];
   onNewGame: () => void; onChangeDecks: () => void; onLoadRecord?: (r: GameRecord) => void; coach?: Coach;
   tutorial?: TutorialFrame;
+  online?: OnlineFrame;
 }) {
   const snap = useHost(host);
   const { view, events, error, viewer, handoff, thinking } = snap;
@@ -262,9 +283,9 @@ export function GameScreen({ host, cards, db, names, onNewGame, onChangeDecks, o
           <div className="gmenu__panel" role="menu">
             <p className="gmenu__title">
               {board.me.deckName} <span className="muted">vs</span> {board.opponent.deckName}
-              <small>{tutorial ? tutorial.subtitle : `${hot ? 'Hot-seat' : seatNames.opponent} · 1v1 Duel · seed ${host.setup.seed}`}</small>
+              <small>{tutorial ? tutorial.subtitle : online ? `${seatNames.opponent} · ${online.mode} · 1v1 Duel` : `${hot ? 'Hot-seat' : seatNames.opponent} · 1v1 Duel · seed ${host.setup.seed}`}</small>
             </p>
-            {!hot && (
+            {!hot && !online && (
               <div className="gmenu__row">
                 <span>Opponent speed</span>
                 <Select label="Opponent speed" value={settings.pace} onChange={(v) => setSettings({ pace: v as PaceChoice })}
@@ -285,8 +306,8 @@ export function GameScreen({ host, cards, db, names, onNewGame, onChangeDecks, o
                 </div>
               ) : <button type="button" role="menuitem" onClick={() => setConfirmConcede(true)}>Concede</button>
             )}
-            {!tutorial && <button type="button" role="menuitem" onClick={() => { close(); onNewGame(); }}>New game</button>}
-            {!tutorial && <button type="button" role="menuitem" onClick={() => { close(); onChangeDecks(); }}>Leave to the decks</button>}
+            {!tutorial && !online && <button type="button" role="menuitem" onClick={() => { close(); onNewGame(); }}>New game</button>}
+            {!tutorial && (!online || stage.k === 'over') && <button type="button" role="menuitem" onClick={() => { close(); onChangeDecks(); }}>{online ? 'Back to the lobby' : 'Leave to the decks'}</button>}
             {!tutorial && (import.meta.env.DEV || settings.dev) && (
               <button type="button" role="menuitem" aria-pressed={settings.dev} onClick={() => setSettings({ dev: !settings.dev })}>DEV panel</button>
             )}
@@ -303,6 +324,7 @@ export function GameScreen({ host, cards, db, names, onNewGame, onChangeDecks, o
       <Preview slot={hover} cards={cards} />
       <ChainBox board={board} cards={cards} />
       <GameLog lines={log} rules={settings.rules} />
+      {online && stage.k !== 'over' && <DecisionClock clock={online.clock} />}
       <div className="rail__dock">{promptArea}</div>
     </>
   );
@@ -332,11 +354,13 @@ export function GameScreen({ host, cards, db, names, onNewGame, onChangeDecks, o
               <span className="muted small"> [{stage.result.rule}]</span>
             </p>
             {!hot && snap.aiMode && <p className="muted small">The computer knew your deck list (built-in decks are public, TR 401.5).</p>}
+            {online?.outcome}
             <div className="sheet__buttons">
-              <button type="button" className="btn btn--primary" onClick={onNewGame}>Rematch</button>
+              {online ? <button type="button" className="btn btn--primary" onClick={onChangeDecks}>Back to the lobby</button>
+                : <button type="button" className="btn btn--primary" onClick={onNewGame}>Rematch</button>}
               <button type="button" className="btn" onClick={() => setReport(true)}>Report a rules problem</button>
               <button type="button" className="btn" onClick={() => setDismissed(true)}>Look at the table</button>
-              <button type="button" className="btn btn--ghost" onClick={onChangeDecks}>Change decks</button>
+              {!online && <button type="button" className="btn btn--ghost" onClick={onChangeDecks}>Change decks</button>}
             </div>
           </SetupSheet>
         )}

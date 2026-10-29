@@ -9,6 +9,7 @@ import {
 import type { Config } from './config.ts';
 import type { Db } from './db.ts';
 import { deckStore, economy, loadCatalog, readAccount, Refused, type Catalog } from './economy.ts';
+import type { Online } from './games/online.ts';
 
 /*
  * The whole HTTP surface: the built app (with index.html for client
@@ -20,6 +21,8 @@ export interface Deps {
   cfg: Config; db: Db; fetch?: typeof fetch;
   /** The card data packs and starters come from; read from the built app when not given. */
   catalog?: Catalog;
+  /** Online play, for the standings. */
+  online?: Online;
 }
 
 export function cookies(req: IncomingMessage): Record<string, string> {
@@ -124,7 +127,7 @@ function limiter(perMinute: number) {
   };
 }
 
-export function handler({ cfg, db, fetch: f = fetch, catalog }: Deps) {
+export function handler({ cfg, db, fetch: f = fetch, catalog, online }: Deps) {
   const secure = cfg.publicUrl.startsWith('https://');
   const authLimit = limiter(20);
   const apiLimit = limiter(240);
@@ -141,7 +144,7 @@ export function handler({ cfg, db, fetch: f = fetch, catalog }: Deps) {
     const path = url.pathname;
     const jar = cookies(req);
     try {
-      if (path === '/api/health') return json(res, 200, { ok: true });
+      if (path === '/api/health') return json(res, 200, { ok: true, ...(online ? { games: online.stats.games, queued: online.stats.queued } : {}) });
 
       if (path === '/api/me') {
         const user = await userForSession(db, jar[SESSION_COOKIE]);
@@ -194,6 +197,17 @@ export function handler({ cfg, db, fetch: f = fetch, catalog }: Deps) {
               db.query('SELECT is_admin FROM users WHERE id = $1', [user.id]).then((r) => !!r.rows[0]?.is_admin),
             ]);
             return json(res, 200, { account, decks, admin });
+          }
+          if (route === 'GET /api/account/standing') {
+            if (!online) return json(res, 404, { error: 'No online play here' });
+            const [ranked, casual] = await Promise.all([online.standing(user.id, 'ranked'), online.standing(user.id, 'casual')]);
+            const recent = await db.query(`SELECT id, mode, players, winner, reason, turns, ended_at, outcome FROM matches
+              WHERE players[1] = $1 OR players[2] = $1 ORDER BY ended_at DESC LIMIT 10`, [user.id]);
+            return json(res, 200, { ranked, casual, recent: recent.rows.map((m) => {
+              const seat = m.players[0] === user.id ? 0 : 1;
+              return { id: m.id, mode: m.mode, won: m.winner === seat, draw: m.winner === null, reason: m.reason, turns: m.turns,
+                endedAt: new Date(m.ended_at).getTime(), coins: m.outcome?.coins?.[seat] ?? 0 };
+            }) });
           }
           if (route === 'POST /api/account/buy') {
             const b = await body(req);

@@ -102,11 +102,10 @@ const addCards = (c: Tx, userId: string, add: { id: string; foil: boolean; n: nu
 
 /** The account as the app's collection store holds it. */
 export async function readAccount(q: Db | Tx, userId: string): Promise<CollectionState> {
-  const [acc, packs, slabs] = await Promise.all([
-    q.query('SELECT coins, starter, daily_at, tutorial_done, showcase, cards FROM accounts WHERE user_id = $1', [userId]),
-    q.query('SELECT set_id, n, opened FROM owned_packs WHERE user_id = $1', [userId]),
-    q.query('SELECT data FROM slabs WHERE user_id = $1 ORDER BY graded_at DESC', [userId]),
-  ]);
+  // one after the other: a transaction's client runs one query at a time
+  const acc = await q.query('SELECT coins, starter, daily_at, tutorial_done, showcase, cards FROM accounts WHERE user_id = $1', [userId]);
+  const packs = await q.query('SELECT set_id, n, opened FROM owned_packs WHERE user_id = $1', [userId]);
+  const slabs = await q.query('SELECT data FROM slabs WHERE user_id = $1 ORDER BY graded_at DESC', [userId]);
   const a = acc.rows[0];
   return {
     coins: a?.coins ?? 0,
