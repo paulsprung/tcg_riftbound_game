@@ -6,8 +6,16 @@ import type { CardSlot } from '../model/board.ts';
  * affordances of their pending decision and a way to send one key. Cards
  * that answer it glow; lanes and the base get a button.
  */
+/** Paying by tapping runes (§12.5): which runes can still be part of a plan, which are in the pick. */
+export interface PayPick {
+  selectable: ReadonlySet<number>;
+  picked: ReadonlySet<number>;
+  toggle: (id: number) => void;
+}
+
 export interface Acts {
   a: Affordances | null;
+  pay?: PayPick;
   /** Why a card can't be used now (§12.7), by object. */
   why?: Record<number, string>;
   send: (key: string) => void;
@@ -15,6 +23,7 @@ export interface Acts {
 
 /** The click handler for a card, when tapping it answers the decision. */
 export function actOn(acts: Acts | undefined, slot: CardSlot): ((s: CardSlot) => void) | undefined {
+  if (acts?.pay && (acts.pay.selectable.has(slot.id) || acts.pay.picked.has(slot.id))) return () => acts.pay!.toggle(slot.id);
   const keys = acts?.a?.objects[slot.id]?.keys ?? [];
   if (keys.length === 0) return undefined;
   return () => acts!.send(keys[0]);

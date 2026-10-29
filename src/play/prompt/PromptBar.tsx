@@ -24,7 +24,7 @@ export function PromptBar({ view, stage, a, onCommit, thinking, coachKeys, oppon
         {a.buttons.map((b) => (
           <button key={b.key ?? 'commit'} type="button" data-key={b.key ?? undefined}
             className={`btn btn--small${b.primary ? ' btn--primary' : ''}${b.key && coachKeys?.has(b.key) ? ' is-coached' : ''}`}
-            onClick={() => onCommit(b.commit)}>
+            disabled={b.disabled} onClick={() => onCommit(b.commit)}>
             {b.label}
           </button>
         ))}

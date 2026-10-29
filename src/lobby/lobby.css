@@ -973,3 +973,9 @@ html[data-scaled] .app {
 .home-feat { margin: 4px 18px 0; }
 .home-news-dock .lb-label, .news { margin-inline: 18px; }
 .wide-side .lb-label { margin-inline: 18px; }
+
+/* ---- a deck's cards ---- */
+.dv { width: min(1100px, 100%); }
+.dv__body { overflow-y: auto; display: grid; gap: 18px; padding-right: 8px; }
+.dv__cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 14px 12px; margin-top: 10px; }
+.dv__card { position: relative; }

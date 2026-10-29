@@ -228,7 +228,9 @@ const myTurn = (c: Ctx) => c.view.turn.player === HUMAN;
 const myMain = (c: Ctx) => myTurn(c) && window_(c) === 'main';
 const points = (c: Ctx, p: PlayerId) => c.view.players[p].points;
 const keys = (c: Ctx) => realKeys(c.decision);
-const PAY = (k: string) => head(k) === 'pay' || k === 'loc:base';
+const PAY = (k: string) => head(k) === 'pay' || k.startsWith('pay-') || k === 'loc:base';
+// the confirm button of the rune-tap payment stands in for the engine's pay options
+const payKeys = (ks: string[]) => (ks.some((k) => head(k) === 'pay') ? ['pay-confirm'] : []);
 const myBase = (c: Ctx) => unitsOf(c.view, HUMAN).filter((id) => whereIs(c.view, id) === 'base');
 const myBfs = (c: Ctx) => c.view.bfs.map((b, i) => (b.controller === HUMAN ? i : -1)).filter((i) => i >= 0);
 const enemiesAt = (c: Ctx, i: number) => c.view.bfs[i].here.filter((id) => c.view.objects[id]?.controller === OPPONENT
@@ -305,13 +307,13 @@ const CONCEPTS: Concept[] = [
     id: 'play-unit', title: 'Play a unit', after: ['runes'], expires: 3,
     ready: (c) => (myMain(c) && unitPlays(c).length > 0) || (myTurn(c) && casting(c)),
     done: (c) => unitsOf(c.view, HUMAN).length > 0,
-    text: (c) => (kind(c) === 'payment' ? 'Pay the cost: exhaust your runes for Energy. Click the payment button.'
+    text: (c) => (kind(c) === 'payment' ? 'Pay the cost: exhaust your runes for Energy. Tap the runes to exhaust, then press Pay.'
       : kind(c) === 'location' ? 'Units are played to your base (or to a battlefield you control). Choose your base.'
         : casting(c) ? 'Your unit asks for a choice: click one of the glowing options.'
           : 'The number in a card\'s corner is its Energy cost. Click a glowing unit in your hand to play it.'),
     allow: (k, c) => unitPlays(c).includes(k) || PAY(k),
     highlight: (c) => (casting(c) && kind(c) !== 'payment' ? choices(c)
-      : { objs: unitPlays(c).map((k) => objOfKey(k)!), keys: [...unitPlays(c).slice(0, 1), ...keys(c).filter(PAY)] }),
+      : { objs: unitPlays(c).map((k) => objOfKey(k)!), keys: [...unitPlays(c).slice(0, 1), ...payKeys(keys(c))] }),
   },
   {
     id: 'end-turn', title: 'End your turn', after: ['play-unit'], expires: 2,
@@ -364,7 +366,7 @@ const CONCEPTS: Concept[] = [
       return `Spells do their thing once, then go to the trash. ${nameOf(def)} is ${how}. Try it now, or keep it for later.`;
     },
     highlight: (c) => (casting(c) && kind(c) !== 'payment' ? choices(c)
-      : { keys: [...spellPlays(c).slice(0, 1), ...keys(c).filter(PAY).slice(0, 1)], objs: spellPlays(c).slice(0, 1).map((k) => objOfKey(k)!) }),
+      : { keys: [...spellPlays(c).slice(0, 1), ...payKeys(keys(c))], objs: spellPlays(c).slice(0, 1).map((k) => objOfKey(k)!) }),
   },
   {
     id: 'conquer', title: 'Conquer and score', next: true, after: ['move'], expires: 12,

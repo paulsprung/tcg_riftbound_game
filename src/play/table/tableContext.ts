@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react';
 import type { ObjId } from '../../game/index.ts';
+import type { CardSlot } from '../model/board.ts';
 import { NO_FX, type Fx } from '../model/fx.ts';
 
 /*
@@ -12,6 +13,8 @@ export interface TableLook {
   coachObjs: ReadonlySet<ObjId>;
   coachLanes: ReadonlySet<number | 'base'>;
   coachKeys: ReadonlySet<string>;
+  /** The pointer is over a card the viewer can read: the rail shows it big. */
+  hover?: (slot: CardSlot) => void;
 }
 
 export const TableLookContext = createContext<TableLook>({

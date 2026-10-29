@@ -123,6 +123,7 @@ function HoloCardInner({
                 draggable={false}
                 decoding="async"
                 loading="lazy"
+                ref={(el) => { if (el && el.complete && el.naturalWidth > 0) setLoaded(true); }}
                 onLoad={() => setLoaded(true)}
                 onError={() => setBroken(true)}
               />

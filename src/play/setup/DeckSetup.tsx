@@ -1,4 +1,5 @@
 import { useEffect, useState, type CSSProperties } from 'react';
+import { Icon } from '../../lobby/icons.tsx';
 import { HoloCard } from '../../card/HoloCard.tsx';
 import { DOMAIN_COLOR, defaultFinish, symbolFor } from '../../data/cardInfo.ts';
 import type { CardDb } from '../../data/types.ts';
@@ -44,6 +45,10 @@ export function choiceFor(owned: string | null): DeckSetupChoice {
   const theirs = others[(BUILT_IN_DECKS.indexOf(mine) * 5 + 3) % others.length] ?? mine;
   return { ...DEFAULT_CHOICE, mine: mine.id, theirs: theirs.id, champion: mine.deck.chosenChampion };
 }
+
+const ORDERS: { id: OrderChoice; label: string }[] = [
+  { id: 'random', label: 'Random' }, { id: 'first', label: 'I play first' }, { id: 'second', label: 'I play second' },
+];
 
 const OPPONENTS: { id: OpponentChoice; label: string; text: string }[] = [
   { id: 'beginner', label: 'Computer: Beginner', text: 'Makes the obvious plays, often misses a Reaction.' },
@@ -165,6 +170,7 @@ export function DeckSetup({ cards, db, initial, error, onStart, saved, onResume,
 }) {
   const [c, setC] = useState<DeckSetupChoice>(initial);
   const [picking, setPicking] = useState<null | 'mine' | 'theirs'>(null);
+  const [settings, setSettings] = useState(false);
   const mine = deckById(c.mine), theirs = deckById(c.theirs);
   const problems = [
     ...deckProblems(mine.deck, c.champion).map((p) => `Your deck: ${p}`),
@@ -193,7 +199,10 @@ export function DeckSetup({ cards, db, initial, error, onStart, saved, onResume,
 
       <header className="ds__bar">
         <h1>Custom game</h1>
-        <FormatSwitch />
+        <span className="ds__bar-right">
+          <FormatSwitch />
+          <button type="button" className="btn btn--small" onClick={() => setSettings(true)}><Icon name="sliders" size={14} /> Settings</button>
+        </span>
       </header>
 
       <div className="ds__stage">
@@ -213,6 +222,36 @@ export function DeckSetup({ cards, db, initial, error, onStart, saved, onResume,
         {error && <p className="play__error" role="alert">{error}</p>}
         <button type="button" className="btn btn--cta" disabled={problems.length > 0} onClick={() => onStart(c)}>Start game</button>
       </div>
+
+      {settings && (
+        <div className="ds-modal" role="dialog" aria-modal="true" aria-label="Game settings" onClick={() => setSettings(false)}>
+          <div className="ds-modal__panel ds-settings lb-card" onClick={(e) => e.stopPropagation()}>
+            <header className="ds-modal__head">
+              <h2>Game settings</h2>
+              <button type="button" className="icon-btn" onClick={() => setSettings(false)} aria-label="Close">✕</button>
+            </header>
+            <div className="ds-settings__group">
+              <span className="lb-label">First player</span>
+              <div className="seg" role="group" aria-label="First player">
+                {ORDERS.map((o) => (
+                  <button key={o.id} type="button" aria-pressed={o.id === c.order} onClick={() => setC({ ...c, order: o.id })}>{o.label}</button>
+                ))}
+              </div>
+            </div>
+            {(mine.deck.championOptions ?? []).length > 1 && (
+              <div className="ds-settings__group">
+                <span className="lb-label">Chosen champion</span>
+                <div className="seg" role="group" aria-label="Chosen champion">
+                  {(mine.deck.championOptions ?? []).map((def) => (
+                    <button key={def} type="button" aria-pressed={def === c.champion} onClick={() => setC({ ...c, champion: def })}>{nameOf(cards, def)}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <footer className="ds-settings__foot"><button type="button" className="btn btn--cta" onClick={() => setSettings(false)}>Done</button></footer>
+          </div>
+        </div>
+      )}
 
       {picking && (
         <DeckPicker cards={cards} db={db} title={picking === 'mine' ? 'Your deck' : c.opponent === 'hotseat' ? "Player 2's deck" : "The computer's deck"}

@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Select } from '../lobby/Select.tsx';
+import './play.css';
+import './board.css';
 import type { CardDb } from '../data/types.ts';
 import { explainUnavailable, type GameRecord } from '../game/index.ts';
 import { DevPanel } from './dev/DevPanel.tsx';
@@ -21,9 +24,10 @@ import { PromptBar, SetupDone } from './prompt/PromptBar.tsx';
 import { SetupSheet } from './prompt/SetupSheet.tsx';
 import { setSettings, usePlaySettings, type PaceChoice } from './settings.ts';
 import { CardZoom } from './table/CardZoom.tsx';
-import { Table } from './table/Table.tsx';
+import { Board } from './table/Board.tsx';
+import { ChainBox, GameLog, Preview, RailHead, Scores } from './table/Rail.tsx';
 import { TableLookContext, type TableLook } from './table/tableContext.ts';
-import { CoachBubble } from './tutorial/CoachBubble.tsx';
+import { CoachPopup } from './tutorial/CoachPopup.tsx';
 import { restrict, type Coach } from './tutorial/coach.ts';
 
 /*
@@ -93,6 +97,14 @@ export function GameScreen({ host, cards, db, names, onNewGame, onChangeDecks, o
   const [report, setReport] = useState(false);
   const [confirmConcede, setConfirmConcede] = useState(false);
   const closeZoom = useCallback(() => setZoom(null), []);
+  const [hover, setHover] = useState<CardSlot | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const stageRef = useRef<HTMLDivElement>(null);
+  // the table fills the window: the lobby's own bars step aside while a game is on
+  useEffect(() => {
+    document.documentElement.dataset.game = '';
+    return () => { delete document.documentElement.dataset.game; };
+  }, []);
   const preview = useCallback((keys: string[]) => host.preview(keys), [host]);
   const mine = stage.k === 'deciding' && stage.mine && view.pending !== null && handoff === null;
   const names_ = useCallback((d: string) => nameOf(cards, d), [cards]);
@@ -162,14 +174,37 @@ export function GameScreen({ host, cards, db, names, onNewGame, onChangeDecks, o
     }
     return out;
   }, [mine, view, a]);
+  // ---- paying by tapping runes (§12.5) ----
+  const plans = useMemo(() => {
+    if (!mine || d?.kind !== 'payment') return null;
+    const ok = allow ?? (() => true);
+    return d.options.filter((o) => o.key.startsWith('pay:') && ok(o.key)).map((o) => ({
+      key: o.key, objs: [...new Set((o.refs ?? []).flatMap((r) => ('obj' in r ? [r.obj] : [])))],
+    }));
+  }, [mine, d, allow]);
+  const [pick, setPick] = useState<{ id: string; objs: number[] }>({ id: '', objs: [] });
+  const payId = plans ? String(d!.id) : '';
+  const picked = useMemo(() => new Set(pick.id === payId ? pick.objs : []), [pick, payId]);
+  const payMatch = useMemo(() => plans?.find((p) => p.objs.length === picked.size && p.objs.every((o) => picked.has(o))) ?? null, [plans, picked]);
+  const pay = useMemo(() => {
+    if (!plans) return undefined;
+    const still = plans.filter((p) => [...picked].every((o) => p.objs.includes(o)));
+    const selectable = new Set<number>([...picked, ...still.flatMap((p) => p.objs)]);
+    return { selectable, picked, toggle: (id: number) => setPick((cur) => {
+      const have = new Set(cur.id === payId ? cur.objs : []);
+      if (have.has(id)) have.delete(id); else have.add(id);
+      return { id: payId, objs: [...have] };
+    }) };
+  }, [plans, picked, payId]);
+
   const acts = useMemo(() => ({
-    a, why, send: (key: string) => { if (assigning) addDraft(key); else commit([key]); },
+    a, why, pay, send: (key: string) => { if (assigning) addDraft(key); else commit([key]); },
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [a, why, commit, assigning, keys, batchId]);
+  }), [a, why, pay, commit, assigning, keys, batchId]);
 
   const look = useMemo<TableLook>(() => ({
     fx, coachObjs: new Set(step?.highlight?.objs ?? []), coachLanes: new Set(step?.highlight?.lanes ?? []),
-    coachKeys: new Set(step?.highlight?.keys ?? []),
+    coachKeys: new Set(step?.highlight?.keys ?? []), hover: setHover,
   }), [fx, step]);
 
   // ---- keys: Ctrl+Shift+D toggles the DEV panel ----
@@ -186,14 +221,19 @@ export function GameScreen({ host, cards, db, names, onNewGame, onChangeDecks, o
 
   const playing = view.turn.n > 0;
   const modeSheet = mine && d?.kind === 'mode';
+  const payButtons = plans ? [
+    { key: 'pay-confirm', label: payMatch ? 'Pay' : picked.size > 0 ? `Pay (${picked.size} picked)` : 'Pay', primary: true, disabled: !payMatch,
+      commit: [payMatch?.key ?? 'pay:0'] },
+    ...(plans.length > 0 ? [{ key: 'pay-auto', label: 'Auto-pay', commit: [plans[0].key] }] : []),
+  ] : [];
   const promptA = a && (modeSheet ? { ...a, buttons: a.buttons.filter((b) => !b.key?.startsWith('mode:')) }
-    : assigning ? { ...a, buttons: [] } : a);
+    : assigning ? { ...a, buttons: [] }
+    : plans ? { ...a, buttons: [...payButtons, ...a.buttons.filter((b) => !b.key?.startsWith('pay:') && b.key !== 'manualPay')] } : a);
   const theirLines = log.filter((l) => l.who === 'opponent').slice(-2);
   const hot = host.hotseat;
 
   const promptArea = (
     <>
-      {step && (step.anchor ?? 'prompt') === 'prompt' && <CoachBubble step={step} onNext={() => coach?.onNext?.(step)} />}
       {mine && <CastingSlot view={view} cards={cards} db={db} />}
       {modeSheet && d && <ModeSheet d={d} cards={cards} onCommit={commit} coachKeys={look.coachKeys} allow={allow} />}
       {assigning && d && (
@@ -209,54 +249,71 @@ export function GameScreen({ host, cards, db, names, onNewGame, onChangeDecks, o
     </>
   );
 
+  const close = () => setMenuOpen(false);
+  const menu = (
+    <div className="gmenu">
+      <button type="button" className="icon-btn gmenu__btn" aria-haspopup="menu" aria-expanded={menuOpen} aria-label="Game menu"
+        onClick={() => setMenuOpen((o) => !o)}>
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+      </button>
+      {menuOpen && (
+        <>
+          <div className="gmenu__scrim" onClick={close} />
+          <div className="gmenu__panel" role="menu">
+            <p className="gmenu__title">
+              {board.me.deckName} <span className="muted">vs</span> {board.opponent.deckName}
+              <small>{tutorial ? tutorial.subtitle : `${hot ? 'Hot-seat' : seatNames.opponent} · 1v1 Duel · seed ${host.setup.seed}`}</small>
+            </p>
+            {!hot && (
+              <div className="gmenu__row">
+                <span>Opponent speed</span>
+                <Select label="Opponent speed" value={settings.pace} onChange={(v) => setSettings({ pace: v as PaceChoice })}
+                  options={[{ value: 'slow', label: 'Slow' }, { value: 'normal', label: 'Normal' }, { value: 'fast', label: 'Fast' }]} />
+              </div>
+            )}
+            <label className="gmenu__row gmenu__check">
+              <span>Rule numbers in the log</span>
+              <input type="checkbox" checked={settings.rules} onChange={() => setSettings({ rules: !settings.rules })} />
+            </label>
+            <button type="button" role="menuitem" onClick={() => { close(); setReport(true); }}>Report a rules problem</button>
+            {tutorial && <div className="gmenu__tut">{tutorial.actions}</div>}
+            {!tutorial && playing && stage.k !== 'over' && (
+              confirmConcede ? (
+                <div className="gmenu__confirm">
+                  <button type="button" className="btn btn--small btn--danger" onClick={() => { setConfirmConcede(false); close(); host.concede(viewer); }}>Concede now</button>
+                  <button type="button" className="btn btn--small btn--ghost" onClick={() => setConfirmConcede(false)}>Keep playing</button>
+                </div>
+              ) : <button type="button" role="menuitem" onClick={() => setConfirmConcede(true)}>Concede</button>
+            )}
+            {!tutorial && <button type="button" role="menuitem" onClick={() => { close(); onNewGame(); }}>New game</button>}
+            {!tutorial && <button type="button" role="menuitem" onClick={() => { close(); onChangeDecks(); }}>Leave to the decks</button>}
+            {!tutorial && (import.meta.env.DEV || settings.dev) && (
+              <button type="button" role="menuitem" aria-pressed={settings.dev} onClick={() => setSettings({ dev: !settings.dev })}>DEV panel</button>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+
+  const rail = (
+    <>
+      <RailHead board={board} names={seatNames} menu={menu} />
+      <Scores board={board} names={seatNames} />
+      <Preview slot={hover} cards={cards} />
+      <ChainBox board={board} cards={cards} />
+      <GameLog lines={log} rules={settings.rules} />
+      <div className="rail__dock">{promptArea}</div>
+    </>
+  );
+
   return (
     <section className="play">
-      <header className="play__head">
-        <div>
-          <h1>{board.me.deckName} <span className="muted">vs</span> {board.opponent.deckName}</h1>
-          <p className="muted small">
-            {tutorial ? tutorial.subtitle : <>{hot ? `Hot-seat · ${names[0]} and ${names[1]} on one device` : `You against ${seatNames.opponent}`} · 1v1 Duel · seed {host.setup.seed}</>}
-          </p>
-        </div>
-        <div className="play__actions">
-          {(stage.k === 'ready' || playing) && atTable && !playing && (
-            <button type="button" className="btn btn--small btn--ghost" onClick={() => setAtTable(false)}>Setup summary</button>
-          )}
-          {!hot && (
-            <label className="play__pace small">
-              Opponent speed{' '}
-              <select value={settings.pace} onChange={(e) => setSettings({ pace: e.target.value as PaceChoice })}>
-                <option value="slow">Slow</option><option value="normal">Normal</option><option value="fast">Fast</option>
-              </select>
-            </label>
-          )}
-          <button type="button" className="btn btn--small btn--ghost" onClick={() => setReport(true)}>Report a rules problem</button>
-          {tutorial?.actions}
-          {!tutorial && playing && stage.k !== 'over' && (
-            confirmConcede ? (
-              <>
-                <button type="button" className="btn btn--small" onClick={() => { setConfirmConcede(false); host.concede(viewer); }}>
-                  Concede now
-                </button>
-                <button type="button" className="btn btn--small btn--ghost" onClick={() => setConfirmConcede(false)}>Keep playing</button>
-              </>
-            ) : <button type="button" className="btn btn--small btn--ghost" onClick={() => setConfirmConcede(true)}>Concede</button>
-          )}
-          {!tutorial && <button type="button" className="btn btn--small" onClick={onNewGame}>New game</button>}
-          {!tutorial && <button type="button" className="btn btn--small btn--ghost" onClick={onChangeDecks}>Change decks</button>}
-          {!tutorial && (import.meta.env.DEV || settings.dev) && (
-            <button type="button" className="btn btn--small btn--ghost" aria-pressed={settings.dev}
-              onClick={() => setSettings({ dev: !settings.dev })}>DEV</button>
-          )}
-        </div>
-      </header>
       {error && <p className="play__error" role="alert">{error}</p>}
-      {step && step.anchor === 'top' && <CoachBubble step={step} onNext={() => coach?.onNext?.(step)} />}
-
-      <div className="play__stage">
+      <div className="play__stage" ref={stageRef}>
         <TableLookContext.Provider value={look}>
-          <Table board={board} cards={cards} log={log} onZoom={setZoom} acts={acts} kind={next?.decision?.kind ?? view.pending?.kind}
-            prompt={promptArea} names={seatNames} rules={settings.rules} onRules={() => setSettings({ rules: !settings.rules })} />
+          <Board board={board} cards={cards} onZoom={setZoom} acts={acts} kind={next?.decision?.kind ?? view.pending?.kind}
+            names={seatNames} rail={rail} />
         </TableLookContext.Provider>
         {stage.k === 'order' && handoff === null && (
           <OrderChoice view={view} board={board} cards={cards} onCommit={commit} onZoom={setZoom} />
@@ -285,6 +342,9 @@ export function GameScreen({ host, cards, db, names, onNewGame, onChangeDecks, o
         )}
         {handoff !== null && <HandoffCover name={names[handoff]} onTake={() => host.takeOver()} />}
         {report && <ReportDialog record={() => host.record()} view={view} log={log} onClose={() => setReport(false)} />}
+        {step && handoff === null && stage.k !== 'order' && stage.k !== 'mulligan' && (
+          <CoachPopup step={step} stage={stageRef} onNext={() => coach?.onNext?.(step)} />
+        )}
       </div>
       {settings.dev && (
         <DevPanel host={host} snap={snap} cards={cards} onClose={() => setSettings({ dev: false })}

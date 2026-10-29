@@ -26,6 +26,8 @@ export interface TableCardProps {
   landscape?: boolean;
   selectable?: boolean;
   selected?: boolean;
+  /** In the pick of runes that pay for a card. */
+  picked?: boolean;
   dimmed?: boolean;
   tilt?: boolean;
   onTap?: (slot: CardSlot) => void;
@@ -45,7 +47,7 @@ function kwText(slot: CardSlot): string {
 }
 
 export const TableCard = memo(function TableCard({
-  slot, cards, size, landscape = false, selectable, selected, dimmed, tilt = false, onTap, label, onAct,
+  slot, cards, size, landscape = false, selectable, selected, picked, dimmed, tilt = false, onTap, label, onAct,
 }: TableCardProps) {
   const look = useTableLook();
   const fx = look.fx.objs[slot.id];
@@ -53,7 +55,7 @@ export const TableCard = memo(function TableCard({
   const card = slot.def !== null ? cardFor(cards, slot.def, slot.printing) : null;
   const px = CARD_PX[size] * (landscape ? 1039 / 744 : 1);
   const cls = ['tcard', `tcard--${size}`, landscape && 'tcard--land', selectable && 'is-selectable',
-    selected && 'is-selected', dimmed && 'is-dim', slot.exhausted && 'is-exhausted', onAct && 'is-actionable',
+    selected && 'is-selected', picked && 'is-picked', dimmed && 'is-dim', slot.exhausted && 'is-exhausted', onAct && 'is-actionable',
     fx && `fx fx--${fx.k}`, fx && look.fx.theirs && 'fx--theirs', coached && 'is-coached']
     .filter(Boolean).join(' ');
   const tap = onAct ? () => onAct(slot) : onTap ? () => onTap(slot) : undefined;
@@ -72,7 +74,8 @@ export const TableCard = memo(function TableCard({
   } : {};
 
   return (
-    <div className={cls} title={title} data-obj={slot.id} {...control}>
+    <div className={cls} title={title} data-obj={slot.id} {...control}
+      onMouseEnter={slot.def !== null && look.hover ? () => look.hover!(slot) : undefined}>
       {card ? (
         <HoloCard card={card} finish={defaultFinish(card)} width="100%" tilt={tilt ? 'hover' : 'off'} upright={landscape}
           imageWidth={Math.min(744, Math.ceil((px * 2) / 50) * 50)} />

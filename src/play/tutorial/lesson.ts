@@ -195,7 +195,9 @@ const window_ = (c: Ctx) => (c.decision?.kind === 'priority' ? c.decision.prompt
 const pointsOf = (c: Ctx, p: PlayerId) => c.view.players[p].points;
 const handKey = (c: Ctx, def: DefId) => { const id = inHand(c.view, HUMAN, def); return id === undefined ? null : `play:${id}`; };
 const runeIds = (c: Ctx) => me(c).base.filter((id) => (defOf(c.view, id) ?? '').endsWith('-rune'));
-const PAY = (k: string) => head(k) === 'pay' || k === 'loc:base';
+const PAY = (k: string) => head(k) === 'pay' || k.startsWith('pay-') || k === 'loc:base';
+// the confirm button of the rune-tap payment stands in for the engine's pay options
+const payKeys = (ks: string[]) => (ks.some((k) => head(k) === 'pay') ? ['pay-confirm'] : []);
 
 /** The lesson, in order. */
 const STEPS: LessonStep[] = [
@@ -221,12 +223,12 @@ const STEPS: LessonStep[] = [
   {
     id: 'play-oracle', title: 'Play a unit',
     text: (c) => (kind(c) === 'payment'
-      ? 'Pay the cost: exhaust 2 runes for 2 Energy. Click the payment button.'
+      ? 'Pay the cost: exhaust 2 runes for 2 Energy. Tap the runes to exhaust, then press Pay.'
       : 'Strigian Oracle costs 2 Energy, the number in its corner. Click it in your hand to play it to your base.'),
     done: (c) => unitsOf(c.view, HUMAN, 'strigian-oracle').length > 0,
     allow: (k, c) => k === handKey(c, 'strigian-oracle') || PAY(k),
     highlight: (c) => ({ objs: [inHand(c.view, HUMAN, 'strigian-oracle')].filter((x): x is number => x !== undefined),
-      keys: realKeys(c.decision).filter(PAY) }),
+      keys: payKeys(realKeys(c.decision)) }),
   },
   {
     id: 'end-1', title: 'End your turn',
@@ -280,7 +282,7 @@ const STEPS: LessonStep[] = [
     done: (c) => unitsOf(c.view, HUMAN, 'faithful-manufactor').length > 0,
     allow: (k, c) => k === handKey(c, 'faithful-manufactor') || PAY(k) || k === 'pass',
     highlight: (c) => ({ objs: [inHand(c.view, HUMAN, 'faithful-manufactor')].filter((x): x is number => x !== undefined),
-      keys: realKeys(c.decision).filter(PAY) }),
+      keys: payKeys(realKeys(c.decision)) }),
   },
   {
     id: 'end-3', title: 'End your turn',
@@ -331,7 +333,7 @@ const STEPS: LessonStep[] = [
     allow: (k, c) => k === handKey(c, 'high-note') || PAY(k)
       || (kind(c) === 'target' && unitsOf(c.view, OPPONENT, 'hunting-dog').includes(objOfKey(k) ?? -1)),
     highlight: (c) => ({ objs: [inHand(c.view, HUMAN, 'high-note'), ...(kind(c) === 'target' ? unitsOf(c.view, OPPONENT, 'hunting-dog') : [])]
-      .filter((x): x is number => x !== undefined), keys: realKeys(c.decision).filter(PAY) }),
+      .filter((x): x is number => x !== undefined), keys: payKeys(realKeys(c.decision)) }),
   },
   {
     id: 'won-fight', title: 'You won the fight', next: true,
@@ -351,7 +353,7 @@ const STEPS: LessonStep[] = [
     done: (c) => !turnIs(c, 5) || unitsOf(c.view, HUMAN, 'hunting-dog').length > 0,
     allow: (k, c) => k === handKey(c, 'hunting-dog') || PAY(k) || k === 'pass',
     highlight: (c) => ({ objs: [inHand(c.view, HUMAN, 'hunting-dog')].filter((x): x is number => x !== undefined),
-      keys: realKeys(c.decision).filter(PAY) }),
+      keys: payKeys(realKeys(c.decision)) }),
   },
   {
     id: 'end-5', title: 'End your turn',
@@ -382,7 +384,7 @@ const STEPS: LessonStep[] = [
     highlight: (c) => ({
       objs: [inHand(c.view, HUMAN, 'herald-of-the-emperor'), ...unitsOf(c.view, HUMAN, 'hunting-dog')]
         .filter((x): x is number => x !== undefined),
-      keys: [handKey(c, 'herald-of-the-emperor'), 'loc:base', ...realKeys(c.decision).filter(PAY).slice(0, 1),
+      keys: [handKey(c, 'herald-of-the-emperor'), 'loc:base', ...payKeys(realKeys(c.decision)),
         ...(kind(c) === 'target' ? unitsOf(c.view, HUMAN, 'hunting-dog').map((id) => `t:${id}`) : [])]
         .filter((k): k is string => k !== null),
     }),

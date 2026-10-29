@@ -29,6 +29,8 @@ export interface Button {
   label: string;
   primary?: boolean;
   hotkey?: string;
+  /** Shown but not clickable yet (paying: the runes are not picked). */
+  disabled?: boolean;
   /** Everything the button sends, in order: the draft, then its key. */
   commit: string[];
 }
@@ -75,7 +77,7 @@ export function promptText(d: Pick<Decision, 'kind' | 'prompt'>, names: Names = 
       const power = Array.isArray(d.prompt.power) ? d.prompt.power.length : 0;
       const what = card === 'hide' ? 'Hide it: pay' : card === 'move' ? 'Moving several units there: pay' : card === 'cost' || !card
         ? 'Pay' : `${names(card)}: pay`;
-      return `${what} ${e} Energy${power > 0 ? ` and ${power} Power` : ''}: choose how.`;
+      return `${what} ${e} Energy${power > 0 ? ` and ${power} Power` : ''}: tap runes to pay, then confirm.`;
     }
     case 'target': {
       const max = typeof d.prompt.max === 'number' ? d.prompt.max : 1;
