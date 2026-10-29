@@ -82,7 +82,7 @@
 .lb-view { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 .lb-page { --side-w: 0px; flex: 1; min-height: 0; display: grid; grid-template-columns: var(--side-w) minmax(0, 1fr); }
 .lb-page.has-side { --side-w: 248px; }
-.lb-page.wide-side { --side-w: 316px; }
+.lb-page.wide-side { --side-w: 344px; }
 .lb-side {
   grid-column: 1; min-height: 0; overflow-y: auto; padding: 26px 0 16px; display: flex; flex-direction: column; gap: 2px;
   background: linear-gradient(90deg, rgba(1, 10, 19, .92), rgba(9, 22, 40, .55));
@@ -950,12 +950,26 @@ html[data-scaled] .app {
 .ds__start { gap: 10px; }
 
 /* ---- play: one frame for the custom game and the online modes ---- */
-.lb-side--center { justify-content: center; padding-block: 16px; }
-.lb-side--center .lb-rank { margin-top: 2px; }
-.ds__start { min-height: 150px; align-content: end; }
-.ds__bar { min-height: 44px; }
+.ds__start { height: 150px; flex: none; align-content: end; }
+.ds__bar { height: 58px; flex: none; }
 .ds-slot__back { width: 100%; aspect-ratio: 744 / 1039; position: relative; overflow: hidden; border-radius: 4.5%; }
 .ds-slot.is-wait .ds-slot__card { cursor: default; opacity: .6; filter: grayscale(.35) drop-shadow(0 18px 34px rgba(0, 0, 0, .55)); }
 .ds-slot.is-wait .ds-slot__card:hover { transform: none; }
 .ds-slot__tag--alt { background: linear-gradient(180deg, #1e2832, #0d141c); color: var(--muted); }
 .ds-slot figcaption { min-height: 96px; align-content: start; }
+
+/* ---- home: the featured card has no frame, the news sit at the bottom ---- */
+.home-feat { display: grid; justify-items: center; margin: 4px 22px 0; text-decoration: none; color: inherit; }
+.home-feat__card { width: min(100%, max(110px, calc((100 * var(--vh) - 395px) * .716))); }
+.home-feat__card.is-slab { width: min(100%, max(100px, calc((100 * var(--vh) - 395px) * .6))); }
+.home-feat__empty { margin-top: 20px; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); text-align: center; }
+.home-news-dock { margin-top: auto; padding-bottom: 6px; }
+.home-news-dock .lb-label { margin: 0 22px 10px; }
+.ds__bar-right { display: flex; align-items: center; gap: 12px; }
+.seg--format button { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; font: 700 11px/1 var(--font-ui); letter-spacing: .1em; text-transform: uppercase; }
+.seg--format button:disabled { opacity: .5; cursor: not-allowed; }
+.seg--format .lb-soon { margin-left: 0; }
+
+.home-feat { margin: 4px 18px 0; }
+.home-news-dock .lb-label, .news { margin-inline: 18px; }
+.wide-side .lb-label { margin-inline: 18px; }

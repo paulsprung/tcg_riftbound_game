@@ -7,7 +7,7 @@ import type { IconName } from '../lobby/icons.tsx';
 import { BUILT_IN_DECKS } from '../play/host/decks.ts';
 import { cardIndex } from '../play/model/cards.ts';
 import { PlayView } from '../play/PlayView.tsx';
-import { DeckPicker, DeckSlot } from '../play/setup/DeckSetup.tsx';
+import { DeckPicker, DeckSlot, FormatSwitch } from '../play/setup/DeckSetup.tsx';
 
 type ModeId = 'ranked' | 'casual' | 'tournament' | 'custom';
 
@@ -31,7 +31,10 @@ function OnlineMode({ db, mode }: { db: CardDb; mode: (typeof ONLINE)[number] })
     <section className="play-setup ds">
       <header className="ds__bar">
         <h1>{mode.label}</h1>
-        <span className="lb-soon-note">Online matches arrive with the server update</span>
+        <span className="ds__bar-right">
+          {mode.id === 'casual' && <FormatSwitch />}
+          <span className="lb-soon-note">Online matches arrive with the server update</span>
+        </span>
       </header>
 
       <div className="ds__stage">
@@ -57,7 +60,6 @@ function OnlineMode({ db, mode }: { db: CardDb; mode: (typeof ONLINE)[number] })
       </div>
 
       <div className="ds__start">
-        <p className="muted small ds__summary">{mode.blurb}</p>
         <button type="button" className="btn btn--cta" disabled>{mode.id === 'tournament' ? 'Browse tournaments' : 'Find match'}</button>
       </div>
       {picking && deck && (
@@ -91,7 +93,7 @@ export function PlayLobby({ db, mode }: { db: CardDb; mode: string }) {
   // a running game takes the whole width
   const bare = tutorial || (id === 'custom' && inGame);
   return (
-    <Lobby side={side} sideClass="lb-side--center" bare={bare}>
+    <Lobby side={side} bare={bare}>
       {online ? <OnlineMode db={db} mode={online} /> : (
         <div className={bare ? 'lb-bare' : 'lb-play-scroll'}>
           <PlayView key={tutorial ? 'tutorial' : 'play'} db={db} tutorial={tutorial} onInGame={setInGame} />

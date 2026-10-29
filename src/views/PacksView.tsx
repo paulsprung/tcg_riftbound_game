@@ -54,7 +54,6 @@ export function PacksView({ db, onInspect }: { db: CardDb; onInspect: (t: Inspec
       <SideTitle>YOUR BALANCE</SideTitle>
       <div className="lb-balance">
         <span><Coin /> <b>{own.coins.toLocaleString('en-US')}</b></span>
-        <span className="muted small">Coins are earned by playing and by selling cards. They can't be bought.</span>
         <a className="btn btn--ghost btn--small" href="#home">Daily coins</a>
       </div>
     </>
@@ -83,7 +82,6 @@ export function PacksView({ db, onInspect }: { db: CardDb; onInspect: (t: Inspec
               <div className="shop-banner__text">
                 <span className="hero__kicker">New set</span>
                 <h2>{featured.info.name} Booster Pack</h2>
-                <p>{featured.pack.slots.reduce((n, s) => n + s.count, 0)} cards · {featured.style.tagline}. Every slot as in the real pack.</p>
                 <div className="shop-actions">
                   <button type="button" className="btn btn--cta" disabled={own.coins < PACK_PRICE} onClick={() => buy(featured.id, 1)}>
                     <Coin /> Buy 1 · {PACK_PRICE}
@@ -108,7 +106,6 @@ export function PacksView({ db, onInspect }: { db: CardDb; onInspect: (t: Inspec
                   width={Math.round(packH * (packArt(s.id)?.aspect ?? aspect))} />
                 <div className="pack-shelf__label">
                   <strong>{s.info.name}</strong>
-                  <span className="muted">{s.style.tagline} · {s.info.cardCount} cards{own.packsOpened[s.id] ? ` · ${own.packsOpened[s.id]} opened` : ''}</span>
                   <button type="button" className="shop-buy" disabled={own.coins < PACK_PRICE} onClick={() => buy(s.id, 1)}
                     aria-label={`Buy a ${s.info.name} pack for ${PACK_PRICE} coins`}>
                     <Coin /> {PACK_PRICE}

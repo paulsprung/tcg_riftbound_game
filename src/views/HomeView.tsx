@@ -12,34 +12,30 @@ import { Starters } from './Starters.tsx';
 
 const hhmm = (ms: number) => `${Math.floor(ms / 3_600_000)} h ${Math.ceil((ms % 3_600_000) / 60_000)} min`;
 
-/** Left of the banner: your featured card (the first one in your showcase) and the news. */
+/** Left of the banner: your featured card (the first one in your showcase), and the news pinned to the bottom. */
 function Side({ db }: { db: CardDb }) {
   const pick = useShowcase(db)[0];
   return (
     <>
       <p className="lb-label">Your showcase</p>
-      <a className="lb-card home-feat" href="#profile" aria-label={pick ? `${pick.card.name}, your featured card. Open your profile` : 'Pick a featured card in your profile'}>
+      <a className="home-feat" href="#profile" aria-label={pick ? `${pick.card.name}, your featured card. Open your profile` : 'Pick a featured card in your profile'}>
         {pick ? (
-          <>
-            <div className={`home-feat__card${pick.slab ? ' is-slab' : ''}`}>
-              {pick.slab ? (
-                <Slab slab={pick.slab} card={pick.card} width="100%" imageWidth={520} tilt="hover" />
-              ) : (
-                <HoloCard card={pick.card} finish={defaultFinish(pick.card, pick.foil)} width="100%" imageWidth={520} />
-              )}
-            </div>
-            <div className="home-feat__info">
-              <strong>{pick.card.name}</strong>
-              <span className="muted small">{pick.slab ? `Graded ${pick.slab.grade}` : `${pick.card.setName} · ${pick.card.rarity}`}</span>
-            </div>
-          </>
+          <div className={`home-feat__card${pick.slab ? ' is-slab' : ''}`}>
+            {pick.slab ? (
+              <Slab slab={pick.slab} card={pick.card} width="100%" imageWidth={520} tilt="hover" />
+            ) : (
+              <HoloCard card={pick.card} finish={defaultFinish(pick.card, pick.foil)} width="100%" imageWidth={520} />
+            )}
+          </div>
         ) : (
-          <p className="muted small home-feat__empty">Put a card in your showcase: it is featured here.</p>
+          <span className="home-feat__empty">Put a card in your showcase</span>
         )}
       </a>
 
-      <p className="lb-label home-news__label">Latest news</p>
-      <NewsCarousel />
+      <div className="home-news-dock">
+        <p className="lb-label home-news__label">Latest news</p>
+        <NewsCarousel />
+      </div>
     </>
   );
 }

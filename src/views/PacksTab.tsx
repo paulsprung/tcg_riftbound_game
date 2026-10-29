@@ -38,7 +38,7 @@ export function PacksTab({ db }: { db: CardDb }) {
                 width={Math.round(packH * (packArt(s.id)?.aspect ?? 1 / 1.72))} onClick={() => openPack(s.id)} />
               <div className="pack-shelf__label">
                 <strong>{s.info.name}</strong>
-                <span className="muted">{s.info.cardCount} cards · × {own.packs[s.id] ?? 0}</span>
+                <span className="muted">× {own.packs[s.id] ?? 0}</span>
                 <div className="shop-actions">
                   {(own.packs[s.id] ?? 0) > 0 && <button type="button" className="btn btn--primary btn--small" onClick={() => openPack(s.id)}>Open pack</button>}
                   {pending?.setId === s.id && (

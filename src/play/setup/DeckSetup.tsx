@@ -51,6 +51,16 @@ const OPPONENTS: { id: OpponentChoice; label: string; text: string }[] = [
   { id: 'hotseat', label: 'Hot-seat', text: 'Two players on this device. The screen is covered between turns so each sees only their own hand.' },
 ];
 
+/** 1v1 is what the engine plays today; the 2v2 Duo rules (Magma Chamber) come later. */
+export function FormatSwitch() {
+  return (
+    <div className="seg seg--format" role="group" aria-label="Format">
+      <button type="button" aria-pressed="true">1v1 Duel</button>
+      <button type="button" disabled aria-pressed="false" title="2v2 is not playable yet">2v2 Duo <em className="lb-soon">soon</em></button>
+    </div>
+  );
+}
+
 /** The domains of a legend as chips with their symbols. */
 function DomainChips({ domains, db }: { domains: string[]; db: CardDb }) {
   return (
@@ -117,13 +127,11 @@ export function DeckPicker({ cards, db, title, current, owned, mine, only, onRan
           ))}
           {onRandom && <button type="button" className="ds-tabs__random" onClick={onRandom}>Random deck</button>}
         </div>}
-        <p className="muted small ds-modal__sub">{only ? 'Decks you have built or own' : group.name}</p>
         <div className="ds-choices">
           {group.decks.map((b) => (
             <DeckChoice key={b.id} b={b} cards={cards} db={db} selected={b.id === current} owned={b.id === owned} onPick={() => onPick(b)} />
           ))}
         </div>
-        {only && <p className="muted small ds-modal__note">More decks will show up here once you build them in the deck builder.</p>}
       </div>
     </div>
   );
@@ -162,7 +170,6 @@ export function DeckSetup({ cards, db, initial, error, onStart, saved, onResume,
     ...deckProblems(mine.deck, c.champion).map((p) => `Your deck: ${p}`),
     ...deckProblems(theirs.deck).map((p) => `Opponent's deck: ${p}`),
   ];
-  const opp = OPPONENTS.find((o) => o.id === c.opponent)!;
 
   return (
     <section className="play-setup ds">
@@ -186,6 +193,7 @@ export function DeckSetup({ cards, db, initial, error, onStart, saved, onResume,
 
       <header className="ds__bar">
         <h1>Custom game</h1>
+        <FormatSwitch />
       </header>
 
       <div className="ds__stage">
@@ -201,7 +209,6 @@ export function DeckSetup({ cards, db, initial, error, onStart, saved, onResume,
               onClick={() => setC({ ...c, opponent: o.id })}>{o.label.replace('Computer: ', '')}</button>
           ))}
         </div>
-        <p className="muted small ds__summary">{opp.text}</p>
         {problems.length > 0 && <ul className="play__error">{problems.map((p) => <li key={p}>{p}</li>)}</ul>}
         {error && <p className="play__error" role="alert">{error}</p>}
         <button type="button" className="btn btn--cta" disabled={problems.length > 0} onClick={() => onStart(c)}>Start game</button>

@@ -27,7 +27,7 @@ export function DecksView({ db }: { db: CardDb }) {
             <div className="dk-tile__art">{legend ? <HoloCard card={legend} finish="none" width="100%" imageWidth={360} /> : <div className="starter__ph" />}</div>
             <div className="dk-tile__info">
               <strong>{deck?.title ?? 'Starter deck'}</strong>
-              <span className="muted small">{deck ? `${deck.size} cards · ${deck.product}` : 'Loading…'}</span>
+              <span className="muted small">{deck ? `${deck.size} cards` : '…'}</span>
               <a className="btn btn--cta btn--small" href="#play/custom">Play with this deck</a>
             </div>
           </article>
