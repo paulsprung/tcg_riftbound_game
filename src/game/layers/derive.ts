@@ -50,6 +50,8 @@ export interface Derived {
   baseMight: number | null;
   /** Keyword values after layer 3; 1 for keywords without a value. */
   keywords: Partial<Record<KeywordId, number>>;
+  /** The static decreases applied, with what each took off (staticDecreases). */
+  decs?: { host: ObjId; ability: string; ctl: PlayerId; n: number }[];
 }
 
 const token = (def: string) => (Object.hasOwn(TOKENS, def) ? TOKENS[def as TokenId] : undefined);
@@ -238,12 +240,20 @@ export function derive(s: GameState, id: ObjId): Derived {
     for (const { st, spec } of ms) {                                 // decreases, "to a minimum of N [M]"
       if (!spec.dec) continue;
       const n = Math.max(0, value(s, spec.n, st.host, st.ctl));
-      d.might -= spec.floor === undefined ? n : Math.min(n, Math.max(0, d.might - spec.floor));
+      const took = spec.floor === undefined ? n : Math.min(n, Math.max(0, d.might - spec.floor));
+      d.might -= took;
+      if (took > 0) (d.decs ??= []).push({ host: st.host, ability: st.a.id, ctl: st.ctl, n: took });
     }
   }
   m.busy.delete(id);
   m.m.set(id, d);
   return d;
+}
+
+/** The static decreases that lower an object's Might now, by how much each actually takes off ("to a minimum of N"
+    included): Ahri, Confident counts a passive that newly applies a non-zero -[M] (Radiance patch notes). */
+export function staticDecreases(s: GameState, id: ObjId): { host: ObjId; ability: string; ctl: PlayerId; n: number }[] {
+  return derive(s, id).decs ?? [];
 }
 
 /** Whether an object has a keyword now (the implemented ones). */

@@ -29,7 +29,7 @@ import { abilityIn, cardDef, keywordCost, keywordsOf } from '../cards/registry.t
 import { K, parseKey, type Option } from '../core/decisions.ts';
 import { endGame } from '../core/end.ts';
 import { emit, emitZone, knowers } from '../core/events.ts';
-import { answer, ask, defineSteps, ret, takeRet, type FrameOf, type StepOut } from '../core/frames.ts';
+import { answer, ask, defineSteps, ret, takeRet, type FrameOf, type RunCtx, type StepOut } from '../core/frames.ts';
 import { EngineError } from '../core/errors.ts';
 import { allMask } from '../state/ids.ts';
 import { append, moveObject, pushFrame, setCopy, setField } from '../state/mut.ts';
@@ -41,9 +41,10 @@ import type { InstrAst, MoveToAst, ProgAst, RefAst, SelAst, SlotAst, ValueAst } 
 import { collect, fire, placeAll, placeSelfLeave } from '../abilities/triggers.ts';
 import {
   addEffect, addMight, addSpecial, attach, banish, buffUnits, burn, cantMove, channelRunes, deal, detach, discard, drawCard,
-  addLegend, drawCards, exhaust, gainPoints, gainXp, heal, kill, look, mill, moveUnits, ready, recall, recycleCards, recyclePermanent, recycleRune, returnToHand,
+  addLegend, drawCards, exhaust, gainPoints, optionalSaves, gainXp, heal, kill, look, mill, moveUnits, ready, recall, recycleCards, recyclePermanent, recycleRune, returnToHand,
   endUnitGears, makeUnitGear, replaceBattlefield, setEmpowered, spendBuffs, spendXp, stunUnits, swapBackBattlefield, toZone,
 } from '../rules/actions.ts';
+import type { DeathOffer } from '../rules/actions.ts';
 import { itemById, markFepr, removeItem } from '../rules/chain.ts';
 import { energyCostOf, isType, isUnitOnBoard, keywordOf, mightOf, snapshotOf, tagsOf, typesOf } from '../rules/chars.ts';
 import { evalCond, tagsAmong, type CondCtx } from '../rules/conditions.ts';
@@ -513,8 +514,11 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
       } else if (typesOf(o).includes('unit') && ins.at === 'base') at = { z: 'base', p: who };
       // "back to the same location or to their base": where the card was before it left the board (look-back).
       const was = ins.sameOrBase || ins.sameLoc ? Object.values(it.play.lookBack).find((sn) => sn.card === o.card)?.loc ?? null : null;
+      // Temporal Breach: a unit that was at another player's base can't be played there by its owner: it stays banished
+      // (Vendetta FAQ) [191.4].
+      if (ins.sameLoc && was && was.z === 'base' && was.p !== who && typesOf(o).includes('unit')) return;
       const locs: Loc[] | undefined = ins.sameOrBase ? [{ z: 'base', p: who }, ...(was && was.z === 'bf' ? [was] : [])]
-        : ins.sameLoc ? [was && (was.z === 'bf' || was.p === who) ? was : { z: 'base', p: who }] : undefined;
+        : ins.sameLoc ? [was ?? { z: 'base', p: who }] : undefined;
       const played = putOnChain(s, x, { obj: id, controller: who, by: { item: it.id, instr: st.key },
         overrides: { cost: { energy: Math.max(0, cost.energy - less), power: ins.free === 'all' ? [] : cost.power }, ...(at ? { at } : {}),
           ...(ins.anyBf ? { anyBf: true } : {}), ...(locs && typesOf(o).includes('unit') ? { locs } : {}) } });
@@ -546,7 +550,15 @@ function execute(s: GameState, x: X, f: ResolveFrame, it: ChainItem, st: Step, c
         const card = it.obj !== undefined ? s.objects[it.obj]?.card : undefined;   // "each time this spell has dealt damage this turn"
         if (card !== undefined) setField(s, s.log, 'cardDeals', [...(s.log.cardDeals ?? []), card]);
       }
-      else if (ins.op === 'kill') { lookBack(s, it, objs); kill(s, x, objs, { rule: '429', inCombat: () => false, by: p, spell: it.kind === 'card' }); }
+      else if (ins.op === 'kill') {
+        // The optional replacements of these deaths are their controllers' to decide (Altar of Blood, Mordekaiser …).
+        if (got === undefined && optionalSaves(s, objs).length > 0) {
+          return choice('deathSaves', { offers: optionalSaves(s, objs) as unknown as Json, i: 0, answers: {} });
+        }
+        const answers = (got as { answers?: Record<string, string> } | undefined)?.answers;
+        lookBack(s, it, objs);
+        kill(s, x, objs, { rule: '429', inCombat: () => false, by: p, spell: it.kind === 'card', ...(answers ? { answers } : {}) });
+      }
       else if (ins.op === 'stun') return stunUnits(s, x, objs, '424', p).length > 0 ? ok : { o: 'negated', why: 'noop' };
       else if (ins.op === 'buff') return buffUnits(s, x, objs, '427', p).length > 0 ? ok : { o: 'negated', why: 'noop' };
       else {
@@ -1529,6 +1541,7 @@ defineSteps('instr', (s, f, x) => {
     return ask(s, f, x, { player: l.who, kind: 'may', prompt: { t: 'mayInstr' }, ctx: { item: l.item, rule: '359.3.e' },
       options: [{ key: K.yes }, { key: K.no }], privateOptions: false });
   }
+  if (f.op === 'deathSaves') return deathSavesStep(s, f, x);
   if (f.op === 'pay') {
     const l = f.locals as unknown as { who: PlayerId; item: number; energy: number; power: PowerReq[] };
     const r = payStep(s, f, x, { payer: l.who, cost: { energy: l.energy, power: l.power }, what: 'cost', item: l.item, back: false,
@@ -1663,3 +1676,34 @@ defineSteps('instr', (s, f, x) => {
   });
 });
 
+/** Asks each dying unit's controller about the optional replacements of its death, one at a time (Altar of Blood's
+    "may pay", Mordekaiser's "you may kill a friendly unit": which one), and hands back the answers for kill(). */
+export function deathSavesStep(s: GameState, f: FrameOf<'instr'>, x: RunCtx): StepOut {
+  const l = f.locals as unknown as { offers: DeathOffer[]; i: number; answers: Record<string, string>; stage?: 'victim' };
+  const key = answer(f);
+  const o = l.offers[l.i];
+  if (!o) return ret(s, f, { answers: l.answers });
+  const k = `${o.unit}:${o.kind}`;
+  if (key !== undefined) {
+    if (l.stage === 'victim') {
+      f.locals = { ...l, i: l.i + 1, stage: undefined, answers: { ...l.answers, [k]: `v:${parseKey(key)!.obj!}` } } as unknown as Json;
+    } else if (key === K.no) {
+      f.locals = { ...l, i: l.i + 1, answers: { ...l.answers, [k]: 'no' } } as unknown as Json;
+    } else if (o.kind === 'byKill') {
+      f.locals = { ...l, stage: 'victim' } as unknown as Json;
+    } else {
+      f.locals = { ...l, i: l.i + 1, answers: { ...l.answers, [k]: 'yes' } } as unknown as Json;
+    }
+    return 'continue';
+  }
+  const u = s.objects[o.unit];
+  if (!u) { f.locals = { ...l, i: l.i + 1 } as unknown as Json; return 'continue'; }
+  const who = u.controller ?? u.owner;
+  if (l.stage === 'victim') {
+    const victims = (o.victims ?? []).filter((v) => s.objects[v]);
+    return ask(s, f, x, { player: who, kind: 'costObject', prompt: { t: 'saveVictim', unit: o.unit, what: 'kill', n: 1 }, ctx: { source: o.source, rule: '740.4.a' },
+      options: victims.map((v) => ({ key: K.t(v), refs: [{ obj: v }] })), privateOptions: false, mustAsk: true });
+  }
+  return ask(s, f, x, { player: who, kind: 'applyReplacement', prompt: { t: 'saveFromDeath', unit: o.unit, source: o.source },
+    ctx: { source: o.source, rule: '370.1' }, options: [{ key: K.yes }, { key: K.no }], privateOptions: false });
+}

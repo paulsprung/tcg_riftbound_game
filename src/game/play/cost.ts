@@ -44,7 +44,9 @@ export interface CostOffer { key: string; a: CostAbilityAst; src: ObjId | null }
 /** The cost abilities that apply to p playing a card of these types: the
     card's own [366.2.a] and those of objects on the board that grant one to
     such cards [356.2], each only while its condition holds. */
-export function costOffers(s: GameState, def: string, types: CardType[], p: PlayerId, origin?: string): CostOffer[] {
+export function costOffers(s: GameState, def: string, types: CardType[], p: PlayerId, origin?: string,
+  /** The card has [Flow] given by an effect (Kennen): "Spells with [Flow]" (Stargazer) include it. */
+  flow = false): CostOffer[] {
   const out: CostOffer[] = [];
   for (const a of abilitiesOf(def)) {
     if (a.kind !== 'cost' || a.grant) continue;
@@ -69,7 +71,8 @@ export function costOffers(s: GameState, def: string, types: CardType[], p: Play
     for (const a of abilitiesOf(o.def)) {
       if (a.kind !== 'cost' || !a.grant || !a.grant.types.some((t) => types.includes(t))) continue;
       if (a.grant.tag && !(findCard(def)?.tags ?? []).includes(a.grant.tag)) continue;
-      if (a.grant.keyword && !(findCard(def)?.keywords ?? []).some((l) => l.keywords.some((k) => k.kw === a.grant!.keyword))) continue;
+      if (a.grant.keyword && !(a.grant.keyword === 'flow' && flow)
+        && !(findCard(def)?.keywords ?? []).some((l) => l.keywords.some((k) => k.kw === a.grant!.keyword))) continue;
       const whose = a.grant.whose ?? 'you';
       const ctl = o.controller;
       if (ctl === null || (whose === 'you' && ctl !== p) || (whose === 'enemy' && ctl === p)) continue;
@@ -137,8 +140,8 @@ export function nonStdOf(c: CostAst | NonStdCostAst | undefined): NonStdCostAst 
 }
 
 /** The optional costs a player may decide to pay now [355.1.a]. */
-export function optionalOffers(s: GameState, def: string, types: CardType[], p: PlayerId, origin?: string): CostOffer[] {
-  return costOffers(s, def, types, p, origin).filter((o) => o.a.optional && nonStdPossible(s, o.a.pay, o.src, p));
+export function optionalOffers(s: GameState, def: string, types: CardType[], p: PlayerId, origin?: string, flow = false): CostOffer[] {
+  return costOffers(s, def, types, p, origin, flow).filter((o) => o.a.optional && nonStdPossible(s, o.a.pay, o.src, p));
 }
 
 /** The Energy a discount takes off, read now [356.4.g]. */
@@ -183,11 +186,13 @@ export function totalCost(s: GameState, o: { def: string; types: CardType[]; p: 
   /** An instruction fixed the cost ("ignoring its cost", "for [A]"): no alternative cost replaces it. */
   fixedBase?: boolean;
   /** Estimate the reduction of a cost read from the objects it kills (Atakhan) with the most expensive candidate. */
-  estimatePaid?: boolean }): ResourceCost {
+  estimatePaid?: boolean;
+  /** [Flow] given by an effect (costOffers). */
+  flow?: boolean }): ResourceCost {
   let energy = o.base.energy;
   let power: PowerReq[] = o.base.power.slice();
   const domains = findCard(o.def)?.domains ?? [];
-  const offers = costOffers(s, o.def, o.types, o.p, o.origin).filter((off) => !off.a.optional || o.chosen.includes(off.key));
+  const offers = costOffers(s, o.def, o.types, o.p, o.origin, o.flow).filter((off) => !off.a.optional || o.chosen.includes(off.key));
   for (const off of offers) {                                        // an alternative cost instead of the base cost [204.1.b]
     if (!off.a.alt || o.fixedBase) continue;
     energy = off.a.alt.energy ?? 0;
@@ -301,11 +306,13 @@ export function cheapestCost(s: GameState, id: ObjId, p: PlayerId, base: Resourc
   const o = s.objects[id];
   const types = typesOf(o);
   const origin = o.zone.z;
-  const free = optionalOffers(s, o.def, types, p, origin).filter((x) => (x.a.discount || x.a.lessByPaid || x.a.alt) && !x.a.add && !x.a.repeat)
+  const flow = origin === 'trash' && s.effects.some((e) => (e.spec as { s?: string } | null)?.s === 'flowGrant'
+    && 'objs' in e.affects && e.affects.objs.includes(id));
+  const free = optionalOffers(s, o.def, types, p, origin, flow).filter((x) => (x.a.discount || x.a.lessByPaid || x.a.alt) && !x.a.add && !x.a.repeat)
     .map((x) => x.key);
   const xs: Record<string, number> = {};
   for (const off of costOffers(s, o.def, types, p, origin)) if (off.a.x) xs[off.key] = xMax(s, off.a.x, p);
-  return totalCost(s, { def: o.def, types, p, base, chosen: free, xs, origin, estimatePaid: true });
+  return totalCost(s, { def: o.def, types, p, base, chosen: free, xs, origin, estimatePaid: true, flow });
 }
 
 /** Whether the mandatory non-standard costs of playing a card can be paid

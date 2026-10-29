@@ -564,6 +564,7 @@ export const VEN_SET_DEFS = [
   unit('spiderling', '[Hidden]\nI have +1 [M] for each other unit you control here with my name.\nYour deck can have any number of cards named Spiderling.', {
     abilities: [statik(val.count(unitSel({ rel: 'friendly', other: true, at: 'here', where: [pred.name('Spiderling')] })))],
   }),
+  // "Spells with [Flow]": printed or given (Kennen) — having a keyword is a characteristic [829], [479.3].
   unit('stargazer', 'Spells with [Flow] you play from your trash cost [2] less, to a minimum of [1].', {
     abilities: [costAbility({ grant: { types: ['spell'], keyword: 'flow' }, discount: { energy: 2, min: 1 }, while: cond.origin('trash') })],
   }),
@@ -580,8 +581,8 @@ export const VEN_SET_DEFS = [
     choose: [slot('a', unitSel())], body: [named('b', banish(ref.slot('a'))), playFree(ref.bound('b'), 'all', { by: 'owner', sameLoc: true })],
   }),
   battlefield('threshold-of-the-gray', 'When combat starts here, the attacker and defender each [Add] [1].', [
-    when({ on: 'attack', who: 'you', at: 'here' }, prog([addEnergy(1)]), { controller: 'eventPlayer' }),
-    when({ on: 'defend', who: 'you', at: 'here' }, prog([addEnergy(1)]), { controller: 'eventPlayer' }),
+    // A start-of-combat effect [466.2.b] (before the designations), one for each player.
+    when({ on: 'combatStart', at: 'here' }, prog([addEnergy(1)]), { controller: 'eventPlayer' }),
   ]),
   unit('tomb-raider-barbara', "When you play me, if you control 7 or more runes, choose an enemy gear. If it's [Empowered], disempower it. Otherwise, kill it.", {
     abilities: [onPlay(prog([iff(cond.is(ref.slot('g'), pred.empowered), [{ op: 'disempower', what: ref.slot('g') }], [kill(ref.slot('g'))])],

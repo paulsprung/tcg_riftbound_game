@@ -87,6 +87,7 @@ export type TriggerEvent =
   | { e: 'drew'; p: PlayerId; before: number; after: number }        // cards drawn this turn, before and after a draw
   | { e: 'mightReduced'; by: PlayerId; objs: ObjId[] }
   | { e: 'combatEnded'; bf: number; units: ObjId[] }                 // [468.7]
+  | { e: 'combatStart'; bf: number; attacker: PlayerId; defender: PlayerId }   // start of combat [466.2.b]
   | { e: 'becameReady'; objs: ObjId[] }                              // by anything [416]
   | { e: 'abilityPlayed'; p: PlayerId; energy: number }              // an activated ability finalized [407]
   | { e: 'mightReached'; objs: { id: ObjId; n: number }[] }          // "When my Might becomes 10 or more"
@@ -379,6 +380,11 @@ function meets(s: GameState, w: TriggerAst, ev: TriggerEvent, o: GameObject | nu
         instances.push({ p: ev.p, info: { p: ev.p, bf: ev.bf } });
       }
       break;
+    case 'combatStart':                                               // "When combat starts here, the attacker and defender each …"
+      if (ev.e === 'combatStart' && sameLoc({ z: 'bf', bf: ev.bf }, here)) {
+        for (const q of [ev.attacker, ev.defender]) instances.push({ p: q, info: { p: q, bf: ev.bf } });
+      }
+      break;
     case 'showdownStart':
       if (ev.e === 'showdown' && o && sameLoc({ z: 'bf', bf: ev.bf }, here)) instances.push({ p: o.controller, info: { bf: ev.bf } });
       break;
@@ -478,14 +484,17 @@ export function collect(s: GameState, ev: TriggerEvent): PendingTrigger[] {
         const controller = controllerFor(o, a, inst.p);
         if (controller === null) continue;                           // uncontrolled battlefield (§8 'none')
         if (a.limit && (s.usage[usageKey(o.id, a.id, '*')] ?? 0) >= a.limit.n) continue;   // [383.3.e.1]
+        // An intervening "if": checked now, and never again [383.2.a.1]; with `firstIf` it is part of the event that
+        // "the first time" counts ("The first time a friendly unit dies during your Beginning Phase each turn").
+        const ifOk = () => !a.if || evalCond(s, a.if, { controller, source: o.id, facts: o.played, info: inst.info });
+        if (a.first && a.firstIf && !ifOk()) continue;
         if (a.first) {                                               // "the first time … each turn": the event counts [383.1.b]
           const k = usageKey(o.id, a.id, 'first' as unknown as PlayerId);
           const seen = s.usage[k] ?? 0;
           countUsage(s, k);
           if (seen > 0) continue;
         }
-        // An intervening "if": checked now, and never again [383.2.a.1].
-        if (a.if && !evalCond(s, a.if, { controller, source: o.id, facts: o.played, info: inst.info })) continue;
+        if (!(a.first && a.firstIf) && !ifOk()) continue;
         // LeBlanc, Everywhere at Once: "Your [Temporary] effects at my battlefield don't trigger."
         if (a.id.endsWith('#kw:temporary') && staticsFor(s, o.id, 'noTemporaryTrigger').some(({ st }) => st.ctl === controller)) continue;
         out.push({ ability: a.id, source: o.id, controller, info: inst.info, group: 0 });

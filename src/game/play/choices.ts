@@ -253,6 +253,7 @@ export function chooseNext(s: GameState, f: Frame, x: RunCtx, it: ChainItem, pro
     const cands = candidatesFor(s, slot, cctx, c).filter((id) => !chosen.includes(id) && !others.includes(id)
       && (!o.affordable || o.affordable(targetRef(s, id)))
       && (slot.sumMightMax === undefined || total + Math.max(0, mightOf(s, id)) <= slot.sumMightMax)
+      && (!slot.oneEachLoc || !chosen.some((u) => s.objects[u] && JSON.stringify(locOf(s.objects[u])) === JSON.stringify(locOf(s.objects[id]))))
       && leavesChoices(s, all, slot, id, cctx, c));
     const enough = chosen.length >= slotMin(slot);
     if (chosen.length >= slotMax(slot) || (enough && cands.length === 0)) {

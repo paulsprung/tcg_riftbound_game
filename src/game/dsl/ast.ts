@@ -62,7 +62,9 @@ export type AbilityAst = { id: string; activeIn?: ZoneScope; limit?: LimitAst;
   grantedOnly?: true;
   /** "The first time … each turn": counted per source as the event happens,
       whatever becomes of the trigger [383.1.b]. */
-  first?: 'turn' } & (
+  first?: 'turn';
+  /** The trigger's `if` belongs to the event "the first time" counts (checked before counting). */
+  firstIf?: true } & (
   | { kind: 'triggered'; when: TriggerAst; may?: true; cost?: CostAst;
       /** Who controls it: its source's controller (owner off the board)
           [191.5.a], or the player the trigger names [190.6.c]. */
@@ -180,7 +182,8 @@ export type StaticAst =
       /** "I can't move to base": only its source. */
       self?: true }
   /** Mordekaiser, Twice-Slain: "Once each turn, if I would die, you may kill a friendly unit to heal me, exhaust me, and recall me
-      instead" (applied whenever another friendly unit can be killed: the one with the least Might). */
+      instead": asked, and the unit picked, before a cleanup's or an instruction's kill (actions.optionalSaves); where nobody
+      can be asked (a cost's kill) it applies with the friendly unit with the least Might. */
   | { s: 'saveSelfByKill' }
   /** Seraphic Wyvern: "If you would channel runes, channel that many runes plus 1 exhausted rune instead." */
   | { s: 'channelExtra' }
@@ -460,6 +463,8 @@ export interface SlotAst {
   if?: CondAst;
   /** "with total Might N or less". */
   sumMightMax?: number;
+  /** "up to one enemy unit at each location": one target per location, each bound to the location it was chosen at. */
+  oneEachLoc?: true;
 }
 
 export interface SelAst {
@@ -669,6 +674,8 @@ export type PlayerEffectAst =
   | { s: 'grantRepeat'; uses: number }
   /** "Its controller can't play spells this turn." */
   | { s: 'cantPlayTypes'; types: CardType[] }
+  /** Scuttle Crab: "You can look at their facedown cards this turn": the cards they hide later this turn too. */
+  | { s: 'seeFacedown' }
   /** "Your non-token units cost [1] more to play this turn." */
   | { s: 'costMore'; types: CardType[]; energy: number; nonToken?: true };
 
@@ -762,7 +769,7 @@ export type InstrAst = { id?: string; link?: string } & (
   | { op: 'revealTop'; bind: string; n?: number }                               // [425]
   | { op: 'toHand'; what: RefAst }                                               // a revealed card to your hand
   | { op: 'gainXp'; n: ValueAst }                                                // [730.1]
-  | { op: 'add'; energy?: number; power?: number; onlyFor?: 'spells' | 'gear' | 'permanents' | 'units';    // [430] (power: [A])
+  | { op: 'add'; energy?: number; power?: number; onlyFor?: 'spells' | 'gear' | 'permanents' | 'units' | 'showdown';    // [430] (power: [A])
       /** Power of one domain ("[Add] [R]") instead of [A]. */
       domain?: Domain }
   | { op: 'win' }                                                                // [194.5]
@@ -1002,6 +1009,9 @@ export type TriggerAst =
       once?: true }                                                              // you stun an enemy unit [424]
   | { on: 'becomesMighty'; who: 'friendly' }                                     // [709]
   | { on: 'hid'; at: 'here' | 'any' }                                            // you hide a card here [422]
+  /** "When combat starts here, the attacker and defender each …": a start-of-combat effect [466.2.b], one instance for
+      each of them (controller 'eventPlayer'). */
+  | { on: 'combatStart'; at: 'here' }
   /** "When a showdown begins here" [341]. */
   | { on: 'showdownStart'; at: 'here' }
   /** "When you draw your second card each turn". */

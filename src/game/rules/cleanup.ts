@@ -31,10 +31,10 @@
  */
 import { K, parseKey } from '../core/decisions.ts';
 import { emit } from '../core/events.ts';
-import { answer, ask, defineSteps, next, type FrameOf, type StepTable } from '../core/frames.ts';
-import { setField, setInCleanup } from '../state/mut.ts';
-import type { GameState, PlayerId } from '../state/types.ts';
-import { emptyPools, heal, kill, recall, setController, clearContested, applyContested, trashForeignFacedown } from './actions.ts';
+import { answer, ask, defineSteps, next, takeRet, type FrameOf, type StepTable } from '../core/frames.ts';
+import { pushFrame, setField, setInCleanup } from '../state/mut.ts';
+import type { GameState, Json, PlayerId } from '../state/types.ts';
+import { emptyPools, heal, kill, optionalSaves, recall, setController, clearContested, applyContested, trashForeignFacedown } from './actions.ts';
 import { playersWithUnitsAt, turnOrderFromTurnPlayer, turnState, unitsAt, unitsOfAt, unitsOnBoard } from './board.ts';
 import { hasKeyword, isLethal, isType, mightOf } from './chars.ts';
 import { fire } from '../abilities/triggers.ts';
@@ -43,7 +43,7 @@ import { designate, designationFor, openCombat } from './combat.ts';
 import { checkWin } from './scoring.ts';
 import { beginShowdown } from './showdown.ts';
 import { enqueueFront } from './tasks.ts';
-import { staticsFor } from '../layers/derive.ts';
+import { staticDecreases, staticsFor } from '../layers/derive.ts';
 
 type CleanupFrame = FrameOf<'cleanup'>;
 
@@ -96,7 +96,14 @@ const STEPS: StepTable<CleanupFrame> = [
   // 3a: every unit with lethal damage dies, as one action [323.4], [142.4].
   (s, f, x) => {
     const dying = unitsOnBoard(s).filter((id) => isLethal(s, id));
-    kill(s, x, dying, { rule: '323.4', inCombat: (id) => s.combat !== null && s.objects[id].designation !== null });
+    // The optional replacements of these deaths are asked first (Altar of Blood, Mordekaiser …), by a child frame.
+    const got = takeRet(f) as { answers?: Record<string, string> } | undefined;
+    if (got === undefined && optionalSaves(s, dying).length > 0) {
+      pushFrame(s, { f: 'instr', op: 'deathSaves', pc: 0, locals: { offers: optionalSaves(s, dying) as unknown as Json, i: 0, answers: {} } });
+      return 'continue';
+    }
+    kill(s, x, dying, { rule: '323.4', inCombat: (id) => s.combat !== null && s.objects[id].designation !== null,
+      ...(got?.answers ? { answers: got.answers } : {}) });
     return next(f);
   },
 
@@ -195,6 +202,24 @@ const STEPS: StepTable<CleanupFrame> = [
       }
     }
     if (reach.length > 0) fire(s, x, { e: 'mightReached', objs: reach });
+    // Ahri, Confident: a static -[M] that newly applies to a unit is a reduction by its controller (Radiance patch notes).
+    {
+      const marks = { ...(s.marks ?? {}) };
+      const seen = new Set<string>();
+      const by = new Map<number, number[]>();
+      for (const id of unitsOnBoard(s)) {
+        for (const d of staticDecreases(s, id)) {
+          const k = `dec|${id}|${d.host}|${d.ability}`;
+          seen.add(k);
+          if (marks[k] === 1) continue;
+          marks[k] = 1;
+          by.set(d.ctl, [...(by.get(d.ctl) ?? []), id]);
+        }
+      }
+      for (const k of Object.keys(marks)) if (k.startsWith('dec|') && !seen.has(k)) delete marks[k];
+      setField(s, s, 'marks', marks);
+      for (const [p, objs] of by) fire(s, x, { e: 'mightReduced', by: p as PlayerId, objs });
+    }
     if (rose.length > 0) {
       for (const id of rose) emit(s, x, { k: 'becomeMighty', obj: id, rule: '709' });
       fire(s, x, { e: 'mighty', objs: rose });

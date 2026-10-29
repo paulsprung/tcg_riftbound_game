@@ -55,23 +55,25 @@ const accepts = (req: PowerReq, d: Domain) =>
 
 /** Energy in the pool that may pay for this: restricted Energy only for
     what it is restricted to ("Spend this Energy only to play spells"). */
-const restrictedEnergy = (pool: RunePool, spell: boolean | 'gear' | 'unit' | 'unitAbility') =>
-  pool.restricted.reduce((n, r) => n + (r.kind === 'energy' && (r.onlyFor === undefined || restrictionOk(r.onlyFor, spell)) ? r.amount : 0), 0);
+const restrictedEnergy = (pool: RunePool, spell: boolean | 'gear' | 'unit' | 'unitAbility', showdown: boolean) =>
+  pool.restricted.reduce((n, r) => n + (r.kind === 'energy' && (r.onlyFor === undefined || restrictionOk(r.onlyFor, spell, showdown)) ? r.amount : 0), 0);
 
 /** Whether a restriction lets this payment use it: spells only, gear only (Ornn) [430]. */
-export const restrictionOk = (onlyFor: unknown, spell: boolean | 'gear' | 'unit' | 'unitAbility') =>
-  onlyFor === 'spells' ? spell === true : onlyFor === 'gear' ? spell === 'gear'
+export const restrictionOk = (onlyFor: unknown, spell: boolean | 'gear' | 'unit' | 'unitAbility', showdown = false) =>
+  onlyFor === 'showdown' ? showdown                                  // Diana, Scorn of the Moon: "Spend this Energy only during showdowns"
+    : onlyFor === 'spells' ? spell === true : onlyFor === 'gear' ? spell === 'gear'
     : onlyFor === 'permanents' ? spell === 'gear' || spell === 'unit'
     : onlyFor === 'units' ? spell === 'unit' || spell === 'unitAbility' : false;   // "only to play units or activated abilities of units"   // "only to play units or gear"
 
 /** What the pool pays of the cost before any rune is touched. */
-function fromPool(pool: RunePool, cost: ResourceCost, spell: boolean | 'gear' | 'unit' | 'unitAbility' = false): { spend: PoolSpend; energy: number; power: PowerReq[] } {
+function fromPool(pool: RunePool, cost: ResourceCost, spell: boolean | 'gear' | 'unit' | 'unitAbility' = false, showdown = false):
+  { spend: PoolSpend; energy: number; power: PowerReq[] } {
   const plain = Math.min(pool.energy, cost.energy);
-  const extra = Math.min(restrictedEnergy(pool, spell), cost.energy - plain);
+  const extra = Math.min(restrictedEnergy(pool, spell, showdown), cost.energy - plain);
   const spend: PoolSpend = { energy: plain + extra, power: {}, universal: 0, restricted: extra > 0 ? [extra] : [] };
   const left = { ...pool.power };
   let universal = pool.universal + pool.restricted.reduce((n, r) => n + (r.kind === 'universal'
-    && restrictionOk(r.onlyFor, spell) ? r.amount : 0), 0);
+    && restrictionOk(r.onlyFor, spell, showdown) ? r.amount : 0), 0);
   const rest: PowerReq[] = [];
   for (const req of cost.power.slice().sort(byWidth)) {
     const d = DOMAINS.find((dd) => left[dd] > 0 && accepts(req, dd));
@@ -128,7 +130,7 @@ const zero = () => Object.fromEntries(DOMAINS.map((d) => [d, 0])) as Record<Doma
 export function paymentPlans(s: GameState, p: PlayerId, cost: ResourceCost,
   o: { limit?: number; reserveFor?: Domain[]; spell?: boolean | 'gear' | 'unit' | 'unitAbility' } = {}): PaymentPlan[] {
   const pool = s.players[p].pool;
-  const base0 = fromPool(pool, cost, o.spell);
+  const base0 = fromPool(pool, cost, o.spell, s.showdown !== null);
   const golds = goldsOf(s, p);
   // Gold covers Power symbols of any domain [187.5]: try covering 0..G of
   // them with Gold, the narrowest symbols last (runes cover those best).
@@ -300,7 +302,7 @@ export function runeAbilities(s: GameState, p: PlayerId): { obj: ObjId; ability:
 
 /** Whether the pool alone covers a cost now. */
 export function poolCovers(s: GameState, p: PlayerId, cost: ResourceCost, spell: boolean | 'gear' | 'unit' | 'unitAbility' = false): boolean {
-  const base = fromPool(s.players[p].pool, cost, spell);
+  const base = fromPool(s.players[p].pool, cost, spell, s.showdown !== null);
   return base.energy === 0 && base.power.length === 0;
 }
 

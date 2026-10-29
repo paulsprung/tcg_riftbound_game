@@ -351,6 +351,8 @@ export function stillLegal(s: GameState, t: TargetRef, slot: SlotAst, c: SelCtx)
   // A move between locations keeps the object [124] ("Move a friendly unit and ready it").
   const loc = (z: string) => z === 'base' || z === 'bf';
   if (!o || (o.zone.z !== t.zone && !(loc(o.zone.z) && loc(t.zone)))) return false;
+  // "up to one … at each location": each target's restriction is its own location (Unleashed FAQ, Elder Dragon).
+  if (slot.oneEachLoc && t.loc && JSON.stringify(locOf(o)) !== JSON.stringify(t.loc)) return false;
   return slot.sel.some((sel) => matches(s, sel, t.id, c));
 }
 

@@ -419,7 +419,7 @@ const xpowOf = (it: ChainItem): Record<string, number> => Object.fromEntries(Obj
 /** The total cost of the item as chosen so far [356]. */
 function playCost(s: GameState, it: ChainItem, extra: TargetRef[] = []): ResourceCost {
   const o = s.objects[it.obj!];
-  return totalCost(s, { def: o.def, types: typesOf(o), p: it.controller, base: baseCost(s, it), chosen: chosenOptional(it), xs: xsOf(it), origin: it.play.origin.z,
+  return totalCost(s, { def: o.def, types: typesOf(o), p: it.controller, base: baseCost(s, it), chosen: chosenOptional(it), xs: xsOf(it), origin: it.play.origin.z, flow: it.play.choices.asPlayed.flow === true,
     targets: [...chosenTargets(it), ...extra], xpow: xpowOf(it), location: it.play.choices.location ?? null,
     fixedBase: overridesOf(it).cost !== undefined });
 }
@@ -469,7 +469,7 @@ function optionalCostStep(s: GameState, f: PlayFrame, x: RunCtx, it: ChainItem, 
   if (key === undefined) {
     const o = s.objects[f.obj];
     const can = (yes: boolean) => paymentPlans(s, it.controller, totalCost(s, { def: o.def, types: typesOf(o), p: it.controller,
-      base: baseCost(s, it), chosen: [...chosenOptional(it), ...(yes ? [off.key] : [])], origin: it.play.origin.z, estimatePaid: true }),
+      base: baseCost(s, it), chosen: [...chosenOptional(it), ...(yes ? [off.key] : [])], origin: it.play.origin.z, flow: it.play.choices.asPlayed.flow === true, estimatePaid: true }),
       { limit: 1, spell: isSpellItem(s, it) })
       .length > 0;
     // "Choose one you haven't already chosen": a Repeat is paid only while another mode is left for its execution.
@@ -617,7 +617,7 @@ const STEPS: StepTable<PlayFrame> = [
       if (key === K.back) return rollback(s, f, x, 'back');
       // As much Power as could be made: runes, the pool's Power, Gold (a number that can't be paid fails at the payment).
       const pl = s.players[it.controller];
-      const base = totalCost(s, { def: o.def, types: typesOf(o), p: it.controller, base: baseCost(s, it), chosen: chosenOptional(it), origin: it.play.origin.z });
+      const base = totalCost(s, { def: o.def, types: typesOf(o), p: it.controller, base: baseCost(s, it), chosen: chosenOptional(it), origin: it.play.origin.z, flow: it.play.choices.asPlayed.flow === true });
       const max = Math.max(0, Math.min(12, pl.base.filter((id) => s.objects[id].def.endsWith('-rune') && !s.objects[id].exhausted).length
         + pl.pool.universal + Object.values(pl.pool.power).reduce((a, b) => a + b, 0) - base.power.length - Math.max(0, base.energy - pl.pool.energy)));
       if (max === 0 || key !== undefined) {
@@ -682,7 +682,7 @@ const STEPS: StepTable<PlayFrame> = [
       // A location whose cost can't be paid is not offered (Hunters' Circle's discount only here) (§4.6).
       const payable = (l: Loc) => {
         const c = totalCost(s, { def: o.def, types: typesOf(o), p: it.controller, base: baseCost(s, it), chosen: chosenOptional(it), xs: xsOf(it),
-          origin: it.play.origin.z, xpow: xpowOf(it), location: l, fixedBase: overridesOf(it).cost !== undefined, estimatePaid: true });
+          origin: it.play.origin.z, flow: it.play.choices.asPlayed.flow === true, xpow: xpowOf(it), location: l, fixedBase: overridesOf(it).cost !== undefined, estimatePaid: true });
         return paymentPlans(s, it.controller, c, { limit: 1, spell: isType(o, 'gear') ? 'gear' : 'unit' }).length > 0;
       };
       if (locs.some(payable)) locs = locs.filter(payable);

@@ -129,7 +129,7 @@ export const onPlay = (effect: ProgAst, o: { may?: true; cost?: CostAst; if?: Co
   ({ kind: 'triggered', when: { on: 'played', who: 'self' }, effect, ...o });
 export const when = (trigger: TriggerAst, effect: ProgAst,
   o: { may?: true; cost?: CostAst; controller?: 'source' | 'eventPlayer'; limit?: { n: number; per: 'turn' };
-    activeIn?: ('trash' | 'hand' | 'deck')[]; if?: CondAst; effectText?: true; first?: 'turn'; modesOncePerTurn?: true } = {}): Ability =>
+    activeIn?: ('trash' | 'hand' | 'deck')[]; if?: CondAst; effectText?: true; first?: 'turn'; firstIf?: true; modesOncePerTurn?: true } = {}): Ability =>
   ({ kind: 'triggered', when: trigger, effect, ...o });
 /** "[Deathknell][>] …": "When I die, …" with self-leave timing [808.1.c]. */
 export const deathknell = (effect: ProgAst, o: { effectText?: true } = {}): Ability =>
@@ -162,7 +162,7 @@ export const modal = (pick: number, of: ModeAst[], choose?: SlotAst[], body: Ins
 export const mode = (label: string, body: InstrAst[], choose?: SlotAst[]): ModeAst =>
   (choose ? { label, choose, body } : { label, body });
 export const slot = (id: string, sel: SelAst | SelAst[], o: { min?: number; max?: number; harm?: boolean;
-  distinctFrom?: string[]; freeFromHidden?: true; if?: CondAst; sumMightMax?: number } = {}): SlotAst =>
+  distinctFrom?: string[]; freeFromHidden?: true; if?: CondAst; sumMightMax?: number; oneEachLoc?: true } = {}): SlotAst =>
   ({ id, sel: Array.isArray(sel) ? sel : [sel], ...o });
 export const unitSel = (o: Omit<SelAst, 'k'> = {}): SelAst => ({ k: 'unit', ...o });
 export const cardSel = (o: Omit<SelAst, 'k'> = {}): SelAst => ({ k: 'card', in: 'trash', ...o });

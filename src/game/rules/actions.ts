@@ -196,15 +196,17 @@ function healExhaustRecall(s: GameState, x: X, id: ObjId) {
  * turn, heal it, exhaust it, and recall it instead" (Highlander, Tactical
  * Retreat; Unlicensed Armory with a cost), Zhonya's Hourglass ("kill this
  * instead") and Sett ("you may pay [A], exhaust me, and spend its buff").
- * A "may" with a cost is applied whenever it can be paid (PROGRESS rulings).
+ * A "may" is the controller's to decide: `answers` (optionalSaves, asked by the cleanup and the kill instruction);
+ * without answers (a kill nobody can be asked about) it applies whenever it can be paid.
  * Returns whether the death was replaced.
  */
-function savedFromDeath(s: GameState, x: X, id: ObjId, dying: ObjId[]): boolean {
+function savedFromDeath(s: GameState, x: X, id: ObjId, dying: ObjId[], answers?: Record<string, string>): boolean {
+  const declined = (kind: DeathOffer['kind']) => answers?.[`${id}:${kind}`] === 'no';
   const u = s.objects[id];
   const p = u.controller ?? u.owner;
   const e = s.effects.find((f) => (f.spec as { s?: string } | null)?.s === 'replaceDeath' && 'objs' in f.affects
     && f.affects.objs.includes(id));
-  if (e) {
+  if (e && !((e.spec as { cost?: unknown }).cost && declined('effect'))) {
     const cost = (e.spec as { cost?: { energy?: number; power?: string[] } }).cost;
     if (!cost || payNow(s, x, p, cost)) {
       setField(s, s, 'effects', s.effects.filter((f) => f.id !== e.id));
@@ -216,9 +218,11 @@ function savedFromDeath(s: GameState, x: X, id: ObjId, dying: ObjId[]): boolean 
   for (const { st } of staticsFor(s, id, 'saveSelfByKill')) {       // Mordekaiser: "Once each turn … kill a friendly unit to …"
     const key = `${id}|${st.a.id}|*`;
     if ((s.usage[key] ?? 0) > 0) continue;
-    const others = unitsAll(s).filter((u) => u !== id && !dying.includes(u) && s.objects[u].controller === p);
-    if (others.length === 0) continue;
-    const victim = others.reduce((a, b) => (mightOfUnit(s, b) < mightOfUnit(s, a) ? b : a));
+    // riftboundfaq.com (Mordekaiser, Twice Slain): another friendly unit about to die with him can pay the cost.
+    const others = unitsAll(s).filter((u) => u !== id && s.objects[u].controller === p);
+    if (others.length === 0 || declined('byKill')) continue;
+    const asked = answers?.[`${id}:byKill`]?.startsWith('v:') ? Number(answers[`${id}:byKill`].slice(2)) : null;
+    const victim = asked !== null && others.includes(asked) ? asked : others.reduce((a, b) => (mightOfUnit(s, b) < mightOfUnit(s, a) ? b : a));
     setField(s, s, 'usage', { ...s.usage, [key]: 1 });
     emit(s, x, { k: 'replaced', source: id, event: 'die', rule: '369.1' });
     kill(s, x, [victim], { rule: '429', inCombat: () => false });
@@ -244,6 +248,7 @@ function savedFromDeath(s: GameState, x: X, id: ObjId, dying: ObjId[]): boolean 
   for (const { st, spec } of staticsFor(s, null, 'saveHere')) {    // Altar of Blood: "If a unit here would die during combat"
     const h = s.objects[st.host], ul = locOf(u);
     if (!h || h.zone.z !== 'bf' || ul?.z !== 'bf' || ul.bf !== h.zone.bf || (spec.combat && s.combat === null)) continue;
+    if (declined('here')) continue;
     if (!payNow(s, x, p, spec.cost as { energy?: number; power?: string[] })) continue;
     emit(s, x, { k: 'replaced', source: st.host, event: 'die', rule: '369.1' });
     healExhaustRecall(s, x, id);
@@ -260,7 +265,7 @@ function savedFromDeath(s: GameState, x: X, id: ObjId, dying: ObjId[]): boolean 
   if (u.buffs > 0) {
     for (const { st, spec } of staticsFor(s, null, 'saveBuffed')) {
       const h = s.objects[st.host];
-      if (!h || st.ctl !== p || h.exhausted) continue;
+      if (!h || st.ctl !== p || h.exhausted || declined('buffed')) continue;
       if (!payNow(s, x, p, spec.cost as { energy?: number; power?: string[] })) continue;
       emit(s, x, { k: 'replaced', source: st.host, event: 'die', rule: '369.1' });
       exhaust(s, x, p, [st.host], '415', true);
@@ -270,6 +275,49 @@ function savedFromDeath(s: GameState, x: X, id: ObjId, dying: ObjId[]): boolean 
     }
   }
   return false;
+}
+
+/** A "may" that would replace a unit's death, as its controller is asked before the kill (Altar of Blood, Mordekaiser,
+    Sett, Unlicensed Armory): CR 383.3.a / 370 — the controller decides; Mordekaiser's controller picks the unit. */
+export interface DeathOffer { unit: ObjId; kind: 'effect' | 'byKill' | 'here' | 'buffed'; source: ObjId; victims?: ObjId[] }
+
+/** The optional death replacements that could apply to these dying units now (payable, unused). */
+export function optionalSaves(s: GameState, dying: ObjId[]): DeathOffer[] {
+  const out: DeathOffer[] = [];
+  const payable = (p: PlayerId, c: { energy?: number; power?: string[] }) => {
+    const cost = { energy: c.energy ?? 0, power: (c.power ?? []).map((r): PowerReq => (r === 'A' || r === 'C' ? { k: 'any' }
+      : { k: 'domain', d: r as Domain })) };
+    return (cost.energy === 0 && cost.power.length === 0) || paymentPlans(s, p, cost, { limit: 1 }).length > 0;
+  };
+  for (const id of dying) {
+    const u = s.objects[id];
+    if (!u || !isType(u, 'unit')) continue;
+    if (s.effects.some((e) => (e.spec as { s?: string } | null)?.s === 'banishIfDies' && 'objs' in e.affects && e.affects.objs.includes(id))) continue;
+    const p = u.controller ?? u.owner;
+    const e = s.effects.find((f) => (f.spec as { s?: string } | null)?.s === 'replaceDeath' && 'objs' in f.affects && f.affects.objs.includes(id));
+    const ec = (e?.spec as { cost?: { energy?: number; power?: string[] } } | undefined)?.cost;
+    if (e && ec && payable(p, ec)) out.push({ unit: id, kind: 'effect', source: e.source ?? id });
+    for (const { st } of staticsFor(s, id, 'saveSelfByKill')) {
+      if ((s.usage[`${id}|${st.a.id}|*`] ?? 0) > 0) continue;
+      const victims = unitsAll(s).filter((v) => v !== id && s.objects[v].controller === p);
+      if (victims.length > 0) out.push({ unit: id, kind: 'byKill', source: id, victims });
+    }
+    for (const { st, spec } of staticsFor(s, null, 'saveHere')) {
+      const h = s.objects[st.host], ul = locOf(u);
+      if (!h || h.zone.z !== 'bf' || ul?.z !== 'bf' || ul.bf !== h.zone.bf || (spec.combat && s.combat === null)) continue;
+      if (payable(p, spec.cost as { energy?: number; power?: string[] })) out.push({ unit: id, kind: 'here', source: st.host });
+      break;
+    }
+    if (u.buffs > 0) {
+      for (const { st, spec } of staticsFor(s, null, 'saveBuffed')) {
+        const h = s.objects[st.host];
+        if (!h || st.ctl !== p || h.exhausted || !payable(p, spec.cost as { energy?: number; power?: string[] })) continue;
+        out.push({ unit: id, kind: 'buffed', source: st.host });
+        break;
+      }
+    }
+  }
+  return out;
 }
 
 /** Every unit on the board. */
@@ -311,7 +359,7 @@ export function payFromPool(s: GameState, x: X, p: PlayerId, energy: number, pow
   let rest = energy - plain;                                         // restricted Energy pays the rest [430]
   if (rest > 0) {
     const restricted = pool.restricted.map((r) => {
-      if (rest <= 0 || r.kind !== 'energy' || (r.onlyFor !== undefined && !restrictionOk(r.onlyFor, spell))) return r;
+      if (rest <= 0 || r.kind !== 'energy' || (r.onlyFor !== undefined && !restrictionOk(r.onlyFor, spell, s.showdown !== null))) return r;
       const take = Math.min(rest, r.amount);
       rest -= take;
       return { ...r, amount: r.amount - take };
@@ -323,7 +371,7 @@ export function payFromPool(s: GameState, x: X, p: PlayerId, energy: number, pow
     if (d) { setField(s, pool.power, d, pool.power[d] - 1); continue; }
     // [A] only for spells (Kai'Sa, Daughter of the Void) before unrestricted [A].
     const r = pool.restricted.findIndex((x) => x.kind === 'universal' && x.amount > 0
-      && restrictionOk(x.onlyFor, spell));
+      && restrictionOk(x.onlyFor, spell, s.showdown !== null));
     if (r >= 0) {
       setField(s, pool, 'restricted', pool.restricted.map((x, i) => (i === r ? { ...x, amount: x.amount - 1 } : x))
         .filter((x) => x.amount > 0));
@@ -424,7 +472,10 @@ export function heal(s: GameState, x: X, units: ObjId[], rule: string) {
  * it died (last-known information [383.2.c.3.b]).
  */
 export function kill(s: GameState, x: X, units0: ObjId[], o: { rule: string; inCombat: (id: ObjId) => boolean;
-  by?: PlayerId | null; spell?: boolean }) {
+  by?: PlayerId | null; spell?: boolean;
+  /** What the controllers answered to the optional death replacements (optionalSaves): `${unit}:${kind}` → 'no' |
+      'yes' | 'v:<victim>'; without it each one applies when it can (paths that can't ask). */
+  answers?: Record<string, string> }) {
   const units: ObjId[] = [];
   const banished: ObjId[] = [];
   for (const id of units0) {
@@ -436,7 +487,7 @@ export function kill(s: GameState, x: X, units0: ObjId[], o: { rule: string; inC
       banished.push(id);
       continue;
     }
-    if (isType(s.objects[id], 'unit') && savedFromDeath(s, x, id, units0)) continue;
+    if (isType(s.objects[id], 'unit') && savedFromDeath(s, x, id, units0, o.answers)) continue;
     units.push(id);
   }
   if (banished.length > 0) banish(s, x, banished, '428');
@@ -840,7 +891,7 @@ export function spendXp(s: GameState, x: X, p: PlayerId, n: number, rule: string
 }
 
 /** Adds universal Power ([A]) or Energy only for spells to a pool [430], [163.2.b]. */
-export function addSpecial(s: GameState, x: X, p: PlayerId, o: { energy?: number; universal?: number; onlyFor?: 'spells' | 'gear' | 'permanents' | 'units';
+export function addSpecial(s: GameState, x: X, p: PlayerId, o: { energy?: number; universal?: number; onlyFor?: 'spells' | 'gear' | 'permanents' | 'units' | 'showdown';
   source: string; domain?: Domain }, rule: string) {
   const pool = s.players[p].pool;
   if (o.universal && o.domain) setField(s, pool.power, o.domain, pool.power[o.domain] + o.universal);   // "[Add] [R]"

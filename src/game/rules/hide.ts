@@ -108,6 +108,10 @@ const STEPS: StepTable<HideFrame> = [
     const from = s.objects[f.obj].zone;
     const obj = moveObject(s, f.obj, Z.facedown(bf), { controller: f.by });
     setField(s, s.objects[obj], 'facedown', { hiddenOnTurn: s.turn.n, bf, by: f.by });
+    // Scuttle Crab: "You can look at their facedown cards this turn".
+    for (const q of s.players) {
+      if (q.id !== f.by && playerEffects(s, q.id, 'seeFacedown').length > 0) setField(s, s.objects[obj], 'knownBy', s.objects[obj].knownBy | (1 << q.id));
+    }
     emitZone(s, x, { obj, prev: f.obj, from, to: Z.facedown(bf), why: 'hide', rule: '422.1', before });
     emit(s, x, { k: 'hide', obj, bf, rule: '422', vis: knowers(s, [obj]) });
     append(s, s.log.hidden, { p: f.by, bf });

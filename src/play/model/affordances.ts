@@ -88,7 +88,9 @@ export function promptText(d: Pick<Decision, 'kind' | 'prompt'>, names: Names = 
       const chosen = Array.isArray(d.prompt.chosen) ? d.prompt.chosen.length : 0;
       return `${names(card)}: choose ${pick - chosen} more mode${pick - chosen === 1 ? '' : 's'}.`;
     }
-    case 'may': return d.prompt.t === 'mayInstr' ? 'You may do this now: do it?' : `Use ${names(defOf(d.prompt.ability))}'s ability?`;
+    case 'may': return d.prompt.t === 'mayInstr' ? 'You may do this now: do it?'
+      : d.prompt.t === 'payTriggerCost' ? `Pay the cost of ${names(defOf(d.prompt.ability))}'s ability?`
+      : `Use ${names(defOf(d.prompt.ability))}'s ability?`;
     case 'orderTriggers':
       return 'Several of your abilities trigger at once: choose the one to put on the chain first (it resolves last).';
     case 'predict': return 'Predict: keep the top card of your Main Deck, or recycle it to the bottom.';
@@ -124,6 +126,7 @@ export function promptText(d: Pick<Decision, 'kind' | 'prompt'>, names: Names = 
       return `${names(card)}: choose ${n > 1 ? `${n - chosen} more ${thing}s` : `a ${thing}`} to ${verb} as part of its cost.`;
     }
     case 'applyReplacement': {
+      if (d.prompt.t === 'saveFromDeath') return `${names(card)}: save the dying unit instead of letting it die?`;
       const tok = typeof d.prompt.token === 'string' ? names(d.prompt.token) : 'a token';
       const instead = typeof d.prompt.with === 'string' ? names(d.prompt.with) : 'another token';
       return `${names(defOf(d.prompt.ability))}: play a ${instead} instead of the ${tok}?`;

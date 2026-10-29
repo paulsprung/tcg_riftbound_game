@@ -87,11 +87,11 @@ export function designate(s: GameState, id: ObjId, d: 'attacker' | 'defender' | 
 
 // ---- Step 1: the Combat Showdown [466] ----
 
-/** [466.2.b]: start-of-combat effects, and start-of-showdown effects with a
-    new showdown. No card defined so far has a start-of-combat ability. */
+/** [466.2.b]: start-of-combat effects (Threshold of the Gray), and start-of-showdown effects with a new showdown. */
 defineTask('combat.startOfCombat', [(s, _f, x) => {
   const c = s.combat!;
   if (c.openedNewShowdown) emit(s, x, { k: 'showdownStart', bf: c.bf, rule: '466.2.b' });
+  fire(s, x, { e: 'combatStart', bf: c.bf, attacker: c.attacker, defender: c.defender });
   return 'done';
 }]);
 

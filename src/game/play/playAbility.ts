@@ -252,6 +252,22 @@ const STEPS: StepTable<AbilityFrame> = [
       if (!nonStdPossible(s, ns, it.source ?? null, it.controller)) {
         return trig ? removeTrigger(s, f, x, 'unpaid') : rollback(s, f, x, 'illegal');
       }
+      // A mandatory trigger's cost ("kill this to …", "exhaust me to …") may still be declined [405.2]; with a leading
+      // "you may" that question was the "may" of step 2, and Energy or Power is declined at the payment.
+      const a = abilityOf(s, f);
+      const resources = it.play.cost!.energy > 0 || it.play.cost!.power.length > 0;
+      if (trig && a.kind === 'triggered' && !a.may && !resources && it.play.choices.asPlayed.payCost !== true) {
+        const key = answer(f);
+        if (key === undefined) {
+          return ask(s, f, x, {
+            player: it.controller, kind: 'may', prompt: { t: 'payTriggerCost', ability: f.ability! }, ctx: { item: it.id,
+              ...(it.source !== undefined ? { source: it.source } : {}), rule: '405.2' },
+            options: [{ key: K.yes }, { key: K.no }], privateOptions: false,
+          });
+        }
+        if (key === K.no) return removeTrigger(s, f, x, 'unpaid');
+        setField(s, it.play.choices.asPlayed, 'payCost', true);
+      }
       const r = chooseCostObjects(s, f, x, { item: it, src: it.source ?? null, key: f.ability!, pay: ns, what: f.ability!,
         back: backOk(s, f), onBack: () => rollback(s, f, x, 'back'),
         onImpossible: () => (trig ? removeTrigger(s, f, x, 'unpaid') : rollback(s, f, x, 'illegal')) });

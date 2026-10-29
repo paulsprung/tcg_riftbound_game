@@ -150,7 +150,8 @@ export const UNL_SET_DEFS = [
       iff(cond.is(ref.bound('r'), pred.type('spell')), [draw(1, ref.bound('r'))])]), { may: true, cost: { energy: 1 } })],
   }),
   legend('diana-scorn-of-the-moon', '[Reaction][>] [E]: [Add] [1]. Spend this Energy only during showdowns.', [
-    activated({ exhaustSelf: true }, prog([addEnergy(1)]), { timing: 'reaction', isAdd: true, while: cond.showdown }),
+    // A [Reaction] Add ability: usable any time; the Energy may be spent only while a showdown is going on [430], [163].
+    activated({ exhaustSelf: true }, prog([{ op: 'add', energy: 1, onlyFor: 'showdown' }]), { timing: 'reaction', isAdd: true }),
   ]),
   spell('disposal-order', "[Reaction]\nChoose one —\n• Choose up to 3 cards from opponents' trashes. Their owners recycle them.\n• Draw 1.", {
     kw: [kw.reaction()],
@@ -173,8 +174,9 @@ export const UNL_SET_DEFS = [
     kw: [kw.reaction()], choose: [slot('a', unitSel(), { harm: true })], body: [might(4, ref.slot('a'), -1), predict(1)],
   }),
   unit('elder-dragon', 'Any amount of your damage is enough to kill enemy units.\nWhen you play me, choose up to one enemy unit at each location. Deal 1 to them.', {
-    abilities: [always({ s: 'anyDamageKills' }), onPlay(prog([choose(unitSel({ rel: 'enemy' }), 'e', { min: 0, max: 99, oneEachLoc: true }),
-      deal(1, ref.bound('e'))]))],
+    // Unleashed FAQ: targets, up to one per location, each restricted to the location it was chosen at.
+    abilities: [always({ s: 'anyDamageKills' }), onPlay(prog([deal(1, ref.slot('e'))],
+      [slot('e', unitSel({ rel: 'enemy' }), { min: 0, max: 99, oneEachLoc: true, harm: true })]))],
   }),
   unit('enthralling-protector', '[Hunt]\nSpend 2 XP: [Buff] me.', { abilities: [activated({ xp: 2 }, prog([buff(ref.self)]))] }),
   unit('evershade-stalker', 'When you play me, discard 1, then draw 1.', { abilities: [onPlay(prog([discard(1), draw(1)]))] }),
@@ -460,7 +462,9 @@ export const UNL_SET_DEFS = [
   }),
   unit('scrutinizing-sergeant', 'When you play me, gain 1 XP for each friendly unit.', { abilities: [onPlay(prog([gainXp(val.count(friendly))]))] }),
   unit('scuttle-crab', 'When you play me, draw 1.\n[Deathknell][>] Choose an opponent. They reveal their hand. You can look at their facedown cards this turn. Gain 1 XP.', {
-    abilities: [onPlay(prog([draw(1)])), deathknell(prog([revealHand, lookAt(facedownSel({ rel: 'enemy' })), gainXp(1)]))],
+    // "this turn": the facedown cards they have now, and the ones they hide later this turn (seen as they are hidden).
+    abilities: [onPlay(prog([draw(1)])), deathknell(prog([revealHand, lookAt(facedownSel({ rel: 'enemy' })),
+      playerEffect({ s: 'seeFacedown' }), gainXp(1)]))],
   }),
   unit('shadow-watcher', 'If a friendly unit died during your Beginning Phase this turn, I enter ready.', {
     abilities: [entersReady({ while: cond.thisTurn('unitDied', { rel: 'friendly', yourBeginning: true }) })],
@@ -470,7 +474,7 @@ export const UNL_SET_DEFS = [
     body: [grant(kw.temporary(), ref.slot('a'), 'permanent'), draw(2)],
   }),
   gear('shard-of-undoing', 'The first time a friendly unit dies during your Beginning Phase each turn, each opponent must kill one of their units.', {
-    abilities: [when({ on: 'unitDies', at: 'any', who: 'friendly' }, prog([eachPlayerKills(1, { who: 'opponents' })]), { first: 'turn', if: cond.yourBeginning })],
+    abilities: [when({ on: 'unitDies', at: 'any', who: 'friendly' }, prog([eachPlayerKills(1, { who: 'opponents' })]), { first: 'turn', firstIf: true, if: cond.yourBeginning })],
   }),
   gear('shepherds-heirloom', 'When you play this, gain 1 XP.\n[Equip] — Spend 1 XP', { abilities: [onPlay(prog([gainXp(1)]))] }),
   unit('sinister-poro', 'When I attack, you may pay [1] to move an enemy unit here to its base.', {
