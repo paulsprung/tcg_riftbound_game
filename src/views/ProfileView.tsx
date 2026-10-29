@@ -82,7 +82,7 @@ export function ProfileView({ db, onInspect }: { db: CardDb; onInspect: (t: Insp
               <h1>{name}</h1>
               <div className="profile__meta">
                 <span className={`profile__rank${demo || rank ? '' : ' is-off'}`}>
-                  <RankEmblem tier={demo ? demoTier.tier : st && rank && !st.ranked.placement ? st.ranked.tier : null} size={22} />
+                  <RankEmblem tier={demo ? demoTier.tier : st && rank && !st.ranked.placement ? st.ranked.tier : null} division={demo ? demoTier.division : st?.ranked.division} size={26} />
                   {demo ? rankName(demoTier.tier, demoTier.division) : rank ?? 'Unranked'}
                 </span>
                 {demo && <span>Level {DEMO_PROFILE.level}</span>}

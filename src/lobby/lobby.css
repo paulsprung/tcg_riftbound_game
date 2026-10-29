@@ -956,3 +956,39 @@ html[data-scaled] .app {
 .lobby-tag { margin-left: 10px; padding: 2px 8px; font: 700 11px/1.4 var(--font-ui); font-style: normal; letter-spacing: .16em; vertical-align: middle;
   color: var(--teal); border: 1px solid var(--teal); }
 .lobby-seat.is-ready .ds-slot__tag { background: var(--teal); color: #031a18; }
+
+/* ---- rank crests: the pieces of armour move on a rank change (RankEmblem.tsx, RankUp.tsx) ---- */
+.rank-emblem { overflow: visible; }
+.rc-p { transform-box: fill-box; transform-origin: center; }
+.rc-crest { --fx: 0px; --fy: -110px; --fs: 1.25; --fr: 0deg; }
+.rc-guards { --fx: 0px; --fy: 0px; --fs: 1.9; --fr: 0deg; }
+.rc-spikes { --fx: 0px; --fy: 120px; --fs: 1.2; --fr: 0deg; }
+.rc-wings { --fx: 0px; --fy: -30px; --fs: 2.3; --fr: 8deg; }
+.rc-shield { --fx: 0px; --fy: 0px; --fs: .15; --fr: -25deg; }
+.rc-halo { --fx: 0px; --fy: 0px; --fs: .3; --fr: -90deg; }
+.rc-enter { animation: rc-enter .5s var(--delay) cubic-bezier(.3, 1.5, .5, 1) both; }
+.rc-shield.rc-enter { animation-duration: .7s; }
+.rc-leave { animation: rc-leave 1s var(--delay) cubic-bezier(.5, 0, .9, .4) forwards; }
+.rc-burst { animation: rc-burst .9s calc(var(--delay) + var(--i) * 40ms) cubic-bezier(.1, .7, .3, 1) forwards; }
+.rc-shield.rc-burst { --bx: 0px; --by: 0px; --bs: 1.6; --br: 0deg; }
+.rc-crest.rc-burst { --bx: 0px; --by: -200px; --bs: 1.2; --br: 30deg; }
+.rc-guards.rc-burst { --bx: 0px; --by: 10px; --bs: 2.6; --br: 0deg; }
+.rc-spikes.rc-burst { --bx: 0px; --by: 220px; --bs: 1.1; --br: -20deg; }
+.rc-wings.rc-burst { --bx: 0px; --by: -40px; --bs: 2.8; --br: 12deg; }
+.rc-halo.rc-burst { --bx: 0px; --by: 0px; --bs: 2.4; --br: 0deg; }
+@keyframes rc-enter {
+  0% { opacity: 0; transform: translate(var(--fx), var(--fy)) scale(var(--fs)) rotate(var(--fr)); filter: brightness(4) blur(3px); }
+  55% { opacity: 1; filter: brightness(2.4) blur(0); }
+  72% { transform: scale(1.04); filter: brightness(3); }
+  100% { opacity: 1; transform: none; filter: none; }
+}
+@keyframes rc-leave {
+  0% { transform: none; }
+  25% { transform: translate(0, -6px) rotate(-4deg); filter: brightness(1.4); }
+  100% { opacity: 0; transform: translate(14px, 160px) rotate(24deg); filter: grayscale(1) brightness(.4); }
+}
+@keyframes rc-burst {
+  0% { transform: none; filter: brightness(3); }
+  100% { opacity: 0; transform: translate(var(--bx), var(--by)) scale(var(--bs)) rotate(var(--br)); filter: brightness(4) blur(6px); }
+}
+@media (prefers-reduced-motion: reduce) { .rc-p { animation: none !important; } .rc-leave, .rc-burst { opacity: 0; } }

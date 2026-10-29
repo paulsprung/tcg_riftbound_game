@@ -120,7 +120,7 @@ export function RankCard() {
     const t = tierOf(DEMO_PROFILE.rp);
     return (
       <div className="lb-rank">
-        <RankEmblem tier={t.tier} size={58} />
+        <RankEmblem tier={t.tier} division={t.division} size={76} />
         <strong>{rankName(t.tier, t.division)}</strong>
         <span className="muted small">{DEMO_PROFILE.rp.toLocaleString('en-US')} LP</span>
         <div className="bar"><span style={{ width: `${Math.round(divisionProgress(DEMO_PROFILE.rp) * 100)}%` }} /></div>
@@ -130,7 +130,7 @@ export function RankCard() {
   if (!r) {
     return (
       <div className="lb-rank is-off">
-        <RankEmblem tier={null} size={58} />
+        <RankEmblem tier={null} size={76} />
         <strong>Unranked</strong>
         <span className="muted small">{signedIn ? 'Play ranked to get a rank' : 'Sign in to play ranked'}</span>
       </div>
@@ -139,7 +139,7 @@ export function RankCard() {
   const pct = Math.round(divisionProgress(r.points) * 100);
   return (
     <div className={`lb-rank${r.placement ? ' is-off' : ''}`}>
-      <RankEmblem tier={r.placement ? null : r.tier} size={58} />
+      <RankEmblem tier={r.placement ? null : r.tier} division={r.division} size={76} />
       <strong>{r.placement ? 'Placement' : rankName(r.tier, r.division)}</strong>
       <span className="muted small">{r.placement ? `${r.games} of 5 games` : `${r.points.toLocaleString('en-US')} LP`} · {r.wins}W {r.games - r.wins}L</span>
       {!r.placement && <div className="bar"><span style={{ width: `${pct}%` }} /></div>}

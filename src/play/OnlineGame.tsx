@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import type { CardDb } from '../data/types.ts';
-import { divisionProgress, PLACEMENT_GAMES, rankName, rankStep } from '../economy/ranks.ts';
+import { divisionProgress, PLACEMENT_GAMES, rankName } from '../economy/ranks.ts';
 import { RankEmblem } from '../lobby/RankEmblem.tsx';
 import { online } from '../net/socket.ts';
 import type { RatingInfo, ServerMsg } from '../net/protocol.ts';
 import { GameScreen } from './GameScreen.tsx';
+import { rankMoved, RankUp } from './prompt/RankUp.tsx';
 import { RemoteHost } from './host/RemoteHost.ts';
 import { cardIndex, withPrintings } from './model/cards.ts';
 
@@ -28,28 +29,10 @@ function CountUp({ to }: { to: number }) {
   return <>{n}</>;
 }
 
-/*
- * The rank the game moved, played out: the division bar runs from where it
- * stood; a promotion fills it, the old emblem bursts and the new one lands
- * (bigger for a new tier), then the bar runs on in the new division. A
- * demotion empties it and the old emblem falls. The fifth placement game
- * reveals the first rank.
- */
-type Phase = 'start' | 'run' | 'swap' | 'settle';
-
+/** The rank after the game as a tile: its crest, the division bar running from where it stood, the points it moved. */
 function RankMove({ before, after }: { before: RatingInfo; after: RatingInfo }) {
-  const placed = before.placement && !after.placement;
-  const moved = placed || (!before.placement && rankStep(after.tier, after.division) !== rankStep(before.tier, before.division));
-  const up = placed || (moved ? rankStep(after.tier, after.division) > rankStep(before.tier, before.division) : after.points >= before.points);
-  const newTier = placed || (moved && before.tier !== after.tier);
-  const [phase, setPhase] = useState<Phase>('start');
-  useEffect(() => {
-    const at = (ms: number, p: Phase) => setTimeout(() => setPhase(p), ms);
-    // after the tile has come in (the scene's own entrance): the bar runs, then the emblem changes
-    const t = moved ? [at(1600, 'run'), at(3100, 'swap'), at(3300, 'settle')] : [at(1600, 'run')];
-    return () => t.forEach(clearTimeout);
-  }, [moved]);
-
+  const [run, setRun] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setRun(true), 1500); return () => clearTimeout(t); }, []);
   if (after.placement) {
     return (
       <div className="go-tile go-rank is-placement">
@@ -62,25 +45,17 @@ function RankMove({ before, after }: { before: RatingInfo; after: RatingInfo }) 
       </div>
     );
   }
-  const swapped = phase === 'swap' || phase === 'settle';
-  const shown = swapped || !moved ? after : before;
-  const bar = phase === 'start' ? (before.placement ? 0 : divisionProgress(before.points))
-    : phase === 'run' ? (moved ? (up ? 1 : 0) : divisionProgress(after.points))
-    : phase === 'swap' ? (up ? 0 : 1) : divisionProgress(after.points);
+  const moved = rankMoved(before, after);
+  const up = after.points >= before.points;
+  const from = moved ? (up ? 0 : 1) : divisionProgress(before.points);
   const delta = before.placement ? null : after.points - before.points;
-  const verdict = placed ? `Placed in ${rankName(after.tier, after.division)}` : moved ? (up ? (newTier ? 'Tier up' : 'Promoted') : 'Demoted') : null;
   return (
-    <div className={`go-tile go-rank${moved ? (up ? ' is-up' : ' is-down') : ''}${newTier ? ' is-tier' : ''} is-${phase}`}>
-      <div className="go-rank__emblem">
-        {moved && swapped && <span className="go-rank__flash" aria-hidden />}
-        {moved && swapped && <RankEmblem key="old" tier={before.placement ? null : before.tier} division={before.division} size={104} className="go-rank__old" />}
-        <RankEmblem key={swapped ? 'new' : 'cur'} tier={shown.placement ? null : shown.tier} division={shown.division} size={104}
-          className={moved && swapped ? 'go-rank__new' : ''} />
-      </div>
+    <div className={`go-tile go-rank${up ? ' is-up' : ' is-down'}`}>
+      <RankEmblem tier={after.tier} division={after.division} size={104} />
       <div className="go-rank__text">
-        <span className="go-tile__label">{verdict && swapped ? verdict : 'Ranked'}</span>
-        <strong>{shown.placement ? 'Unranked' : rankName(shown.tier, shown.division)}</strong>
-        <div className={`go-rank__bar${phase === 'swap' ? ' is-reset' : ''}`}><span style={{ width: `${Math.round(bar * 100)}%` }} /></div>
+        <span className="go-tile__label">Ranked</span>
+        <strong>{rankName(after.tier, after.division)}</strong>
+        <div className="go-rank__bar"><span style={{ width: `${Math.round((run ? divisionProgress(after.points) : from) * 100)}%` }} /></div>
         <span className="go-rank__lp">
           {after.points.toLocaleString('en-US')} LP
           {delta !== null && <b className={delta >= 0 ? 'is-up' : 'is-down'}>{delta >= 0 ? '+' : ''}{delta}</b>}
@@ -91,12 +66,17 @@ function RankMove({ before, after }: { before: RatingInfo; after: RatingInfo }) 
 }
 
 function Outcome({ end, tournament, mode }: { end: Extract<ServerMsg, { t: 'end' }> | null; tournament: boolean; mode: string }) {
+  // a rank change plays as a ceremony first, once
+  const [seen, setSeen] = useState(false);
   if (!end) return <p className="gameover__note">Saving the result…</p>;
   // a tournament's result is in its standings; a friendly game moves nothing
   if (tournament) return <p className="gameover__note">The result is in the tournament's standings.</p>;
   if (mode === 'friendly') return <p className="gameover__note">A friendly game: no rank, no coins.</p>;
   return (
     <div className="go-outcome">
+      {end.rating && rankMoved(end.rating.before, end.rating.after) && !seen && (
+        <RankUp before={end.rating.before} after={end.rating.after} onDone={() => setSeen(true)} />
+      )}
       {end.rating && <RankMove before={end.rating.before} after={end.rating.after} />}
       <div className="go-tile go-coins">
         <span className="go-coins__coin" aria-hidden />
