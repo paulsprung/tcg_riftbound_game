@@ -938,3 +938,23 @@ html[data-scaled] .app {
   opacity: 0; transition: opacity .2s;
 }
 .home-feat:hover .home-feat__plus, .home-feat:focus-visible .home-feat__plus { opacity: 1; }
+
+/* ---- friends: your code, adding, requests, a challenge ---- */
+.soc-av img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+.soc-code { display: inline-flex !important; align-items: center; gap: 6px; font: 700 11px/1.3 var(--font-ui) !important; letter-spacing: .18em; color: var(--muted) !important; }
+.soc-code button { border: 0; background: none; padding: 0; color: var(--gold); cursor: pointer; font-size: 12px; }
+.soc-add { flex: none; display: flex; gap: 6px; padding: 0 16px 10px; }
+.soc-add .input { flex: 1; min-width: 0; padding: 7px 10px; font-size: 13px; letter-spacing: .14em; text-transform: uppercase; }
+.soc-req { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--gold-hi); }
+.soc-req > span:not(.soc-av) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.soc-req .soc-av { width: 26px; height: 26px; font-size: 11px; }
+.soc-req em { font: 600 10px/1 var(--font-ui); font-style: normal; letter-spacing: .12em; text-transform: uppercase; color: var(--lb-gold); }
+.soc-count--req { border-color: var(--lb-gold); color: var(--lb-gold); }
+.soc-empty { padding: 8px; }
+.soc-challenge {
+  position: fixed; right: 76px; bottom: 60px; z-index: 70; width: 280px; display: grid; gap: 8px; padding: 14px 16px;
+  animation: rise .25s ease;
+}
+.soc-challenge b { font: 700 15px/1.2 var(--font-display); color: var(--gold-hi); }
+.soc-challenge > span { font-size: 13px; color: var(--muted); }
+.soc-challenge__btns { display: flex; gap: 8px; }

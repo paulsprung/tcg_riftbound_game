@@ -38,6 +38,8 @@ export async function exportAccount(db: Db, userId: string) {
       JOIN tournaments t ON t.id = p.tournament_id WHERE p.user_id = $1`),
     marketListings: await q('SELECT card_id, foil, qty, price, status, created_at, expires_at FROM market_listings WHERE seller = $1'),
     marketSales: await q('SELECT card_id, foil, qty, price, fee, at, (seller = $1) AS sold FROM market_sales WHERE seller = $1 OR buyer = $1'),
+    friends: await q(`SELECT u.name, f.status, f.created_at FROM friendships f JOIN users u ON u.id = CASE WHEN f.user_a = $1 THEN f.user_b ELSE f.user_a END
+      WHERE f.user_a = $1 OR f.user_b = $1`),
   };
 }
 

@@ -40,6 +40,7 @@ export function LegalView({ page }: { page: 'privacy' | 'imprint' }) {
               <li><b>Matches:</b> who played, the result and the full replay. The replay is deleted after 90 days, the result stays in your match history.</li>
               <li><b>Marketplace:</b> your listings and sales. Buyer and seller are removed from a sale after one year; the price stays for price history.</li>
               <li><b>Tournaments:</b> your sign-up, your deck for it, your pairings and your place.</li>
+              <li><b>Friends:</b> who you are friends with and open requests. Friends see your name, avatar and whether you are online, looking for a match or in a game.</li>
               <li><b>A session cookie</b> (rift_session) that keeps you signed in, 30 days; the server keeps only a hash of it. A short-lived cookie (rift_oauth_state) protects the sign-in. Both are needed for the service: no consent banner (§ 25 (2) TDDDG).</li>
               <li><b>In your browser</b> (local storage): your display settings and, without an account, your local collection. They never leave your device.</li>
             </ul>

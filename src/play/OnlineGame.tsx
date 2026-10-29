@@ -14,9 +14,10 @@ import { cardIndex, withPrintings } from './model/cards.ts';
 
 const tierText = (r: RatingInfo) => (r.placement ? `Placement ${r.games}/5` : `${r.tier}${r.division ? ` ${'IV III II I'.split(' ')[4 - r.division]}` : ''} · ${r.points} LP`);
 
-function Outcome({ end, tournament }: { end: Extract<ServerMsg, { t: 'end' }> | null; tournament: boolean }) {
+function Outcome({ end, tournament, mode }: { end: Extract<ServerMsg, { t: 'end' }> | null; tournament: boolean; mode: string }) {
   if (!end) return <p className="muted small">Saving the result…</p>;
-  if (tournament) return null;
+  // a tournament's result is in its standings; a friendly game moves nothing
+  if (tournament || mode === 'friendly') return null;
   const r = end.rating;
   // in placement the points are not shown yet: only how many games are played
   const delta = r && !r.after.placement ? r.after.points - r.before.points : null;
@@ -43,10 +44,11 @@ export function OnlineGame({ db, start, end }: { db: CardDb; start: Extract<Serv
 
   if (!ready) return <p className="status">Waiting for the table…</p>;
   const tm = start.tournament;
-  const mode = tm ? `${tm.name} · ${tm.round} · game ${tm.game} (${tm.score[start.seat]}–${tm.score[1 - start.seat]})` : start.mode === 'ranked' ? 'Ranked' : 'Casual';
+  const mode = tm ? `${tm.name} · ${tm.round} · game ${tm.game} (${tm.score[start.seat]}–${tm.score[1 - start.seat]})`
+    : start.mode === 'ranked' ? 'Ranked' : start.mode === 'friendly' ? 'Friendly' : 'Casual';
   return (
     <GameScreen host={host} cards={cards} db={db} names={start.names}
       onNewGame={leave} onChangeDecks={leave}
-      online={{ mode, clock: () => host.deadlines, outcome: <Outcome end={end} tournament={!!tm} /> }} />
+      online={{ mode, clock: () => host.deadlines, outcome: <Outcome end={end} tournament={!!tm} mode={start.mode} /> }} />
   );
 }

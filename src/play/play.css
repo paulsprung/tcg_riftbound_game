@@ -108,7 +108,7 @@ ul.play__error { padding-left: 30px; }
 .score--opp .score__track .is-on, .score--opp .score__track .is-at { background: #e0475f; }
 .score__track .is-at { box-shadow: 0 0 0 3px rgba(255, 255, 255, .12); }
 .score__n { text-align: right; font-variant-numeric: tabular-nums; }
-.log { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; max-height: 340px; overflow-y: auto; font-size: 13px; line-height: 1.4; }
+.log { margin: 0; padding: 0; list-style: none; display: grid; align-content: start; gap: 6px; max-height: 340px; overflow-y: auto; font-size: 13px; line-height: 1.4; }
 .log__line { padding-left: 9px; border-left: 2px solid var(--line); }
 .log__line--me { border-left-color: var(--accent); }
 .log__line--opponent { border-left-color: #e0475f; }

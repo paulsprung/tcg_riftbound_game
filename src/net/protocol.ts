@@ -6,9 +6,11 @@ import type { DeckList, ObservedEvent, PlayerId, PlayerView } from '../game/inde
  * its own seat's view back after every change.
  */
 
-/** What a game is: a queue's (ranked, casual) or a tournament round's. */
-export type Mode = 'ranked' | 'casual' | 'tournament';
-export type QueueMode = Exclude<Mode, 'tournament'>;
+/** What a game is: a queue's (ranked, casual), a tournament round's, or one between friends. */
+export type Mode = 'ranked' | 'casual' | 'tournament' | 'friendly';
+export type QueueMode = 'ranked' | 'casual';
+/** What friends see of each other. */
+export type Presence = 'online' | 'queue' | 'game' | 'offline';
 
 export type ClientMsg =
   | { t: 'hello' }
@@ -16,7 +18,11 @@ export type ClientMsg =
   | { t: 'queue'; mode: QueueMode; deck: string }
   | { t: 'leave' }
   | { t: 'choose'; gameId: string; keys: string[] }
-  | { t: 'concede'; gameId: string };
+  | { t: 'concede'; gameId: string }
+  /** A friendly game: ask a friend, who answers with their deck (or no). */
+  | { t: 'challenge'; to: string; deck: string }
+  | { t: 'challenge-answer'; from: string; accept: boolean; deck?: string }
+  | { t: 'challenge-cancel'; to: string };
 
 export interface RatingInfo { points: number; tier: string; division: number | null; games: number; placement: boolean }
 
@@ -32,6 +38,12 @@ export type ServerMsg =
   /** Your view after a change, with what you observed in it; `full` replaces the log (after a reconnect). Deadlines are ms since the epoch. */
   | { t: 'update'; gameId: string; view: PlayerView; events: ObservedEvent[]; full: boolean; deadline: number | null; theirDeadline: number | null }
   | { t: 'end'; gameId: string; winner: PlayerId | null; reason: string; coins: number; rating: { before: RatingInfo; after: RatingInfo } | null }
+  /** A friend asks you for a game; it lapses after a minute. */
+  | { t: 'challenge'; from: { id: string; name: string } }
+  /** A challenge you sent or got is over (declined, cancelled, lapsed). */
+  | { t: 'challenge-gone'; with: string; why: string }
+  /** A friend's presence or your friend requests changed: fetch the list again. */
+  | { t: 'friends' }
   /** Your account changed from elsewhere (a sale, a gift, a prize): fetch it again. */
   | { t: 'account'; why: string }
   | { t: 'error'; message: string };

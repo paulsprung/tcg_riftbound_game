@@ -10,6 +10,7 @@ import type { Config } from './config.ts';
 import type { Db } from './db.ts';
 import { deckStore, economy, loadCatalog, readAccount, Refused, type Catalog } from './economy.ts';
 import type { Online } from './games/online.ts';
+import { friends } from './friends.ts';
 import { market } from './market.ts';
 import { deleteAccount, exportAccount } from './privacy.ts';
 import type { Director } from './tournament/director.ts';
@@ -221,7 +222,7 @@ export function handler({ cfg, db, fetch: f = fetch, catalog, online, director }
       }
 
       // ---- the signed-in player's account: changes are POST/PUT/DELETE from this site only ----
-      if (path.startsWith('/api/account') || path.startsWith('/api/decks') || path.startsWith('/api/admin') || path.startsWith('/api/tournaments') || path.startsWith('/api/market')) {
+      if (path.startsWith('/api/account') || path.startsWith('/api/decks') || path.startsWith('/api/admin') || path.startsWith('/api/tournaments') || path.startsWith('/api/market') || path.startsWith('/api/friends')) {
         const user = await userForSession(db, jar[SESSION_COOKIE]);
         if (!user) return json(res, 401, { error: 'Sign in first' });
         if (!apiLimit(user.id)) return json(res, 429, { error: 'Slow down a little' });
@@ -285,6 +286,20 @@ export function handler({ cfg, db, fetch: f = fetch, catalog, online, director }
           const deck = /^\/api\/decks\/([^/]+)$/.exec(path);
           if (deck && req.method === 'PUT') return json(res, 200, { deck: await deckStore.save(db, user.id, deck[1], (await body(req)).deck) });
           if (deck && req.method === 'DELETE') { await deckStore.remove(db, user.id, deck[1]); return json(res, 200, { ok: true }); }
+
+          // ---- friends ----
+          if (route === 'GET /api/friends') return json(res, 200, await friends.list(db, user.id, (id) => online?.presence(id) ?? 'offline'));
+          if (route === 'POST /api/friends/add') {
+            const r = await friends.add(db, user.id, (await body(req)).code);
+            online?.notify(r.id, 'friends');
+            return json(res, 200, r);
+          }
+          if (route === 'POST /api/friends/accept' || route === 'POST /api/friends/remove') {
+            const other = String((await body(req)).id ?? '');
+            if (route.endsWith('accept')) await friends.accept(db, user.id, other); else await friends.remove(db, user.id, other);
+            online?.notify(other, 'friends');
+            return json(res, 200, { ok: true });
+          }
 
           // ---- the marketplace ----
           if (route === 'GET /api/market') {

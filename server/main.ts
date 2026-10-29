@@ -4,6 +4,7 @@ import { loadConfig } from './config.ts';
 import { connect, migrate } from './db.ts';
 import { Online } from './games/online.ts';
 import { EnginePool } from './games/pool.ts';
+import { friends } from './friends.ts';
 import { handler } from './http.ts';
 import { market } from './market.ts';
 import { retention } from './privacy.ts';
@@ -24,6 +25,17 @@ const pool = new EnginePool();
 const sockets = new Sockets();
 const online = new Online(db, pool, sockets);
 const director = new Director(db, online);
+// friends: only friends can challenge each other, and they hear when a friend's presence changes
+online.areFriends = (a, b) => friends.areFriends(db, a, b);
+const told = new Map<string, ReturnType<typeof setTimeout>>();
+online.onPresence((userId) => {
+  // a burst of changes (connect, queue, match) goes out once
+  if (told.has(userId)) return;
+  told.set(userId, setTimeout(() => {
+    told.delete(userId);
+    friends.ids(db, userId).then((ids) => { for (const f of ids) sockets.send(f, { t: 'friends' }); }).catch(() => undefined);
+  }, 800));
+});
 const server = createServer(handler({ cfg, db, online, director }));
 sockets.attach(server, cfg, db, () => online);
 const resumed = await online.recover();

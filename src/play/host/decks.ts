@@ -78,6 +78,7 @@ const ruleRef = (rule: string) => (/^\d/.test(rule) ? `[${rule}]` : rule);
     online modes accept. */
 export function playerDecks(coll: CollectionState, ready = false): BuiltInDeck[] {
   const own = ownedDefs(coll);
-  const built = customDecks().filter((b) => !ready || (deckProblems(b.deck).length === 0 && missingCards(b.deck, own).length === 0));
-  return [...BUILT_IN_DECKS.filter((b) => b.id === coll.starter), ...built];
+  // the starter too: a card of it sold or graded away, and it is no longer whole
+  const ok = (b: BuiltInDeck) => !ready || (deckProblems(b.deck).length === 0 && missingCards(b.deck, own).length === 0);
+  return [...BUILT_IN_DECKS.filter((b) => b.id === coll.starter), ...customDecks()].filter(ok);
 }

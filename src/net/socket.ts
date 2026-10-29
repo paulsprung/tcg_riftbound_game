@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { showNotice } from './api.ts';
 import type { ClientMsg, Mode, ServerMsg } from './protocol.ts';
 
 /*
@@ -8,7 +9,8 @@ import type { ClientMsg, Mode, ServerMsg } from './protocol.ts';
  * itself listens through RemoteHost.
  */
 
-type Listener = (m: ServerMsg) => void;
+/** `seq` counts the messages of this tab, so a replayed one can be told from a new one. */
+type Listener = (m: ServerMsg, seq: number) => void;
 
 export interface OnlineState {
   status: 'off' | 'connecting' | 'open';
@@ -30,8 +32,9 @@ const stateListeners = new Set<() => void>();
 const listeners = new Set<Listener>();
 /** Called when the account changed on the server: a game's end, a sale, a gift. */
 const endHooks = new Set<() => void>();
-/** Updates that came before anyone listened (the game's first view, right after 'start'). */
-let early: ServerMsg[] = [];
+/** The current game's updates since its 'start', for a table that mounts after them (the page loads lazily). */
+let early: { m: ServerMsg; seq: number }[] = [];
+let seq = 0;
 
 const set = (patch: Partial<OnlineState>) => { state = { ...state, ...patch }; stateListeners.forEach((l) => l()); };
 
@@ -48,11 +51,16 @@ function open() {
     if (m.t === 'state') set({ queue: m.queue, game: m.game, ...(m.game ? {} : { start: null }) });
     else if (m.t === 'queued') set({ queue: { mode: m.mode, since: m.since }, error: null });
     else if (m.t === 'left') set({ queue: null });
-    else if (m.t === 'start') { early = []; set({ queue: null, game: m.gameId, start: m, end: null }); }
+    else if (m.t === 'start') {
+      early = []; set({ queue: null, game: m.gameId, start: m, end: null });
+      // a game that begins (a friend's, a tournament round) opens the table, wherever you are
+      if (!/^#\/?play/.test(location.hash)) location.hash = 'play';
+    }
     else if (m.t === 'end' || m.t === 'account') { if (m.t === 'end') set({ game: null, end: m }); endHooks.forEach((h) => h()); }
-    else if (m.t === 'error') set({ error: m.message });
-    if (listeners.size === 0 && m.t === 'update') early.push(m);
-    listeners.forEach((l) => l(m));
+    else if (m.t === 'error') { set({ error: m.message }); showNotice(m.message); }
+    const n = ++seq;
+    if (m.t === 'update' && early.length < 500) early.push({ m, seq: n });
+    listeners.forEach((l) => l(m, n));
   };
   s.onclose = () => {
     ws = null;
@@ -72,11 +80,10 @@ export const online = {
     set({ error: 'Not connected to the server. Trying again…' });
     return false;
   },
-  /** Every message from now on; the updates that came before the first listener, at once. */
-  listen(l: Listener) {
+  /** Every message from now on; with `replay`, first the current game's updates so far. */
+  listen(l: Listener, replay = false) {
     listeners.add(l);
-    const missed = early; early = [];
-    missed.forEach(l);
+    if (replay) for (const e of early) l(e.m, e.seq);
     return () => { listeners.delete(l); };
   },
   /** The account changed on the server (a game's coins, a sale, a gift). */

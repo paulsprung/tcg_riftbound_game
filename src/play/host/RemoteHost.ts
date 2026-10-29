@@ -35,6 +35,7 @@ export class RemoteHost implements TableHost {
   private snap: HostSnapshot | null = null;
   private readonly listeners = new Set<() => void>();
   private off: (() => void) | null = null;
+  private seq = 0;
 
   constructor(start: Extract<ServerMsg, { t: 'start' }>) {
     this.gameId = start.gameId;
@@ -51,7 +52,10 @@ export class RemoteHost implements TableHost {
 
   start() {
     if (this.off) return;
-    this.off = online.listen((m) => {
+    this.off = online.listen((m, seq) => {
+      // a replay after a remount brings what was applied already
+      if (seq <= this.seq) return;
+      this.seq = seq;
       if (m.t === 'update' && m.gameId === this.gameId) {
         this.view = m.view;
         this.events = m.full ? m.events.slice() : [...this.events, ...m.events];
@@ -64,7 +68,7 @@ export class RemoteHost implements TableHost {
         this.error = m.message;
         this.publish();
       }
-    });
+    }, true);
   }
 
   stop() { this.off?.(); this.off = null; }

@@ -82,7 +82,6 @@ function OnlineMode({ db, mode }: { db: CardDb; mode: (typeof ONLINE)[number] })
       </div>
 
       <div className="ds__start">
-        {ol.error && <p className="play__error" role="alert">{ol.error}</p>}
         {queued ? (
           <button type="button" className="btn btn--ghost" onClick={() => socket.send({ t: 'leave' })}>Cancel search</button>
         ) : (

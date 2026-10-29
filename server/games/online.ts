@@ -5,7 +5,7 @@ import { STARTERS, validateDeck, type DeckList, type GameRecord, type PlayerId, 
 import type { Db } from '../db.ts';
 import { readAccount } from '../economy.ts';
 import { ladderPoints, PLACEMENT_GAMES, rate, START, tierOf, type Rating } from '../rating.ts';
-import type { ClientMsg, Mode, QueueMode, RatingInfo, ServerMsg } from '../../src/net/protocol.ts';
+import type { ClientMsg, Mode, Presence, QueueMode, RatingInfo, ServerMsg } from '../../src/net/protocol.ts';
 import type { Answer, Update } from './engine.ts';
 import type { EnginePool } from './pool.ts';
 
@@ -84,6 +84,11 @@ export class Online {
   private readonly queues = new Map<QueueMode, Queued[]>(MODES.map((m) => [m, []]));
   private readonly finishHooks = new Set<(f: Finished) => void | Promise<void>>();
   private readonly hellos = new Map<string, number>();
+  private readonly presenceHooks = new Set<(userId: string) => void>();
+  /** Friendly games asked for: 'from>to' → the asker's deck; a minute to answer. */
+  private readonly challenges = new Map<string, { from: string; fromName: string; to: string; deck: DeckList; timer: ReturnType<typeof setTimeout> }>();
+  /** Checks that two players are friends (server/friends.ts); everyone, in tests. */
+  areFriends: (a: string, b: string) => Promise<boolean> = async () => true;
   /** Players whose queue request is being checked: a second one waits its turn. */
   private readonly joining = new Set<string>();
   private readonly games = new Map<string, Live>();
@@ -103,11 +108,22 @@ export class Online {
 
   stop() { clearInterval(this.ticker); clearInterval(this.flusher); for (const g of this.games.values()) this.clearTimers(g); }
 
+  /** What friends see: offline, online, looking for a match, in a game. */
+  presence(userId: string): Presence {
+    if (!this.net.online(userId)) return 'offline';
+    if (this.byUser.has(userId)) return 'game';
+    for (const q of this.queues.values()) if (q.some((x) => x.userId === userId)) return 'queue';
+    return 'online';
+  }
+  /** Called when a player's presence may have changed (friends are told). */
+  onPresence(h: (userId: string) => void) { this.presenceHooks.add(h); }
+  private changed(...userIds: string[]) { for (const u of userIds) for (const h of this.presenceHooks) h(u); }
+
   /** Called after every game's end (tournaments hang their matches on it). */
   onFinish(h: (f: Finished) => void | Promise<void>) { this.finishHooks.add(h); }
   isLive(gameId: string) { return this.games.has(gameId); }
   /** Tells a player their account changed (a sale, a gift, a prize), if they are connected. */
-  notify(userId: string, why: string) { this.net.send(userId, { t: 'account', why }); }
+  notify(userId: string, why: string) { this.net.send(userId, why === 'friends' ? { t: 'friends' } : { t: 'account', why }); }
   inGame(userId: string) { return this.byUser.has(userId); }
   /** A deleted account: out of every queue. */
   forget(userId: string) { for (const q of this.queues.values()) { const i = q.findIndex((x) => x.userId === userId); if (i >= 0) q.splice(i, 1); } }
@@ -121,6 +137,7 @@ export class Online {
     const gameId = this.byUser.get(userId);
     const queued = MODES.flatMap((m) => this.queues.get(m)!.filter((q) => q.userId === userId).map((q) => ({ mode: m, since: q.since })))[0] ?? null;
     this.net.send(userId, { t: 'state', queue: queued, game: gameId ?? null });
+    this.changed(userId);
     if (!gameId) return;
     const g = this.games.get(gameId)!;
     const seat = g.players.indexOf(userId) as PlayerId;
@@ -133,6 +150,8 @@ export class Online {
   /** Their last socket closed: out of the queue; in a game, a minute to come back. */
   disconnected(userId: string) {
     for (const q of this.queues.values()) { const i = q.findIndex((x) => x.userId === userId); if (i >= 0) q.splice(i, 1); }
+    this.changed(userId);
+    for (const [k, c] of this.challenges) if (c.from === userId || c.to === userId) this.dropChallenge(k, 'went offline');
     const gameId = this.byUser.get(userId);
     const g = gameId ? this.games.get(gameId) : undefined;
     if (!g || g.over) return;
@@ -154,8 +173,12 @@ export class Online {
       if (m.t === 'queue') return await this.enqueue(userId, name, m.mode, m.deck);
       if (m.t === 'leave') {
         for (const q of this.queues.values()) { const i = q.findIndex((x) => x.userId === userId); if (i >= 0) q.splice(i, 1); }
+        this.changed(userId);
         return this.net.send(userId, { t: 'left' });
       }
+      if (m.t === 'challenge') return await this.challenge(userId, name, String(m.to), String(m.deck));
+      if (m.t === 'challenge-cancel') return this.dropChallenge(`${userId}>${String(m.to)}`, 'cancelled');
+      if (m.t === 'challenge-answer') return await this.answerChallenge(userId, name, String(m.from), !!m.accept, String(m.deck ?? ''));
       const g = this.games.get(m.gameId);
       if (!g || !g.players.includes(userId)) throw new Error('No such game');
       const seat = g.players.indexOf(userId) as PlayerId;
@@ -215,6 +238,7 @@ export class Online {
     const since = entry.since;
     this.queues.get(mode)!.push(entry);
     this.net.send(userId, { t: 'queued', mode, since });
+    this.changed(userId);
     await this.matchmake();
   }
 
@@ -277,6 +301,7 @@ export class Online {
     };
     this.games.set(id, g);
     this.byUser.set(p0.userId, id); this.byUser.set(p1.userId, id);
+    this.changed(p0.userId, p1.userId);
     const u = await this.pool.engine.create(id, setup);
     const rec = await this.pool.engine.record(id);
     g.head = { engine: rec.engine, defsHash: rec.defsHash };
@@ -413,6 +438,47 @@ export class Online {
     return this.games.size;
   }
 
+  // ---- friendly games ----
+
+  private dropChallenge(key: string, why: string) {
+    const c = this.challenges.get(key);
+    if (!c) return;
+    clearTimeout(c.timer);
+    this.challenges.delete(key);
+    this.net.send(c.from, { t: 'challenge-gone', with: c.to, why });
+    this.net.send(c.to, { t: 'challenge-gone', with: c.from, why });
+  }
+
+  /** Ask a friend for a game, with your deck; they have a minute to answer. */
+  private async challenge(from: string, fromName: string, to: string, ref: string) {
+    if (from === to || !/^[0-9a-f-]{36}$/.test(to)) throw new Error('No such friend');
+    if (!(await this.areFriends(from, to))) throw new Error('Only friends can be challenged');
+    if (this.presence(to) !== 'online') throw new Error(this.presence(to) === 'offline' ? 'Your friend is offline' : 'Your friend is busy');
+    if (this.byUser.has(from)) throw new Error('You are in a game');
+    if ([...this.challenges.values()].filter((c) => c.from === from).length >= 3) throw new Error('Wait for your other challenges first');
+    const deck = await this.deckFor(from, ref);
+    const key = `${from}>${to}`;
+    this.dropChallenge(key, 'replaced');
+    const timer = setTimeout(() => this.dropChallenge(key, 'no answer'), 60_000);
+    timer.unref?.();
+    this.challenges.set(key, { from, fromName, to, deck, timer });
+    this.net.send(to, { t: 'challenge', from: { id: from, name: fromName } });
+  }
+
+  private async answerChallenge(to: string, toName: string, from: string, accept: boolean, ref: string) {
+    const key = `${from}>${to}`;
+    const c = this.challenges.get(key);
+    if (!c) throw new Error('That challenge is gone');
+    if (!accept) { this.dropChallenge(key, 'declined'); return; }
+    const deck = await this.deckFor(to, ref);
+    if (!this.challenges.has(key)) throw new Error('That challenge is gone');
+    clearTimeout(c.timer);
+    this.challenges.delete(key);
+    if (this.byUser.has(from) || this.byUser.has(to) || !this.net.online(from)) throw new Error('Your friend is busy');
+    this.forget(from); this.forget(to);
+    await this.start('friendly', { userId: from, name: c.fromName, deck: c.deck }, { userId: to, name: toName, deck });
+  }
+
   // ---- the end ----
 
   private async finish(g: Live, u: Update) {
@@ -432,15 +498,16 @@ export class Online {
         await c.query('INSERT INTO accounts (user_id) VALUES ($1) ON CONFLICT DO NOTHING', [u]);
         await c.query('SELECT 1 FROM accounts WHERE user_id = $1 FOR UPDATE', [u]);
       }
-      const order = (g.mode === 'tournament' ? [] : [0, 1].sort((x, y) => (g.players[x] < g.players[y] ? -1 : 1))) as PlayerId[];
+      const rated = g.mode === 'ranked' || g.mode === 'casual';
+      const order = (rated ? [0, 1].sort((x, y) => (g.players[x] < g.players[y] ? -1 : 1)) : []) as PlayerId[];
       const before: Record<number, { rating: Rating; games: number; wins: number }> = {};
       for (const s of order) {
         await c.query('INSERT INTO ratings (user_id, mode) VALUES ($1, $2) ON CONFLICT DO NOTHING', [g.players[s], g.mode]);
         const x = (await c.query('SELECT r, rd, vol, games, wins FROM ratings WHERE user_id = $1 AND mode = $2 FOR UPDATE', [g.players[s], g.mode])).rows[0];
         before[s] = { rating: { r: x.r, rd: x.rd, vol: x.vol }, games: x.games, wins: x.wins };
       }
-      // a tournament game moves no rating and pays no coins: the tournament's prizes do
-      for (const s of g.mode === 'tournament' ? [] : [0, 1] as const) {
+      // a tournament or friendly game moves no rating and pays no coins (a tournament's prizes do)
+      for (const s of rated ? [0, 1] as const : []) {
         const score = res.winner === null ? 0.5 : res.winner === s ? 1 : 0;
         const me = before[s], opp = before[1 - s];
         const next = rate(me.rating, opp.rating, score as 0 | 0.5 | 1);
@@ -475,6 +542,7 @@ export class Online {
       if (this.byUser.get(g.players[s]) === g.id) this.byUser.delete(g.players[s]);
     }
     this.games.delete(g.id);
+    this.changed(...g.players);
     await this.pool.engine.drop(g.id);
     const done: Finished = { gameId: g.id, mode: g.mode, players: g.players, winner: res.winner, reason: res.reason, meta: g.meta,
       first: g.first, noShow: g.noShow };
