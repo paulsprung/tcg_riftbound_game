@@ -984,6 +984,8 @@ html[data-scaled] .app {
 .dv__cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 14px 12px; margin-top: 10px; }
 .dv__card { position: relative; }
 
+/* good news and the server's no: a line at the top for a few seconds */
+.notice--ok { background: linear-gradient(180deg, #0b3a36, #06201e) !important; border-color: var(--teal) !important; color: #d8fffb !important; }
 /* the server said no (not enough coins, a pack you don't have): a line at the top for a few seconds */
 .notice {
   position: fixed; z-index: 90; left: 50%; top: 70px; translate: -50% 0; margin: 0; max-width: min(520px, 90vw);

@@ -11,6 +11,7 @@ import { PlayView } from '../play/PlayView.tsx';
 import { useSession } from '../net/session.ts';
 import { online as socket, useOnline } from '../net/socket.ts';
 
+const Tournaments = lazy(() => import('./Tournaments.tsx').then((m) => ({ default: m.Tournaments })));
 const OnlineGame = lazy(() => import('../play/OnlineGame.tsx').then((m) => ({ default: m.OnlineGame })));
 import { DeckPicker, DeckSlot, FormatSwitch } from '../play/setup/DeckSetup.tsx';
 
@@ -125,7 +126,7 @@ export function PlayLobby({ db, mode }: { db: CardDb; mode: string }) {
       <RankCard />
       <div className="lb-side__gap" />
       <SideTitle>GAME MODE</SideTitle>
-      {ONLINE.map((m) => <SideLink key={m.id} href={`#play/${m.id}`} icon={m.icon} active={id === m.id} soon={m.id === 'tournament'}>{m.label}</SideLink>)}
+      {ONLINE.map((m) => <SideLink key={m.id} href={`#play/${m.id}`} icon={m.icon} active={id === m.id} >{m.label}</SideLink>)}
       <div className="lb-side__gap" />
       <SideTitle>PLAY NOW</SideTitle>
       <SideLink href="#play/custom" icon="sliders" active={id === 'custom'}>Custom game</SideLink>
@@ -136,7 +137,8 @@ export function PlayLobby({ db, mode }: { db: CardDb; mode: string }) {
   const bare = tutorial || (id === 'custom' && inGame);
   return (
     <Lobby side={side} bare={bare}>
-      {online ? <OnlineMode db={db} mode={online} /> : (
+      {online?.id === 'tournament' ? <Suspense fallback={<p className="muted">Loading…</p>}><Tournaments db={db} /></Suspense>
+        : online ? <OnlineMode db={db} mode={online} /> : (
         <div className={bare ? 'lb-bare' : 'lb-play-scroll'}>
           <PlayView key={tutorial ? 'tutorial' : 'play'} db={db} tutorial={tutorial} onInGame={setInGame} />
         </div>

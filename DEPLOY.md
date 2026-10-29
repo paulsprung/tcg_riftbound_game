@@ -39,8 +39,14 @@ Entwicklermodus, dann Rechtsklick auf dich → „User-ID kopieren"):
 docker compose exec db psql -U rift rift -c "UPDATE users SET is_admin = true WHERE discord_id = 'DEINE_ID'"
 ```
 
-Ein Admin kann Spielern Coins und Packs geben (`POST /api/admin/grant`, mit
-Grund); jede Vergabe steht mit Admin und Grund in der Tabelle `ledger`.
+Als Admin steht oben rechts der Link „Admin" (`#admin`):
+
+- **Players:** Spieler suchen (Name oder Discord-ID), Coins und Packs geben,
+  immer mit Grund. Jede Vergabe steht mit Admin und Grund in der Tabelle
+  `ledger`, die Seite zeigt die letzten 50 Einträge des Spielers.
+- **Tournaments:** Turnier anlegen (Start, Bo1/Bo3, Spielerzahl, Startgebühr,
+  Top Cut, Swiss-Runden, No-Show-Zeit, Preise je Platz), vorzeitig starten,
+  absagen (Startgebühren gehen zurück). Zur Startzeit startet es von selbst.
 
 ## Backup
 

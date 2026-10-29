@@ -51,6 +51,7 @@ export function LobbyTop({ route }: { route: string }) {
             {user?.avatar ? <img src={user.avatar} alt="" /> : <span>{name.slice(0, 1).toUpperCase()}</span>}
           </a>
         )}
+        {user?.admin && <a className="lb-signout" href="#admin">Admin</a>}
         {user && <button type="button" className="lb-signout" onClick={() => { void logout(); }}>Sign out</button>}
       </div>
     </header>

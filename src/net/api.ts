@@ -21,12 +21,14 @@ export async function api<T>(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: st
 
 // ---- a short message at the top of the screen when the server says no ----
 
-let notice: string | null = null;
+export interface Notice { text: string; ok: boolean }
+let notice: Notice | null = null;
 let timer: ReturnType<typeof setTimeout> | undefined;
 const listeners = new Set<() => void>();
 
-export function showNotice(text: string) {
-  notice = text;
+/** `ok`: good news (given, made); otherwise the server said no. */
+export function showNotice(text: string, ok = false) {
+  notice = { text, ok };
   clearTimeout(timer);
   timer = setTimeout(() => { notice = null; listeners.forEach((l) => l()); }, 4500);
   listeners.forEach((l) => l());

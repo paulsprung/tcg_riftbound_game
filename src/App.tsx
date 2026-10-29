@@ -18,9 +18,10 @@ import { RulesView } from './views/RulesView.tsx';
 // The play table brings the engine with it: loaded only when opened.
 // A new player sees this first, not the lobby (loaded only for them).
 const Onboarding = lazy(() => import('./onboarding/Onboarding.tsx').then((m) => ({ default: m.Onboarding })));
+const AdminView = lazy(() => import('./views/AdminView.tsx').then((m) => ({ default: m.AdminView })));
 const PlayLobby = lazy(() => import('./views/PlayLobby.tsx').then((m) => ({ default: m.PlayLobby })));
 
-const ROUTES = ['home', 'play', 'collection', 'shop', 'profile', 'rules'] as const;
+const ROUTES = ['home', 'play', 'collection', 'shop', 'profile', 'rules', 'admin'] as const;
 type Route = (typeof ROUTES)[number];
 const COLLECTION_TABS: CollectionTab[] = ['cards', 'packs', 'decks'];
 
@@ -106,6 +107,7 @@ export function App() {
               )}
               {route === 'profile' && <ProfileView db={state.db} onInspect={onInspect} />}
               {route === 'rules' && <Lobby><div className="lb-scroll"><RulesView /></div></Lobby>}
+              {route === 'admin' && <Suspense fallback={<p className="status">Loading…</p>}><AdminView /></Suspense>}
             </>
           )}
           </div>
@@ -123,7 +125,7 @@ export function App() {
         <a href="https://riftcodex.com" target="_blank" rel="noreferrer">Riftcodex</a>. · <a href="#rules">Rules</a>
       </footer>
 
-      {notice && <p className="notice" role="alert">{notice}</p>}
+      {notice && <p className={`notice${notice.ok ? ' notice--ok' : ''}`} role={notice.ok ? 'status' : 'alert'}>{notice.text}</p>}
 
       {inspect && state.status === 'ready' && (
         <Inspector target={inspect} db={state.db} onClose={() => setInspect(null)} />
