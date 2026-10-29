@@ -57,8 +57,8 @@ export function LobbyTop({ route }: { route: string }) {
  * page fills the window; lists inside it (`.lb-scroll`) scroll, it does not.
  * `bare` drops the chrome (a game in progress).
  */
-export function Lobby({ side, children, bare = false, className = '' }: {
-  side?: ReactNode; children: ReactNode; bare?: boolean; className?: string;
+export function Lobby({ side, sideClass = '', children, bare = false, className = '' }: {
+  side?: ReactNode; sideClass?: string; children: ReactNode; bare?: boolean; className?: string;
 }) {
   // the social dock hides while a game is on
   useEffect(() => {
@@ -69,7 +69,7 @@ export function Lobby({ side, children, bare = false, className = '' }: {
   // One structure either way, so a game in progress is not rebuilt when the chrome goes.
   return (
     <div className={`lb-page${side ? ' has-side' : ''}${bare ? ' is-bare' : ''} ${className}`}>
-      {side && <aside className="lb-side">{side}</aside>}
+      {side && <aside className={`lb-side ${sideClass}`}>{side}</aside>}
       <div className="lb-main">{children}</div>
     </div>
   );

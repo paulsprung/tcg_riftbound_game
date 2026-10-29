@@ -948,3 +948,14 @@ html[data-scaled] .app {
 .ds-modal__note { margin: 0; text-align: center; }
 .ds__summary { max-width: 360px; text-align: center; text-transform: none; letter-spacing: 0; }
 .ds__start { gap: 10px; }
+
+/* ---- play: one frame for the custom game and the online modes ---- */
+.lb-side--center { justify-content: center; padding-block: 16px; }
+.lb-side--center .lb-rank { margin-top: 2px; }
+.ds__start { min-height: 150px; align-content: end; }
+.ds__bar { min-height: 44px; }
+.ds-slot__back { width: 100%; aspect-ratio: 744 / 1039; position: relative; overflow: hidden; border-radius: 4.5%; }
+.ds-slot.is-wait .ds-slot__card { cursor: default; opacity: .6; filter: grayscale(.35) drop-shadow(0 18px 34px rgba(0, 0, 0, .55)); }
+.ds-slot.is-wait .ds-slot__card:hover { transform: none; }
+.ds-slot__tag--alt { background: linear-gradient(180deg, #1e2832, #0d141c); color: var(--muted); }
+.ds-slot figcaption { min-height: 96px; align-content: start; }

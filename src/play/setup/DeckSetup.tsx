@@ -130,7 +130,7 @@ export function DeckPicker({ cards, db, title, current, owned, mine, only, onRan
 }
 
 /** A deck slot on the table: the legend, big, and a button to change it. */
-function DeckSlot({ label, b, cards, db, owned, onOpen }: {
+export function DeckSlot({ label, b, cards, db, owned, onOpen }: {
   label: string; b: BuiltInDeck; cards: CardIndex; db: CardDb; owned?: boolean; onOpen: () => void;
 }) {
   const legend = cardFor(cards, b.deck.legend);
