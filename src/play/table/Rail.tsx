@@ -26,7 +26,7 @@ export function RailHead({ board, names, menu }: { board: BoardModel; names: { m
     <header className="rail__head">
       <div className="rail__turn">
         <strong>{board.turn === 0 ? 'Before turn 1' : `Turn ${board.turn}`}</strong>
-        {board.turnPlayer !== null && <em className={mine ? 'is-me' : 'is-opp'}>{mine ? `${names.me}'s turn` : `${names.opponent}'s turn`}</em>}
+        {board.turnPlayer !== null && <em className={mine ? 'is-me' : 'is-opp'}>{mine ? (names.me === 'You' ? 'Your turn' : `${names.me}'s turn`) : `${names.opponent}'s turn`}</em>}
       </div>
       {menu}
       <ol className="rail__phases" aria-label="Phases">

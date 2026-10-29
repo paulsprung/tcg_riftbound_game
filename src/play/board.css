@@ -36,7 +36,7 @@ html:not([data-scaled]) .play__stage { min-height: 760px; overflow: visible; }
 .board .tcard--xl { --w: calc(var(--cu) * 12.4); }
 
 .board__main {
-  position: relative; display: grid; grid-template-rows: 14fr 11fr 39fr 11fr 25fr; gap: calc(var(--cu) * .6);
+  position: relative; display: grid; grid-template-rows: 13fr 14fr 34fr 14fr 25fr; gap: calc(var(--cu) * .6);
   min-width: 0; min-height: 0; padding: calc(var(--cu) * .8) calc(var(--cu) * 1) calc(var(--cu) * .8); overflow: hidden;
 }
 .board__main > * { min-width: 0; min-height: 0; }
@@ -187,3 +187,11 @@ html:not([data-scaled]) .play__stage { min-height: 760px; overflow: visible; }
 .coach-pop[data-side="right"] .coach-pop__arrow { display: block; top: var(--ay); left: -8px; translate: 0 -50%; border-width: 0 0 1px 1px; }
 .is-coached { outline: 3px solid var(--gold) !important; outline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) { .coach-pop, .coach-dim { animation: none; } }
+
+/* tapped permanents: dimmed and tilted, no label (it covered the next card) */
+.board .tcard__badge { display: none; }
+.board .tcard.is-exhausted { opacity: .6; filter: saturate(.55); rotate: 7deg; }
+.board .tcard.is-exhausted.is-picked { opacity: 1; }
+/* nothing under the cursor: the empty preview gives its room to the log */
+.rail__preview:has(.rail__hint) { height: auto; }
+.rail__preview .rail__hint { margin: 0; text-align: left; justify-self: start; }
