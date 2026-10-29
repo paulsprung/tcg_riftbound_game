@@ -19,10 +19,20 @@ export type ClientMsg =
   | { t: 'leave' }
   | { t: 'choose'; gameId: string; keys: string[] }
   | { t: 'concede'; gameId: string }
-  /** A friendly game: ask a friend, who answers with their deck (or no). */
-  | { t: 'challenge'; to: string; deck: string }
-  | { t: 'challenge-answer'; from: string; accept: boolean; deck?: string }
-  | { t: 'challenge-cancel'; to: string };
+  /** A lobby, as in the League client: invite friends from the custom game (or casual 2v2), they join,
+      pick a deck and ready up; the host starts when everyone is ready. */
+  | { t: 'lobby-invite'; to: string; mode: LobbyMode }
+  | { t: 'lobby-answer'; lobby: string; accept: boolean }
+  | { t: 'lobby-deck'; deck: string }
+  | { t: 'lobby-ready'; ready: boolean }
+  | { t: 'lobby-start' }
+  | { t: 'lobby-leave' }
+  | { t: 'lobby-kick'; who: string };
+
+/** Where a lobby plays: the custom game (1v1 between friends), or casual 2v2 (with a teammate, soon). */
+export type LobbyMode = 'custom' | 'casual';
+export interface LobbyMember { id: string; name: string; host: boolean; ready: boolean; deck: { ref: string; name: string; legend: string } | null }
+export interface LobbyView { id: string; mode: LobbyMode; members: LobbyMember[]; max: number; inGame: boolean; invited: { id: string; name: string }[] }
 
 export interface RatingInfo { points: number; tier: string; division: number | null; games: number; placement: boolean }
 
@@ -38,10 +48,11 @@ export type ServerMsg =
   /** Your view after a change, with what you observed in it; `full` replaces the log (after a reconnect). Deadlines are ms since the epoch. */
   | { t: 'update'; gameId: string; view: PlayerView; events: ObservedEvent[]; full: boolean; deadline: number | null; theirDeadline: number | null }
   | { t: 'end'; gameId: string; winner: PlayerId | null; reason: string; coins: number; rating: { before: RatingInfo; after: RatingInfo } | null }
-  /** A friend asks you for a game; it lapses after a minute. */
-  | { t: 'challenge'; from: { id: string; name: string } }
-  /** A challenge you sent or got is over (declined, cancelled, lapsed). */
-  | { t: 'challenge-gone'; with: string; why: string }
+  /** Your lobby as it is now (after every change); null: you are in none. */
+  | { t: 'lobby'; lobby: LobbyView | null }
+  /** A friend invites you to their lobby; it lapses after a minute. */
+  | { t: 'lobby-invite'; lobby: string; mode: LobbyMode; from: { id: string; name: string } }
+  | { t: 'lobby-invite-gone'; lobby: string; why: string }
   /** A friend's presence or your friend requests changed: fetch the list again. */
   | { t: 'friends' }
   /** Your account changed from elsewhere (a sale, a gift, a prize): fetch it again. */

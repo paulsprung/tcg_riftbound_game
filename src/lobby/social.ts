@@ -1,15 +1,16 @@
 import { useSyncExternalStore } from 'react';
 import { api, showNotice } from '../net/api.ts';
-import type { Presence } from '../net/protocol.ts';
+import type { LobbyMode, LobbyView, Presence } from '../net/protocol.ts';
 import { online } from '../net/socket.ts';
 import { DEMO, DEMO_FRIENDS } from './demo.ts';
 
 /*
- * The friends list. Signed in, it is the server's (server/friends.ts):
- * friends with their presence, kept fresh by the socket's 'friends' nudge,
- * requests both ways, your friend code, and friendly games (a challenge a
- * friend answers with their deck). Without a server (the preview) it runs
- * on sample friends, forgotten on reload.
+ * Friends and the lobby. Signed in, both are the server's: friends with
+ * their presence (server/friends.ts), kept fresh by the socket's 'friends'
+ * nudge, requests both ways, your friend code; and the lobby as in the
+ * League client (server/games/online.ts): the host invites friends from the
+ * custom game (or casual 2v2), they join, pick a deck and ready up, the host
+ * starts. Without a server (the preview) it runs on sample friends.
  */
 
 export interface Friend { id: string; name: string; avatar: string | null; presence: Presence }
@@ -17,8 +18,9 @@ export interface Pending { id: string; name: string; avatar: string | null }
 interface State {
   open: boolean; live: boolean; code: string;
   friends: Friend[]; incoming: Pending[]; outgoing: Pending[];
-  /** Challenges you sent, by friend id; one a friend sent you. */
-  sent: string[]; asked: { id: string; name: string } | null;
+  lobby: LobbyView | null;
+  /** An invite to a friend's lobby, waiting for your answer. */
+  invite: { lobby: string; mode: LobbyMode; from: { id: string; name: string } } | null;
   note: string;
 }
 
@@ -34,7 +36,7 @@ const sample: Friend[] = DEMO_FRIENDS.map((f) => ({
   presence: f.presence === 'offline' ? 'offline' : f.doing.startsWith('In Game') ? 'game' : 'online',
 }));
 
-let state: State = { open: DEMO ? readOpen() : false, live: false, code: '', friends: DEMO ? sample : [], incoming: [], outgoing: [], sent: [], asked: null, note: '' };
+let state: State = { open: DEMO ? readOpen() : false, live: false, code: '', friends: DEMO ? sample : [], incoming: [], outgoing: [], lobby: null, invite: null, note: '' };
 const listeners = new Set<() => void>();
 const set = (patch: Partial<State>) => { state = { ...state, ...patch }; listeners.forEach((l) => l()); };
 let noteTimer: ReturnType<typeof setTimeout> | undefined;
@@ -51,24 +53,28 @@ async function load() {
   set({ live: true, code: r.code, friends: r.friends, incoming: r.incoming, outgoing: r.outgoing });
 }
 
+/** The page you invite from decides the lobby: the custom game, or casual (2v2). */
+export function lobbyModeHere(): LobbyMode | null {
+  const h = location.hash.replace(/^#\/?/, '');
+  if (h === 'play' || h.startsWith('play/custom')) return 'custom';
+  if (h.startsWith('play/casual')) return 'casual';
+  return null;
+}
+
 export const social = {
   setOpen(open: boolean) {
     set({ open });
     try { localStorage.setItem(KEY, open ? 'open' : 'closed'); } catch { /* per-session only */ }
   },
   say,
-  /** Signed in: the server's friends from now on, kept fresh over the socket. */
+  /** Signed in: the server's friends and lobby from now on, kept fresh over the socket. */
   connect() {
     void load().catch(() => undefined);
     online.listen((m) => {
       if (m.t === 'friends') void load().catch(() => undefined);
-      else if (m.t === 'challenge') set({ asked: m.from });
-      else if (m.t === 'challenge-gone') {
-        const f = state.friends.find((x) => x.id === m.with);
-        set({ sent: state.sent.filter((id) => id !== m.with), asked: state.asked?.id === m.with ? null : state.asked });
-        if (m.why !== 'replaced' && f) say(`${f.name}: ${m.why}`);
-      } else if (m.t === 'start') set({ sent: [], asked: null });
-      else if (m.t === 'error' && state.sent.length) set({ sent: [] });
+      else if (m.t === 'lobby') set({ lobby: m.lobby });
+      else if (m.t === 'lobby-invite') set({ invite: { lobby: m.lobby, mode: m.mode, from: m.from } });
+      else if (m.t === 'lobby-invite-gone' && state.invite?.lobby === m.lobby) set({ invite: null });
     });
   },
   async add(code: string) {
@@ -84,20 +90,27 @@ export const social = {
     if (!state.live) { set({ friends: state.friends.filter((x) => x.id !== id) }); return; }
     void api('POST', '/api/friends/remove', { id }).then(load).catch(fail);
   },
-  /** A friendly game with your deck; they answer with theirs. */
-  challenge(id: string, deck: string) {
+  /** Into your lobby, from the custom game or casual page. */
+  invite(id: string) {
     const f = state.friends.find((x) => x.id === id);
     if (!state.live) { if (f) say(`Invite sent to ${f.name} (sample)`); return; }
-    if (!deck) { showNotice('You need a legal deck of your own cards'); return; }
-    if (online.send({ t: 'challenge', to: id, deck })) { set({ sent: [...new Set([...state.sent, id])] }); if (f) say(`Challenge sent to ${f.name}`); }
+    const mode = state.lobby?.mode ?? lobbyModeHere();
+    if (!mode) { showNotice('Invite from the custom game or casual'); return; }
+    if (online.send({ t: 'lobby-invite', to: id, mode }) && f) say(`Invite sent to ${f.name}`);
   },
-  cancel(id: string) { online.send({ t: 'challenge-cancel', to: id }); },
-  answer(accept: boolean, deck = '') {
-    const a = state.asked;
-    if (!a) return;
-    online.send({ t: 'challenge-answer', from: a.id, accept, deck });
-    set({ asked: null });
+  /** Join (or not) the lobby you were invited to; joining opens its page. */
+  answer(accept: boolean) {
+    const i = state.invite;
+    if (!i) return;
+    online.send({ t: 'lobby-answer', lobby: i.lobby, accept });
+    set({ invite: null });
+    if (accept) location.hash = i.mode === 'casual' ? 'play/casual' : 'play/custom';
   },
+  leave() { online.send({ t: 'lobby-leave' }); },
+  kick(id: string) { online.send({ t: 'lobby-kick', who: id }); },
+  deck(ref: string) { online.send({ t: 'lobby-deck', deck: ref }); },
+  ready(ready: boolean) { online.send({ t: 'lobby-ready', ready }); },
+  start() { online.send({ t: 'lobby-start' }); },
 };
 
 export function useSocial(): State {

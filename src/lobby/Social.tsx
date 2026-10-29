@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
-import { collection } from '../collection/store.ts';
 import type { Presence } from '../net/protocol.ts';
 import { useSession } from '../net/session.ts';
 import { DEMO, DEMO_PROFILE } from './demo.ts';
 import { Icon } from './icons.tsx';
 import { viewport } from './scale.ts';
-import { social, useSocial, type Friend } from './social.ts';
+import { lobbyModeHere, social, useSocial, type Friend } from './social.ts';
 
 const STATUS: Record<Presence, string> = { online: 'Online', queue: 'Looking for a match', game: 'In a game', offline: 'Offline' };
 const GROUPS: { id: string; label: string; has: (p: Presence) => boolean }[] = [
@@ -14,9 +13,6 @@ const GROUPS: { id: string; label: string; has: (p: Presence) => boolean }[] = [
   { id: 'offline', label: 'Offline', has: (p) => p === 'offline' },
 ];
 const dot = (p: Presence) => (p === 'offline' ? 'offline' : p === 'game' ? 'away' : 'online');
-
-/** The decks a player may bring to a game, best first (the engine loads with them, so only when asked). */
-const readyDecks = () => import('../play/host/decks.ts').then((m) => m.playerDecks(collection.get(), true).map((b) => ({ id: b.id, name: b.deck.name })));
 
 function Avatar({ name, avatar, presence }: { name: string; avatar?: string | null; presence: Presence }) {
   return (
@@ -28,9 +24,9 @@ function Avatar({ name, avatar, presence }: { name: string; avatar?: string | nu
 }
 
 /** The menu on a right click (or a click): what you can do with a friend. */
-function Menu({ friend, x, y, onClose, onChallenge }: { friend: Friend; x: number; y: number; onClose: () => void; onChallenge: (f: Friend) => void }) {
+function Menu({ friend, x, y, onClose }: { friend: Friend; x: number; y: number; onClose: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
-  const { sent } = useSocial();
+  const { lobby } = useSocial();
   const [pos, setPos] = useState({ x, y });
   const [sure, setSure] = useState(false);
 
@@ -53,14 +49,14 @@ function Menu({ friend, x, y, onClose, onChallenge }: { friend: Friend; x: numbe
     };
   }, [x, y, onClose]);
 
-  const asked = sent.includes(friend.id);
+  const inLobby = !!lobby?.members.some((m) => m.id === friend.id);
   return (
     <div ref={ref} className="soc-menu" role="menu" style={{ left: pos.x, top: pos.y }} aria-label={friend.name}>
       <div className="soc-menu__head"><Avatar name={friend.name} avatar={friend.avatar} presence={friend.presence} /><div><b>{friend.name}</b><span>{STATUS[friend.presence]}</span></div></div>
-      {asked ? (
-        <button role="menuitem" type="button" onClick={() => { social.cancel(friend.id); onClose(); }}>Cancel challenge</button>
+      {inLobby ? (
+        <button role="menuitem" type="button" onClick={() => { social.kick(friend.id); onClose(); }}>Remove from lobby</button>
       ) : (
-        <button role="menuitem" type="button" disabled={friend.presence !== 'online'} onClick={() => { onChallenge(friend); onClose(); }}>Challenge to a game</button>
+        <button role="menuitem" type="button" disabled={!canInvite(friend, lobby)} onClick={() => { social.invite(friend.id); onClose(); }}>Invite to lobby</button>
       )}
       <hr />
       {sure ? (
@@ -72,26 +68,22 @@ function Menu({ friend, x, y, onClose, onChallenge }: { friend: Friend; x: numbe
   );
 }
 
-/** A friend asks for a game: answer with one of your decks. */
-function Challenged() {
-  const { asked } = useSocial();
-  const [decks, setDecks] = useState<{ id: string; name: string }[] | null>(null);
-  const [pick, setPick] = useState('');
-  useEffect(() => {
-    if (!asked) return;
-    void readyDecks().then((d) => { setDecks(d); setPick(d[0]?.id ?? ''); });
-  }, [asked]);
-  if (!asked) return null;
+/** Can this friend be invited now: online and free, from the custom game or casual (or into your lobby). */
+function canInvite(f: Friend, lobby: ReturnType<typeof useSocial>['lobby']): boolean {
+  if (f.presence !== 'online') return false;
+  if (lobby) return lobby.members.length + lobby.invited.length < lobby.max && !lobby.invited.some((i) => i.id === f.id);
+  return lobbyModeHere() !== null;
+}
+
+/** A friend invites you to their lobby: join it, or not. */
+function LobbyInvite() {
+  const { invite } = useSocial();
+  if (!invite) return null;
   return (
-    <div className="soc-challenge lb-card" role="alertdialog" aria-label={`${asked.name} challenges you`}>
-      <b>{asked.name}</b><span>challenges you to a friendly game</span>
-      {decks && decks.length > 0 ? (
-        <select className="input" value={pick} onChange={(e) => setPick(e.target.value)} aria-label="Your deck">
-          {decks.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-        </select>
-      ) : decks && <span className="muted small">No legal deck of your own</span>}
+    <div className="soc-challenge lb-card" role="alertdialog" aria-label={`${invite.from.name} invites you`}>
+      <b>{invite.from.name}</b><span>invites you to {invite.mode === 'casual' ? 'a casual 2v2 lobby' : 'a custom game'}</span>
       <span className="soc-challenge__btns">
-        <button type="button" className="btn btn--cta btn--small" disabled={!pick} onClick={() => social.answer(true, pick)}>Play</button>
+        <button type="button" className="btn btn--cta btn--small" onClick={() => social.answer(true)}>Join</button>
         <button type="button" className="btn btn--ghost btn--small" onClick={() => social.answer(false)}>Decline</button>
       </span>
     </div>
@@ -100,14 +92,14 @@ function Challenged() {
 
 /**
  * The social dock at the right edge, as in the League client: friends by
- * presence, requests, your friend code, a right-click menu to challenge or
- * remove. It folds into a slim rail. Signed in, all of it is real; the
+ * presence, requests, your friend code, your lobby, a right-click menu to
+ * invite or remove. It folds into a slim rail. Signed in, all of it is real; the
  * preview shows sample friends.
  */
 export function Social() {
   const session = useSession();
   const user = session.status === 'online' ? session.user : null;
-  const { open, live, code, friends, incoming, outgoing, sent, note } = useSocial();
+  const { open, live, code, friends, incoming, outgoing, lobby, note } = useSocial();
   const [q, setQ] = useState('');
   const [adding, setAdding] = useState('');
   const [folded, setFolded] = useState<Record<string, boolean>>({ offline: true });
@@ -119,7 +111,6 @@ export function Social() {
   }, [friends, q]);
   const on = friends.filter((f) => f.presence !== 'offline').length;
   const openMenu = (f: Friend, e: MouseEvent) => { e.preventDefault(); setMenu({ f, x: e.clientX, y: e.clientY }); };
-  const challenge = (f: Friend) => { void readyDecks().then((d) => social.challenge(f.id, d[0]?.id ?? '')); };
 
   if (!user && !DEMO) return null;
   const me = user?.name ?? DEMO_PROFILE.name;
@@ -158,7 +149,23 @@ export function Social() {
             </form>
           )}
 
-          {(incoming.length > 0 || outgoing.length > 0 || sent.length > 0) && (
+          {lobby && (
+            <div className="soc-party">
+              <p className="lb-label">Your lobby</p>
+              {lobby.members.map((m) => (
+                <div key={m.id} className="soc-req">
+                  <Avatar name={m.name} presence="online" /><span>{m.name}</span>
+                  <em>{m.host ? 'Host' : m.ready ? 'Ready' : 'Not ready'}</em>
+                </div>
+              ))}
+              {lobby.invited.map((i) => (
+                <div key={i.id} className="soc-req is-wait"><Avatar name={i.name} presence="offline" /><span>{i.name}</span><em>Invited…</em></div>
+              ))}
+              <button type="button" className="lb-linkbtn" onClick={() => social.leave()}>Leave lobby</button>
+            </div>
+          )}
+
+          {(incoming.length > 0 || outgoing.length > 0) && (
             <div className="soc-party">
               {incoming.map((p) => (
                 <div key={p.id} className="soc-req">
@@ -173,15 +180,6 @@ export function Social() {
                   <button type="button" className="icon-btn" aria-label={`Take back the request to ${p.name}`} onClick={() => social.remove(p.id)}><Icon name="close" size={12} /></button>
                 </div>
               ))}
-              {sent.map((id) => {
-                const f = friends.find((x) => x.id === id);
-                return f ? (
-                  <div key={id} className="soc-req is-wait">
-                    <Avatar name={f.name} avatar={f.avatar} presence={f.presence} /><span>{f.name}</span><em>Challenged…</em>
-                    <button type="button" className="icon-btn" aria-label="Cancel the challenge" onClick={() => social.cancel(id)}><Icon name="close" size={12} /></button>
-                  </div>
-                ) : null;
-              })}
             </div>
           )}
 
@@ -199,10 +197,10 @@ export function Social() {
                   <div key={f.id} className={`soc-row is-${f.presence === 'offline' ? 'offline' : 'online'}`} onContextMenu={(e) => openMenu(f, e)}>
                     <button type="button" className="soc-row__main" onClick={(e) => openMenu(f, e)} aria-haspopup="menu">
                       <Avatar name={f.name} avatar={f.avatar} presence={f.presence} />
-                      <span className="soc-row__text"><b>{f.name}</b><span>{sent.includes(f.id) ? 'Challenged' : STATUS[f.presence]}</span></span>
+                      <span className="soc-row__text"><b>{f.name}</b><span>{lobby?.members.some((m) => m.id === f.id) ? 'In your lobby' : lobby?.invited.some((i) => i.id === f.id) ? 'Invited' : STATUS[f.presence]}</span></span>
                     </button>
-                    {f.presence === 'online' && !sent.includes(f.id) && (
-                      <button type="button" className="soc-row__invite" onClick={() => challenge(f)} aria-label={`Challenge ${f.name}`} title="Challenge to a game"><Icon name="swords" size={15} /></button>
+                    {canInvite(f, lobby) && (
+                      <button type="button" className="soc-row__invite" onClick={() => social.invite(f.id)} aria-label={`Invite ${f.name}`} title="Invite to lobby"><Icon name="plus" size={15} /></button>
                     )}
                   </div>
                 ))}
@@ -214,8 +212,8 @@ export function Social() {
           <footer className="soc-foot">{note && <span role="status" className="soc-note">{note}</span>}</footer>
         </aside>
       )}
-      <Challenged />
-      {menu && <Menu friend={menu.f} x={menu.x} y={menu.y} onClose={() => setMenu(null)} onChallenge={challenge} />}
+      <LobbyInvite />
+      {menu && <Menu friend={menu.f} x={menu.x} y={menu.y} onClose={() => setMenu(null)} />}
     </div>
   );
 }

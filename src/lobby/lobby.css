@@ -958,3 +958,8 @@ html[data-scaled] .app {
 .soc-challenge b { font: 700 15px/1.2 var(--font-display); color: var(--gold-hi); }
 .soc-challenge > span { font-size: 13px; color: var(--muted); }
 .soc-challenge__btns { display: flex; gap: 8px; }
+
+/* ---- the lobby of a custom game ---- */
+.lobby-tag { margin-left: 10px; padding: 2px 8px; font: 700 11px/1.4 var(--font-ui); font-style: normal; letter-spacing: .16em; vertical-align: middle;
+  color: var(--teal); border: 1px solid var(--teal); }
+.lobby-seat.is-ready .ds-slot__tag { background: var(--teal); color: #031a18; }

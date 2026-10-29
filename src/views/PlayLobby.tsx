@@ -10,10 +10,12 @@ import { cardIndex } from '../play/model/cards.ts';
 import { PlayView } from '../play/PlayView.tsx';
 import { useSession } from '../net/session.ts';
 import { online as socket, useOnline } from '../net/socket.ts';
+import { useSocial } from '../lobby/social.ts';
+import { DeckPicker, DeckSlot, FormatSwitch } from '../play/setup/DeckSetup.tsx';
+import { LobbyRoom } from './LobbyRoom.tsx';
 
 const Tournaments = lazy(() => import('./Tournaments.tsx').then((m) => ({ default: m.Tournaments })));
 const OnlineGame = lazy(() => import('../play/OnlineGame.tsx').then((m) => ({ default: m.OnlineGame })));
-import { DeckPicker, DeckSlot, FormatSwitch } from '../play/setup/DeckSetup.tsx';
 
 type ModeId = 'ranked' | 'casual' | 'tournament' | 'custom';
 
@@ -106,6 +108,7 @@ export function PlayLobby({ db, mode }: { db: CardDb; mode: string }) {
   const [inGame, setInGame] = useState(false);
   const online = ONLINE.find((m) => m.id === id);
   const ol = useOnline();
+  const { lobby } = useSocial();
   // an online game (or its end screen) takes the page, whatever tab is open
   if (ol.start && (ol.game === ol.start.gameId || ol.end?.gameId === ol.start.gameId)) {
     return (
@@ -136,7 +139,9 @@ export function PlayLobby({ db, mode }: { db: CardDb; mode: string }) {
   const bare = tutorial || (id === 'custom' && inGame);
   return (
     <Lobby side={side} bare={bare}>
-      {online?.id === 'tournament' ? <Suspense fallback={<p className="muted">Loading…</p>}><Tournaments db={db} /></Suspense>
+      {/* in a lobby: its room, on the page it belongs to (the custom game, or casual for 2v2) */}
+      {lobby && ((lobby.mode === 'custom' && id === 'custom') || (lobby.mode === 'casual' && id === 'casual')) ? <LobbyRoom db={db} lobby={lobby} />
+        : online?.id === 'tournament' ? <Suspense fallback={<p className="muted">Loading…</p>}><Tournaments db={db} /></Suspense>
         : online ? <OnlineMode db={db} mode={online} /> : (
         <div className={bare ? 'lb-bare' : 'lb-play-scroll'}>
           <PlayView key={tutorial ? 'tutorial' : 'play'} db={db} tutorial={tutorial} onInGame={setInGame} />

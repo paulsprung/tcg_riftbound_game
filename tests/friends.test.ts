@@ -53,7 +53,7 @@ describe.skipIf(!url)('friends', () => {
     expect(await friends.areFriends(db, ann, cid)).toBe(false);
   });
 
-  it('friends see each other\'s presence and can play a friendly game, without rating or coins', async () => {
+  it('a lobby as in the League client: invite, join, pick a deck, ready up, the host starts; back in the lobby after', async () => {
     const net = new Net();
     const online = new Online(db, new EnginePool(0), net, Date, { autoPass: 1 });
     online.areFriends = (a, b) => friends.areFriends(db, a, b);
@@ -65,24 +65,48 @@ describe.skipIf(!url)('friends', () => {
     expect(online.presence(ben)).toBe('online');
     expect(online.presence(cid)).toBe('offline');
     const st = async (u: string) => (await db.query('SELECT starter FROM accounts WHERE user_id = $1', [u])).rows[0].starter as string;
+    const lobbyOf = (u: string) => net.last(u, 'lobby')?.lobby;
 
-    await online.message(ann, 'ann', { t: 'challenge', to: cid, deck: await st(ann) });
+    await online.message(ann, 'ann', { t: 'lobby-invite', to: cid, mode: 'custom' });
     expect(net.last(ann, 'error')?.message).toMatch(/Only friends/);
-    await online.message(ann, 'ann', { t: 'challenge', to: ben, deck: await st(ann) });
-    expect(net.last(ben, 'challenge')?.from).toEqual({ id: ann, name: 'ann' });
-    await online.message(ben, 'ben', { t: 'challenge-answer', from: ann, accept: true, deck: await st(ben) });
+    await online.message(ann, 'ann', { t: 'lobby-invite', to: ben, mode: 'custom' });
+    const inv = net.last(ben, 'lobby-invite')!;
+    expect(inv).toMatchObject({ mode: 'custom', from: { id: ann, name: 'ann' } });
+    expect(lobbyOf(ann)?.invited).toEqual([{ id: ben, name: 'ben' }]);
+    await online.message(ben, 'ben', { t: 'lobby-answer', lobby: inv.lobby, accept: true });
+    expect(lobbyOf(ann)?.members.map((m) => [m.name, m.host, m.ready])).toEqual([['ann', true, false], ['ben', false, false]]);
+
+    // ready needs a deck; ready locks the deck; the host starts only when all are ready
+    await online.message(ben, 'ben', { t: 'lobby-ready', ready: true });
+    expect(net.last(ben, 'error')?.message).toMatch(/Pick a deck/);
+    await online.message(ann, 'ann', { t: 'lobby-deck', deck: await st(ann) });
+    await online.message(ben, 'ben', { t: 'lobby-deck', deck: await st(ben) });
+    await online.message(ann, 'ann', { t: 'lobby-start' });
+    expect(net.last(ann, 'error')?.message).toMatch(/Not everyone is ready/);
+    await online.message(ben, 'ben', { t: 'lobby-ready', ready: true });
+    await online.message(ben, 'ben', { t: 'lobby-deck', deck: await st(ben) });
+    expect(net.last(ben, 'error')?.message).toMatch(/Not ready first/);
+    await online.message(ben, 'ben', { t: 'lobby-start' });
+    expect(net.last(ben, 'error')?.message).toMatch(/Only the host/);
+    await online.message(ann, 'ann', { t: 'lobby-start' });
     const start = net.last(ann, 'start')!;
     expect(start.mode).toBe('friendly');
     expect(online.presence(ann)).toBe('game');
+
     await online.message(ann, 'ann', { t: 'concede', gameId: start.gameId });
     await new Promise((r) => setTimeout(r, 50));
     expect(net.last(ben, 'end')).toMatchObject({ coins: 0, rating: null });
     expect((await db.query('SELECT count(*)::int AS n FROM ratings')).rows[0].n).toBe(0);
+    // back in the lobby, nobody ready
+    expect(lobbyOf(ben)).toMatchObject({ inGame: false });
+    expect(lobbyOf(ben)!.members.every((m) => !m.ready)).toBe(true);
 
-    // a declined challenge tells both
-    await online.message(ann, 'ann', { t: 'challenge', to: ben, deck: await st(ann) });
-    await online.message(ben, 'ben', { t: 'challenge-answer', from: ann, accept: false });
-    expect(net.last(ann, 'challenge-gone')).toMatchObject({ with: ben, why: 'declined' });
+    // the host leaves: ben leads; ben leaves: the lobby is gone
+    await online.message(ann, 'ann', { t: 'lobby-leave' });
+    expect(lobbyOf(ann)).toBeNull();
+    expect(lobbyOf(ben)?.members).toEqual([expect.objectContaining({ name: 'ben', host: true })]);
+    await online.message(ben, 'ben', { t: 'lobby-leave' });
+    expect(lobbyOf(ben)).toBeNull();
     online.stop();
   });
 });

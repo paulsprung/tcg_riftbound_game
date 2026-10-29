@@ -5,7 +5,7 @@ import { STARTERS, validateDeck, type DeckList, type GameRecord, type PlayerId, 
 import type { Db } from '../db.ts';
 import { readAccount } from '../economy.ts';
 import { ladderPoints, PLACEMENT_GAMES, rate, START, tierOf, type Rating } from '../rating.ts';
-import type { ClientMsg, Mode, Presence, QueueMode, RatingInfo, ServerMsg } from '../../src/net/protocol.ts';
+import type { ClientMsg, LobbyMode, LobbyView, Mode, Presence, QueueMode, RatingInfo, ServerMsg } from '../../src/net/protocol.ts';
 import type { Answer, Update } from './engine.ts';
 import type { EnginePool } from './pool.ts';
 
@@ -68,6 +68,15 @@ interface Live {
   showed: [boolean, boolean];
 }
 
+type LobbyMsg = Extract<ClientMsg, { t: `lobby-${string}` }>;
+const isLobbyMsg = (m: ClientMsg): m is LobbyMsg => m.t.startsWith('lobby-');
+
+interface Lobby {
+  id: string; mode: LobbyMode; host: string; inGame: boolean;
+  members: { id: string; name: string; ready: boolean; deck: { ref: string; list: DeckList } | null }[];
+  invites: Map<string, { id: string; name: string; timer: ReturnType<typeof setTimeout> }>;
+}
+
 export const infoOf = (x: Rating, games: number): RatingInfo => {
   const points = ladderPoints(x);
   const t = tierOf(points);
@@ -85,8 +94,9 @@ export class Online {
   private readonly finishHooks = new Set<(f: Finished) => void | Promise<void>>();
   private readonly hellos = new Map<string, number>();
   private readonly presenceHooks = new Set<(userId: string) => void>();
-  /** Friendly games asked for: 'from>to' → the asker's deck; a minute to answer. */
-  private readonly challenges = new Map<string, { from: string; fromName: string; to: string; deck: DeckList; timer: ReturnType<typeof setTimeout> }>();
+  /** Lobbies by id, and which one each player is in. */
+  private readonly lobbies = new Map<string, Lobby>();
+  private readonly lobbyOf = new Map<string, string>();
   /** Checks that two players are friends (server/friends.ts); everyone, in tests. */
   areFriends: (a: string, b: string) => Promise<boolean> = async () => true;
   /** Players whose queue request is being checked: a second one waits its turn. */
@@ -137,6 +147,7 @@ export class Online {
     const gameId = this.byUser.get(userId);
     const queued = MODES.flatMap((m) => this.queues.get(m)!.filter((q) => q.userId === userId).map((q) => ({ mode: m, since: q.since })))[0] ?? null;
     this.net.send(userId, { t: 'state', queue: queued, game: gameId ?? null });
+    this.sendLobby(userId);
     this.changed(userId);
     if (!gameId) return;
     const g = this.games.get(gameId)!;
@@ -151,7 +162,8 @@ export class Online {
   disconnected(userId: string) {
     for (const q of this.queues.values()) { const i = q.findIndex((x) => x.userId === userId); if (i >= 0) q.splice(i, 1); }
     this.changed(userId);
-    for (const [k, c] of this.challenges) if (c.from === userId || c.to === userId) this.dropChallenge(k, 'went offline');
+    // gone from the site: out of their lobby (as in the League client), their invites lapse
+    if (!this.net.online(userId)) this.leaveLobby(userId);
     const gameId = this.byUser.get(userId);
     const g = gameId ? this.games.get(gameId) : undefined;
     if (!g || g.over) return;
@@ -176,9 +188,7 @@ export class Online {
         this.changed(userId);
         return this.net.send(userId, { t: 'left' });
       }
-      if (m.t === 'challenge') return await this.challenge(userId, name, String(m.to), String(m.deck));
-      if (m.t === 'challenge-cancel') return this.dropChallenge(`${userId}>${String(m.to)}`, 'cancelled');
-      if (m.t === 'challenge-answer') return await this.answerChallenge(userId, name, String(m.from), !!m.accept, String(m.deck ?? ''));
+      if (isLobbyMsg(m)) return await this.lobbyMessage(userId, name, m);
       const g = this.games.get(m.gameId);
       if (!g || !g.players.includes(userId)) throw new Error('No such game');
       const seat = g.players.indexOf(userId) as PlayerId;
@@ -438,45 +448,145 @@ export class Online {
     return this.games.size;
   }
 
-  // ---- friendly games ----
+  // ---- lobbies (as in the League client) ----
 
-  private dropChallenge(key: string, why: string) {
-    const c = this.challenges.get(key);
-    if (!c) return;
-    clearTimeout(c.timer);
-    this.challenges.delete(key);
-    this.net.send(c.from, { t: 'challenge-gone', with: c.to, why });
-    this.net.send(c.to, { t: 'challenge-gone', with: c.from, why });
+  private lobbyView(l: Lobby): LobbyView {
+    return {
+      id: l.id, mode: l.mode, max: 2, inGame: l.inGame,
+      members: l.members.map((m) => ({ id: m.id, name: m.name, host: m.id === l.host, ready: m.ready, deck: m.deck && { ref: m.deck.ref, name: m.deck.list.name, legend: m.deck.list.legend } })),
+      invited: [...l.invites.values()].map((i) => ({ id: i.id, name: i.name })),
+    };
   }
 
-  /** Ask a friend for a game, with your deck; they have a minute to answer. */
-  private async challenge(from: string, fromName: string, to: string, ref: string) {
-    if (from === to || !/^[0-9a-f-]{36}$/.test(to)) throw new Error('No such friend');
-    if (!(await this.areFriends(from, to))) throw new Error('Only friends can be challenged');
-    if (this.presence(to) !== 'online') throw new Error(this.presence(to) === 'offline' ? 'Your friend is offline' : 'Your friend is busy');
-    if (this.byUser.has(from)) throw new Error('You are in a game');
-    if ([...this.challenges.values()].filter((c) => c.from === from).length >= 3) throw new Error('Wait for your other challenges first');
-    const deck = await this.deckFor(from, ref);
-    const key = `${from}>${to}`;
-    this.dropChallenge(key, 'replaced');
-    const timer = setTimeout(() => this.dropChallenge(key, 'no answer'), 60_000);
-    timer.unref?.();
-    this.challenges.set(key, { from, fromName, to, deck, timer });
-    this.net.send(to, { t: 'challenge', from: { id: from, name: fromName } });
+  private tellLobby(l: Lobby) {
+    const v = this.lobbyView(l);
+    for (const m of l.members) this.net.send(m.id, { t: 'lobby', lobby: v });
   }
 
-  private async answerChallenge(to: string, toName: string, from: string, accept: boolean, ref: string) {
-    const key = `${from}>${to}`;
-    const c = this.challenges.get(key);
-    if (!c) throw new Error('That challenge is gone');
-    if (!accept) { this.dropChallenge(key, 'declined'); return; }
-    const deck = await this.deckFor(to, ref);
-    if (!this.challenges.has(key)) throw new Error('That challenge is gone');
-    clearTimeout(c.timer);
-    this.challenges.delete(key);
-    if (this.byUser.has(from) || this.byUser.has(to) || !this.net.online(from)) throw new Error('Your friend is busy');
-    this.forget(from); this.forget(to);
-    await this.start('friendly', { userId: from, name: c.fromName, deck: c.deck }, { userId: to, name: toName, deck });
+  /** The player's lobby now (on connect, a reload). */
+  sendLobby(userId: string) {
+    const l = this.lobbies.get(this.lobbyOf.get(userId) ?? '');
+    this.net.send(userId, { t: 'lobby', lobby: l ? this.lobbyView(l) : null });
+  }
+
+  private leaveLobby(userId: string) {
+    const l = this.lobbies.get(this.lobbyOf.get(userId) ?? '');
+    if (!l) return;
+    this.lobbyOf.delete(userId);
+    l.members = l.members.filter((m) => m.id !== userId);
+    this.net.send(userId, { t: 'lobby', lobby: null });
+    if (l.members.length === 0) {
+      for (const i of l.invites.values()) { clearTimeout(i.timer); this.net.send(i.id, { t: 'lobby-invite-gone', lobby: l.id, why: 'the lobby closed' }); }
+      this.lobbies.delete(l.id);
+      return;
+    }
+    // the host gone: the longest-standing member leads
+    if (l.host === userId) l.host = l.members[0].id;
+    this.tellLobby(l);
+  }
+
+  private async lobbyMessage(userId: string, name: string, m: LobbyMsg) {
+    const mine = this.lobbies.get(this.lobbyOf.get(userId) ?? '');
+    const member = mine?.members.find((x) => x.id === userId);
+    switch (m.t) {
+      case 'lobby-invite': {
+        const to = String(m.to);
+        if (to === userId || !/^[0-9a-f-]{36}$/.test(to)) throw new Error('No such friend');
+        if (m.mode !== 'custom' && m.mode !== 'casual') throw new Error('Invites are for the custom game or casual');
+        if (!(await this.areFriends(userId, to))) throw new Error('Only friends can be invited');
+        if (this.presence(to) === 'offline') throw new Error('Your friend is offline');
+        if (this.byUser.has(userId)) throw new Error('You are in a game');
+        // your lobby, or a new one with you as host
+        let l = mine;
+        if (!l) {
+          l = { id: randomUUID(), mode: m.mode, host: userId, members: [{ id: userId, name, ready: false, deck: null }], invites: new Map(), inGame: false };
+          this.lobbies.set(l.id, l);
+          this.lobbyOf.set(userId, l.id);
+        }
+        if (l.host !== userId) throw new Error('Only the host invites');
+        if (l.members.some((x) => x.id === to)) throw new Error('Already in your lobby');
+        if (l.members.length + l.invites.size >= 2) throw new Error('The lobby is full');
+        const lobby = l;
+        const timer = setTimeout(() => {
+          lobby.invites.delete(to);
+          this.net.send(to, { t: 'lobby-invite-gone', lobby: lobby.id, why: 'no answer' });
+          this.tellLobby(lobby);
+        }, 60_000);
+        timer.unref?.();
+        clearTimeout(l.invites.get(to)?.timer);
+        const toName = (await this.db.query('SELECT name FROM users WHERE id = $1', [to])).rows[0]?.name ?? 'Friend';
+        l.invites.set(to, { id: to, name: toName, timer });
+        this.net.send(to, { t: 'lobby-invite', lobby: l.id, mode: l.mode, from: { id: userId, name } });
+        this.tellLobby(l);
+        return;
+      }
+      case 'lobby-answer': {
+        const l = this.lobbies.get(String(m.lobby));
+        const inv = l?.invites.get(userId);
+        if (!l || !inv) throw new Error('That invite is gone');
+        clearTimeout(inv.timer);
+        l.invites.delete(userId);
+        if (!m.accept) { this.tellLobby(l); return; }
+        if (this.byUser.has(userId)) throw new Error('You are in a game');
+        if (l.members.length >= 2) throw new Error('The lobby is full');
+        this.leaveLobby(userId);
+        this.forget(userId);
+        l.members.push({ id: userId, name, ready: false, deck: null });
+        this.lobbyOf.set(userId, l.id);
+        this.tellLobby(l);
+        return;
+      }
+      case 'lobby-leave': this.leaveLobby(userId); return;
+    }
+    if (!mine || !member) throw new Error('You are in no lobby');
+    switch (m.t) {
+      case 'lobby-deck': {
+        if (member.ready) throw new Error('Not ready first, then change your deck');
+        const ref = String(m.deck);
+        member.deck = { ref, list: await this.deckFor(userId, ref) };
+        this.tellLobby(mine);
+        return;
+      }
+      case 'lobby-ready': {
+        if (mine.host === userId) throw new Error('The host starts the game');
+        if (m.ready && !member.deck) throw new Error('Pick a deck first');
+        member.ready = !!m.ready;
+        this.tellLobby(mine);
+        return;
+      }
+      case 'lobby-kick': {
+        if (mine.host !== userId) throw new Error('Only the host');
+        const who = String(m.who);
+        if (who === userId || !mine.members.some((x) => x.id === who)) return;
+        this.leaveLobby(who);
+        return;
+      }
+      case 'lobby-start': {
+        if (mine.host !== userId) throw new Error('Only the host starts');
+        if (mine.mode === 'casual') throw new Error('Casual 2v2 comes with the 2v2 rules');
+        if (mine.members.length < 2) throw new Error('Invite a friend first');
+        if (!member.deck) throw new Error('Pick a deck first');
+        if (mine.members.some((x) => x.id !== mine.host && !x.ready)) throw new Error('Not everyone is ready');
+        if (mine.members.some((x) => this.byUser.has(x.id) || !this.net.online(x.id))) throw new Error('Someone is busy');
+        // the decks again, in case a card was sold in between
+        const [a, b] = mine.members;
+        const [da, db] = await Promise.all([this.deckFor(a.id, a.deck!.ref), this.deckFor(b.id, b.deck!.ref)]);
+        for (const x of mine.members) this.forget(x.id);
+        mine.inGame = true;
+        this.tellLobby(mine);
+        await this.start('friendly', { userId: a.id, name: a.name, deck: da }, { userId: b.id, name: b.name, deck: db });
+        return;
+      }
+    }
+  }
+
+  /** After a friendly game the lobby is back, nobody ready (as in the League client). */
+  private lobbyAfterGame(players: string[]) {
+    const l = this.lobbies.get(this.lobbyOf.get(players[0]) ?? '');
+    if (!l || !l.inGame) return;
+    l.inGame = false;
+    for (const m of l.members) m.ready = false;
+    this.tellLobby(l);
   }
 
   // ---- the end ----
@@ -543,6 +653,7 @@ export class Online {
     }
     this.games.delete(g.id);
     this.changed(...g.players);
+    if (g.mode === 'friendly') this.lobbyAfterGame(g.players);
     await this.pool.engine.drop(g.id);
     const done: Finished = { gameId: g.id, mode: g.mode, players: g.players, winner: res.winner, reason: res.reason, meta: g.meta,
       first: g.first, noShow: g.noShow };
