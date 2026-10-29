@@ -56,7 +56,7 @@ export function ProfileShowcase({ db, pieces, onInspect }: { db: CardDb; pieces:
           {STAGE_ORDER.map((idx) => {
             const p = shown[idx];
             const scale = SCALE[idx];
-            const style = { '--s': scale, '--i': idx, '--glow': p ? RARITY_GLOW[p.card.rarity] ?? '#c8aa6e' : '#c8aa6e' } as CSSProperties;
+            const style = { '--s': scale, '--k': p?.slab ? 0.8 : 1, '--i': idx, '--glow': p ? RARITY_GLOW[p.card.rarity] ?? '#c8aa6e' : '#c8aa6e' } as CSSProperties;
             return (
               <div key={idx} className={`stage__spot${idx === 0 ? ' is-hero' : ''}${p ? '' : ' is-empty'}`} style={style}>
                 {p ? (

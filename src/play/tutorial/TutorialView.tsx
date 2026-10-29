@@ -107,11 +107,23 @@ export function TutorialView({ db, cards, starter, onExit, onFinish }: {
   );
 }
 
+/** The window's size, so the packs on the reward screen can be as big as fits. */
+function useViewport() {
+  const [v, setV] = useState(() => ({ w: window.innerWidth, h: window.innerHeight }));
+  useEffect(() => {
+    const on = () => setV({ w: window.innerWidth, h: window.innerHeight });
+    window.addEventListener('resize', on);
+    return () => window.removeEventListener('resize', on);
+  }, []);
+  return v;
+}
+
 /** The ending: the five packs (or a note that they were taken already). */
 export function TutorialReward({ db, granted, won, onReplay, onExit, onFinish }: {
   db: CardDb; granted: boolean; won: boolean | null; onReplay: () => void; onExit: () => void; onFinish?: (to: 'shop' | 'play' | 'home') => void;
 }) {
   const own = useCollection();
+  const { w, h } = useViewport();
   useEffect(() => { window.scrollTo(0, 0); }, []);
   const sets = useMemo(() => TUTORIAL_PACKS.map((id) => {
     const b = BOOSTER_SETS.find((x) => x.id === id);
@@ -119,36 +131,35 @@ export function TutorialReward({ db, granted, won, onReplay, onExit, onFinish }:
     return b && info ? { id, info, style: b.style, cards: db.cards.filter((c) => c.setId === id) } : null;
   }).filter((x) => x !== null), [db]);
   const title = won === null ? 'Tutorial skipped' : won ? 'You won the tutorial!' : 'Tutorial complete';
+  // as big as the window allows: by its height, and five side by side by its width
+  const aspect = 1 / 1.72;
+  const packH = Math.max(150, Math.min(h * 0.36, ((w - 120 - 4 * 24) / 5) / 0.66, 380));
+  const total = Object.values(own.packs).reduce((a, b) => a + b, 0);
   return (
     <section className="tutorial-reward" aria-labelledby="tutorial-reward-title">
-      <div className="page-head">
-        <h1 id="tutorial-reward-title">{title}</h1>
-        <p className="muted">
-          {granted
-            ? 'Your reward: one booster pack from each set. They are waiting in the Shop, ready to open.'
-            : 'You already took the tutorial reward. Play it again any time to practise.'}
-        </p>
-      </div>
+      <p className="lb-label tutorial-reward__kicker">Tutorial</p>
+      <h1 id="tutorial-reward-title">{title}</h1>
+      <p className="tutorial-reward__lead">
+        {granted
+          ? 'Your reward: one booster pack from each set. They are waiting for you, ready to open.'
+          : 'You already took the tutorial reward. Play it again any time to practise.'}
+      </p>
       {granted && (
         <div className="tutorial-reward__packs">
-          {sets.map((s) => (
-            <figure key={s.id} className="tutorial-reward__pack">
+          {sets.map((s, i) => (
+            <figure key={s.id} className="tutorial-reward__pack" style={{ '--i': i } as React.CSSProperties}>
               <PackWrapper set={s.info} style={s.style} hero={heroCard(s.cards, s.style)}
-                width={Math.round(170 * (packArt(s.id)?.aspect ?? 1 / 1.72))} onClick={() => { location.hash = 'shop'; }} />
-              <figcaption className="small">{s.info.name}</figcaption>
+                width={Math.round(packH * (packArt(s.id)?.aspect ?? aspect))} />
+              <figcaption>{s.info.name}</figcaption>
             </figure>
           ))}
         </div>
       )}
-      <div className="home__actions">
+      <div className="tutorial-reward__actions">
         {onFinish ? (
-          <button type="button" className="btn btn--cta" onClick={() => onFinish('shop')}>
-            Enter Riftbound ({Object.values(own.packs).reduce((a, b) => a + b, 0)} packs to open)
-          </button>
+          <button type="button" className="btn btn--cta" onClick={() => onFinish('shop')}>Enter Riftbound · {total} packs to open</button>
         ) : (
-          <a className="btn btn--cta" href="#shop">
-            Open your packs ({Object.values(own.packs).reduce((a, b) => a + b, 0)} in the Shop)
-          </a>
+          <a className="btn btn--cta" href="#collection/packs">Open your packs · {total}</a>
         )}
         <button type="button" className="btn btn--ghost" onClick={onReplay}>Play the tutorial again</button>
         {!onFinish && <button type="button" className="btn btn--ghost" onClick={onExit}>Play a real game</button>}

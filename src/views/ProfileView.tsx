@@ -46,20 +46,19 @@ export function ProfileView({ db, onInspect }: { db: CardDb; onInspect: (t: Insp
                 {DEMO && <span>Joined {DEMO_PROFILE.joined}</span>}
               </div>
             </div>
-            <button type="button" className="btn btn--ghost profile__edit" disabled title="Profiles come with accounts and online play">Edit profile</button>
+            <div className="profile__chips" aria-label="Player stats">
+              {stats.map((s) => (
+                <div key={s.label} className={`lb-card profile__chip${s.off ? ' is-off' : ''}`}>
+                  <b className={`tone-${s.tone}`}>{s.value}</b>
+                  <span>{s.label}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </HeroBanner>
 
         <ProfileShowcase db={db} pieces={pieces} onInspect={onInspect} />
 
-        <div className="profile__stats">
-          {stats.map((s) => (
-            <div key={s.label} className={`lb-card profile__stat${s.off ? ' is-off' : ''}`}>
-              <b className={`tone-${s.tone}`}>{s.value}</b>
-              <span className="muted">{s.label}</span>
-            </div>
-          ))}
-        </div>
       </div>
     </Lobby>
   );

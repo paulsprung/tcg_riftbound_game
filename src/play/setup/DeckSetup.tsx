@@ -87,11 +87,17 @@ function DeckChoice({ b, cards, db, selected, owned, onPick }: {
 }
 
 /** Pick a deck: the products as tabs, the decks of the one you look at as big cards. One screen, nothing to scroll. */
-function DeckPicker({ cards, db, title, current, owned, onPick, onClose }: {
+function DeckPicker({ cards, db, title, current, owned, mine, onRandom, onPick, onClose }: {
   cards: CardIndex; db: CardDb; title: string; current: string; owned?: string | null; onPick: (b: BuiltInDeck) => void; onClose: () => void;
+  /** The decks the player owns: a tab of their own, ahead of every set. */
+  mine?: BuiltInDeck[];
+  /** Offers a random deck. */
+  onRandom?: () => void;
 }) {
-  const [set, setSet] = useState(() => DECK_GROUPS.find((g) => g.decks.some((d) => d.id === current))?.set ?? DECK_GROUPS[0].set);
-  const group = DECK_GROUPS.find((g) => g.set === set) ?? DECK_GROUPS[0];
+  const [set, setSet] = useState<string>(() => (mine?.some((d) => d.id === current) ? 'mine' : DECK_GROUPS.find((g) => g.decks.some((d) => d.id === current))?.set ?? DECK_GROUPS[0].set));
+  const tabs = [...(mine && mine.length > 0 ? [{ set: 'mine', name: 'Decks you own', label: 'My decks', decks: mine }] : []),
+    ...DECK_GROUPS.map((g) => ({ set: g.set as string, name: g.name, label: PRODUCT_LABEL[g.set] ?? g.name, decks: g.decks }))];
+  const group = tabs.find((g) => g.set === set) ?? tabs[0];
   useEffect(() => {
     const key = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', key);
@@ -105,12 +111,13 @@ function DeckPicker({ cards, db, title, current, owned, onPick, onClose }: {
           <button type="button" className="icon-btn" onClick={onClose} aria-label="Close">✕</button>
         </header>
         <div className="ds-tabs" role="tablist" aria-label="Product">
-          {DECK_GROUPS.map((g) => (
+          {tabs.map((g) => (
             <button key={g.set} type="button" role="tab" aria-selected={g.set === set} onClick={() => setSet(g.set)}>
-              {PRODUCT_LABEL[g.set] ?? g.name}
+              {g.label}
               <span>{g.decks.length}</span>
             </button>
           ))}
+          {onRandom && <button type="button" className="ds-tabs__random" onClick={onRandom}>Random deck</button>}
         </div>
         <p className="muted small ds-modal__sub">{group.name}</p>
         <div className="ds-choices">
@@ -231,6 +238,8 @@ export function DeckSetup({ cards, db, initial, error, onStart, saved, onResume,
       {picking && (
         <DeckPicker cards={cards} db={db} title={picking === 'mine' ? 'Your deck' : c.opponent === 'hotseat' ? "Player 2's deck" : "The computer's deck"}
           current={picking === 'mine' ? c.mine : c.theirs} owned={picking === 'mine' ? owned : null}
+          mine={picking === 'mine' && owned ? BUILT_IN_DECKS.filter((b) => b.id === owned) : undefined}
+          onRandom={picking === 'theirs' ? () => { setC({ ...c, theirs: BUILT_IN_DECKS[Math.floor(Math.random() * BUILT_IN_DECKS.length)].id }); setPicking(null); } : undefined}
           onClose={() => setPicking(null)}
           onPick={(b) => { setC(picking === 'mine' ? { ...c, mine: b.id, champion: b.deck.chosenChampion } : { ...c, theirs: b.id }); setPicking(null); }} />
       )}

@@ -6,23 +6,22 @@ import type { CardDb } from '../data/types.ts';
 import { Lobby, SideLink, SideTitle } from '../lobby/Lobby.tsx';
 import { PackOpening } from '../pack/PackOpening.tsx';
 import { heroCard, PackWrapper } from '../pack/PackWrapper.tsx';
-import { readPending } from '../pack/pending.ts';
-import { openPack, useBoosters } from './boosters.ts';
+import { useBoosters } from './boosters.ts';
 
 // What is on screen is in the address: #shop is the store, #shop/market the
 // marketplace, #shop/rad the pack being opened, so the browser's and the
 // phone's back gesture return to the shelf.
 const subFromHash = () => /^#\/?shop\/([a-z0-9]+)/.exec(location.hash)?.[1] ?? null;
 
-/** The window's height, so the packs can be as big as fits without a scroll bar. */
-function useViewportHeight() {
-  const [h, setH] = useState(() => window.innerHeight);
+/** The window's size, so the packs can be as big as fits without a scroll bar. */
+function useViewport() {
+  const [v, setV] = useState(() => ({ w: window.innerWidth, h: window.innerHeight }));
   useEffect(() => {
-    const on = () => setH(window.innerHeight);
+    const on = () => setV({ w: window.innerWidth, h: window.innerHeight });
     window.addEventListener('resize', on);
     return () => window.removeEventListener('resize', on);
   }, []);
-  return h;
+  return v;
 }
 
 const Coin = () => <span className="lb-coin" aria-hidden />;
@@ -31,15 +30,16 @@ export function PacksView({ db, onInspect }: { db: CardDb; onInspect: (t: Inspec
   const [sub, setSub] = useState<string | null>(subFromHash);
   const own = useCollection();
   const sets = useBoosters(db);
-  const vh = useViewportHeight();
-  // what is left for the packs once the bar, the header and the banner have their share
-  const packH = Math.max(150, Math.min(250, vh - 520));
+  const { w: vw, h: vh } = useViewport();
+  // what is left for the packs: by the height once the bar, header and banner have their share,
+  // and five side by side by the width once the sidebar and the friends rail have theirs
+  const aspect = 1 / 1.72;
+  const packH = Math.max(150, Math.min(vh - 440, ((vw - 248 - 56 - 60 - 4 * 24) / 5) / 0.66, 340));
   useEffect(() => {
     const on = () => setSub(subFromHash());
     window.addEventListener('hashchange', on);
     return () => window.removeEventListener('hashchange', on);
   }, []);
-  const pending = sub ? null : readPending();
 
   const active = sets.find((s) => s.id === sub);
   if (active) {
@@ -115,23 +115,14 @@ export function PacksView({ db, onInspect }: { db: CardDb; onInspect: (t: Inspec
             {sets.map((s) => (
               <div key={s.id} className="pack-shelf__item">
                 <PackWrapper set={s.info} style={s.style} hero={heroCard(s.cards, s.style)}
-                  width={Math.round(packH * (packArt(s.id)?.aspect ?? 1 / 1.72))}
-                  onClick={() => ((own.packs[s.id] ?? 0) > 0 ? openPack(s.id) : buy(s.id, 1))} />
+                  width={Math.round(packH * (packArt(s.id)?.aspect ?? aspect))} />
                 <div className="pack-shelf__label">
                   <strong>{s.info.name}</strong>
                   <span className="muted">{s.style.tagline} · {s.info.cardCount} cards{own.packsOpened[s.id] ? ` · ${own.packsOpened[s.id]} opened` : ''}</span>
-                  <span className="shop-price"><Coin /> {PACK_PRICE}</span>
-                  <div className="shop-actions">
-                    <button type="button" className="btn btn--primary btn--small" disabled={own.coins < PACK_PRICE} onClick={() => buy(s.id, 1)}>Buy</button>
-                    <button type="button" className="btn btn--ghost btn--small" disabled={(own.packs[s.id] ?? 0) < 1} onClick={() => openPack(s.id)}>
-                      Open ({own.packs[s.id] ?? 0})
-                    </button>
-                  </div>
-                  {pending?.setId === s.id && (
-                    <button type="button" className="btn btn--primary btn--small" onClick={() => openPack(s.id)}>
-                      Continue opening ({pending.pulls.length - pending.index} left)
-                    </button>
-                  )}
+                  <button type="button" className="shop-buy" disabled={own.coins < PACK_PRICE} onClick={() => buy(s.id, 1)}
+                    aria-label={`Buy a ${s.info.name} pack for ${PACK_PRICE} coins`}>
+                    <Coin /> {PACK_PRICE}
+                  </button>
                 </div>
               </div>
             ))}

@@ -21,7 +21,7 @@ function Side({ db }: { db: CardDb }) {
       <a className="lb-card home-feat" href="#profile" aria-label={pick ? `${pick.card.name}, your featured card. Open your profile` : 'Pick a featured card in your profile'}>
         {pick ? (
           <>
-            <div className="home-feat__card">
+            <div className={`home-feat__card${pick.slab ? ' is-slab' : ''}`}>
               {pick.slab ? (
                 <Slab slab={pick.slab} card={pick.card} width="100%" imageWidth={520} tilt="hover" />
               ) : (

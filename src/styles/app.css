@@ -335,5 +335,4 @@ body::before {
 .tutorial-reward__pack figcaption { text-align: center; max-width: 120px; }
 @media (max-width: 700px) {
   .tutorial-reward__packs { gap: 12px; }
-  .tutorial-reward__pack { transform: scale(.82); transform-origin: top center; margin-bottom: -40px; }
 }
