@@ -13,6 +13,7 @@ import { online as socket, useOnline } from '../net/socket.ts';
 import { useSocial } from '../lobby/social.ts';
 import { DeckPicker, DeckSlot, FormatSwitch } from '../play/setup/DeckSetup.tsx';
 import { LobbyRoom } from './LobbyRoom.tsx';
+import { CasualLimited } from '../limited/OnlineLimited.tsx';
 
 const Tournaments = lazy(() => import('./Tournaments.tsx').then((m) => ({ default: m.Tournaments })));
 const OnlineGame = lazy(() => import('../play/OnlineGame.tsx').then((m) => ({ default: m.OnlineGame })));
@@ -42,6 +43,8 @@ function OnlineMode({ db, mode }: { db: CardDb; mode: (typeof ONLINE)[number] })
   const decks = useMemo(() => playerDecks(own, true), [own, built]);
   const [chosen, setChosen] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
+  // casual: your own deck, or a Limited pool
+  const [kind, setKind] = useState<'constructed' | 'sealed' | 'draft'>('constructed');
   const deck = decks.find((d) => d.id === chosen) ?? decks[0] ?? null;
   const session = useSession();
   const ol = useOnline();
@@ -56,11 +59,19 @@ function OnlineMode({ db, mode }: { db: CardDb; mode: (typeof ONLINE)[number] })
       <header className="ds__bar">
         <h1>{mode.label}</h1>
         <span className="ds__bar-right">
+          {mode.id === 'casual' && signedIn && (
+            <div className="seg seg--format" role="group" aria-label="Deck">
+              {(['constructed', 'sealed', 'draft'] as const).map((k) => (
+                <button key={k} type="button" aria-pressed={kind === k} onClick={() => setKind(k)}>{k[0].toUpperCase() + k.slice(1)}</button>
+              ))}
+            </div>
+          )}
           {mode.id === 'casual' && <FormatSwitch />}
           {note && <span className="lb-soon-note">{note}</span>}
         </span>
       </header>
 
+      {mode.id === 'casual' && kind !== 'constructed' && signedIn ? <CasualLimited db={db} format={kind} /> : <>
       <div className="ds__stage">
         {deck ? (
           <DeckSlot label="You" b={deck} cards={cards} db={db} owned onOpen={() => setPicking(true)} />
@@ -97,6 +108,7 @@ function OnlineMode({ db, mode }: { db: CardDb; mode: (typeof ONLINE)[number] })
         <DeckPicker cards={cards} db={db} title="Your deck" only={decks} current={deck.id} owned={own.starter}
           onClose={() => setPicking(false)} onPick={(b) => { setChosen(b.id); setPicking(false); }} />
       )}
+      </>}
     </section>
   );
 }

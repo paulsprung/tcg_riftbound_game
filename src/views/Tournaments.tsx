@@ -7,6 +7,7 @@ import { useSession } from '../net/session.ts';
 import { playerDecks } from '../play/host/decks.ts';
 import { cardIndex } from '../play/model/cards.ts';
 import { DeckPicker } from '../play/setup/DeckSetup.tsx';
+import { TournamentLimited } from '../limited/OnlineLimited.tsx';
 import './tournaments.css';
 
 /*
@@ -17,7 +18,8 @@ import './tournaments.css';
  */
 
 interface Prize { coins: number; packs?: Record<string, number> }
-interface Settings { bestOf: 1 | 3; maxPlayers: number; entryFee: number; topCut: 0 | 4 | 8; rounds: number | null; prizes: Prize[]; noShowMinutes: number }
+interface Settings { bestOf: 1 | 3; maxPlayers: number; entryFee: number; topCut: 0 | 4 | 8; rounds: number | null; prizes: Prize[]; noShowMinutes: number;
+  format?: 'constructed' | 'sealed' | 'draft'; setId?: string | null; buildMinutes?: number; pickSeconds?: number }
 interface Summary { id: string; name: string; status: string; settings: Settings; startsAt: number; round: number; stage: string; players: number; joined: boolean }
 interface Who { name: string; me: boolean }
 interface Detail extends Omit<Summary, 'players'> {
@@ -26,10 +28,11 @@ interface Detail extends Omit<Summary, 'players'> {
   matches: { round: number; stage: string; table: number; a: Who; b: Who | null; wins: [number, number]; games: number; status: string }[];
 }
 
-const STATUS: Record<string, string> = { open: 'Sign-up open', running: 'Running', done: 'Finished', cancelled: 'Cancelled' };
+const STATUS: Record<string, string> = { open: 'Sign-up open', drafting: 'Drafting', building: 'Building decks', running: 'Running', done: 'Finished', cancelled: 'Cancelled' };
 const when = (ms: number) => new Date(ms).toLocaleString(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 const prizeText = (p: Prize | undefined) => (!p ? '—' : [p.coins ? `${p.coins.toLocaleString('en-US')} coins` : '', ...Object.entries(p.packs ?? {}).map(([s, n]) => `${n}× ${s.toUpperCase()} pack`)].filter(Boolean).join(' + ') || '—');
-const formatText = (s: Settings) => `Best of ${s.bestOf}${s.topCut ? ` · Top ${s.topCut}` : ''} · ${s.rounds ? `${s.rounds} rounds` : 'Swiss'}`;
+const limitedOf = (s: Settings) => (s.format === 'sealed' || s.format === 'draft' ? s.format : null);
+const formatText = (s: Settings) => `${limitedOf(s) ? `${limitedOf(s) === 'sealed' ? 'Sealed' : 'Draft'} ${s.setId?.toUpperCase() ?? ''} · ` : ''}Best of ${s.bestOf}${s.topCut ? ` · Top ${s.topCut}` : ''} · ${s.rounds ? `${s.rounds} rounds` : 'Swiss'}`;
 
 function TournamentPage({ id, db, onBack }: { id: string; db: CardDb; onBack: () => void }) {
   const [t, setT] = useState<Detail | null>(null);
@@ -74,8 +77,11 @@ function TournamentPage({ id, db, onBack }: { id: string; db: CardDb; onBack: ()
         <div className="tn-me lb-card">
           {t.status === 'open' && !t.joined && (
             <>
-              <button type="button" className="btn btn--cta" disabled={decks.length === 0} onClick={() => setPicking(true)}>Sign up</button>
-              {decks.length === 0 && <p className="muted small">No legal deck yet</p>}
+              {/* a Limited tournament hands out the pools: no deck to bring */}
+              {limitedOf(t.settings) ? <button type="button" className="btn btn--cta" onClick={() => act(`/api/tournaments/${id}/join`, { deck: '' })}>Sign up</button> : (
+                <button type="button" className="btn btn--cta" disabled={decks.length === 0} onClick={() => setPicking(true)}>Sign up</button>
+              )}
+              {!limitedOf(t.settings) && decks.length === 0 && <p className="muted small">No legal deck yet</p>}
             </>
           )}
           {t.status === 'open' && t.joined && (
@@ -94,6 +100,9 @@ function TournamentPage({ id, db, onBack }: { id: string; db: CardDb; onBack: ()
         </div>
       </div>
 
+      {(t.status === 'drafting' || t.status === 'building') && t.joined && (
+        <div className="tn-limited"><TournamentLimited db={db} id={id} onChange={() => { void load(); }} /></div>
+      )}
       <div className="tn-tabs" role="tablist">
         {(['standings', 'pairings', 'players', 'prizes'] as const).map((k) => (
           <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{k[0].toUpperCase() + k.slice(1)}</button>

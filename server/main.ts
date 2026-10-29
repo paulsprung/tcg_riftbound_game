@@ -6,6 +6,8 @@ import { Online } from './games/online.ts';
 import { EnginePool } from './games/pool.ts';
 import { friends } from './friends.ts';
 import { handler } from './http.ts';
+import { loadCatalog, type Catalog } from './economy.ts';
+import { LimitedService } from './limited.ts';
 import { market } from './market.ts';
 import { retention } from './privacy.ts';
 import { Director } from './tournament/director.ts';
@@ -24,7 +26,12 @@ if (applied.length) console.log(`migrations applied: ${applied.join(', ')}`);
 const pool = new EnginePool();
 const sockets = new Sockets();
 const online = new Online(db, pool, sockets);
-const director = new Director(db, online);
+// the card data, read once when first needed; Limited pools are made from it
+let catalog: Promise<Catalog> | null = null;
+const getCatalog = () => (catalog ??= loadCatalog(cfg.staticDir).catch((err) => { catalog = null; throw err; }));
+const limited = new LimitedService(db, getCatalog);
+online.limited = limited;
+const director = new Director(db, online, limited);
 // friends: only friends can challenge each other, and they hear when a friend's presence changes
 online.areFriends = (a, b) => friends.areFriends(db, a, b);
 const told = new Map<string, ReturnType<typeof setTimeout>>();
@@ -36,7 +43,7 @@ online.onPresence((userId) => {
     friends.ids(db, userId).then((ids) => { for (const f of ids) sockets.send(f, { t: 'friends' }); }).catch(() => undefined);
   }, 800));
 });
-const server = createServer(handler({ cfg, db, online, director }));
+const server = createServer(handler({ cfg, db, online, director, limited }));
 sockets.attach(server, cfg, db, () => online);
 const resumed = await online.recover();
 server.listen(cfg.port, () => console.log(`Riftbound server on :${cfg.port} (${cfg.publicUrl}), ${pool.threads} engine thread(s)${resumed ? `, ${resumed} game(s) resumed` : ''}`));

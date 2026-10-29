@@ -11,6 +11,7 @@ import type { Db } from './db.ts';
 import { deckStore, economy, loadCatalog, readAccount, Refused, type Catalog } from './economy.ts';
 import type { Online } from './games/online.ts';
 import { friends } from './friends.ts';
+import { LimitedService } from './limited.ts';
 import { market } from './market.ts';
 import { deleteAccount, exportAccount } from './privacy.ts';
 import type { Director } from './tournament/director.ts';
@@ -28,6 +29,8 @@ export interface Deps {
   /** Online play, for the standings. */
   online?: Online;
   director?: Director;
+  /** Limited pools; made here when not given. */
+  limited?: LimitedService;
 }
 
 export function cookies(req: IncomingMessage): Record<string, string> {
@@ -161,13 +164,14 @@ function limiter(perMinute: number) {
   };
 }
 
-export function handler({ cfg, db, fetch: f = fetch, catalog, online, director }: Deps) {
+export function handler({ cfg, db, fetch: f = fetch, catalog, online, director, limited: given }: Deps) {
   const secure = cfg.publicUrl.startsWith('https://');
   const authLimit = limiter(20);
   const apiLimit = limiter(240);
   const CSP = csp(cfg.publicUrl);
   let cat: Promise<Catalog> | null = catalog ? Promise.resolve(catalog) : null;
   const getCatalog = () => (cat ??= loadCatalog(cfg.staticDir).catch((err) => { cat = null; throw err; }));
+  const limited = given ?? new LimitedService(db, getCatalog);
   const clientIp = (req: IncomingMessage) =>
     (cfg.trustProxy && (req.headers['cf-connecting-ip'] as string)) || req.socket.remoteAddress || '?';
 
@@ -222,7 +226,7 @@ export function handler({ cfg, db, fetch: f = fetch, catalog, online, director }
       }
 
       // ---- the signed-in player's account: changes are POST/PUT/DELETE from this site only ----
-      if (path.startsWith('/api/account') || path.startsWith('/api/decks') || path.startsWith('/api/admin') || path.startsWith('/api/tournaments') || path.startsWith('/api/market') || path.startsWith('/api/friends')) {
+      if (path.startsWith('/api/account') || path.startsWith('/api/decks') || path.startsWith('/api/admin') || path.startsWith('/api/tournaments') || path.startsWith('/api/market') || path.startsWith('/api/friends') || path.startsWith('/api/limited')) {
         const user = await userForSession(db, jar[SESSION_COOKIE]);
         if (!user) return json(res, 401, { error: 'Sign in first' });
         if (!apiLimit(user.id)) return json(res, 429, { error: 'Slow down a little' });
@@ -287,6 +291,13 @@ export function handler({ cfg, db, fetch: f = fetch, catalog, online, director }
           if (deck && req.method === 'PUT') return json(res, 200, { deck: await deckStore.save(db, user.id, deck[1], (await body(req)).deck) });
           if (deck && req.method === 'DELETE') { await deckStore.remove(db, user.id, deck[1]); return json(res, 200, { ok: true }); }
 
+          // ---- Limited pools (casual Sealed and Draft) ----
+          if (route === 'GET /api/limited') return json(res, 200, { pool: await limited.current(user.id) });
+          if (route === 'POST /api/limited') { const b = await body(req); return json(res, 200, { pool: await limited.start(user.id, b.format, b.setId) }); }
+          const lim = /^\/api\/limited\/([0-9a-f-]{36})\/(pick|deck)$/.exec(path);
+          if (lim && req.method === 'POST' && lim[2] === 'pick') return json(res, 200, { pool: await limited.pick(user.id, lim[1], (await body(req)).card) });
+          if (lim && req.method === 'PUT' && lim[2] === 'deck') return json(res, 200, { pool: await limited.saveDeck(user.id, lim[1], (await body(req)).deck) });
+
           // ---- friends ----
           if (route === 'GET /api/friends') return json(res, 200, await friends.list(db, user.id, (id) => online?.presence(id) ?? 'offline'));
           if (route === 'POST /api/friends/add') {
@@ -322,12 +333,17 @@ export function handler({ cfg, db, fetch: f = fetch, catalog, online, director }
           }
           if (route === 'POST /api/market/cancel') { const b = await body(req); return json(res, 200, { account: await market.cancel(db, user.id, b.listingId) }); }
 
-          const tour = /^\/api\/tournaments(?:\/([^/]+))?(?:\/(join|leave))?$/.exec(path);
+          const tour = /^\/api\/tournaments(?:\/([^/]+))?(?:\/(join|leave|pool|pick|deck|ready))?$/.exec(path);
           if (tour && director) {
             if (req.method === 'GET' && !tour[1]) return json(res, 200, { tournaments: await director.list(user.id) });
             if (req.method === 'GET' && !tour[2]) return json(res, 200, { tournament: await director.detail(tour[1], user.id) });
             if (req.method === 'POST' && tour[2] === 'join') { await director.join(user.id, user.name, tour[1], String((await body(req)).deck ?? '')); return json(res, 200, { ok: true }); }
             if (req.method === 'POST' && tour[2] === 'leave') { await director.leave(user.id, tour[1]); return json(res, 200, { ok: true }); }
+            // a Limited tournament: your pool, your draft picks, your deck, ready to play
+            if (req.method === 'GET' && tour[2] === 'pool') return json(res, 200, { pool: await director.poolOf(user.id, tour[1]) });
+            if (req.method === 'POST' && tour[2] === 'pick') return json(res, 200, { pool: await director.pick(user.id, tour[1], (await body(req)).card) });
+            if (req.method === 'PUT' && tour[2] === 'deck') return json(res, 200, { pool: await director.saveDeck(user.id, tour[1], (await body(req)).deck) });
+            if (req.method === 'POST' && tour[2] === 'ready') { await director.ready(user.id, tour[1]); return json(res, 200, { ok: true }); }
           }
 
           if (path.startsWith('/api/admin/')) {

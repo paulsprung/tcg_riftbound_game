@@ -100,6 +100,11 @@ function TournamentsAdmin() {
   const [topCut, setCut] = useState<0 | 4 | 8>(0);
   const [rounds, setRounds] = useState('');
   const [noShow, setNoShow] = useState(10);
+  // Limited (TR 602): the boosters' set, the build time, the pick clock
+  const [format, setFormat] = useState<'constructed' | 'sealed' | 'draft'>('constructed');
+  const [setId, setSetId] = useState(SETS[0]);
+  const [buildMinutes, setBuild] = useState(20);
+  const [pickSeconds, setPick] = useState(40);
   const [prizes, setPrizes] = useState<PrizeRow[]>([{ coins: 500, set: SETS[0], packs: 0 }]);
   const load = () => api<{ tournaments: Tour[] }>('GET', '/api/tournaments').then((r) => setList(r.tournaments)).catch(() => undefined);
   useEffect(() => { void load(); }, []);
@@ -107,6 +112,7 @@ function TournamentsAdmin() {
     api('POST', '/api/admin/tournaments', {
       name, startsAt: new Date(at).getTime(),
       settings: { bestOf, maxPlayers, entryFee, topCut, rounds: rounds ? Number(rounds) : null, noShowMinutes: noShow,
+        format, ...(format !== 'constructed' ? { setId, buildMinutes, pickSeconds } : {}),
         prizes: prizes.map((p) => ({ coins: p.coins, ...(p.packs > 0 ? { packs: { [p.set]: p.packs } } : {}) })) },
     }).then(() => { showNotice('Tournament made.', true); setName(''); void load(); }).catch((e: Error) => showNotice(e.message));
   };
@@ -125,6 +131,14 @@ function TournamentsAdmin() {
         <label>Top cut<select className="input" value={topCut} onChange={(e) => setCut(Number(e.target.value) as 0 | 4 | 8)}><option value={0}>None</option><option value={4}>Top 4</option><option value={8}>Top 8</option></select></label>
         <label>Swiss rounds<input className="input" type="number" min={1} max={12} value={rounds} placeholder="auto" onChange={(e) => setRounds(e.target.value)} /></label>
         <label>No-show (minutes)<input className="input" type="number" min={1} max={30} value={noShow} onChange={(e) => setNoShow(num(e.target.value))} /></label>
+        <label>Format<select className="input" value={format} onChange={(e) => setFormat(e.target.value as typeof format)}>
+          <option value="constructed">Constructed (own decks)</option><option value="sealed">Sealed (6 boosters)</option><option value="draft">Draft (pods of 8)</option>
+        </select></label>
+        {format !== 'constructed' && <>
+          <label>Set<select className="input" value={setId} onChange={(e) => setSetId(e.target.value)}>{SETS.map((s) => <option key={s} value={s}>{s.toUpperCase()}</option>)}</select></label>
+          <label>Build time (minutes)<input className="input" type="number" min={5} max={60} value={buildMinutes} onChange={(e) => setBuild(num(e.target.value))} /></label>
+          {format === 'draft' && <label>Pick clock (seconds)<input className="input" type="number" min={15} max={120} value={pickSeconds} onChange={(e) => setPick(num(e.target.value))} /></label>}
+        </>}
         <div className="adm-prizes is-wide">
           <span className="lb-label">Prizes by place</span>
           {prizes.map((p, i) => (

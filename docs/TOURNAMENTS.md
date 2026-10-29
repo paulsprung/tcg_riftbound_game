@@ -24,3 +24,24 @@ Die Tournament Rules legen keine Match-Punkte fest. Wir nehmen das Übliche: 3 f
   - Steht man zwischen zwei Spielen, wird kein neues Spiel mehr begonnen.
   - Online gibt es bisher nur die Schachuhr pro Spieler: 30 Sekunden frei pro Entscheidung, danach läuft eine Zeitbank von 15 Minuten pro Spiel.
 - **Playoffs mit Zeitlimit** (TR 408.4): mit Sudden Death. Laut TR sollen Playoffs ohne Zeitlimit laufen, so ist es auch bei uns.
+
+## Limited (TR 602)
+
+Ein Turnier kann im Format **Sealed** oder **Draft** laufen (Admin → Tournaments → Format, Set, Bauzeit, Pick-Zeit).
+
+- **Anmeldung:** ohne Deck. Die Pools verteilt das Turnier.
+- **Sealed:** Beim Start bekommt jeder 6 Booster eines Sets, ohne Runen und Token. Ein erster Deckvorschlag ist schon gebaut.
+- **Draft:** Pods zu je bis zu 8 Spielern. Fehlende Plätze füllen Computer.
+  - Gepickt wird nacheinander, die Packs gehen links, rechts, links weiter.
+  - Jeder Pick hat eine Uhr (Standard 40 Sekunden). Wer nicht pickt, bekommt den Pick des Computers.
+  - Am Ende hat jeder 39 Karten.
+- **Bauphase** (Standard 20 Minuten):
+  - Mindestgröße des Decks: 25 Karten bei Sealed, 20 bei Draft.
+  - Bis zu 3 Domains, kein Kopie-Limit.
+  - Legend und Chosen Champion sind optional. Ohne beides zieht man 1 Karte mehr.
+  - Basis-Runen aus beliebiger Quelle, Battlefields aus dem Pool oder Blanko-Battlefields.
+  - Sind alle „ready“, beginnen die Runden früher.
+- **Runden:** Das Deck zum Ende der Bauphase ist die Deckliste für alle Runden. Wer keins gebaut hat, spielt den Vorschlag.
+
+Casual bietet dasselbe ohne Turnier: Play → Casual → Sealed oder Draft. Gedraftet wird dort mit 7 Computern, gespielt gegen andere Limited-Spieler.
+

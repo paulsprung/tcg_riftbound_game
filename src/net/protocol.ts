@@ -7,8 +7,9 @@ import type { DeckList, ObservedEvent, PlayerId, PlayerView } from '../game/inde
  */
 
 /** What a game is: a queue's (ranked, casual), a tournament round's, or one between friends. */
-export type Mode = 'ranked' | 'casual' | 'tournament' | 'friendly';
-export type QueueMode = 'ranked' | 'casual';
+export type Mode = 'ranked' | 'casual' | 'sealed' | 'draft' | 'tournament' | 'friendly';
+/** sealed and draft: casual games with a deck built from a Limited pool (deck 'limited:<pool id>'). */
+export type QueueMode = 'ranked' | 'casual' | 'sealed' | 'draft';
 /** What friends see of each other. */
 export type Presence = 'online' | 'queue' | 'game' | 'offline';
 

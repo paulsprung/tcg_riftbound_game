@@ -37,3 +37,9 @@
 .lm-list em { margin-left: auto; font-style: normal; color: var(--muted); }
 .lm-issues { margin: 0; padding-left: 16px; color: #f2a7b0; font-size: 12px; display: grid; gap: 2px; }
 @media (max-width: 900px) { .lm-build { grid-template-columns: 1fr; } }
+.lm-clock { color: var(--teal); font-variant-numeric: tabular-nums; }
+.lm-clock.is-low { color: #f2a7b0; }
+.lm-online { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.lm-online__bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.tn-limited { display: flex; flex-direction: column; min-height: 560px; margin: 10px 0 14px; }
+.ds .lm-online, .ds .lm-sets, .ds .lm-draft { flex: 1; min-height: 0; }

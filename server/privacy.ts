@@ -12,7 +12,9 @@ import { readAccount, Refused } from './economy.ts';
  *                         a finished match keeps its full record (the
  *                         replay) for 90 days, then only the result; market
  *                         sales forget buyer and seller after a year; the
- *                         ledger is kept two years, for disputes and fraud
+ *                         ledger is kept two years, for disputes and fraud;
+ *                         a casual Limited pool goes after 30 days (a
+ *                         tournament's stays with the tournament)
  *
  * Nothing else is stored: no e-mail, no IP address (rate limits are counted
  * in memory), no tracking. Discord gives us only the account id, the name
@@ -20,7 +22,7 @@ import { readAccount, Refused } from './economy.ts';
  */
 
 export const DELETED = '00000000-0000-0000-0000-000000000000';
-const RECORD_DAYS = 90, SALE_DAYS = 365, LEDGER_DAYS = 730;
+const RECORD_DAYS = 90, SALE_DAYS = 365, LEDGER_DAYS = 730, POOL_DAYS = 30;
 
 export async function exportAccount(db: Db, userId: string) {
   const q = (sql: string) => db.query(sql, [userId]).then((r) => r.rows);
@@ -38,6 +40,7 @@ export async function exportAccount(db: Db, userId: string) {
       JOIN tournaments t ON t.id = p.tournament_id WHERE p.user_id = $1`),
     marketListings: await q('SELECT card_id, foil, qty, price, status, created_at, expires_at FROM market_listings WHERE seller = $1'),
     marketSales: await q('SELECT card_id, foil, qty, price, fee, at, (seller = $1) AS sold FROM market_sales WHERE seller = $1 OR buyer = $1'),
+    limitedPools: await q('SELECT format, set_id, cards, deck, tournament_id, created_at FROM limited_pools WHERE user_id = $1'),
     friends: await q(`SELECT u.name, f.status, f.created_at FROM friendships f JOIN users u ON u.id = CASE WHEN f.user_a = $1 THEN f.user_b ELSE f.user_a END
       WHERE f.user_a = $1 OR f.user_b = $1`),
   };
@@ -72,4 +75,5 @@ export async function retention(db: Db) {
   await db.query('UPDATE market_sales SET buyer = NULL, seller = NULL WHERE at < now() - make_interval(days => $1) AND (buyer IS NOT NULL OR seller IS NOT NULL)', [SALE_DAYS]);
   await db.query('DELETE FROM ledger WHERE created_at < now() - make_interval(days => $1)', [LEDGER_DAYS]);
   await db.query('DELETE FROM sessions WHERE expires_at <= now()');
+  await db.query('DELETE FROM limited_pools WHERE tournament_id IS NULL AND created_at < now() - make_interval(days => $1)', [POOL_DAYS]);
 }

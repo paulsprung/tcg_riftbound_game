@@ -4,6 +4,7 @@ import { missingCards, ownedDefs, ownPrintings } from '../../src/decks/ownership
 import { STARTERS, validateDeck, type DeckList, type GameRecord, type PlayerId, type PlayerView } from '../../src/game/index.ts';
 import type { Db } from '../db.ts';
 import { readAccount } from '../economy.ts';
+import type { LimitedService } from '../limited.ts';
 import { ladderPoints, PLACEMENT_GAMES, rate, START, tierOf, type Rating } from '../rating.ts';
 import type { ClientMsg, LobbyMode, LobbyView, Mode, Presence, QueueMode, RatingInfo, ServerMsg } from '../../src/net/protocol.ts';
 import type { Answer, Update } from './engine.ts';
@@ -27,7 +28,7 @@ import type { EnginePool } from './pool.ts';
  * mode) and both players get coins, the day's first win a bonus on top.
  */
 
-const MODES: QueueMode[] = ['ranked', 'casual'];
+const MODES: QueueMode[] = ['ranked', 'casual', 'sealed', 'draft'];
 
 /** Free time for every decision; then the player's time bank runs. */
 export const GRACE_MS = 30_000;
@@ -55,7 +56,7 @@ export interface Finished {
 
 export interface Transport { send(userId: string, msg: ServerMsg): void; online(userId: string): boolean }
 
-interface Queued { userId: string; name: string; deck: DeckList; rating: number; since: number }
+interface Queued { userId: string; name: string; deck: DeckList; rating: number; since: number; limited?: 'sealed' | 'draft' }
 
 interface Live {
   id: string; mode: Mode; players: [string, string]; names: [string, string]; decks: [DeckList, DeckList];
@@ -105,6 +106,8 @@ export class Online {
   private readonly lobbyOf = new Map<string, string>();
   /** Checks that two players are friends (server/friends.ts); everyone, in tests. */
   areFriends: (a: string, b: string) => Promise<boolean> = async () => true;
+  /** Limited pools (server/limited.ts), for the sealed and draft queues. */
+  limited: LimitedService | null = null;
   /** Players whose queue request is being checked: a second one waits its turn. */
   private readonly joining = new Set<string>();
   private readonly games = new Map<string, Live>();
@@ -245,8 +248,17 @@ export class Online {
     this.joining.add(userId);
     let entry: Queued;
     try {
-      const deck = await this.deckFor(userId, String(ref));
-      entry = { userId, name, deck, rating: (await this.rating(userId, mode)).rating.r, since: this.clock.now() };
+      const rating = (await this.rating(userId, mode)).rating.r;
+      if (mode === 'sealed' || mode === 'draft') {
+        // a deck from the player's Limited pool of that format
+        const id = String(ref).replace(/^limited:/, '');
+        if (!this.limited) throw new Error('No such mode');
+        const { deck, format } = await this.limited.deckFor(userId, id);
+        if (format !== mode) throw new Error(`That pool is ${format}`);
+        entry = { userId, name, deck, rating, since: this.clock.now(), limited: format };
+      } else {
+        entry = { userId, name, deck: await this.deckFor(userId, String(ref)), rating, since: this.clock.now() };
+      }
     } finally { this.joining.delete(userId); }
     // matched meanwhile (another tab): stay out of the queue
     if (this.byUser.has(userId)) throw new Error('You are in a game');
@@ -278,14 +290,14 @@ export class Online {
 
   // ---- a game ----
 
-  private start(mode: Mode, a: Pick<Queued, 'userId' | 'name' | 'deck'>, b: Pick<Queued, 'userId' | 'name' | 'deck'>) {
+  private start(mode: Mode, a: Pick<Queued, 'userId' | 'name' | 'deck' | 'limited'>, b: Pick<Queued, 'userId' | 'name' | 'deck' | 'limited'>) {
     // who sits first is random; who plays first the engine settles (TR 407)
     return randomInt(2) === 0 ? this.begin(mode, a, b, null) : this.begin(mode, b, a, null);
   }
 
   /** A game between two given players (a tournament's): a in seat 0. `firstPlayer` fixes who plays first
       (the loser of the match's last game); a player not connected has `noShowMs` to come. */
-  async startPaired(a: Pick<Queued, 'userId' | 'name' | 'deck'>, b: Pick<Queued, 'userId' | 'name' | 'deck'>, meta: GameMeta,
+  async startPaired(a: Pick<Queued, 'userId' | 'name' | 'deck' | 'limited'>, b: Pick<Queued, 'userId' | 'name' | 'deck' | 'limited'>, meta: GameMeta,
     firstPlayer: GameRecord['setup']['firstPlayer'] | null, noShowMs: number): Promise<string> {
     for (const u of [a.userId, b.userId]) for (const q of this.queues.values()) { const i = q.findIndex((x) => x.userId === u); if (i >= 0) q.splice(i, 1); }
     const id = await this.begin('tournament', a, b, meta, firstPlayer);
@@ -304,11 +316,12 @@ export class Online {
     return id;
   }
 
-  private async begin(mode: Mode, p0: Pick<Queued, 'userId' | 'name' | 'deck'>, p1: Pick<Queued, 'userId' | 'name' | 'deck'>, meta: GameMeta | null,
-    firstPlayer: GameRecord['setup']['firstPlayer'] | null = null): Promise<string> {
+  private async begin(mode: Mode, p0: Pick<Queued, 'userId' | 'name' | 'deck' | 'limited'>, p1: Pick<Queued, 'userId' | 'name' | 'deck' | 'limited'>,
+    meta: GameMeta | null, firstPlayer: GameRecord['setup']['firstPlayer'] | null = null): Promise<string> {
     const id = randomUUID();
+    const limited = p0.limited ?? p1.limited;
     const setup: GameRecord['setup'] = { seed: randomInt(0, 2 ** 31), decks: [p0.deck, p1.deck] as [DeckList, DeckList],
-      ...(firstPlayer !== null ? { firstPlayer } : {}) };
+      ...(firstPlayer !== null ? { firstPlayer } : {}), ...(limited ? { limited } : {}) };
     const g: Live = {
       id, mode, players: [p0.userId, p1.userId], names: [p0.name, p1.name], decks: setup.decks, started: this.clock.now(),
       answers: [], setup, pending: null, deadline: null, lastView: null, bank: [this.t.bank, this.t.bank], asked: null,
@@ -627,7 +640,7 @@ export class Online {
         await c.query('INSERT INTO accounts (user_id) VALUES ($1) ON CONFLICT DO NOTHING', [u]);
         await c.query('SELECT 1 FROM accounts WHERE user_id = $1 FOR UPDATE', [u]);
       }
-      const rated = g.mode === 'ranked' || g.mode === 'casual';
+      const rated = g.mode === 'ranked' || g.mode === 'casual' || g.mode === 'sealed' || g.mode === 'draft';
       const order = (rated ? [0, 1].sort((x, y) => (g.players[x] < g.players[y] ? -1 : 1)) : []) as PlayerId[];
       const before: Record<number, { rating: Rating; games: number; wins: number }> = {};
       for (const s of order) {

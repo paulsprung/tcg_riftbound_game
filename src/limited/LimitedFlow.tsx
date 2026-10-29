@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { HoloCard } from '../card/HoloCard.tsx';
 import { defaultFinish } from '../data/cardInfo.ts';
 import type { Card, CardDb } from '../data/types.ts';
@@ -29,7 +29,7 @@ const cap = (s: string) => s.slice(0, 1).toUpperCase() + s.slice(1);
 
 type Step = { k: 'set' } | { k: 'pool' } | { k: 'draft'; d: Draft } | { k: 'build' };
 
-function Thumb({ card, onClick, badge, dim, title }: { card: Card | undefined; onClick?: () => void; badge?: string; dim?: boolean; title?: string }) {
+export function Thumb({ card, onClick, badge, dim, title }: { card: Card | undefined; onClick?: () => void; badge?: string; dim?: boolean; title?: string }) {
   if (!card) return null;
   return (
     <button type="button" className={`lm-card${dim ? ' is-dim' : ''}`} onClick={onClick} title={title ?? card.name}>
@@ -122,14 +122,7 @@ export function LimitedFlow({ db, format, onPlay, onBack, error }: {
       )}
 
       {step.k === 'draft' && (
-        <div className="lm-draft">
-          <p className="lm-sub">Booster {step.d.round + 1} of 3 · pick {step.d.picks[0].length % 13 + 1} · passing {step.d.round === 1 ? 'right' : 'left'}</p>
-          <div className="lm-grid">
-            {step.d.packs[0].map((id, i) => <Thumb key={`${step.d.round}-${step.d.picks[0].length}-${i}`} card={cards.get(id)} onClick={() => take(step.d, id)} title={`Pick ${cards.get(id)?.name}`} />)}
-          </div>
-          <p className="lm-sub">Your picks · {step.d.picks[0].length}</p>
-          <div className="lm-strip">{step.d.picks[0].map((id, i) => <Thumb key={`${id}-${i}`} card={cards.get(id)} />)}</div>
-        </div>
+        <DraftPicks cards={cards} round={step.d.round} pack={step.d.packs[0]} picks={step.d.picks[0]} onPick={(id) => take(step.d, id)} />
       )}
 
       {step.k === 'build' && deck && (
@@ -144,9 +137,37 @@ export function LimitedFlow({ db, format, onPlay, onBack, error }: {
 const RANK: Record<string, number> = { common: 1, uncommon: 2, rare: 3, epic: 4, showcase: 5, ultimate: 6 };
 const rankOf = (c: Card | undefined) => RANK[c?.rarity ?? 'common'] ?? 1;
 
-function Builder({ cards, pool, format, deck, onChange, onAuto, onPlay }: {
+/** The pack in front of you, a card to pick; your picks below. `deadline` shows the pick clock. */
+export function DraftPicks({ cards, round, pack, picks, onPick, deadline }: {
+  cards: Map<string, Card>; round: number; pack: string[]; picks: string[]; onPick: (id: string) => void; deadline?: number;
+}) {
+  return (
+    <div className="lm-draft">
+      <p className="lm-sub">Booster {round + 1} of 3 · pick {picks.length % 13 + 1} · passing {round === 1 ? 'right' : 'left'}
+        {deadline !== undefined && <> · <Countdown to={deadline} /></>}</p>
+      {pack.length === 0 ? <p className="muted">Waiting for the next pack…</p> : (
+        <div className="lm-grid">
+          {pack.map((id, i) => <Thumb key={`${round}-${picks.length}-${i}`} card={cards.get(id)} onClick={() => onPick(id)} title={`Pick ${cards.get(id)?.name}`} />)}
+        </div>
+      )}
+      <p className="lm-sub">Your picks · {picks.length}</p>
+      <div className="lm-strip">{picks.map((id, i) => <Thumb key={`${id}-${i}`} card={cards.get(id)} />)}</div>
+    </div>
+  );
+}
+
+/** Seconds (or minutes and seconds) left until a moment. */
+export function Countdown({ to }: { to: number }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 500); return () => clearInterval(t); }, []);
+  const s = Math.max(0, Math.ceil((to - now) / 1000));
+  return <span className={s <= 10 ? 'lm-clock is-low' : 'lm-clock'}>{s >= 60 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : `${s}s`}</span>;
+}
+
+/** A deck from a pool: domains, cards in and out, Legend, Chosen Champion, battlefields; the checks as you go. */
+export function Builder({ cards, pool, format, deck, onChange, onAuto, onPlay, playLabel = 'Play' }: {
   cards: Map<string, Card>; pool: string[]; format: LimitedFormat; deck: DeckList;
-  onChange: (d: DeckList) => void; onAuto: () => void; onPlay: () => void;
+  onChange: (d: DeckList) => void; onAuto: () => void; onPlay: () => void; playLabel?: string;
 }) {
   const have = poolDefs(pool);
   const domains = deck.domains ?? [];
@@ -221,7 +242,7 @@ function Builder({ cards, pool, format, deck, onChange, onAuto, onPlay }: {
           ))}
         </ul>
         {issues.length > 0 && <ul className="lm-issues">{issues.map((x) => <li key={x.message}>{x.message}</li>)}</ul>}
-        <button type="button" className="btn btn--cta" disabled={issues.length > 0} onClick={onPlay}>Play</button>
+        <button type="button" className="btn btn--cta" disabled={issues.length > 0} onClick={onPlay}>{playLabel}</button>
       </aside>
     </div>
   );

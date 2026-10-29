@@ -1,8 +1,12 @@
 import { randomInt } from 'node:crypto';
+import type { Card } from '../../src/data/types.ts';
+import { defOfPrinting } from '../../src/game/cards/oracle.ts';
 import type { DeckList, GameSetup } from '../../src/game/index.ts';
+import { autoBuild, botPick, draftDone, limitedIssues, newDraft, pick, POD, sealedPool, type Draft, type LimitedFormat } from '../../src/limited/limited.ts';
 import { BOOSTER_SETS } from '../../src/pack/packConfig.ts';
 import type { Db } from '../db.ts';
-import { Refused } from '../economy.ts';
+import { Refused, secureRandom } from '../economy.ts';
+import { cleanDeck, viewOf, type LimitedService, type PoolView } from '../limited.ts';
 import type { Finished, Online } from '../games/online.ts';
 import { pairRound, standings, swissRounds, topCutPairs, type MatchResult, type Standing } from './swiss.ts';
 
@@ -16,6 +20,13 @@ import { pairRound, standings, swissRounds, topCutPairs, type MatchResult, type 
  * as 2-0 wins, and a player who doesn't come within the no-show time loses
  * the match and is dropped (TR 703.8.d). The tiebreakers are TR 409's. After the Swiss rounds the best 4 or 8 play
  * a single-elimination top cut. At the end the prizes go out by final place.
+ *
+ * A Limited tournament (Sealed or Draft, TR 602) signs players up without a
+ * deck. At the start each gets six boosters (Sealed), or the field drafts in
+ * pods of eight, computer seats filling a pod, a pick clock on every pick
+ * (a seat out of time picks the computer's pick). Then everyone builds until
+ * the build time is up (or all are ready); the deck each has then is their
+ * decklist for the rounds, a first build of their pool if they made none.
  *
  * Everything lives in the database (tournaments, tournament_players,
  * tournament_matches); a restart picks up where it was. One change at a
@@ -35,13 +46,25 @@ export interface Settings {
   /** By final place: prizes[0] for the winner. */
   prizes: Prize[];
   noShowMinutes: number;
+  /** Constructed (your own deck) or a Limited format (TR 602). */
+  format: 'constructed' | LimitedFormat;
+  /** Limited: the boosters' set. */
+  setId: string | null;
+  /** Limited: minutes to build, seconds for each draft pick. */
+  buildMinutes: number;
+  pickSeconds: number;
 }
+
+/** A draft pod: which player sits in each seat (null: a computer seat) and its draft. */
+interface Pod { seats: (string | null)[]; draft: Draft; deadline: number }
 
 export interface TournamentInput { name: string; startsAt: number; settings: Partial<Settings> }
 
-const DEFAULTS: Settings = { bestOf: 1, maxPlayers: 32, entryFee: 0, topCut: 0, rounds: null, prizes: [], noShowMinutes: 10 };
+const DEFAULTS: Settings = { bestOf: 1, maxPlayers: 32, entryFee: 0, topCut: 0, rounds: null, prizes: [], noShowMinutes: 10,
+  format: 'constructed', setId: null, buildMinutes: 20, pickSeconds: 40 };
 
-interface Row { id: string; name: string; status: string; settings: Settings; starts_at: Date; round: number; stage: 'swiss' | 'top' }
+interface Row { id: string; name: string; status: string; settings: Settings; starts_at: Date; round: number; stage: 'swiss' | 'top';
+  draft: { pods: Pod[] } | null; build_until: Date | null }
 interface MatchRow { id: string; round: number; stage: string; tbl: number; a: string; b: string | null; wins: [number, number]; games: number; status: string; game_id: string | null }
 
 export function cleanSettings(s: Partial<Settings>): Settings {
@@ -55,6 +78,11 @@ export function cleanSettings(s: Partial<Settings>): Settings {
   int(out.entryFee, 0, 100_000, 'Entry fee');
   int(out.noShowMinutes, 1, 30, 'No-show minutes');
   if (out.rounds !== null) int(out.rounds, 1, 12, 'Rounds');
+  if (!['constructed', 'sealed', 'draft'].includes(out.format)) throw new Refused('Format: constructed, sealed or draft');
+  if (out.format === 'constructed') out.setId = null;
+  else if (!BOOSTER_SETS.some((b) => b.id === out.setId)) throw new Refused('Limited needs a set of boosters');
+  int(out.buildMinutes, 5, 60, 'Build minutes');
+  int(out.pickSeconds, 15, 120, 'Pick seconds');
   if (!Array.isArray(out.prizes) || out.prizes.length > 64) throw new Refused('Prizes: up to 64 places');
   out.prizes = out.prizes.map((p) => {
     int(p?.coins ?? 0, 0, 1_000_000, 'Prize coins');
@@ -75,7 +103,8 @@ export class Director {
   private chain: Promise<unknown> = Promise.resolve();
   private readonly ticker: ReturnType<typeof setInterval>;
 
-  constructor(private readonly db: Db, private readonly online: Online, private readonly now: () => number = Date.now) {
+  constructor(private readonly db: Db, private readonly online: Online, private readonly limited: LimitedService | null = null,
+    private readonly now: () => number = Date.now) {
     online.onFinish((f) => (f.meta ? this.serial(() => this.gameOver(f)) : undefined));
     this.ticker = setInterval(() => { void this.serial(() => this.tick()); }, 5000);
     this.ticker.unref?.();
@@ -119,7 +148,10 @@ export class Director {
     return this.serial(async () => {
       const t = await this.get(id);
       if (t.status !== 'open') throw new Refused('Sign-up is closed');
-      const deck = await this.online.deckFor(userId, String(deckRef));
+      // a Limited tournament makes the decks from the pools it hands out
+      const limited = t.settings.format !== 'constructed';
+      const deck = limited ? {} : await this.online.deckFor(userId, String(deckRef));
+      if (limited) deckRef = 'limited';
       const c = await this.db.connect();
       try {
         await c.query('BEGIN');
@@ -170,6 +202,9 @@ export class Director {
   async tick() {
     const due = await this.db.query("SELECT id FROM tournaments WHERE status = 'open' AND starts_at <= now()");
     for (const r of due.rows) await this.begin(r.id).catch((err) => console.error(`tournament ${r.id}:`, err instanceof Error ? err.message : err));
+    // the pick clock of the drafts, the end of the build time
+    const limited = await this.db.query("SELECT id FROM tournaments WHERE status IN ('drafting', 'building')");
+    for (const r of limited.rows) await this.limitedTick(await this.get(r.id)).catch((err) => console.error(`tournament ${r.id}:`, err instanceof Error ? err.message : err));
     const stuck = await this.db.query(`SELECT m.*, t.name AS tname, t.settings FROM tournament_matches m JOIN tournaments t ON t.id = m.tournament_id
       WHERE m.status = 'playing' AND t.status = 'running'`);
     for (const m of stuck.rows) if (!m.game_id || !this.online.isLive(m.game_id)) await this.playGame(await this.get(m.tournament_id), m);
@@ -184,8 +219,167 @@ export class Director {
       await this.db.query("UPDATE tournaments SET status = 'cancelled', ended_at = now() WHERE id = $1", [id]);
       return;
     }
+    if (t.settings.format !== 'constructed') { await this.beginLimited(t); return; }
     await this.db.query("UPDATE tournaments SET status = 'running', starts_at = least(starts_at, now()) WHERE id = $1", [id]);
     await this.nextRound(await this.get(id));
+  }
+
+  // ---- Limited: the pools, the draft, the build ----
+
+  private async catalog() {
+    if (!this.limited) throw new Refused('Limited play is not set up');
+    return this.limited.cards();
+  }
+
+  /** Sealed: everyone's six boosters and a first build; Draft: the pods. */
+  private async beginLimited(t: Row) {
+    const cat = await this.catalog();
+    const ps = (await this.players(t.id)).map((p) => p.user_id);
+    const setId = t.settings.setId!;
+    if (t.settings.format === 'sealed') {
+      for (const u of ps) {
+        const cards = sealedPool(cat.db, setId, secureRandom);
+        await this.db.query(`INSERT INTO limited_pools (user_id, format, set_id, cards, deck, tournament_id) VALUES ($1, 'sealed', $2, $3, $4, $5)`,
+          [u, setId, JSON.stringify(cards), JSON.stringify(autoBuild(cards, 'sealed', cat.byId)), t.id]);
+      }
+      await this.db.query(`UPDATE tournaments SET status = 'building', starts_at = least(starts_at, now()),
+        build_until = now() + make_interval(mins => $2) WHERE id = $1`, [t.id, t.settings.buildMinutes]);
+    } else {
+      // pods of up to eight, as even as they come; computer seats fill each
+      const order = [...ps].sort(() => secureRandom() - 0.5);
+      const pods = Math.ceil(order.length / POD);
+      const list: Pod[] = [];
+      for (let i = 0; i < pods; i++) {
+        const humans = order.filter((_, k) => k % pods === i);
+        const seats: (string | null)[] = Array.from({ length: POD }, (_, k) => humans[k] ?? null);
+        list.push(this.botsPick({ seats, draft: newDraft(cat.db, setId, secureRandom), deadline: this.now() + t.settings.pickSeconds * 1000 }, cat.byId));
+      }
+      for (const u of ps) {
+        await this.db.query(`INSERT INTO limited_pools (user_id, format, set_id, tournament_id) VALUES ($1, 'draft', $2, $3)`, [u, setId, t.id]);
+      }
+      await this.db.query(`UPDATE tournaments SET status = 'drafting', starts_at = least(starts_at, now()), draft = $2 WHERE id = $1`,
+        [t.id, JSON.stringify({ pods: list })]);
+    }
+    for (const u of ps) this.online.notify(u, 'tournament');
+  }
+
+  /** The computer seats of a pod pick from the packs in front of them. */
+  private botsPick(pod: Pod, cards: Map<string, Card>): Pod {
+    let d = pod.draft;
+    for (const [s, who] of pod.seats.entries()) if (who === null && !d.picked[s] && !draftDone(d)) d = pick(d, s, botPick(cards, d.packs[s], d.picks[s]));
+    return { ...pod, draft: d };
+  }
+
+  /** A player's pick in a tournament draft. */
+  pick(userId: string, id: string, card: unknown) {
+    return this.serial(async () => {
+      const t = await this.get(id);
+      if (t.status !== 'drafting' || !t.draft) throw new Refused('Not drafting');
+      const cat = await this.catalog();
+      const pods = t.draft.pods.map((p) => {
+        const seat = p.seats.indexOf(userId);
+        if (seat < 0) return p;
+        if (p.draft.picked[seat] || draftDone(p.draft)) throw new Refused('Wait for the next pack');
+        return this.advance({ ...p, draft: pick(p.draft, seat, String(card)) }, p.draft, t, cat.byId);
+      });
+      await this.saveDraft(t, pods);
+      return this.poolOf(userId, id);
+    });
+  }
+
+  /** After picks: when the turn changed, the computer seats pick and the clock starts again. */
+  private advance(pod: Pod, before: Draft, t: Row, cards: Map<string, Card>): Pod {
+    // every seat picked: the packs passed, a new turn
+    if (!pod.draft.picked.every((x) => !x) || pod.draft === before) return pod;
+    const next = this.botsPick({ ...pod, deadline: this.now() + t.settings.pickSeconds * 1000 }, cards);
+    return next;
+  }
+
+  private async saveDraft(t: Row, pods: Pod[]) {
+    await this.db.query('UPDATE tournaments SET draft = $2 WHERE id = $1', [t.id, JSON.stringify({ pods })]);
+    for (const p of pods) for (const u of p.seats) if (u) this.online.notify(u, 'tournament');
+    if (!pods.every((p) => draftDone(p.draft))) return;
+    // the draft is over: each player's picks are their pool, with a first build
+    const cat = await this.catalog();
+    for (const p of pods) {
+      for (const [s, u] of p.seats.entries()) {
+        if (!u) continue;
+        const cards = p.draft.picks[s];
+        await this.db.query('UPDATE limited_pools SET cards = $3, deck = $4 WHERE tournament_id = $1 AND user_id = $2',
+          [t.id, u, JSON.stringify(cards), JSON.stringify(autoBuild(cards, 'draft', cat.byId))]);
+      }
+    }
+    await this.db.query(`UPDATE tournaments SET status = 'building', build_until = now() + make_interval(mins => $2) WHERE id = $1`, [t.id, t.settings.buildMinutes]);
+  }
+
+  /** The pick clock: a seat out of time takes the computer's pick; the build time's end starts the rounds. */
+  private async limitedTick(t: Row) {
+    if (t.status === 'drafting' && t.draft) {
+      const late = t.draft.pods.some((p) => !draftDone(p.draft) && this.now() >= p.deadline);
+      if (!late) return;
+      const cat = await this.catalog();
+      const pods = t.draft.pods.map((p) => {
+        if (draftDone(p.draft) || this.now() < p.deadline) return p;
+        let d = p.draft;
+        for (const [s, who] of p.seats.entries()) if (who && !d.picked[s]) d = pick(d, s, botPick(cat.byId, d.packs[s], d.picks[s]));
+        return this.advance({ ...p, draft: d }, p.draft, t, cat.byId);
+      });
+      await this.saveDraft(t, pods);
+    } else if (t.status === 'building' && t.build_until && this.now() >= new Date(t.build_until).getTime()) {
+      await this.lockDecks(t);
+    }
+  }
+
+  /** The build is over: each player's deck is their decklist for the rounds (TR 602.4.a.7). */
+  private async lockDecks(t: Row) {
+    const cat = await this.catalog();
+    const pools = (await this.db.query('SELECT * FROM limited_pools WHERE tournament_id = $1', [t.id])).rows;
+    for (const p of pools) {
+      const legal = p.deck && limitedIssues(p.deck, p.cards, p.format).length === 0;
+      const deck = legal ? p.deck : autoBuild(p.cards, p.format, cat.byId);
+      const printings: Record<string, string[]> = {};
+      for (const id of p.cards as string[]) { const def = defOfPrinting(id); if (def) (printings[def] ??= []).push(id); }
+      await this.db.query('UPDATE tournament_players SET deck = $3 WHERE tournament_id = $1 AND user_id = $2', [t.id, p.user_id, JSON.stringify({ ...deck, printings })]);
+    }
+    await this.db.query("UPDATE tournaments SET status = 'running', build_until = NULL WHERE id = $1", [t.id]);
+    await this.nextRound(await this.get(t.id));
+  }
+
+  /** Everyone is done building: the rounds start before the time is up. */
+  ready(userId: string, id: string) {
+    return this.serial(async () => {
+      const t = await this.get(id);
+      if (t.status !== 'building') throw new Refused('Not building');
+      await this.db.query('UPDATE tournament_players SET deck_ref = $3 WHERE tournament_id = $1 AND user_id = $2', [t.id, userId, 'limited:ready']);
+      const waiting = await this.db.query("SELECT 1 FROM tournament_players WHERE tournament_id = $1 AND NOT dropped AND deck_ref <> 'limited:ready'", [t.id]);
+      if (!waiting.rowCount) await this.lockDecks(t);
+    });
+  }
+
+  /** A player's deck from their tournament pool, while the build is on. */
+  saveDeck(userId: string, id: string, raw: unknown) {
+    return this.serial(async () => {
+      const t = await this.get(id);
+      if (t.status !== 'building') throw new Refused('Decks can only change while building');
+      const r = await this.db.query('SELECT * FROM limited_pools WHERE tournament_id = $1 AND user_id = $2', [t.id, userId]);
+      if (!r.rowCount) throw new Refused('You have no pool here', 404);
+      const deck = cleanDeck(raw);
+      const issues = limitedIssues(deck, r.rows[0].cards, r.rows[0].format);
+      if (issues.length) throw new Refused(issues[0].message);
+      await this.db.query('UPDATE limited_pools SET deck = $3 WHERE tournament_id = $1 AND user_id = $2', [t.id, userId, JSON.stringify(deck)]);
+      return this.poolOf(userId, id);
+    });
+  }
+
+  /** What a player sees of their pool: the draft at their seat, or the pool and their deck. */
+  async poolOf(userId: string, id: string): Promise<PoolView & { status: string; buildUntil: number | null }> {
+    const t = await this.get(id);
+    const r = await this.db.query('SELECT * FROM limited_pools WHERE tournament_id = $1 AND user_id = $2', [t.id, userId]);
+    if (!r.rowCount) throw new Refused('You have no pool here', 404);
+    const pod = t.draft?.pods.find((p) => p.seats.includes(userId));
+    const row = pod ? { ...r.rows[0], draft: pod.draft } : r.rows[0];
+    const view = viewOf(row, pod ? pod.seats.indexOf(userId) : 0, pod?.deadline);
+    return { ...view, status: t.status, buildUntil: t.build_until ? new Date(t.build_until).getTime() : null };
   }
 
   private async players(id: string) {
@@ -204,8 +398,9 @@ export class Director {
   }
 
   private async nextRound(t: Row) {
-    // the cards must still be theirs: a deck sold or graded away since sign-up drops its player
-    for (const p of await this.db.query('SELECT user_id, deck_ref FROM tournament_players WHERE tournament_id = $1 AND NOT dropped', [t.id]).then((r) => r.rows)) {
+    // the cards must still be theirs: a deck sold or graded away since sign-up drops its player (a Limited deck is the pool's)
+    const own = t.settings.format === 'constructed' ? await this.db.query('SELECT user_id, deck_ref FROM tournament_players WHERE tournament_id = $1 AND NOT dropped', [t.id]).then((r) => r.rows) : [];
+    for (const p of own) {
       const ok = await this.online.deckFor(p.user_id, p.deck_ref).then(() => true, () => false);
       if (!ok) await this.db.query('UPDATE tournament_players SET dropped = true WHERE tournament_id = $1 AND user_id = $2', [t.id, p.user_id]);
     }
@@ -251,8 +446,9 @@ export class Director {
     const ps = await this.players(t.id);
     const pa = ps.find((p) => p.user_id === m.a)!, pb = ps.find((p) => p.user_id === m.b)!;
     const cutLeft = m.stage === 'top' ? 2 * (await this.db.query("SELECT count(*)::int AS n FROM tournament_matches WHERE tournament_id = $1 AND stage = 'top' AND round = $2", [t.id, m.round])).rows[0].n : 0;
+    const limited = t.settings.format === 'constructed' ? undefined : t.settings.format;
     const gameId = await this.online.startPaired(
-      { userId: pa.user_id, name: pa.name, deck: pa.deck }, { userId: pb.user_id, name: pb.name, deck: pb.deck },
+      { userId: pa.user_id, name: pa.name, deck: pa.deck, limited }, { userId: pb.user_id, name: pb.name, deck: pb.deck, limited },
       { id: t.id, name: t.name, round: roundName(m.stage, m.round, cutLeft), game: m.games + 1, score: m.wins, match: m.id },
       firstPlayer, t.settings.noShowMinutes * 60_000,
     );
