@@ -8,7 +8,7 @@
    on a glass shelf. */
 .vitrine {
   position: relative;
-  padding: 26px clamp(12px, 3vw, 30px) 10px;
+  padding: 26px clamp(12px, calc(3 * var(--vw)), 30px) 10px;
   border-radius: 18px;
   background:
     radial-gradient(120% 60% at 50% -8%, rgba(255, 236, 205, .12), transparent 60%),
@@ -19,7 +19,7 @@
 .vitrine__grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 6px clamp(10px, 2vw, 22px);
+  gap: 6px clamp(10px, calc(2 * var(--vw)), 22px);
 }
 @media (max-width: 480px) {
   .vitrine__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -118,7 +118,7 @@
 .picker__panel {
   width: min(1040px, 100%);
   display: grid; gap: 14px;
-  padding: 18px clamp(12px, 2.4vw, 24px) 24px;
+  padding: 18px clamp(12px, calc(2.4 * var(--vw)), 24px) 24px;
   border-radius: var(--radius);
   background: var(--panel);
   border: 1px solid var(--line);

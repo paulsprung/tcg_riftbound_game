@@ -1,3 +1,4 @@
+import { useViewport } from '../lobby/scale.ts';
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { CardBack } from '../card/CardBack.tsx';
 import { HoloCard } from '../card/HoloCard.tsx';
@@ -43,14 +44,9 @@ function hypeColor(p: Pull): string {
   return RARITY_COLOR[p.card.rarity];
 }
 
-function useViewport() {
-  const [size, setSize] = useState({ w: window.innerWidth, h: window.innerHeight });
-  useEffect(() => {
-    const on = () => setSize({ w: window.innerWidth, h: window.innerHeight });
-    window.addEventListener('resize', on);
-    return () => window.removeEventListener('resize', on);
-  }, []);
-  return size;
+function useVirtualViewport() {
+  const v = useViewport();
+  return { w: v.w, h: v.h };
 }
 
 /** Copies of these cards owned now, raw and graded. */
@@ -94,7 +90,7 @@ export function PackOpening({ set, cards, pack, style, onInspect, onExit }: Prop
   const [ready, setReady] = useState<Set<string>>(() => new Set());
   const before = useRef<Record<string, number>>(resumed?.before ?? {});
   const flippedAt = useRef(0);
-  const { w, h } = useViewport();
+  const { w, h } = useVirtualViewport();
 
   // Opening a set from further down the shelf should start at the top.
   useEffect(() => { window.scrollTo(0, 0); }, []);

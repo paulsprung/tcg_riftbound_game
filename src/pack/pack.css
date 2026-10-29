@@ -174,7 +174,7 @@
 .opening__stage {
   position: relative;
   display: grid; justify-items: center; align-content: center; gap: 16px;
-  min-height: min(68vh, 560px);
+  min-height: min(calc(68 * var(--vh)), 560px);
   overflow: clip;   /* the torn strip flying off never pans the page */
 }
 /* the whole stage advances the reveal, not just the card */

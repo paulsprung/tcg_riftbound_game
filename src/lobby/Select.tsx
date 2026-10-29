@@ -1,5 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { viewport } from './scale.ts';
 
 export interface Option { value: string; label: string }
 
@@ -20,9 +21,12 @@ export function Select({ value, options, onChange, label, className = '' }: {
   const current = options.find((o) => o.value === value) ?? options[0];
 
   const show = () => {
-    const r = btn.current?.getBoundingClientRect();
-    if (!r) return;
-    const below = window.innerHeight - r.bottom - 12, above = r.top - 12;
+    const rr = btn.current?.getBoundingClientRect();
+    if (!rr) return;
+    // the page is scaled: work in its own pixels
+    const { s, h } = viewport();
+    const r = { left: rr.left / s, top: rr.top / s, bottom: rr.bottom / s, width: rr.width / s };
+    const below = h - r.bottom - 12, above = r.top - 12;
     const up = below < 200 && above > below;
     setBox({ left: r.left, top: up ? r.top : r.bottom, width: r.width, max: Math.min(340, up ? above : below), up });
     setActive(Math.max(0, options.findIndex((o) => o.value === value)));
@@ -74,14 +78,14 @@ export function Select({ value, options, onChange, label, className = '' }: {
       </button>
       {open && createPortal(
         <div ref={list} id={id} role="listbox" aria-label={label} className="sel__list" onKeyDown={key}
-          style={{ left: box.left, minWidth: box.width, maxHeight: box.max, ...(box.up ? { bottom: window.innerHeight - box.top + 4 } : { top: box.top + 4 }) }}>
+          style={{ left: box.left, minWidth: box.width, maxHeight: box.max, ...(box.up ? { bottom: viewport().h - box.top + 4 } : { top: box.top + 4 }) }}>
           {options.map((o, i) => (
             <div key={o.value} role="option" aria-selected={o.value === value} data-on={i === active ? '' : undefined}
               className="sel__opt" onPointerEnter={() => setActive(i)} onClick={() => pick(i)}>
               {o.label}
             </div>
           ))}
-        </div>, document.body)}
+        </div>, document.querySelector('.app') ?? document.body)}
     </>
   );
 }

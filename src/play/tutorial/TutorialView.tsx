@@ -7,6 +7,7 @@ import { heroCard, PackWrapper } from '../../pack/PackWrapper.tsx';
 import { GameScreen } from '../GameScreen.tsx';
 import type { GameHost } from '../host/GameHost.ts';
 import type { CardIndex } from '../model/cards.ts';
+import { useViewport } from '../../lobby/scale.ts';
 import { PACE_FACTOR, getSettings, usePlaySettings } from '../settings.ts';
 import type { Coach } from './coach.ts';
 import { createTutorialCoach, OPPONENT_NAME, TUTORIAL_SCORE, tutorialHost, type TutorialCoach } from './lesson.ts';
@@ -105,17 +106,6 @@ export function TutorialView({ db, cards, starter, onExit, onFinish }: {
       onNewGame={restart} onChangeDecks={onExit}
       tutorial={{ subtitle: run.subtitle, actions }} />
   );
-}
-
-/** The window's size, so the packs on the reward screen can be as big as fits. */
-function useViewport() {
-  const [v, setV] = useState(() => ({ w: window.innerWidth, h: window.innerHeight }));
-  useEffect(() => {
-    const on = () => setV({ w: window.innerWidth, h: window.innerHeight });
-    window.addEventListener('resize', on);
-    return () => window.removeEventListener('resize', on);
-  }, []);
-  return v;
 }
 
 /** The ending: the five packs (or a note that they were taken already). */

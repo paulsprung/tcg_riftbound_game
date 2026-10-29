@@ -1,3 +1,4 @@
+import { viewport } from '../../lobby/scale.ts';
 import { useEffect } from 'react';
 import { HoloCard } from '../../card/HoloCard.tsx';
 import { RulesText } from '../../card/RulesText.tsx';
@@ -27,7 +28,7 @@ export function CardZoom({ slot, where, cards, db, onClose }: {
   const text = textOf(slot.def);
   const landscape = card.orientation === 'landscape';
   const coarse = matchMedia('(pointer: coarse)').matches;
-  const width = Math.round(Math.min(window.innerWidth * 0.8, landscape ? 460 : 320));
+  const width = Math.round(Math.min(viewport().w * 0.8, landscape ? 460 : 320));
 
   return (
     <div className="inspector zoom" role="dialog" aria-modal="true" aria-label={nameOf(cards, slot.def)} onClick={onClose}>

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { DEMO, DEMO_PROFILE, type Friend, type Presence } from './demo.ts';
 import { Icon } from './icons.tsx';
+import { viewport } from './scale.ts';
 import { social, useSocial } from './social.ts';
 
 const ORDER: Presence[] = ['online', 'away', 'offline'];
@@ -24,7 +25,8 @@ function Menu({ friend, x, y, onClose }: { friend: Friend; x: number; y: number;
 
   useEffect(() => {
     const r = ref.current?.getBoundingClientRect();
-    if (r) setPos({ x: Math.min(x, window.innerWidth - r.width - 8), y: Math.min(y, window.innerHeight - r.height - 8) });
+    const { s, w, h } = viewport();
+    if (r) setPos({ x: Math.min(x / s, w - r.width / s - 8), y: Math.min(y / s, h - r.height / s - 8) });
     const off = (e: Event) => { if (!(e.target instanceof Node) || !ref.current?.contains(e.target)) onClose(); };
     const key = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('pointerdown', off, true);

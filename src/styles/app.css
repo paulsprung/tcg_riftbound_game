@@ -47,18 +47,18 @@ a { color: var(--accent); }
 ::-webkit-scrollbar-thumb { background: var(--gold-lo); border-radius: 2px; }
 ::-webkit-scrollbar-track { background: transparent; }
 h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing: .02em; line-height: 1.15; text-transform: uppercase; text-wrap: balance; }
-h1 { font-size: clamp(24px, 4vw, 34px); margin: 0 0 6px; }
+h1 { font-size: clamp(24px, calc(4 * var(--vw)), 34px); margin: 0 0 6px; }
 code { background: var(--panel); padding: 1px 6px; border-radius: 5px; }
 .muted { color: var(--muted); }
 .small { font-size: 13px; }
 
-.app { min-height: 100vh; display: flex; flex-direction: column; }
+.app { min-height: calc(100 * var(--vh)); display: flex; flex-direction: column; }
 .main { flex: 1; width: 100%; }
 /* A window-sized app: the page itself never scrolls, only lists inside it do.
    On phones and very short windows it falls back to a normal scrolling page. */
 @media (min-width: 901px) and (min-height: 561px) {
   html, body { height: 100%; overflow: hidden; }
-  .app { height: 100dvh; min-height: 0; overflow: hidden; }
+  .app { height: calc(100 * var(--vh)); min-height: 0; overflow: hidden; }
   .app > .main { min-height: 0; overflow: hidden; display: flex; }
 }
 /* Paints the band above the sticky header on phones with a notch. */

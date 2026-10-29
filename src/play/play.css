@@ -7,7 +7,7 @@
 
 .play { display: grid; gap: 14px; }
 .play__head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 10px 20px; }
-.play__head h1 { margin: 0; font-size: clamp(20px, 3vw, 28px); }
+.play__head h1 { margin: 0; font-size: clamp(20px, calc(3 * var(--vw)), 28px); }
 .play__head p { margin: 2px 0 0; }
 .play__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
 .play__error {
@@ -179,7 +179,7 @@ ul.play__error { padding-left: 30px; }
   box-shadow: 0 30px 80px rgba(0, 0, 0, .5);
 }
 .sheet__panel p { margin: 0; max-width: 620px; }
-.sheet__title { margin: 0; font-size: clamp(20px, 3vw, 26px); }
+.sheet__title { margin: 0; font-size: clamp(20px, calc(3 * var(--vw)), 26px); }
 .sheet__bfs { display: flex; flex-wrap: wrap; justify-content: center; gap: 18px; }
 .sheet__bf { margin: 0; display: grid; justify-items: center; gap: 6px; }
 .sheet__hand { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; padding-top: 30px; }
@@ -345,7 +345,7 @@ ul.play__error { padding-left: 30px; }
   background: radial-gradient(800px 500px at 50% 40%, #241d3d, #07050d);
 }
 .handoff__panel { display: grid; gap: 12px; justify-items: center; text-align: center; max-width: 460px; }
-.handoff__panel h2 { margin: 0; font-size: clamp(22px, 5vw, 32px); }
+.handoff__panel h2 { margin: 0; font-size: clamp(22px, calc(5 * var(--vw)), 32px); }
 .handoff__panel p { margin: 0; }
 .report { text-align: left; justify-items: stretch; }
 .report__text, .report__json, .devpanel textarea {
@@ -366,7 +366,7 @@ ul.play__error { padding-left: 30px; }
 
 /* ---- DEV panel ---- */
 .devpanel {
-  position: fixed; right: 12px; bottom: 12px; z-index: 70; width: min(360px, calc(100vw - 24px)); max-height: 70vh; overflow: auto;
+  position: fixed; right: 12px; bottom: 12px; z-index: 70; width: min(360px, calc(calc(100 * var(--vw)) - 24px)); max-height: calc(70 * var(--vh)); overflow: auto;
   display: grid; gap: 8px; padding: 10px 12px; border-radius: 12px; background: rgba(10, 8, 18, .96); border: 1px solid var(--line);
   font-size: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, .5);
 }

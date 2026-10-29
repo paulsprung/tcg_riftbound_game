@@ -1,5 +1,6 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import { collection } from '../collection/store.ts';
+import { viewport } from '../lobby/scale.ts';
 import { defaultFinish } from '../data/cardInfo.ts';
 import type { Card } from '../data/types.ts';
 import { GradeReport } from './GradeReport.tsx';
@@ -56,8 +57,9 @@ export function GradingRun({ card, slab, onClose, onAnother }: {
     return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = overflow; };
   }, [onClose]);
 
-  const vw = Math.min(window.innerWidth, 1100);
-  const vh = window.innerHeight;
+  const virt = viewport();
+  const vw = Math.min(virt.w, 1100);
+  const vh = virt.h;
   const slabW = Math.round(Math.min(vw * 0.8, 340, vh * 0.7 * (3.25 / 5.375)));
   const sealed = phase === 'seal' || phase === 'done';
   // borders as printed: their share of a 6% margin, for the centering guides

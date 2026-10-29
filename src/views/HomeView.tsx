@@ -83,7 +83,7 @@ export function HomeView({ db }: { db: CardDb }) {
         ) : (
           <div className="hero__buttons">
             <a className="btn btn--cta" href="#play">Play</a>
-            <a className="btn btn--primary" href="#shop">{unopened > 0 ? `Open packs (${unopened})` : 'Shop'}</a>
+            <a className="btn btn--primary" href={unopened > 0 ? '#collection/packs' : '#shop'}>{unopened > 0 ? `Open packs (${unopened})` : 'Shop'}</a>
             <a className="btn btn--ghost" href="#collection">Collection</a>
           </div>
         )}

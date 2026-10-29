@@ -4,6 +4,7 @@ import { collection, PACK_PRICE, useCollection } from '../collection/store.ts';
 import { packArt } from '../data/media.ts';
 import type { CardDb } from '../data/types.ts';
 import { Lobby, SideLink, SideTitle } from '../lobby/Lobby.tsx';
+import { useViewport } from '../lobby/scale.ts';
 import { PackOpening } from '../pack/PackOpening.tsx';
 import { heroCard, PackWrapper } from '../pack/PackWrapper.tsx';
 import { useBoosters } from './boosters.ts';
@@ -12,17 +13,6 @@ import { useBoosters } from './boosters.ts';
 // marketplace, #shop/rad the pack being opened, so the browser's and the
 // phone's back gesture return to the shelf.
 const subFromHash = () => /^#\/?shop\/([a-z0-9]+)/.exec(location.hash)?.[1] ?? null;
-
-/** The window's size, so the packs can be as big as fits without a scroll bar. */
-function useViewport() {
-  const [v, setV] = useState(() => ({ w: window.innerWidth, h: window.innerHeight }));
-  useEffect(() => {
-    const on = () => setV({ w: window.innerWidth, h: window.innerHeight });
-    window.addEventListener('resize', on);
-    return () => window.removeEventListener('resize', on);
-  }, []);
-  return v;
-}
 
 const Coin = () => <span className="lb-coin" aria-hidden />;
 

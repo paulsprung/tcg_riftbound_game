@@ -1,3 +1,4 @@
+import { viewport } from '../lobby/scale.ts';
 import { useEffect, useState } from 'react';
 import { useCollection } from '../collection/store.ts';
 import { cap, defaultFinish, hasFoilToggle, RARITY_COLOR, symbolFor, VARIANT_LABEL } from '../data/cardInfo.ts';
@@ -42,8 +43,9 @@ export function Inspector({ target, db, onClose }: { target: InspectTarget; db: 
 
   const upright = card.orientation === 'landscape';
   // Fit the card to the viewport either way round.
-  const vw = Math.min(window.innerWidth, 1200);
-  const vh = window.innerHeight;
+  const virt = viewport();
+  const vw = Math.min(virt.w, 1200);
+  const vh = virt.h;
   const portraitW = Math.min(vw * 0.86, 420, (vh * 0.68) * (744 / 1039));
   const landscapeW = Math.min(vw * 0.9, 600, (vh * 0.6) * (1039 / 744));
   const width = Math.round(upright ? landscapeW : portraitW);
