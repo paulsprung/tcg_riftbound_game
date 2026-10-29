@@ -172,7 +172,8 @@ export function limitedIssues(d: DeckList, pool: string[], format: LimitedFormat
   for (const [def, n] of fields) {
     const c = findCard(def);
     if (!c || !isType(c, 'battlefield')) add('103.5', `${c?.name ?? def} is not a battlefield.`);
-    else if (n > (have.get(def) ?? 0)) add('602.3.d', `${c.name} is not in your pool${n > 1 ? ` ${n} times` : ''}.`);
+    else if (n > 1) add('103.5.c', `${c.name} twice: battlefields need different names (blanks may repeat).`);
+    else if ((have.get(def) ?? 0) < 1) add('602.3.d', `${c.name} is not in your pool.`);
   }
   return out;
 }
@@ -212,7 +213,8 @@ export function autoBuild(pool: string[], format: LimitedFormat, cards: Map<stri
   }
   const legends = [...have.keys()].map((d) => findCard(d)).filter((c): c is OracleCard => !!c && isType(c, 'legend') && c.domains.every((x) => domains.includes(x)));
   const champion = deck.map((e) => findCard(e.def)).find((c) => c && isChampionUnit(c));
-  const fields = [...have.entries()].flatMap(([def, n]) => (findCard(def) && isType(findCard(def)!, 'battlefield') ? Array<DefId>(n).fill(def) : []));
+  // battlefields of different names (103.5.c), blanks for the rest
+  const fields = [...have.keys()].filter((def) => { const c = findCard(def); return c && isType(c, 'battlefield'); });
   const battlefields = [...fields.slice(0, BATTLEFIELDS)];
   while (battlefields.length < BATTLEFIELDS) battlefields.push(BLANK_BATTLEFIELD);
   // each card shows as the printing the pool holds

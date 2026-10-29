@@ -114,7 +114,9 @@ function deckIssues(s: GameState, d: DeckList, p: PlayerId, chosen: DefId, limit
   if (d.battlefields.length < s.mode.battlefieldsPerPlayer) {
     out.push(`${at}: ${d.battlefields.length} battlefields, ${s.mode.battlefieldsPerPlayer} needed [487.4.a]`);
   }
-  if (new Set(d.battlefields).size !== d.battlefields.length) out.push(`${at}: two battlefields share a name [103.5.c]`);
+  // Limited's blank battlefield may come more than once (TR 602.3.d)
+  const named = d.battlefields.filter((b) => !(limited && b === 'blank-battlefield'));
+  if (new Set(named).size !== named.length) out.push(`${at}: two battlefields share a name [103.5.c]`);
   return out;
 }
 

@@ -162,8 +162,10 @@ export function DeckSlot({ label, b, cards, db, owned, onOpen }: {
   );
 }
 
-export function DeckSetup({ cards, db, initial, error, onStart, saved, onResume, onDiscard, owned }: {
+export function DeckSetup({ cards, db, initial, error, onStart, saved, onResume, onDiscard, owned, onLimited }: {
   cards: CardIndex; db: CardDb; initial: DeckSetupChoice; error: string | null; onStart: (c: DeckSetupChoice) => void;
+  /** Sealed or Draft instead of your own deck. */
+  onLimited?: (format: 'sealed' | 'draft') => void;
   saved?: SavedGame | null; onResume?: (g: SavedGame) => void; onDiscard?: () => void;
   /** The starter deck the player owns (collection), if any. */
   owned?: string | null;
@@ -200,6 +202,13 @@ export function DeckSetup({ cards, db, initial, error, onStart, saved, onResume,
       <header className="ds__bar">
         <h1>Custom game</h1>
         <span className="ds__bar-right">
+          {onLimited && (
+            <div className="seg seg--format" role="group" aria-label="Deck">
+              <button type="button" aria-pressed="true">Constructed</button>
+              <button type="button" aria-pressed="false" onClick={() => onLimited('sealed')}>Sealed</button>
+              <button type="button" aria-pressed="false" onClick={() => onLimited('draft')}>Draft</button>
+            </div>
+          )}
           <FormatSwitch />
           <button type="button" className="btn btn--small" onClick={() => setSettings(true)}><Icon name="sliders" size={14} /> Settings</button>
         </span>

@@ -12,6 +12,8 @@ import { getSettings, PACE_FACTOR, setSettings, usePlaySettings, type OpponentCh
 import { choiceFor, DeckSetup, type DeckSetupChoice } from './setup/DeckSetup.tsx';
 import { TutorialView } from './tutorial/TutorialView.tsx';
 import { useCollection } from '../collection/store.ts';
+import { LimitedFlow } from '../limited/LimitedFlow.tsx';
+import type { DeckList } from '../game/index.ts';
 import './play.css';
 
 /*
@@ -69,6 +71,7 @@ export function PlayView({ db, tutorial = false, onInGame }: { db: CardDb; tutor
   const [game, setGame] = useState<{ host: GameHost; n: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<SavedGame | null>(() => store.load());
+  const [limited, setLimited] = useState<'sealed' | 'draft' | null>(null);
   const ai = useRef<AiClient | null>(null);
   useEffect(() => { onInGame?.(game !== null); }, [game, onInGame]);
 
@@ -102,6 +105,17 @@ export function PlayView({ db, tutorial = false, onInGame }: { db: CardDb; tutor
     }
   };
 
+  // a Limited game: decks built from pools, the computer (or a second player) on its own
+  const startLimited = (format: 'sealed' | 'draft', mine: DeckList, theirs: DeckList) => {
+    try {
+      const setup = { ...gameSetup({ human: 0, mine, theirs, champion: mine.chosenChampion, order: choice.order, seed: newSeed() }, cards), limited: format };
+      const seats = seatsFor(choice.opponent);
+      show(new GameHost({ ...options(seats), setup, started: new Date().toISOString() }));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
   const resume = (g: SavedGame) => {
     try {
       show(GameHost.fromRecord(g.record, options(g.seats)));
@@ -122,10 +136,13 @@ export function PlayView({ db, tutorial = false, onInGame }: { db: CardDb; tutor
 
   if (tutorial) return <TutorialView db={db} cards={cards} starter={own.starter} onExit={() => { location.hash = 'play'; }} />;
 
+  if (!game && limited) {
+    return <LimitedFlow key={limited} db={db} format={limited} error={error} onBack={() => setLimited(null)} onPlay={(mine, theirs) => startLimited(limited, mine, theirs)} />;
+  }
   if (!game) {
     return (
       <>
-        <DeckSetup cards={cards} db={db} initial={choice} error={error} onStart={start} owned={own.starter}
+        <DeckSetup cards={cards} db={db} initial={choice} error={error} onStart={start} owned={own.starter} onLimited={setLimited}
         saved={saved && resumable(saved) ? saved : null} onResume={resume}
         onDiscard={() => { store.clear(); setSaved(null); }} />
       </>

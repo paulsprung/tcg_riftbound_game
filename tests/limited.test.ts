@@ -17,6 +17,8 @@ describe('Limited (TR 602)', () => {
       const deck = autoBuild(pool, 'sealed', cards);
       expect(limitedIssues(deck, pool, 'sealed'), setId).toEqual([]);
       expect(deck.main.reduce((t, e) => t + e.n, 0)).toBeGreaterThanOrEqual(MIN_DECK.sealed);
+      // and the engine takes it
+      expect(() => createGame({ seed: 1, decks: [deck, deck], limited: 'sealed' })).not.toThrow();
     }
   });
 

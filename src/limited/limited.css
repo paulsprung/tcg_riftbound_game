@@ -1,0 +1,39 @@
+/* Limited play (LimitedFlow.tsx): the set, the pool, the draft, the deck. */
+.lm { display: flex; flex-direction: column; min-height: 0; }
+.lm-sub { margin: 10px 0 8px; font: 700 12px/1 var(--font-ui); letter-spacing: .16em; text-transform: uppercase; color: var(--gold); }
+.lm-sets { display: grid; gap: 18px; justify-items: center; padding-top: 16px; }
+.lm-sets__row { display: flex; flex-wrap: wrap; gap: 18px; justify-content: center; }
+.lm-set { display: grid; justify-items: center; gap: 10px; padding: 14px 12px; background: none; border: 1px solid transparent; cursor: pointer; color: var(--muted);
+  transition: transform .2s, border-color .2s, background .2s; }
+.lm-set strong { font: 700 13px/1 var(--font-ui); letter-spacing: .12em; text-transform: uppercase; }
+.lm-set:hover { transform: translateY(-4px); }
+.lm-set.is-on { border-color: var(--gold); background: radial-gradient(ellipse at 50% 80%, rgba(10, 200, 185, .18), transparent 70%); color: var(--gold-hi); }
+.lm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; overflow-y: auto; padding: 4px 2px 10px; min-height: 0; }
+.lm-pool, .lm-draft { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.lm-pool .lm-grid, .lm-draft .lm-grid { flex: 1; }
+.lm-draft .lm-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.lm-card { position: relative; padding: 0; border: 0; background: none; cursor: pointer; transition: transform .15s; }
+.lm-card:hover { transform: translateY(-3px); }
+.lm-card.is-dim { opacity: .38; }
+.lm-card__badge { position: absolute; right: 4px; top: 4px; padding: 2px 6px; font: 700 11px/1.3 var(--font-ui); color: #0a1428; background: var(--gold-hi); border-radius: 2px; }
+.lm-strip { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; }
+.lm-strip .lm-card { flex: none; width: 64px; cursor: default; }
+.lm-reveal { animation: lm-in .4s calc(var(--i) * 18ms) cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes lm-in { from { opacity: 0; transform: translateY(14px) scale(.92); } }
+.lm-build { display: grid; grid-template-columns: 1fr 300px; gap: 16px; min-height: 0; flex: 1; }
+.lm-build__pool { display: flex; flex-direction: column; min-height: 0; }
+.lm-domains { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 8px 0; }
+.lm-domains button[aria-pressed] { padding: 7px 12px; border: 1px solid color-mix(in srgb, var(--dc) 60%, transparent); background: rgba(255, 255, 255, .03); color: var(--muted);
+  font: 700 11px/1 var(--font-ui); letter-spacing: .12em; text-transform: uppercase; cursor: pointer; }
+.lm-domains button[aria-pressed="true"] { background: color-mix(in srgb, var(--dc) 30%, transparent); color: #fff; box-shadow: 0 0 12px color-mix(in srgb, var(--dc) 50%, transparent); }
+.lm-build__deck { display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow-y: auto; padding: 10px 12px; border: 1px solid var(--gold-dim); background: rgba(2, 10, 20, .6); }
+.lm-build__deck label { display: grid; gap: 3px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.lm-build__deck select { background: #0b1522; color: var(--text, #e8e2d0); border: 1px solid var(--gold-dim); padding: 6px; font-size: 13px; text-transform: none; letter-spacing: 0; }
+.lm-runes { margin: 2px 0; font-size: 12px; color: var(--muted); }
+.lm-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; align-content: start; flex: 1; min-height: 60px; overflow-y: auto; }
+.lm-list button { width: 100%; display: flex; gap: 8px; align-items: baseline; padding: 4px 6px; background: rgba(255, 255, 255, .03); border: 0; color: var(--text, #e8e2d0); text-align: left; cursor: pointer; font-size: 13px; }
+.lm-list button:hover { background: rgba(224, 71, 95, .15); }
+.lm-list span { color: var(--gold); font-weight: 700; min-width: 22px; }
+.lm-list em { margin-left: auto; font-style: normal; color: var(--muted); }
+.lm-issues { margin: 0; padding-left: 16px; color: #f2a7b0; font-size: 12px; display: grid; gap: 2px; }
+@media (max-width: 900px) { .lm-build { grid-template-columns: 1fr; } }
