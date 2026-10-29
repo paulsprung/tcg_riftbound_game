@@ -22,5 +22,5 @@ Die Tournament Rules legen keine Match-Punkte fest. Wir nehmen das Übliche: 3 f
   - Bei Zeitablauf beendet der Spieler am Zug seinen Zug, dann folgen 3 weitere Züge.
   - Wer danach 2 oder mehr Punkte vorne liegt, gewinnt das Spiel.
   - Steht man zwischen zwei Spielen, wird kein neues Spiel mehr begonnen.
-  - Online gibt es bisher nur die Bedenkzeit pro Entscheidung.
+  - Online gibt es bisher nur die Schachuhr pro Spieler: 30 Sekunden frei pro Entscheidung, danach läuft eine Zeitbank von 15 Minuten pro Spiel.
 - **Playoffs mit Zeitlimit** (TR 408.4): mit Sudden Death. Laut TR sollen Playoffs ohne Zeitlimit laufen, so ist es auch bei uns.

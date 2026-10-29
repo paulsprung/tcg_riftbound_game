@@ -8,9 +8,7 @@ export const DEMO = Boolean(import.meta.env.VITE_PREVIEW);
 
 export const DEMO_PROFILE = {
   name: 'Riftwalker',
-  rank: 'Diamond III',
   rp: 1847,
-  rpPct: 72,
   level: 47,
   joined: 'Season 1',
   matches: 1247,

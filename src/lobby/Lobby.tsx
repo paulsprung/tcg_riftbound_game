@@ -1,4 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { divisionProgress, rankName, tierOf } from '../economy/ranks.ts';
+import { RankEmblem } from './RankEmblem.tsx';
 import { HoloSwitches } from '../card/HoloSwitches.tsx';
 import { useCollection } from '../collection/store.ts';
 import { api } from '../net/api.ts';
@@ -115,31 +117,30 @@ export function RankCard() {
     return () => { alive = false; };
   }, [signedIn, ol.end]);
   if (DEMO && !signedIn) {
+    const t = tierOf(DEMO_PROFILE.rp);
     return (
       <div className="lb-rank">
-        <span className="lb-rank__badge" aria-hidden>◈</span>
-        <strong>{DEMO_PROFILE.rank}</strong>
-        <span className="muted small">{DEMO_PROFILE.rp.toLocaleString('en-US')} RP</span>
-        <div className="bar"><span style={{ width: `${DEMO_PROFILE.rpPct}%` }} /></div>
+        <RankEmblem tier={t.tier} size={58} />
+        <strong>{rankName(t.tier, t.division)}</strong>
+        <span className="muted small">{DEMO_PROFILE.rp.toLocaleString('en-US')} LP</span>
+        <div className="bar"><span style={{ width: `${Math.round(divisionProgress(DEMO_PROFILE.rp) * 100)}%` }} /></div>
       </div>
     );
   }
   if (!r) {
     return (
       <div className="lb-rank is-off">
-        <span className="lb-rank__badge" aria-hidden>◈</span>
+        <RankEmblem tier={null} size={58} />
         <strong>Unranked</strong>
         <span className="muted small">{signedIn ? 'Play ranked to get a rank' : 'Sign in to play ranked'}</span>
       </div>
     );
   }
-  const roman = r.division ? ` ${['I', 'II', 'III', 'IV'][r.division - 1]}` : '';
-  // within a division: 50 points from its floor
-  const pct = r.tier === 'Master' ? 100 : Math.round(((r.points % 50) / 50) * 100);
+  const pct = Math.round(divisionProgress(r.points) * 100);
   return (
     <div className={`lb-rank${r.placement ? ' is-off' : ''}`}>
-      <span className="lb-rank__badge" aria-hidden>◈</span>
-      <strong>{r.placement ? 'Placement' : `${r.tier}${roman}`}</strong>
+      <RankEmblem tier={r.placement ? null : r.tier} size={58} />
+      <strong>{r.placement ? 'Placement' : rankName(r.tier, r.division)}</strong>
       <span className="muted small">{r.placement ? `${r.games} of 5 games` : `${r.points.toLocaleString('en-US')} LP`} · {r.wins}W {r.games - r.wins}L</span>
       {!r.placement && <div className="bar"><span style={{ width: `${pct}%` }} /></div>}
     </div>

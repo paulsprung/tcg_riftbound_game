@@ -1,5 +1,5 @@
 import { randomInt, randomUUID } from 'node:crypto';
-import { LOSS_COINS, MATCH_COINS_PER_DAY, MIN_REWARD_TURNS, WIN_COINS } from '../../src/economy/rules.ts';
+import { FIRST_WIN_COINS, LOSS_COINS, MATCH_COINS_PER_DAY, MIN_REWARD_TURNS, WIN_COINS } from '../../src/economy/rules.ts';
 import { missingCards, ownedDefs, ownPrintings } from '../../src/decks/ownership.ts';
 import { STARTERS, validateDeck, type DeckList, type GameRecord, type PlayerId, type PlayerView } from '../../src/game/index.ts';
 import type { Db } from '../db.ts';
@@ -13,22 +13,27 @@ import type { EnginePool } from './pool.ts';
  * Online play: the queues, matchmaking, the games in progress and their end.
  *
  * A game lives in an engine thread (pool.ts); this side only routes. Each
- * player gets their own view after every change, never the other's. A
- * decision has a time limit: when it runs out the server answers for the
- * player (pass, done, no, or the first option) and counts a strike; the
- * third strike concedes. A player whose last connection drops has a minute
- * to come back. A pass-only priority is passed for the player at once.
+ * player gets their own view after every change, never the other's. Each
+ * player has a chess clock: every decision gets a free grace time, and what
+ * it takes beyond that comes off the player's time bank for the game. When
+ * both are used up the server answers for the player (pass, done, no, or
+ * the first option) and counts a strike; the third strike concedes. A
+ * player whose last connection drops has three minutes to come back. A
+ * pass-only priority is passed for the player at once.
  *
  * The record so far (setup and every answer) is written to live_games every
  * few seconds, so a restart replays the games and carries on. At the end the
  * match goes to `matches` with its record, ratings move (Glicko-2, per
- * mode) and both players get coins, up to a daily limit.
+ * mode) and both players get coins, up to a daily limit, and the day's
+ * first win a bonus on top.
  */
 
 const MODES: QueueMode[] = ['ranked', 'casual'];
 
-export const DECISION_MS = 90_000;
-export const RECONNECT_MS = 60_000;
+/** Free time for every decision; then the player's time bank runs. */
+export const GRACE_MS = 30_000;
+export const BANK_MS = 15 * 60_000;
+export const RECONNECT_MS = 180_000;
 const STRIKES = 3;
 const AUTO_PASS_MS = 300;
 const FLUSH_MS = 3_000;
@@ -57,6 +62,8 @@ interface Live {
   id: string; mode: Mode; players: [string, string]; names: [string, string]; decks: [DeckList, DeckList];
   started: number; answers: Answer[]; setup: GameRecord['setup'];
   pending: Update['pending']; deadline: number | null; lastView: [PlayerView, PlayerView] | null;
+  /** Each player's time bank left, and when the decision on the clock was asked (and of whom). */
+  bank: [number, number]; asked: { seat: PlayerId; at: number } | null;
   strikes: [number, number]; timer: ReturnType<typeof setTimeout> | null; away: [ReturnType<typeof setTimeout> | null, ReturnType<typeof setTimeout> | null];
   dirty: boolean; over: boolean; turn: number; busy: Promise<void>;
   /** The engine and card set the game runs on: a record replays only on the same. */
@@ -106,11 +113,11 @@ export class Online {
   private readonly ticker: ReturnType<typeof setInterval>;
   private readonly flusher: ReturnType<typeof setInterval>;
 
-  private readonly t: { decision: number; reconnect: number; autoPass: number };
+  private readonly t: { grace: number; bank: number; reconnect: number; autoPass: number };
 
   constructor(private readonly db: Db, private readonly pool: EnginePool, private readonly net: Transport,
-    private readonly clock: { now(): number } = Date, times: Partial<{ decision: number; reconnect: number; autoPass: number }> = {}) {
-    this.t = { decision: DECISION_MS, reconnect: RECONNECT_MS, autoPass: AUTO_PASS_MS, ...times };
+    private readonly clock: { now(): number } = Date, times: Partial<{ grace: number; bank: number; reconnect: number; autoPass: number }> = {}) {
+    this.t = { grace: GRACE_MS, bank: BANK_MS, reconnect: RECONNECT_MS, autoPass: AUTO_PASS_MS, ...times };
     this.ticker = setInterval(() => { void this.matchmake(); }, 1000);
     this.flusher = setInterval(() => { void this.flush(); }, FLUSH_MS);
     this.ticker.unref?.(); this.flusher.unref?.();
@@ -158,7 +165,7 @@ export class Online {
     await this.sendStart(g, seat, true);
   }
 
-  /** Their last socket closed: out of the queue; in a game, a minute to come back. */
+  /** Their last socket closed: out of the queue; in a game, three minutes to come back. */
   disconnected(userId: string) {
     for (const q of this.queues.values()) { const i = q.findIndex((x) => x.userId === userId); if (i >= 0) q.splice(i, 1); }
     this.changed(userId);
@@ -305,7 +312,8 @@ export class Online {
       ...(firstPlayer !== null ? { firstPlayer } : {}) };
     const g: Live = {
       id, mode, players: [p0.userId, p1.userId], names: [p0.name, p1.name], decks: setup.decks, started: this.clock.now(),
-      answers: [], setup, pending: null, deadline: null, lastView: null, strikes: [0, 0], timer: null, away: [null, null],
+      answers: [], setup, pending: null, deadline: null, lastView: null, bank: [this.t.bank, this.t.bank], asked: null,
+      strikes: [0, 0], timer: null, away: [null, null],
       dirty: true, over: false, turn: 0, busy: Promise.resolve(), head: { engine: '', defsHash: '' }, meta,
       first: null, noShow: null, showed: [false, false],
     };
@@ -338,10 +346,12 @@ export class Online {
     this.net.send(g.players[seat], { t: 'update', gameId: g.id, view: cur.seats[seat].view, events, full, ...this.deadlines(g, seat) });
   }
 
+  /** The clock as one seat sees it: when the decision times out, when its grace ends, both banks. */
   private deadlines(g: Live, seat: PlayerId) {
     const mine = g.pending && g.pending.player === seat && !g.pending.passOnly ? g.deadline : null;
     const theirs = g.pending && g.pending.player !== seat && !g.pending.passOnly ? g.deadline : null;
-    return { deadline: mine, theirDeadline: theirs };
+    const grace = g.asked ? g.asked.at + this.t.grace : null;
+    return { deadline: mine, theirDeadline: theirs, clock: { grace, banks: [g.bank[seat], g.bank[1 - seat]] as [number, number] } };
   }
 
   /** One change at a time per game: answers that arrive together queue up. */
@@ -377,7 +387,16 @@ export class Online {
     g.first = u.first;
     g.lastView = [u.seats[0].view, u.seats[1].view];
     this.clearTimers(g, false);
-    g.deadline = u.pending && !u.pending.passOnly ? this.clock.now() + this.t.decision : null;
+    // the decision that was on the clock: what it took past its grace comes off the bank
+    const now = this.clock.now();
+    if (g.asked) {
+      const { seat, at } = g.asked;
+      g.bank[seat] = Math.max(0, g.bank[seat] - Math.max(0, now - at - this.t.grace));
+      g.asked = null;
+    }
+    const timed = u.pending && !u.pending.passOnly ? u.pending.player : null;
+    if (timed !== null) g.asked = { seat: timed, at: now };
+    g.deadline = timed !== null ? now + this.t.grace + g.bank[timed] : null;
     for (const seat of [0, 1] as const) {
       this.net.send(g.players[seat], { t: 'update', gameId: g.id, view: u.seats[seat].view, events: u.seats[seat].events, full, ...this.deadlines(g, seat) });
     }
@@ -387,7 +406,7 @@ export class Online {
     if (p.passOnly) {
       g.timer = setTimeout(() => { void this.answer(g, p.player, ['pass'], true).catch(() => undefined); }, this.t.autoPass);
     } else {
-      g.timer = setTimeout(() => { void this.timeout(g, p.player, p.id); }, this.t.decision);
+      g.timer = setTimeout(() => { void this.timeout(g, p.player, p.id); }, g.deadline! - now);
     }
     g.timer.unref?.();
   }
@@ -406,7 +425,7 @@ export class Online {
   }
 
   private liveData(g: Live) {
-    return JSON.stringify({ ...g.head, setup: g.setup, answers: g.answers, names: g.names, started: g.started, strikes: g.strikes, meta: g.meta });
+    return JSON.stringify({ ...g.head, setup: g.setup, answers: g.answers, names: g.names, started: g.started, strikes: g.strikes, bank: g.bank, meta: g.meta });
   }
 
   /** The records so far into live_games, for the games that changed. */
@@ -418,14 +437,15 @@ export class Online {
     }
   }
 
-  /** After a restart: every game in live_games replayed and going again; clocks start fresh. */
+  /** After a restart: every game in live_games replayed and going again; the decision on the clock starts again, the banks as saved. */
   async recover() {
     const r = await this.db.query('SELECT id, mode, players, data FROM live_games');
     for (const row of r.rows) {
-      const d = row.data as { engine: string; defsHash: string; setup: GameRecord['setup']; answers: Answer[]; names: [string, string]; started: number; strikes?: [number, number]; meta?: GameMeta | null };
+      const d = row.data as { engine: string; defsHash: string; setup: GameRecord['setup']; answers: Answer[]; names: [string, string]; started: number; strikes?: [number, number]; bank?: [number, number]; meta?: GameMeta | null };
       const g: Live = {
         id: row.id, mode: row.mode, players: row.players, names: d.names, decks: d.setup.decks as [DeckList, DeckList], started: d.started,
-        answers: d.answers.slice(), setup: d.setup, pending: null, deadline: null, lastView: null, strikes: d.strikes ?? [0, 0], timer: null,
+        answers: d.answers.slice(), setup: d.setup, pending: null, deadline: null, lastView: null,
+        bank: d.bank ?? [this.t.bank, this.t.bank], asked: null, strikes: d.strikes ?? [0, 0], timer: null,
         away: [null, null], dirty: false, over: false, turn: 0, busy: Promise.resolve(), head: { engine: d.engine, defsHash: d.defsHash },
         meta: d.meta ?? null, first: null, noShow: null, showed: [true, true],
       };
@@ -437,7 +457,7 @@ export class Online {
         } as GameRecord);
         this.games.set(g.id, g);
         for (const p of g.players) this.byUser.set(p, g.id);
-        // the restart is nobody's fault: whoever is not back within the minute concedes
+        // the restart is nobody's fault: whoever is not back in time concedes
         for (const seat of [0, 1] as const) if (!this.net.online(g.players[seat])) this.disconnected(g.players[seat]);
         await this.after(g, { ...u, answers: [] }, true);
       } catch (err) {
@@ -599,7 +619,7 @@ export class Online {
     const record = await this.pool.engine.record(g.id, u.conceded);
     const rewarded = res.turn >= MIN_REWARD_TURNS;
     const c = await this.db.connect();
-    const outcome: { coins: [number, number]; rating: [{ before: RatingInfo; after: RatingInfo } | null, { before: RatingInfo; after: RatingInfo } | null] } = { coins: [0, 0], rating: [null, null] };
+    const outcome: { coins: [number, number]; bonus: [number, number]; rating: [{ before: RatingInfo; after: RatingInfo } | null, { before: RatingInfo; after: RatingInfo } | null] } = { coins: [0, 0], bonus: [0, 0], rating: [null, null] };
     try {
       await c.query('BEGIN');
       // both accounts first, then the ratings, each in one fixed order (as every transfer does):
@@ -634,6 +654,16 @@ export class Online {
             await c.query('INSERT INTO ledger (user_id, coins, reason) VALUES ($1, $2, $3)', [g.players[s], coins, `match ${score === 1 ? 'win' : 'played'} ${g.id}`]);
           }
           outcome.coins[s] = coins;
+          // the first win of the day pays extra
+          if (score === 1) {
+            const won = (await c.query(`SELECT 1 FROM ledger WHERE user_id = $1 AND reason LIKE 'first win %'
+              AND created_at > now() - interval '1 day' LIMIT 1`, [g.players[s]])).rowCount;
+            if (!won) {
+              await c.query('UPDATE accounts SET coins = coins + $2 WHERE user_id = $1', [g.players[s], FIRST_WIN_COINS]);
+              await c.query('INSERT INTO ledger (user_id, coins, reason) VALUES ($1, $2, $3)', [g.players[s], FIRST_WIN_COINS, `first win ${g.id}`]);
+              outcome.bonus[s] = FIRST_WIN_COINS;
+            }
+          }
         }
       }
       await c.query(`INSERT INTO matches (id, mode, players, winner, reason, turns, started_at, record, outcome)
@@ -648,7 +678,7 @@ export class Online {
       c.release();
     }
     for (const s of [0, 1] as const) {
-      this.net.send(g.players[s], { t: 'end', gameId: g.id, winner: res.winner, reason: res.reason, coins: outcome.coins[s], rating: outcome.rating[s] });
+      this.net.send(g.players[s], { t: 'end', gameId: g.id, winner: res.winner, reason: res.reason, coins: outcome.coins[s], bonus: outcome.bonus[s], rating: outcome.rating[s] });
       if (this.byUser.get(g.players[s]) === g.id) this.byUser.delete(g.players[s]);
     }
     this.games.delete(g.id);

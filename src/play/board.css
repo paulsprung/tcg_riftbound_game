@@ -207,12 +207,74 @@ html:not([data-scaled]) .play__stage { min-height: 760px; overflow: visible; }
 .rail__preview .rail__hint { margin: 0; text-align: left; justify-self: start; }
 
 /* ---- online: the decision clock and what the game brought ---- */
-.rail__clock { margin: 0; padding: 4px 8px; text-align: center; font: 700 calc(var(--cu) * 1.3)/1.3 var(--font-ui); letter-spacing: .08em;
-  color: var(--teal); border: 1px solid rgba(10, 200, 185, .35); background: rgba(10, 200, 185, .06); }
+.rail__clock { display: grid; gap: 2px; margin: 0; padding: 4px 8px; text-align: center; font: 700 calc(var(--cu) * 1.3)/1.3 var(--font-ui); letter-spacing: .08em;
+  color: var(--muted); border: 1px solid var(--gold-dim); }
+.rail__clock.is-mine { color: var(--teal); border-color: rgba(10, 200, 185, .35); background: rgba(10, 200, 185, .06); }
+.rail__clock strong { font-weight: 700; }
+.rail__banks { display: flex; justify-content: space-between; gap: 8px; font: 600 calc(var(--cu) * 1.05)/1.2 var(--font-ui); letter-spacing: .04em; color: var(--muted); font-variant-numeric: tabular-nums; }
 .rail__clock.is-low { color: #ffb3bd; border-color: #e0475f; background: rgba(224, 71, 95, .12); animation: pulse 1s ease-in-out infinite alternate; }
 .rail__clock.is-theirs { color: var(--muted); border-color: var(--gold-dim); background: none; }
 @keyframes pulse { to { opacity: .6; } }
-.online-outcome { display: grid; gap: 6px; justify-items: center; margin: 4px 0 10px; }
 
-.online-outcome__rating, .online-outcome__coins { margin: 0; display: flex; align-items: center; gap: 6px; }
-.online-outcome .is-up { color: var(--teal); } .online-outcome .is-down { color: #f2a7b0; }
+/* ---- the end of a game: Victory or Defeat, both Legends, what it brought ---- */
+.gameover {
+  position: absolute; inset: 0 var(--rail-w) 0 0; z-index: 30; display: grid; place-items: center; padding: 20px;
+  background: radial-gradient(ellipse 70% 60% at 50% 45%, rgba(1, 8, 16, .5), rgba(1, 8, 16, .86));
+  backdrop-filter: blur(2px); animation: go-fade .4s ease-out;
+  --tone: var(--gold-hi); --tone-2: var(--gold); --glow: rgba(240, 200, 110, .45);
+}
+.gameover.is-loss { --tone: #f3b2bb; --tone-2: #b8475a; --glow: rgba(200, 70, 90, .35); }
+.gameover.is-draw, .gameover.is-neutral { --tone: #bff8f2; --tone-2: var(--teal); --glow: rgba(10, 200, 185, .35); }
+.gameover__panel {
+  position: relative; overflow: hidden; width: min(880px, 100%); max-height: 100%; overflow-y: auto;
+  display: grid; justify-items: center; gap: 10px; padding: 22px 28px 24px; text-align: center;
+  border: 1px solid var(--gold-dim); background: linear-gradient(180deg, rgba(9, 24, 44, .97), rgba(2, 10, 20, .98));
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .6), 0 30px 80px rgba(0, 0, 0, .6), 0 0 90px var(--glow);
+}
+.gameover__panel > * { position: relative; }
+.gameover__rays {
+  position: absolute !important; inset: -60%; pointer-events: none; opacity: .5;
+  background: repeating-conic-gradient(from 0deg at 50% 50%, var(--glow) 0deg 6deg, transparent 6deg 18deg);
+  mask-image: radial-gradient(circle at 50% 50%, #000 0, transparent 45%); animation: go-spin 40s linear infinite;
+}
+.gameover.is-loss .gameover__rays { opacity: .25; animation-duration: 90s; }
+.gameover__title {
+  margin: 0; font: 800 clamp(40px, 7vw, 76px)/1 var(--font-display); letter-spacing: .16em; text-transform: uppercase;
+  background: linear-gradient(180deg, #fff 0%, var(--tone) 45%, var(--tone-2) 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 0 18px var(--glow)); animation: go-title .7s cubic-bezier(.2, 1.4, .4, 1) both;
+}
+.gameover__detail { margin: 0; color: var(--muted); letter-spacing: .06em; }
+.gameover__duel { display: grid; grid-template-columns: minmax(0, 170px) auto minmax(0, 170px); align-items: center; gap: 22px; margin: 6px 0 4px; width: 100%; justify-content: center; }
+.gameover__legend { transition: transform .5s, filter .5s; filter: grayscale(.75) brightness(.5); transform: scale(.9); animation: go-rise .6s .15s ease-out both; }
+.gameover__legend.is-lit { filter: drop-shadow(0 0 22px var(--glow)); transform: none; }
+.gameover__score { display: flex; align-items: center; gap: 14px; }
+.gameover__score span { display: grid; justify-items: center; gap: 2px; min-width: 70px; }
+.gameover__score strong { font: 800 46px/1 var(--font-display); color: var(--gold-hi); font-variant-numeric: tabular-nums; }
+.gameover__score em { font-style: normal; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gameover__score i { font: 800 30px/1 var(--font-display); color: var(--gold-dim); font-style: normal; }
+.gameover__note { margin: 4px 0; }
+.gameover__buttons { justify-content: center; margin-top: 6px; }
+@keyframes go-fade { from { opacity: 0; } }
+@keyframes go-spin { to { transform: rotate(360deg); } }
+@keyframes go-title { from { opacity: 0; transform: scale(1.6); letter-spacing: .4em; } }
+@keyframes go-rise { from { opacity: 0; transform: translateY(18px) scale(.9); } }
+
+.go-outcome { display: flex; flex-wrap: wrap; justify-content: center; align-items: stretch; gap: 14px; margin: 4px 0; animation: go-rise .6s .35s ease-out both; }
+.go-rank, .go-coins { display: flex; align-items: center; gap: 14px; padding: 10px 18px; border: 1px solid var(--gold-dim); background: rgba(255, 255, 255, .03); text-align: left; }
+.go-rank > div { display: grid; gap: 6px; min-width: 200px; }
+.go-rank strong { font: 800 16px/1.1 var(--font-display); letter-spacing: .12em; text-transform: uppercase; color: var(--gold-hi); display: flex; align-items: center; gap: 8px; }
+.go-rank strong em { font: 700 10px/1 var(--font-ui); letter-spacing: .14em; padding: 3px 6px; color: #03141a; background: var(--teal); font-style: normal; }
+.go-rank.is-demoted strong em { background: #e07a8a; }
+.go-rank.is-promoted { border-color: var(--teal); box-shadow: 0 0 24px rgba(10, 200, 185, .3); }
+.go-rank__bar { height: 6px; background: rgba(255, 255, 255, .08); overflow: hidden; }
+.go-rank__bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-hi)); transition: width 1.2s cubic-bezier(.2, .8, .2, 1); }
+.go-rank__lp { display: flex; gap: 8px; font-variant-numeric: tabular-nums; color: var(--muted); }
+.go-rank__lp b.is-up { color: var(--teal); } .go-rank__lp b.is-down { color: #f2a7b0; }
+.go-rank__dots { display: flex; gap: 6px; }
+.go-rank__dots i { width: 12px; height: 12px; transform: rotate(45deg); border: 1px solid var(--gold-dim); }
+.go-rank__dots i.is-done { background: var(--gold); border-color: var(--gold-hi); box-shadow: 0 0 8px rgba(240, 200, 110, .5); }
+.go-coins { flex-direction: column; gap: 4px; justify-content: center; min-width: 150px; }
+.go-coins .lb-coin { width: 28px; height: 28px; }
+.go-coins strong { font: 800 30px/1 var(--font-display); color: var(--gold-hi); font-variant-numeric: tabular-nums; }
+.go-coins__bonus { font-style: normal; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--teal); }
+@media (prefers-reduced-motion: reduce) { .gameover, .gameover *, .gameover__rays { animation: none !important; transition: none !important; } }

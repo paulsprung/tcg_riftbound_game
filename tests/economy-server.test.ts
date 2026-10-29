@@ -8,7 +8,7 @@ import { connect, migrate, type Db } from '../server/db.ts';
 import { catalogFrom, economy } from '../server/economy.ts';
 import { handler } from '../server/http.ts';
 import type { CardDb } from '../src/data/types.ts';
-import { PACK_PRICE } from '../src/economy/rules.ts';
+import { DAILY_COINS, PACK_PRICE } from '../src/economy/rules.ts';
 
 /*
  * The server-side economy against a real Postgres (TEST_DATABASE_URL); skipped
@@ -67,7 +67,7 @@ describe.skipIf(!url)('server economy', () => {
 
   it('the daily coins once a day, the tutorial packs once', async () => {
     const d = await (await call('POST', '/api/account/daily', alice)).json();
-    expect(d.account.coins).toBe(50);
+    expect(d.account.coins).toBe(DAILY_COINS);
     expect((await call('POST', '/api/account/daily', alice)).status).toBe(400);
     const t1 = await (await call('POST', '/api/account/tutorial', alice)).json();
     const t2 = await (await call('POST', '/api/account/tutorial', alice)).json();
@@ -81,7 +81,7 @@ describe.skipIf(!url)('server economy', () => {
     const all = await Promise.all(Array.from({ length: 10 }, () => call('POST', '/api/account/buy', alice, { setId: 'rad', n: 1 })));
     expect(all.filter((r) => r.ok)).toHaveLength(3);
     const acc = (await (await call('GET', '/api/account', alice)).json()).account;
-    expect(acc.coins).toBe(50);
+    expect(acc.coins).toBe(DAILY_COINS);
     expect(acc.packs.rad).toBe(4);
     const spent = await db.query("SELECT sum(coins)::int AS s FROM ledger WHERE user_id = $1 AND reason = 'buy packs'", [aliceId]);
     expect(spent.rows[0].s).toBe(-PACK_PRICE * 3);

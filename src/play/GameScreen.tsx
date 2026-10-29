@@ -6,22 +6,23 @@ import type { CardDb } from '../data/types.ts';
 import { explainUnavailable, type GameRecord } from '../game/index.ts';
 import { DevPanel } from './dev/DevPanel.tsx';
 import type { TableHost } from './host/GameHost.ts';
+import type { OnlineClock } from './host/RemoteHost.ts';
 import { useHost } from './host/useHost.ts';
 import { isAssign, rowOf, suggestKey } from './model/assign.ts';
 import { boardOf, type CardSlot } from './model/board.ts';
 import { isRune, nameOf, type CardIndex } from './model/cards.ts';
 import { affordances, type Affordances } from './model/affordances.ts';
-import { describeAll, resultText, whereText } from './model/describe.ts';
+import { describeAll, resultHow, whereText } from './model/describe.ts';
 import { fxOf, hasFx, NO_FX, type Fx } from './model/fx.ts';
 import { setupSummary, stageOf } from './model/stage.ts';
 import { AssignWidget } from './prompt/AssignWidget.tsx';
 import { CastingSlot } from './prompt/CastingSlot.tsx';
 import { HandoffCover, ReportDialog } from './prompt/Dialogs.tsx';
+import { GameOver } from './prompt/GameOver.tsx';
 import { ModeSheet } from './prompt/ModeSheet.tsx';
 import { Mulligan } from './prompt/Mulligan.tsx';
 import { OrderChoice } from './prompt/OrderChoice.tsx';
 import { PromptBar, SetupDone } from './prompt/PromptBar.tsx';
-import { SetupSheet } from './prompt/SetupSheet.tsx';
 import { setSettings, usePlaySettings, type PaceChoice } from './settings.ts';
 import { CardZoom } from './table/CardZoom.tsx';
 import { Board } from './table/Board.tsx';
@@ -56,21 +57,35 @@ export interface TutorialFrame { subtitle: string; actions: ReactNode }
 /** A game against another player through the server: its mode, the clock on the pending decision, and what the end brought. */
 export interface OnlineFrame {
   mode: string;
-  clock: () => { mine: number | null; theirs: number | null };
+  clock: () => OnlineClock;
   /** Rating and coins, once the server has said. */
   outcome: ReactNode;
 }
 
-/** Seconds left on a decision: the player's own, and the opponent's when they take long. */
+const mmss = (ms: number) => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+
+/** The chess clock: the free seconds of a decision, then the time bank running; both banks below. */
 function DecisionClock({ clock }: { clock: OnlineFrame['clock'] }) {
   const [, tick] = useState(0);
   useEffect(() => { const t = setInterval(() => tick((n) => n + 1), 500); return () => clearInterval(t); }, []);
-  const { mine, theirs } = clock();
-  const left = (at: number | null) => (at === null ? null : Math.max(0, Math.ceil((at - Date.now()) / 1000)));
-  const me = left(mine), them = left(theirs);
-  if (me !== null) return <p className={`rail__clock${me <= 15 ? ' is-low' : ''}`}>Your time: {me}s</p>;
-  if (them !== null && them <= 45) return <p className="rail__clock is-theirs">Opponent's time: {them}s</p>;
-  return null;
+  const { mine, theirs, grace, banks } = clock();
+  const now = Date.now();
+  const deadline = mine ?? theirs;
+  // a bank as it stands now: it runs once the grace is over
+  const bank = (i: 0 | 1, running: boolean) => (banks ? (running && deadline !== null && grace !== null && now > grace ? deadline - now : banks[i]) : null);
+  const myBank = bank(0, mine !== null), theirBank = bank(1, theirs !== null);
+  const free = grace !== null && now < grace ? Math.ceil((grace - now) / 1000) : null;
+  const low = mine !== null && mine - now <= 15_000;
+  if (mine === null && theirs === null && !banks) return null;
+  return (
+    <div className={`rail__clock${mine !== null ? ' is-mine' : theirs !== null ? ' is-theirs' : ''}${low ? ' is-low' : ''}`}>
+      {mine !== null && <strong>{free !== null ? `Your turn · ${free}s` : `Time bank · ${mmss(mine - now)}`}</strong>}
+      {theirs !== null && <strong>{free !== null ? 'Opponent deciding…' : `Opponent's bank · ${mmss(theirs - now)}`}</strong>}
+      {myBank !== null && theirBank !== null && (
+        <span className="rail__banks"><span>You {mmss(myBank)}</span><span>Them {mmss(theirBank)}</span></span>
+      )}
+    </div>
+  );
 }
 
 export function GameScreen({ host, cards, db, names, onNewGame, onChangeDecks, onLoadRecord, coach, tutorial, online }: {
@@ -348,20 +363,21 @@ export function GameScreen({ host, cards, db, names, onNewGame, onChangeDecks, o
           <SetupDone board={board} summary={summary} onClose={() => setAtTable(true)} />
         )}
         {stage.k === 'over' && !dismissed && !tutorial && (
-          <SetupSheet step={`Turn ${view.turn.n} · game over`} title={hot ? hotResult(stage.result.winner, names) : resultText(stage.result, view.me)}>
-            <p>
-              Final score: {seatNames.me} {board.me.points}, {seatNames.opponent} {board.opponent.points}
-              <span className="muted small"> [{stage.result.rule}]</span>
-            </p>
-            {online?.outcome}
-            <div className="sheet__buttons">
-              {online ? <button type="button" className="btn btn--primary" onClick={onChangeDecks}>Back to the lobby</button>
-                : <button type="button" className="btn btn--primary" onClick={onNewGame}>Rematch</button>}
-              <button type="button" className="btn" onClick={() => setReport(true)}>Report a rules problem</button>
+          <GameOver
+            tone={hot ? 'neutral' : stage.result.winner === null ? 'draw' : stage.result.winner === view.me ? 'win' : 'loss'}
+            title={hot ? hotResult(stage.result.winner, names) : stage.result.winner === null ? 'Draw' : stage.result.winner === view.me ? 'Victory' : 'Defeat'}
+            detail={`${resultHow(stage.result, hot ? null : view.me)} [${stage.result.rule}]`} turn={view.turn.n}
+            names={[seatNames.me, seatNames.opponent]} points={[board.me.points, board.opponent.points]}
+            legends={[board.me.legend[0], board.opponent.legend[0]]} cards={cards}
+            buttons={<>
+              {online ? <button type="button" className="btn btn--primary" autoFocus onClick={onChangeDecks}>Back to the lobby</button>
+                : <button type="button" className="btn btn--primary" autoFocus onClick={onNewGame}>Rematch</button>}
               <button type="button" className="btn" onClick={() => setDismissed(true)}>Look at the table</button>
               {!online && <button type="button" className="btn btn--ghost" onClick={onChangeDecks}>Change decks</button>}
-            </div>
-          </SetupSheet>
+              <button type="button" className="btn btn--ghost" onClick={() => setReport(true)}>Report a rules problem</button>
+            </>}>
+            {online?.outcome}
+          </GameOver>
         )}
         {handoff !== null && <HandoffCover name={names[handoff]} onTake={() => host.takeOver()} />}
         {report && <ReportDialog record={() => host.record()} view={view} log={log} onClose={() => setReport(false)} />}
@@ -379,5 +395,5 @@ export function GameScreen({ host, cards, db, names, onNewGame, onChangeDecks, o
 }
 
 function hotResult(winner: number | null, names: [string, string]): string {
-  return winner === null ? 'Nobody wins.' : `${names[winner]} wins.`;
+  return winner === null ? 'Draw' : `${names[winner]} wins`;
 }

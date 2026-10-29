@@ -4,7 +4,7 @@
  */
 
 export const PACK_PRICE = 100;
-export const DAILY_COINS = 50;
+export const DAILY_COINS = 75;
 export const DAY = 86_400_000;
 export const SHOWCASE_SIZE = 5;
 /** The tutorial's reward: one booster of each set the shop sells. */
@@ -16,10 +16,12 @@ export const MAX_BUY = 10;
 
 // ---- online matches ----
 /** Coins for a win and for a loss, casual and ranked alike. */
-export const WIN_COINS = 20;
-export const LOSS_COINS = 5;
+export const WIN_COINS = 40;
+export const LOSS_COINS = 15;
 /** Coins from matches a player can earn a day, at most (no farming with a friend). */
-export const MATCH_COINS_PER_DAY = 150;
+export const MATCH_COINS_PER_DAY = 300;
+/** On top, once a day: the first win (not counted against the daily limit). */
+export const FIRST_WIN_COINS = 60;
 /** A match shorter than this (turns) pays nothing: a quick concession is not a game. */
 export const MIN_REWARD_TURNS = 3;
 

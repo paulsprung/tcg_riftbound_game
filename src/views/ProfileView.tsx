@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { rankName, tierOf } from '../economy/ranks.ts';
+import { RankEmblem } from '../lobby/RankEmblem.tsx';
 import type { InspectTarget } from '../card/Inspector.tsx';
 import { useCollection } from '../collection/store.ts';
 import type { CardDb } from '../data/types.ts';
@@ -51,7 +53,8 @@ export function ProfileView({ db, onInspect }: { db: CardDb; onInspect: (t: Insp
   const games = st ? st.ranked.games + st.casual.games : 0;
   const wins = st ? st.ranked.wins + st.casual.wins : 0;
   const rank = !st || st.ranked.games === 0 ? null : st.ranked.placement ? `Placement ${st.ranked.games}/5`
-    : `${st.ranked.tier}${st.ranked.division ? ` ${['I', 'II', 'III', 'IV'][st.ranked.division - 1]}` : ''}`;
+    : rankName(st.ranked.tier, st.ranked.division);
+  const demoTier = tierOf(DEMO_PROFILE.rp);
 
   const collected = useMemo(() => {
     const ids = new Set(Object.entries(own.cards).filter(([, o]) => o.normal + o.foil > 0).map(([id]) => id));
@@ -78,7 +81,10 @@ export function ProfileView({ db, onInspect }: { db: CardDb; onInspect: (t: Insp
             <div className="profile__who">
               <h1>{name}</h1>
               <div className="profile__meta">
-                <span className={`profile__rank${demo || rank ? '' : ' is-off'}`}>◈ {demo ? DEMO_PROFILE.rank : rank ?? 'Unranked'}</span>
+                <span className={`profile__rank${demo || rank ? '' : ' is-off'}`}>
+                  <RankEmblem tier={demo ? demoTier.tier : st && rank && !st.ranked.placement ? st.ranked.tier : null} size={22} />
+                  {demo ? rankName(demoTier.tier, demoTier.division) : rank ?? 'Unranked'}
+                </span>
                 {demo && <span>Level {DEMO_PROFILE.level}</span>}
                 {demo && <span>Joined {DEMO_PROFILE.joined}</span>}
               </div>

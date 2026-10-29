@@ -6,6 +6,7 @@ import { catalogFrom, economy } from '../server/economy.ts';
 import { Online, timeoutAnswer, type ServerMsg, type Transport } from '../server/games/online.ts';
 import { EnginePool } from '../server/games/pool.ts';
 import type { CardDb } from '../src/data/types.ts';
+import { FIRST_WIN_COINS, LOSS_COINS, WIN_COINS } from '../src/economy/rules.ts';
 import type { PlayerView } from '../src/game/index.ts';
 
 /*
@@ -94,8 +95,10 @@ describe.skipIf(!url)('online play', () => {
     // ranked: the winner climbs, the loser drops; both get coins (the game went past turn 3)
     expect(endB.rating!.after.points).toBeGreaterThan(endB.rating!.before.points);
     expect(endA.rating!.after.points).toBeLessThan(endA.rating!.before.points);
-    expect(endB.coins).toBe(20);
-    expect(endA.coins).toBe(5);
+    expect(endB.coins).toBe(WIN_COINS);
+    expect(endB.bonus).toBe(FIRST_WIN_COINS);                 // the day's first win
+    expect(endA.coins).toBe(LOSS_COINS);
+    expect(endA.bonus).toBe(0);
     const m = (await db.query('SELECT mode, winner, reason, record FROM matches WHERE id = $1', [start.gameId])).rows[0];
     expect(m).toMatchObject({ mode: 'ranked', winner: 1 - start.seat, reason: 'concede' });
     expect(m.record.answers.length).toBeGreaterThan(10);
@@ -138,4 +141,23 @@ describe.skipIf(!url)('online play', () => {
     expect(net2.last(c, 'end')!.coins).toBe(0);   // conceded on turn 1: no reward
     again.stop();
   }, 60_000);
+
+  it('runs a chess clock: a decision\'s grace, then the time bank; with both gone, strikes, and the third concedes', async () => {
+    const net = new Net();
+    const online = new Online(db, new EnginePool(0), net, Date, { autoPass: 1, grace: 40, bank: 120 });
+    const [a, , c] = users;
+    net.on.add(a); net.on.add(c);
+    const st = async (u: string) => (await db.query('SELECT starter FROM accounts WHERE user_id = $1', [u])).rows[0].starter as string;
+    await online.message(a, 'ann', { t: 'queue', mode: 'casual', deck: await st(a) });
+    await online.message(c, 'cid', { t: 'queue', mode: 'casual', deck: await st(c) });
+    await until(() => !!net.last(a, 'update') && !!net.last(c, 'update'));
+    const first = [a, c].map((u) => net.last(u, 'update')!).find((m) => m.deadline !== null)!;
+    expect(first.clock.banks).toEqual([120, 120]);
+    expect(first.deadline! - first.clock.grace!).toBe(120);       // the grace, then the whole bank
+    // nobody answers: the bank runs out once, then each decision has only its grace
+    await until(() => [a, c].some((u) => (net.inbox.get(u) ?? []).some((m) => m.t === 'update' && m.clock.banks[0] === 0)), 5_000);
+    await until(() => !!net.last(a, 'end'), 10_000);
+    expect(net.last(a, 'end')!.reason).toBe('concede');
+    online.stop();
+  }, 30_000);
 });

@@ -54,18 +54,5 @@ export function rate(me: Rating, opp: Rating, score: 0 | 0.5 | 1): Rating {
 /** What the ladder shows: the cautious estimate, never below 0. */
 export const ladderPoints = (x: Rating) => Math.max(0, Math.round(x.r - 2 * x.rd));
 
-export const TIERS = ['Iron', 'Bronze', 'Silver', 'Gold', 'Platinum', 'Emerald', 'Diamond', 'Master'] as const;
-export type Tier = (typeof TIERS)[number];
-
-/** Placement games before a tier is shown. */
-export const PLACEMENT_GAMES = 5;
-
-/** The tier and division (IV lowest … I highest) of ladder points. Master has no divisions. */
-export function tierOf(points: number): { tier: Tier; division: 1 | 2 | 3 | 4 | null } {
-  // 200 points per tier from 600 up: Iron below 600, Master from 2000
-  if (points >= 2000) return { tier: 'Master', division: null };
-  const i = Math.max(0, Math.min(6, Math.floor((points - 600) / 200) + 1));
-  if (i === 0) return { tier: 'Iron', division: (4 - Math.min(3, Math.floor(points / 150))) as 1 | 2 | 3 | 4 };
-  const within = points - (600 + (i - 1) * 200);
-  return { tier: TIERS[i], division: (4 - Math.min(3, Math.floor(within / 50))) as 1 | 2 | 3 | 4 };
-}
+// the tiers on top of the points: src/economy/ranks.ts
+export { PLACEMENT_GAMES, TIERS, tierOf, type Tier } from '../src/economy/ranks.ts';

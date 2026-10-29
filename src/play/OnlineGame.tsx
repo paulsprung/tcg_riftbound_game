@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import type { CardDb } from '../data/types.ts';
+import { divisionProgress, PLACEMENT_GAMES, rankName } from '../economy/ranks.ts';
+import { RankEmblem } from '../lobby/RankEmblem.tsx';
 import { online } from '../net/socket.ts';
 import type { RatingInfo, ServerMsg } from '../net/protocol.ts';
 import { GameScreen } from './GameScreen.tsx';
@@ -9,27 +11,73 @@ import { cardIndex, withPrintings } from './model/cards.ts';
 /*
  * A game against another player: the table on a RemoteHost, once the
  * server's first view is in. The end screen adds what the game brought:
- * coins and, in ranked, the rating before and after.
+ * coins (with the day's first-win bonus) and, in ranked, the rank it moved.
  */
 
-const tierText = (r: RatingInfo) => (r.placement ? `Placement ${r.games}/5` : `${r.tier}${r.division ? ` ${'IV III II I'.split(' ')[4 - r.division]}` : ''} · ${r.points} LP`);
+/** Counts up to a number once, for the coins a game brought. */
+function CountUp({ to }: { to: number }) {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    if (to <= 0) return;
+    const t0 = performance.now();
+    let raf = 0;
+    const step = (t: number) => { const k = Math.min(1, (t - t0) / 900); setN(Math.round(to * (1 - (1 - k) ** 3))); if (k < 1) raf = requestAnimationFrame(step); };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [to]);
+  return <>{n}</>;
+}
+
+/** The rank after the game: its emblem, the division's bar filling from where it was, and the points it moved. */
+function RankMove({ before, after }: { before: RatingInfo; after: RatingInfo }) {
+  const [shown, setShown] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setShown(true), 400); return () => clearTimeout(t); }, []);
+  if (after.placement) {
+    return (
+      <div className="go-rank is-placement">
+        <RankEmblem tier={null} size={64} />
+        <div>
+          <strong>Placement</strong>
+          <span className="go-rank__dots">{Array.from({ length: PLACEMENT_GAMES }, (_, i) => <i key={i} className={i < after.games ? 'is-done' : ''} />)}</span>
+          <span className="muted small">{PLACEMENT_GAMES - after.games > 0 ? `${PLACEMENT_GAMES - after.games} more to your first rank` : 'Your rank is in'}</span>
+        </div>
+      </div>
+    );
+  }
+  const delta = before.placement ? null : after.points - before.points;
+  const promoted = !before.placement && (before.tier !== after.tier || before.division !== after.division);
+  const up = delta === null || delta >= 0;
+  // the bar starts where the old points stood in the new division, unless the division changed
+  const from = promoted ? (up ? 0 : 1) : divisionProgress(before.points);
+  return (
+    <div className={`go-rank${promoted ? (up ? ' is-promoted' : ' is-demoted') : ''}`}>
+      <RankEmblem tier={after.tier} size={72} />
+      <div>
+        <strong>{rankName(after.tier, after.division)}{promoted && <em>{up ? 'Promoted' : 'Demoted'}</em>}</strong>
+        <div className="go-rank__bar"><span style={{ width: `${Math.round((shown ? divisionProgress(after.points) : from) * 100)}%` }} /></div>
+        <span className="go-rank__lp">
+          {after.points.toLocaleString('en-US')} LP
+          {delta !== null && <b className={up ? 'is-up' : 'is-down'}>{up ? '+' : ''}{delta}</b>}
+        </span>
+      </div>
+    </div>
+  );
+}
 
 function Outcome({ end, tournament, mode }: { end: Extract<ServerMsg, { t: 'end' }> | null; tournament: boolean; mode: string }) {
-  if (!end) return <p className="muted small">Saving the result…</p>;
+  if (!end) return <p className="muted small gameover__note">Saving the result…</p>;
   // a tournament's result is in its standings; a friendly game moves nothing
-  if (tournament || mode === 'friendly') return null;
-  const r = end.rating;
-  // in placement the points are not shown yet: only how many games are played
-  const delta = r && !r.after.placement ? r.after.points - r.before.points : null;
+  if (tournament) return <p className="muted small gameover__note">The result is in the tournament's standings.</p>;
+  if (mode === 'friendly') return <p className="muted small gameover__note">A friendly game: no rank, no coins.</p>;
   return (
-    <div className="online-outcome">
-      {r && (
-        <p className="online-outcome__rating">
-          {tierText(r.before)} → <strong>{tierText(r.after)}</strong>
-          {delta !== null && <span className={delta >= 0 ? 'is-up' : 'is-down'}> ({delta >= 0 ? '+' : ''}{delta} LP)</span>}
-        </p>
-      )}
-      <p className="online-outcome__coins"><span className="lb-coin" aria-hidden /> +{end.coins} coins</p>
+    <div className="go-outcome">
+      {end.rating && <RankMove before={end.rating.before} after={end.rating.after} />}
+      <div className="go-coins">
+        <span className="lb-coin" aria-hidden />
+        <strong>+<CountUp to={end.coins + end.bonus} /></strong>
+        <span className="muted small">{end.coins + end.bonus === 0 ? 'No coins: too short a game, or today\'s limit is reached' : 'coins'}</span>
+        {end.bonus > 0 && <em className="go-coins__bonus">First win of the day +{end.bonus}</em>}
+      </div>
     </div>
   );
 }

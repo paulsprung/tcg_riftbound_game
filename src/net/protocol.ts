@@ -46,8 +46,11 @@ export type ServerMsg =
       /** A tournament's game: its name, round and the match score so far. */
       tournament?: { id: string; name: string; round: string; game: number; score: [number, number] } }
   /** Your view after a change, with what you observed in it; `full` replaces the log (after a reconnect). Deadlines are ms since the epoch. */
-  | { t: 'update'; gameId: string; view: PlayerView; events: ObservedEvent[]; full: boolean; deadline: number | null; theirDeadline: number | null }
-  | { t: 'end'; gameId: string; winner: PlayerId | null; reason: string; coins: number; rating: { before: RatingInfo; after: RatingInfo } | null }
+  /** A change in a game: your view; when the pending decision times out (yours or theirs), when its free
+      grace time ends and both time banks (yours first) as they stood when it was asked. */
+  | { t: 'update'; gameId: string; view: PlayerView; events: ObservedEvent[]; full: boolean; deadline: number | null; theirDeadline: number | null;
+    clock: { grace: number | null; banks: [number, number] } }
+  | { t: 'end'; gameId: string; winner: PlayerId | null; reason: string; coins: number; bonus: number; rating: { before: RatingInfo; after: RatingInfo } | null }
   /** Your lobby as it is now (after every change); null: you are in none. */
   | { t: 'lobby'; lobby: LobbyView | null }
   /** A friend invites you to their lobby; it lapses after a minute. */

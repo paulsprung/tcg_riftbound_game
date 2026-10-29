@@ -20,7 +20,8 @@ import type { HostSnapshot, Preview, TableHost } from './GameHost.ts';
  * whatever the sample holds.
  */
 
-export interface OnlineClock { mine: number | null; theirs: number | null }
+/** The chess clock: when the pending decision times out (mine or theirs), when its grace ends, both banks (mine first). */
+export interface OnlineClock { mine: number | null; theirs: number | null; grace: number | null; banks: [number, number] | null }
 
 export class RemoteHost implements TableHost {
   readonly hotseat = false;
@@ -31,7 +32,7 @@ export class RemoteHost implements TableHost {
   private events: ObservedEvent[] = [];
   private error: string | null = null;
   private sent: number | null = null;
-  private clock: OnlineClock = { mine: null, theirs: null };
+  private clock: OnlineClock = { mine: null, theirs: null, grace: null, banks: null };
   private snap: HostSnapshot | null = null;
   private readonly listeners = new Set<() => void>();
   private off: (() => void) | null = null;
@@ -59,7 +60,7 @@ export class RemoteHost implements TableHost {
       if (m.t === 'update' && m.gameId === this.gameId) {
         this.view = m.view;
         this.events = m.full ? m.events.slice() : [...this.events, ...m.events];
-        this.clock = { mine: m.deadline, theirs: m.theirDeadline };
+        this.clock = { mine: m.deadline, theirs: m.theirDeadline, grace: m.clock.grace, banks: m.clock.banks };
         this.sent = null;
         this.error = null;
         this.publish();

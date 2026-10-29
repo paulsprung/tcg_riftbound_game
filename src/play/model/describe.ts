@@ -48,13 +48,20 @@ const TOKEN_DEFS: readonly string[] = ['recruit', 'mech', 'bird', 'gold', 'sprit
   'shadowClone', 'bomb'];
 const ZONE_NAME = { deck: 'Main Deck', runeDeck: 'Rune Deck' } as const;
 
+const HOW: Record<GameResult['reason'], string> = {
+  score: 'by points', burnout: 'by burn out', concede: 'by concession', effect: 'by a card effect',
+  loop: 'because the game could not go on',
+};
+
 export function resultText(r: GameResult, me: PlayerId): string {
   const who = r.winner === null ? 'Nobody wins' : r.winner === me ? 'You win' : 'The opponent wins';
-  const how: Record<GameResult['reason'], string> = {
-    score: 'by points', burnout: 'by burn out', concede: 'by concession', effect: 'by a card effect',
-    loop: 'because the game could not go on',
-  };
-  return `${who} ${how[r.reason]}.`;
+  return `${who} ${HOW[r.reason]}.`;
+}
+
+/** How a game was won: "Won by points", "Lost by concession". */
+export function resultHow(r: GameResult, me: PlayerId | null): string {
+  const verb = r.winner === null ? 'Ended' : me === null ? 'Won' : r.winner === me ? 'Won' : 'Lost';
+  return `${verb} ${HOW[r.reason]}`;
 }
 
 /** The log of a sequence of observed events, oldest first. */
