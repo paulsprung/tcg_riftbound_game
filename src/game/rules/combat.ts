@@ -54,6 +54,7 @@ export function openCombat(s: GameState, x: X, bf: number, newShowdown: boolean)
   };
   setField(s, s, 'combat', combat);
   emit(s, x, { k: 'combatStart', bf, attacker, rule: newShowdown ? '323.12' : '323.13' });
+  if (newShowdown) fire(s, x, { e: 'showdown', bf });               // a combat showdown begins [466.2]
   enqueueFront(s, { t: 'combat', id: 'startOfCombat' }, { t: 'combat', id: 'designations' },
     { t: 'combat', id: 'placeCombatTriggers' });
 }

@@ -233,6 +233,53 @@ export function createBattlefield(s: GameState, o: { def: DefId; printing: strin
   return bf;
 }
 
+/**
+ * Replace [439]: a battlefield token takes the place of the battlefield
+ * object at index bf, the same space (units, controller, statuses stay with
+ * the slot [439.1]); the replaced card goes to its owner's banishment as
+ * Replaced [439.5] (a replaced token ceases to exist [439.6]) and is
+ * remembered for a swap back [439.7]. Returns the token's id.
+ */
+export function replaceBattlefieldObj(s: GameState, bf: number, def: DefId, owner: PlayerId): ObjId {
+  const b = s.bfs[bf];
+  const old = s.objects[b.obj];
+  const id = mint(s, 'obj');
+  s.objects[id] = {
+    id, card: mint(s, 'card'), def, printing: null, token: true, owner, controller: b.controller,
+    zone: { z: 'bf', bf }, knownBy: allMask(s.players.length), ts: mint(s, 'ts'), enteredTurn: s.turn.n, ...freshStatus(),
+  };
+  b.obj = id;
+  delete s.objects[old.id];
+  if (!old.token) {
+    const back = mint(s, 'obj');
+    s.objects[back] = { ...old, id: back, controller: old.owner, zone: { z: 'banish', p: old.owner }, ts: mint(s, 'ts'),
+      enteredTurn: s.turn.n, ...freshStatus() };
+    s.players[old.owner].banish.push(back);
+    b.replacedChain.push(back);
+  }
+  touch(s);
+  return id;
+}
+
+/** Swap back [439.7]: the last card this slot replaced returns to it, the token stops existing. */
+export function swapBackBattlefieldObj(s: GameState, bf: number): ObjId | null {
+  const b = s.bfs[bf];
+  const card = b.replacedChain[b.replacedChain.length - 1];
+  const o = card === undefined ? undefined : s.objects[card];
+  if (!o || o.zone.z !== 'banish') return null;
+  const tok = s.objects[b.obj];
+  extract(s, o.zone, o.id);
+  delete s.objects[o.id];
+  const id = mint(s, 'obj');
+  s.objects[id] = { ...o, id, controller: b.controller, zone: { z: 'bf', bf }, knownBy: allMask(s.players.length), ts: mint(s, 'ts'),
+    enteredTurn: s.turn.n, ...freshStatus() };
+  b.replacedChain.pop();
+  if (tok && tok.token) delete s.objects[tok.id];
+  b.obj = id;
+  touch(s);
+  return id;
+}
+
 export interface MoveOptions {
   /** Ordered zones only; default: the bottom of a deck, the end elsewhere. */
   pos?: Position;

@@ -97,7 +97,12 @@ export type AbilityAst = { id: string; activeIn?: ZoneScope; limit?: LimitAst;
           cost by [Y] for each": a number chosen as it is played. */
       x?: { kill?: SelAst; spendBuff?: SelAst; lessPower: PowerReqAst };
       /** Accelerate given to other cards: paid, the unit enters ready [805.2.b]. */
-      accelerate?: true }
+      accelerate?: true;
+      /** Atakhan: "I cost [1] less for each Energy it costs and [Y] less for each Power it costs" (the objects this
+          cost kills, read as they are chosen). */
+      lessByPaid?: { power: PowerReqAst };
+      /** "you may play me for [B]": an alternative cost replacing the base cost [204.1.b]. */
+      alt?: CostAst }
 );
 export type TriggeredAst = Extract<AbilityAst, { kind: 'triggered' }>;
 export type ActivatedAst = Extract<AbilityAst, { kind: 'activated' }>;
@@ -131,7 +136,7 @@ export type StaticAst =
   | { s: 'copyAbilities'; of: SelAst[] }
   /** Where it may be played besides the usual [355.2]: an open battlefield,
       an occupied enemy battlefield. */
-  | { s: 'playTo'; where: 'open' | 'occupiedEnemy' | 'attacking' }
+  | { s: 'playTo'; where: 'open' | 'occupiedEnemy' | 'attacking' | 'enemyAlone' }
   /** Mageseeker Investigator: moving more than one unit here at once costs [A] each beyond the first. */
   | { s: 'moveTax' }
   /** "This enters exhausted" (gear) [359.2.d]. */
@@ -145,7 +150,9 @@ export type StaticAst =
   /** "If a combat where you are the attacker ends in a tie, recall ALL units instead." */
   | { s: 'tieRecallAll' }
   /** "Units can't move from here to base"; `anywhere`: "Units can't move to base". */
-  | { s: 'noMoveToBase'; anywhere?: true }
+  | { s: 'noMoveToBase'; anywhere?: true;
+      /** "I can't move to base": only its source. */
+      self?: true }
   /** "Units can't be played here." */
   | { s: 'noPlayHere' }
   /** "While I'm at a battlefield, opponents can't gain points." */
@@ -163,7 +170,7 @@ export type StaticAst =
   /** "My hold effects are also conquer effects, and vice versa." */
   | { s: 'holdIsConquer' }
   /** "I can't be chosen by enemy spells and abilities." */
-  | { s: 'noEnemyChoose' }
+  | { s: 'noEnemyChoose'; to?: SelAst }
   /** "Your Gold [Add] an additional [1]." */
   | { s: 'goldBonus' }
   /** "Your tokens enter ready." */
@@ -185,13 +192,31 @@ export type StaticAst =
   /** "Your opponents' [Hidden] cards can't be revealed here." */
   | { s: 'noFacedownPlayHere' }
   /** "Friendly units may be played to open battlefields" (other cards you play). */
-  | { s: 'othersPlayTo'; where: 'open'; types: CardType[] }
+  | { s: 'othersPlayTo'; where: 'open' | 'enemyAlone'; types: CardType[] }
   /** Zhonya's Hourglass: "If a friendly unit would die, kill this instead. Heal that unit, exhaust it, and recall it." */
   | { s: 'saveFriendly' }
   /** Teemo, Swift Scout: "You may pay [1] to hide a card with [Hidden] instead of [A]." */
   | { s: 'hideFor'; cost: CostAst }
   /** Sett: "If a buffed unit you control would die, you may pay …, spend its buff to heal it, exhaust it, and recall it instead." */
-  | { s: 'saveBuffed'; cost: CostAst };
+  | { s: 'saveBuffed'; cost: CostAst }
+  /** Altar of Blood: "If a unit here would die during combat, its controller may pay … to heal it, exhaust it, and recall it instead." */
+  | { s: 'saveHere'; cost: CostAst; combat?: true }
+  /** Baron Nashor: "As you play me, add the … battlefield token to the board if it's not there already. If you do, I enter there." */
+  | { s: 'addBfToken'; token: TokenId }
+  /** Baron Pit: "Units can move here from anywhere." */
+  | { s: 'moveHereFromAnywhere' }
+  /** "Your hold effects for holding here trigger an additional time" (conquer: "Your conquer effects …"). */
+  | { s: 'extraScoreTriggers'; how: 'hold' | 'conquer' }
+  /** Elder Dragon: "Any amount of your damage is enough to kill enemy units." */
+  | { s: 'anyDamageKills' }
+  /** "I don't deal combat damage"; with `to`: "Enemy units here with less Might than me don't deal combat damage." */
+  | { s: 'noCombatDamage'; to?: SelAst }
+  /** LeBlanc: "Your [Temporary] effects at my battlefield don't trigger." */
+  | { s: 'noTemporaryTrigger'; to: SelAst }
+  /** "I can't be readied." */
+  | { s: 'cantBeReadied' }
+  /** Ivern: "As you play me, choose Bird, Cat, Dog, or Poro. I gain that tag." */
+  | { s: 'chooseTag'; tags: string[] };
 
 /** The events replacements of the deck change: playing a token [440.2.c]. */
 export interface ReplaceEventAst { ev: 'playToken'; by: 'you'; type: CardType }
@@ -251,7 +276,9 @@ export type CondAst =
       /** unitDied: only units of this relation to the controller ("an enemy unit has died"). */
       rel?: 'friendly' | 'enemy';
       /** played: only cards with this tag ("if you've played an Equipment this turn"). */
-      tag?: string }
+      tag?: string;
+      /** played: only plays that spent this much Energy or more ("If you've spent [4] or more to play a spell this turn"). */
+      minSpent?: number }
   /** "If an opponent's score is within N points of the Victory Score". */
   | { c: 'opponentNearWin'; within: number }
   /** The trigger's player ('p' of the info) is in their first Beginning Phase [190.6.b]. */
@@ -279,14 +306,27 @@ export type CondAst =
   /** Your own score is within N of the Victory Score. */
   | { c: 'nearWin'; within: number }
   /** A rune revealed by revealRune has this domain. */
-  | { c: 'boundDomain'; name: string; d: Domain };
+  | { c: 'boundDomain'; name: string; d: Domain }
+  /** A number compared ("if it had 3 [M] or less": the look-back Might of a chosen unit). */
+  | { c: 'val'; v: ValueAst; op: Cmp; n: number }
+  /** The source (an Equipment's host: "I") conquered or held this turn. */
+  | { c: 'scoredThisTurn'; how: 'conquer' | 'hold' }
+  /** "your units have all of the following tags among them": at least n of these tags. */
+  | { c: 'tags'; tags: string[]; n: number }
+  /** A showdown is going on [341]. */
+  | { c: 'showdown' }
+  /** "If it's your Beginning Phase". */
+  | { c: 'phase'; phase: 'beginning' | 'main'; yours?: true }
+  /** "If you've gained XP this turn". */
+  | { c: 'xpGained' };
 
 export interface ProgAst {
   /** Targets chosen as it is played (step 2) or as the ability finalizes [355.5], [403.2]. */
   choose?: SlotAst[];
   /** "Choose two —" [355.3]: each mode's own targets and instructions;
-      chosen modes execute in printed order. */
-  modes?: { pick: number; of: ModeAst[] };
+      chosen modes execute in printed order. `distinct`: "Choose one you haven't already chosen" (each Repeat
+      execution a mode no earlier execution chose). */
+  modes?: { pick: number; of: ModeAst[]; distinct?: true };
   body: InstrAst[];
 }
 export interface ModeAst { label: string; choose?: SlotAst[]; body: InstrAst[] }
@@ -304,7 +344,7 @@ export interface SlotAst {
   distinctFrom?: string[];
   /** A destination slot: where the units another slot chose move to [355.4]
       (a location, not a target); `to` limits it. */
-  dest?: { of: string; to?: 'base' | 'bf' | 'open' | 'any' | 'toOrFromBase' | 'withFriends' };
+  dest?: { of: string; to?: 'base' | 'bf' | 'open' | 'any' | 'toOrFromBase' | 'withFriends' | 'controlled' };
   /** Played from face down, targets must be at its battlefield [811.1.d.2–3]
       unless the slot's own restriction makes that impossible: this one. */
   freeFromHidden?: true;
@@ -320,7 +360,7 @@ export interface SelAst {
       'legend': a legend; 'facedown': a facedown card at a battlefield. */
   k: 'unit' | 'gear' | 'permanent' | 'battlefield' | 'rune' | 'card' | 'spell' | 'legend' | 'facedown';
   /** For k:'card': the zone, its owner's by `rel` (friendly: yours). */
-  in?: 'trash' | 'hand' | 'champion';
+  in?: 'trash' | 'hand' | 'champion' | 'banish';
   /** Relative to the item's controller as it executes [359.3.f.4]. */
   rel?: 'friendly' | 'enemy' | 'any';
   at?: LocSelAst;
@@ -362,7 +402,17 @@ export type PredAst =
   | { p: 'tag'; tag: string }
   | { p: 'designation'; d: 'attacker' | 'defender' }
   | { p: 'keyword'; kw: KeywordId }
-  | { p: 'not'; of: PredAst };
+  | { p: 'not'; of: PredAst }
+  /** Might compared with the source's ("with less Might than me"). */
+  | { p: 'mightVsSource'; op: Cmp }
+  /** Not what a slot chose ("each other enemy unit there"). */
+  | { p: 'notSlot'; slot: string }
+  /** One of these tags ("a Bird, Cat, Dog, or Poro"). */
+  | { p: 'anyTag'; tags: string[] }
+  /** A battlefield whose units not controlled by the item's controller have less total Might than the source. */
+  | { p: 'enemyMightBelowSource' }
+  /** A card that costs no more Energy and no more Power than the object a cost killed. */
+  | { p: 'costAtMostPaid' };
 
 export type ValueAst = number
   | { v: 'count'; of: SelAst }
@@ -393,14 +443,26 @@ export type ValueAst = number
   | { v: 'playedThisTurn' }
   /** Points the controller scored from holding this turn. */
   | { v: 'holdPoints' }
+  /** How many of these tags the controller's units have among them. */
+  | { v: 'tagsAmong'; tags: string[] }
+  /** The total Might of the objects a selector picks. */
+  | { v: 'sumMight'; of: SelAst }
+  /** How many times this card dealt damage this turn (Dancing Grenade). */
+  | { v: 'cardDeals' }
 /** What an instruction acts on: its source, a chosen slot, a bound name,
     the object the trigger condition named. */
 export type RefAst = 'self' | { slot: string } | { bound: string } | { event: 'subject' } | { info: string }
   /** The card that object was, wherever it is now ("Recycle me" in a Deathknell, "play it" after a banish) [124]. */
-  | { now: RefAst };
+  | { now: RefAst }
+  /** "this": the card whose text it is (an Equipment's effect text: the Equipment, not the unit). */
+  | 'this'
+  /** The objects a cost of this item exhausted or killed ("the unit you exhausted to pay for this ability"). */
+  | { paid: 'exhaust' | 'kill' };
 /** Where a token is played: "to your base", "here", or chosen as it is
     played (base or a battlefield you control [440.2.b.1]). */
-export type LocAst = 'yourBase' | 'here' | 'choose' | { info: string };
+export type LocAst = 'yourBase' | 'here' | 'choose' | { info: string }
+  /** Where the trigger's unit moved from ("When I move from a location, … there"). */
+  | 'eventFrom';
 /** Where a move instruction takes units: their base, here (the source's
     battlefield), a destination slot, the battlefield a trigger named. */
 export type MoveToAst = 'base' | 'here' | { dest: string } | { info: string }
@@ -426,7 +488,11 @@ export type PlayerEffectAst =
   /** "You can hide cards ignoring costs this turn." */
   | { s: 'hideFree' }
   /** "Give the next spell you play this turn [Repeat] equal to its cost." */
-  | { s: 'grantRepeat'; uses: number };
+  | { s: 'grantRepeat'; uses: number }
+  /** "Its controller can't play spells this turn." */
+  | { s: 'cantPlayTypes'; types: CardType[] }
+  /** "Your non-token units cost [1] more to play this turn." */
+  | { s: 'costMore'; types: CardType[]; energy: number; nonToken?: true };
 
 /** `id` names an instruction for "if you do" (CondAst 'did'); `link` makes
     it linked to another, ignored if that one was [359.3.e.14.a]. */
@@ -443,7 +509,11 @@ export type InstrAst = { id?: string; link?: string } & (
       /** For the item's controller inside a "for each player" block. */
       caster?: true;
       /** "Then ready up to N of them": the first N are played ready. */
-      readyFirst?: number }
+      readyFirst?: number;
+      /** "They become copies of …" [446]: each enters as a copy of that object (its copyable traits now). */
+      copyOf?: RefAst;
+      /** "Give it [Temporary]": keywords it has for good once it is on the board. */
+      give?: KeywordAst[] }
   | { op: 'predict'; n: ValueAst }                                               // [437]
   | { op: 'look'; n: number; bind: string }                                      // [425]: the top N of your Main Deck
   | { op: 'pick'; from: string; n: number; bind: string;                       // a resolution-time choice [355.18]
@@ -475,12 +545,16 @@ export type InstrAst = { id?: string; link?: string } & (
   | { op: 'may'; then: InstrAst[] }
   | { op: 'delayed'; uses: number; ability: Omit<TriggeredAst, 'id'>;          // [390–393], "this turn"
       /** Referents captured now for the delayed ability ("that unit", "this battlefield") [391.5]. */
-      capture?: Record<string, RefAst | 'eventBf' | 'hereBf'> }
+      capture?: Record<string, RefAst | 'eventBf' | 'hereBf'>;
+      /** Not only this turn: until it has triggered its uses ("When they hold, return it to their hand"). */
+      lasting?: true }
   | { op: 'draws'; n: number; who: { controllerOf: RefAst } | 'opponents' | 'caster' }   // "Its controller draws 2"
   | { op: 'move'; what: RefAst | SelAst; to: MoveToAst }                         // [421]
   | { op: 'returnToHand'; what: RefAst | SelAst }                                // to its owner's hand
   | { op: 'recycle'; what: RefAst }                                              // [417] a permanent or a card
-  | { op: 'counter'; what: RefAst }                                              // [426]
+  | { op: 'counter'; what: RefAst;                                               // [426]
+      /** "Return it to its owner's hand instead of putting it in their trash." */
+      to?: 'hand' }
   /** "They deal damage equal to their Mights to each other" [418.6.b.3]. */
   | { op: 'fight'; a: RefAst; b: RefAst }
   /** "It deals damage equal to its Might to …": the unit is the source. */
@@ -503,7 +577,11 @@ export type InstrAst = { id?: string; link?: string } & (
   | { op: 'spendBuff'; from: SelAst | RefAst;
       /** Spend the buff of each of them (a bound set), not one. */
       all?: true }
-  | { op: 'eachPlayerKills'; n: number }                                         // Cull the Weak
+  | { op: 'eachPlayerKills'; n: number;                                          // Cull the Weak
+      /** "each opponent must kill one of their units" / "the defender must kill one of their units here". */
+      who?: 'opponents'; at?: 'here';
+      /** "If you paid my additional cost, you don't kill a unit this way." */
+      exceptIf?: CondAst }
   /** A cost within an instruction, paid as it executes or declined [740.4.a]. */
   | { op: 'pay'; cost: CostAst;
       /** Paid by a referenced object's controller ("unless its controller pays [2]"). */
@@ -511,13 +589,17 @@ export type InstrAst = { id?: string; link?: string } & (
   /** Weaponmaster [821.1.c]: pay that Equipment's Equip cost less [A] to attach it to me. */
   | { op: 'equipToSelf'; what: RefAst }
   | { op: 'playerEffect'; spec: PlayerEffectAst; until: 'thisTurn';
-      /** Whom it is on: you (default), each opponent, every player. */
-      who?: 'opponents' | 'all' }
+      /** Whom it is on: you (default), each opponent, every player, a referenced object's controller. */
+      who?: 'opponents' | 'all' | { controllerOf: RefAst } }
   /** A resolution-time choice of objects [355.18] ("spend any number of buffs", "choose 2 units"), bound by name;
       chosen by the instruction's player; `sumMightMax`: their total Might may not exceed it. */
   | { op: 'choose'; sel: SelAst[]; min: number; max: number; bind: string; sumMightMax?: number;
       /** Not what these slots chose ("another enemy unit"). */
-      notSlots?: string[] }
+      notSlots?: string[];
+      /** "up to one … at each location". */
+      oneEachLoc?: true;
+      /** "with the same controller". */
+      sameController?: true }
   /** Each player in turn (from the controller, or from the next player), the body executed as that player:
       "you", "your", "friendly" are theirs [MP]; names bound inside are theirs (`name#p<id>`). */
   | { op: 'forEach'; who: 'each' | 'opponents'; from: 'you' | 'next'; body: InstrAst[] }
@@ -536,7 +618,9 @@ export type InstrAst = { id?: string; link?: string } & (
   /** "Pay any amount of [A]": a number, then the payment; the amount is bound [740.4.a]. */
   | { op: 'payX'; bind: string; kind?: 'energy' }
   /** "Deal N damage split among any number of …": one point at a time [418]. */
-  | { op: 'dealSplit'; n: number; to: SelAst }
+  | { op: 'dealSplit'; n: ValueAst; to: SelAst;
+      /** "It deals damage equal to its Might split among …": that unit is the source. */
+      from?: RefAst }
   /** Recycle every object of these selectors but the kept ones (Divine Judgment). */
   | { op: 'recycleAllBut'; sel: SelAst[]; keep: string[] }
   /** "Gain control of a spell. You may make new choices for it." */
@@ -575,6 +659,15 @@ export type InstrAst = { id?: string; link?: string } & (
       cost?: CostAst }
   /** "They can't move it this turn." */
   | { op: 'cantMove'; what: RefAst }
+  /** "Its controller may play this spell again for [A]" / "You may play this from your trash for [A]": as the
+      spell leaves the chain, that player plays it from the trash for the cost (declining at the payment). */
+  | { op: 'replay'; who: 'self' | { controllerOf: RefAst }; cost: CostAst }
+  /** "Put each in its trash": cards from a banishment or a hand to their owners' trashes. */
+  | { op: 'toTrash'; what: RefAst | SelAst }
+  /** "Double all damage that would be dealt to it this turn" [433]. */
+  | { op: 'doubleDamage'; what: RefAst }
+  /** Replace a battlefield with a battlefield token [439]; `back`: swap the token back [439.7]. */
+  | { op: 'replaceBf'; token?: TokenId; at: 'eventBf' | 'here'; back?: true }
 );
 /** How long an effect lasts [479]. */
 export type Until = 'thisTurn' | 'thisCombat' | 'permanent';
@@ -584,7 +677,13 @@ export type TriggerAst =
   | { on: 'cardPlayed'; by: 'you' | 'anyPlayer' | 'opponent';
       what?: { types?: CardType[]; minEnergy?: number; card?: true; fromFacedown?: true; minPower?: number;
         /** "another unit": not the source itself. */
-        other?: true };
+        other?: true;
+        /** "if you spent [4] or more" (Energy spent on it). */
+        minSpent?: number;
+        /** "another Dragon": with this tag. */
+        tag?: string;
+        /** "a token unit". */
+        token?: true };
       to?: 'here';                                                               // [420.4.a]; card: not a token [052]
       /** "For each player, the first time they …" [383.1.b]. */
       firstPerPlayer?: true }
@@ -606,7 +705,9 @@ export type TriggerAst =
       firstPerPlayer?: true }
   | { on: 'dies'; who: 'self' }                                                  // Deathknell [808]: self-leave, LKI
   /** A delayed ability's "if this kills it": the unit it captured dies [388]. */
-  | { on: 'objDies'; info: string }
+  | { on: 'objDies'; info?: string;
+      /** "When it dies this turn": by any cause, not only this item. Without `info`: each unit the item's damage kills. */
+      any?: true }
   | { on: 'phase'; at: 'beginning' | 'mainStart' | 'endOfTurn'; whose: 'your' | 'any' }   // [315.2.a], [316.4], [317.1.a]
   /** "When I move [to a battlefield]" (self); "When you move an enemy unit" (enemy, by you) [448]. */
   | { on: 'moved'; who: 'self' | 'enemy' | 'any' | 'friendlyOther' | 'opponent'; to?: 'bf' | 'otherBf';
@@ -624,7 +725,9 @@ export type TriggerAst =
   /** Nocturne: "As you look at or reveal me from the top of your deck". */
   | { on: 'seenOnTop'; reveal?: true }
   /** "When I win a combat" / "When you win a combat" [468.3]. */
-  | { on: 'winCombat'; who: 'self' | 'you' }
+  | { on: 'winCombat'; who: 'self' | 'you';
+      /** A delayed ability's "When it wins a combat this turn": the unit it captured. */
+      info?: string }
   /** "When you choose a friendly unit", "When you choose me with a spell" [355.5]. */
   | { on: 'chosen'; who: 'self' | 'friendly'; spell?: true }
   /** "When you attach an Equipment to me" [435]. */
@@ -643,7 +746,11 @@ export type TriggerAst =
       /** "one or more": one instance per Stun action. */
       once?: true }                                                              // you stun an enemy unit [424]
   | { on: 'becomesMighty'; who: 'friendly' }                                     // [709]
-  | { on: 'hid'; at: 'here' };                                                   // you hide a card here [422]
+  | { on: 'hid'; at: 'here' | 'any' }                                            // you hide a card here [422]
+  /** "When a showdown begins here" [341]. */
+  | { on: 'showdownStart'; at: 'here' }
+  /** "When you draw your second card each turn". */
+  | { on: 'drew'; nth: number };
 
 /** An ability's id as chain items and usage counters name it. */
 export type AbilityRef = string;

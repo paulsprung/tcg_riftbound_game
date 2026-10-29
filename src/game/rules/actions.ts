@@ -25,7 +25,7 @@ import { emit, emitZone, knowers, newGroup } from '../core/events.ts';
 import { emptyPool } from '../state/blank.ts';
 import { fire, placeSelfLeave } from '../abilities/triggers.ts';
 import { bit } from '../state/ids.ts';
-import { append, deleteObject, mint, moveObject, setField } from '../state/mut.ts';
+import { append, deleteObject, mint, moveObject, replaceBattlefieldObj, setField, swapBackBattlefieldObj } from '../state/mut.ts';
 import { shuffled, shuffleZone } from '../state/rng.ts';
 import { locOf, Z } from '../state/zones.ts';
 import type { Domain, GameObject, GameState, Json, Loc, ObjId, PlayerId, PowerReq, RunePool, Zone } from '../state/types.ts';
@@ -63,8 +63,10 @@ export function drawCards(s: GameState, x: X, p: PlayerId, n: number, rule: stri
     drawn.push(obj);
   }
   if (drawn.length > 0) {
-    setField(s, s.log.draws, p, s.log.draws[p] + drawn.length);
+    const before = s.log.draws[p];
+    setField(s, s.log.draws, p, before + drawn.length);
     emit(s, x, { k: 'draw', p, objs: drawn, rule, group, vis: knowers(s, drawn) });
+    fire(s, x, { e: 'drew', p, before, after: before + drawn.length });   // "When you draw your second card each turn"
   }
   return drawn;
 }
@@ -161,7 +163,8 @@ export function exhaust(s: GameState, x: X, p: PlayerId, objs: ObjId[], rule: st
 
 /** Readies objects as one action [416]; ready ones: nothing happens [416.1.c]. */
 export function ready(s: GameState, x: X, objs: ObjId[], rule: string, by: PlayerId | null = null) {
-  const tired = objs.filter((id) => s.objects[id].exhausted);
+  // "I can't be readied" (Maduli, the Gatekeeper).
+  const tired = objs.filter((id) => s.objects[id].exhausted && staticsFor(s, id, 'cantBeReadied').length === 0);
   if (tired.length === 0) return;
   for (const id of tired) setField(s, s.objects[id], 'exhausted', false);
   emit(s, x, { k: 'ready', objs: tired, rule });
@@ -210,6 +213,14 @@ function savedFromDeath(s: GameState, x: X, id: ObjId, dying: ObjId[]): boolean 
     const hl = h ? locOf(h) : null, ul = locOf(u);
     if (!h || st.host === id || st.ctl !== p || !hl || !ul || JSON.stringify(hl) !== JSON.stringify(ul)) continue;
     if (mightOfUnit(s, id) >= mightOfUnit(s, st.host)) continue;
+    emit(s, x, { k: 'replaced', source: st.host, event: 'die', rule: '369.1' });
+    healExhaustRecall(s, x, id);
+    return true;
+  }
+  for (const { st, spec } of staticsFor(s, null, 'saveHere')) {    // Altar of Blood: "If a unit here would die during combat"
+    const h = s.objects[st.host], ul = locOf(u);
+    if (!h || h.zone.z !== 'bf' || ul?.z !== 'bf' || ul.bf !== h.zone.bf || (spec.combat && s.combat === null)) continue;
+    if (!payNow(s, x, p, spec.cost as { energy?: number; power?: string[] })) continue;
     emit(s, x, { k: 'replaced', source: st.host, event: 'die', rule: '369.1' });
     healExhaustRecall(s, x, id);
     return true;
@@ -342,6 +353,10 @@ export function deal(s: GameState, x: X, hits: { to: ObjId; n: number }[], o: {
       continue;
     }
     const u = s.objects[h.to];
+    // "Double all damage that would be dealt to it this turn" (Lotus Trap) [433].
+    const doubled = s.effects.filter((e) => (e.spec as { s?: string } | null)?.s === 'doubleDamage' && 'objs' in e.affects
+      && e.affects.objs.includes(h.to)).length;
+    if (doubled > 0) h.n *= 2 ** doubled;
     append(s, u.damage, { amount: h.n, by: o.by, sources: o.sources, combat: o.combat, group });
     setField(s, u, 'lastDamage', { item: o.item ?? null, sources: o.sources, by: o.by, combat: o.combat,
       ...(o.spell ? { spell: true } : {}) });
@@ -469,8 +484,10 @@ export function drawCard(s: GameState, x: X, p: PlayerId, id: ObjId, rule: strin
   const from = copyJson(s.objects[id].zone);
   const obj = moveObject(s, id, Z.hand(p));
   emitZone(s, x, { obj, prev: id, from, to: Z.hand(p), why: 'draw', rule, before, group });
-  setField(s, s.log.draws, p, s.log.draws[p] + 1);
+  const n0 = s.log.draws[p];
+  setField(s, s.log.draws, p, n0 + 1);
   emit(s, x, { k: 'draw', p, objs: [obj], rule, group, vis: knowers(s, [obj]) });
+  fire(s, x, { e: 'drew', p, before: n0, after: n0 + 1 });
   return obj;
 }
 
@@ -551,7 +568,7 @@ export function addMight(s: GameState, x: X, units: ObjId[], n: number, o: { con
     [479]: "its base Might becomes N" (layer 2), "give … [Shield 2]" (layer
     3). The objects are fixed now [479.4.b]. */
 export function addEffect(s: GameState, x: X, objs: ObjId[], spec: { s: 'baseMight'; n: number } | { s: 'keyword'; kw: string;
-  value: number } | { s: 'cantMove' } | { s: 'replaceDeath'; cost?: Json } | { s: 'preventNext' }, o: { controller: PlayerId; source: ObjId | null; item: number | null;
+  value: number } | { s: 'cantMove' } | { s: 'replaceDeath'; cost?: Json } | { s: 'preventNext' } | { s: 'doubleDamage' }, o: { controller: PlayerId; source: ObjId | null; item: number | null;
   rule: string; until?: 'thisTurn' | 'thisCombat' | 'permanent' }) {
   if (objs.length === 0) return;
   append(s, s.effects, {
@@ -763,6 +780,26 @@ export function setController(s: GameState, x: X, bf: number, p: PlayerId | null
   setField(s, s.objects[b.obj], 'controller', p);
   emit(s, x, { k: 'control', bf, p, rule });
   requestCleanup(s);
+}
+
+/** Replaces a battlefield with a battlefield token [439] (Ivern, the Green Father's Brush). */
+export function replaceBattlefield(s: GameState, x: X, bf: number, token: string, p: PlayerId): boolean {
+  if (!s.bfs[bf]) return false;
+  const was = s.bfs[bf].obj;
+  const id = replaceBattlefieldObj(s, bf, token, p);
+  emit(s, x, { k: 'replaced', source: was, event: `battlefield:${token}`, rule: '439' });
+  void id;
+  requestCleanup(s);
+  return true;
+}
+
+/** "Replace this with the battlefield it replaced" [439.7]. */
+export function swapBackBattlefield(s: GameState, x: X, bf: number): boolean {
+  const was = s.bfs[bf]?.obj;
+  if (was === undefined || swapBackBattlefieldObj(s, bf) === null) return false;
+  emit(s, x, { k: 'replaced', source: was, event: 'swapBack', rule: '439.7' });
+  requestCleanup(s);
+  return true;
 }
 
 const shuffledIds = (s: GameState, ids: ObjId[]) => shuffled(s, ids);

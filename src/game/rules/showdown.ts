@@ -20,6 +20,7 @@ import type { GameState } from '../state/types.ts';
 import { nextPlayer, playersWithUnitsAt } from './board.ts';
 import { establishControl } from './scoring.ts';
 import { requestCleanup } from './tasks.ts';
+import { fire } from '../abilities/triggers.ts';
 
 type X = { present: boolean };
 
@@ -32,6 +33,7 @@ export function beginShowdown(s: GameState, x: X, bf: number) {
   setField(s, s.turn, 'focusPasses', 0);
   emit(s, x, { k: 'showdownStart', bf, rule: '344' });
   emit(s, x, { k: 'focus', p: b.contested, rule: '345' });
+  fire(s, x, { e: 'showdown', bf });                                 // "When a showdown begins here"
 }
 
 /** The Focus holder passes [347.2]. */

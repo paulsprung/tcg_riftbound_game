@@ -2,6 +2,7 @@ import { ORACLE, type DeckList } from '../../../src/game/index.ts';
 import { deckLimit, isChampionUnit, isSignature, type OracleCard } from '../../../src/game/cards/oracle.ts';
 import { isLegalDeck, validateDeck } from '../../../src/game/decks/validate.ts';
 import { mulberry32 } from '../../../src/game/state/rng.ts';
+import { coverageOf } from '../../../src/game/cards/registry.ts';
 
 /*
  * Random legal decks from one set's cards (§14.7 fuzzing of whole sets): a
@@ -13,11 +14,12 @@ import { mulberry32 } from '../../../src/game/state/rng.ts';
 const RUNE: Record<string, string> = { fury: 'fury-rune', calm: 'calm-rune', mind: 'mind-rune', body: 'body-rune', chaos: 'chaos-rune',
   order: 'order-rune' };
 
-export function randomDeck(set: string, seed: number): DeckList | null {
+/** `executable`: only cards the engine executes (a set still being defined). */
+export function randomDeck(set: string, seed: number, o: { executable?: boolean } = {}): DeckList | null {
   let r = Math.imul(seed, 2654435761) >>> 0;
   const rand = () => { const st = mulberry32(r); r = st.next; return st.value; };
   const pickOne = <T>(xs: T[]): T => xs[Math.floor(rand() * xs.length)];
-  const cards = ORACLE.cards.filter((c) => c.sets[0] === set);
+  const cards = ORACLE.cards.filter((c) => c.sets[0] === set && (!o.executable || coverageOf(c.id) !== 'undefined'));
   const legends = cards.filter((c) => c.types.includes('legend'));
   for (let attempt = 0; attempt < 20; attempt++) {
     const legend = pickOne(legends);

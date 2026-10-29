@@ -132,7 +132,7 @@ export function staticApplies(s: GameState, st: StaticInst, spec: { to?: SelAst 
 
 /** Statics about an object: "I have …" or "… have …" (a `to` selector). */
 const TARGETED: readonly StaticAst['s'][] = ['might', 'keyword', 'entersReady', 'grantAbility', 'maxBuffs', 'tag', 'saveHost',
-  'doubleMightBonus', 'holdIsConquer', 'noEnemyChoose'];
+  'doubleMightBonus', 'holdIsConquer', 'noEnemyChoose', 'noTemporaryTrigger', 'noCombatDamage', 'cantBeReadied'];
 
 /** The statics of a kind that apply to an object now (for the kinds that
     are about objects), or every active one of that kind whose condition

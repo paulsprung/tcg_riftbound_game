@@ -41,16 +41,22 @@ export function moveDestinations(s: GameState, id: ObjId): Loc[] {
   const at = locOf(o);
   if (!at || o.controller === null || cantMove(s, id)) return [];
   if (at.z === 'base') return s.bfs.map((_, bf): Loc => ({ z: 'bf', bf }));   // [144.4.a]
-  const out: Loc[] = noMoveToBase(s, at.bf) ? [] : [{ z: 'base', p: o.controller }];   // [144.4.b]; Vilemaw's Lair
-  if (hasKeyword(s, id, 'ganking')) {                                            // [144.4.c], [810.1.b]
-    s.bfs.forEach((_, bf) => { if (bf !== at.bf) out.push({ z: 'bf', bf }); });
-  }
+  const out: Loc[] = noMoveToBase(s, at.bf, id) ? [] : [{ z: 'base', p: o.controller }];   // [144.4.b]; Vilemaw's Lair
+  const ganking = hasKeyword(s, id, 'ganking');
+  s.bfs.forEach((_, bf) => {                                         // [144.4.c], [810.1.b]; Baron Pit: "from anywhere"
+    if (bf !== at.bf && (ganking || moveHereFromAnywhere(s, bf))) out.push({ z: 'bf', bf });
+  });
   return out;
 }
 
-/** "Units can't move from here to base" (Vilemaw's Lair). */
-export const noMoveToBase = (s: GameState, bf: number) => staticsFor(s, null, 'noMoveToBase').some(({ st, spec }) => {
+/** Baron Pit: "Units can move here from anywhere." */
+const moveHereFromAnywhere = (s: GameState, bf: number) => staticsFor(s, null, 'moveHereFromAnywhere')
+  .some(({ st }) => s.bfs[bf].obj === st.host);
+
+/** "Units can't move from here to base" (Vilemaw's Lair); "I can't move to base" (a unit's own). */
+export const noMoveToBase = (s: GameState, bf: number, unit?: ObjId) => staticsFor(s, null, 'noMoveToBase').some(({ st, spec }) => {
   const h = s.objects[st.host];
+  if (spec.self) return unit !== undefined && st.host === unit;
   return spec.anywhere === true || (h.zone.z === 'bf' && h.zone.bf === bf);
 });
 

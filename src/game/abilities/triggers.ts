@@ -59,7 +59,9 @@ type X = { present: boolean };
 /** What happened, as triggers read it. */
 export type TriggerEvent =
   | { e: 'played'; p: PlayerId; obj: ObjId | null; def: DefId; isCard: boolean; types: CardType[]; energy: number;
-      to?: Loc; from?: ZoneKind }                                    // Played [420.4.a]
+      to?: Loc; from?: ZoneKind;
+      /** Energy spent playing it; the card (a spell's, now in the trash). */
+      spent?: number; cardObj?: ObjId }                              // Played [420.4.a]
   | { e: 'exhausted'; p: PlayerId; objs: ObjId[] }                   // one Exhaust action [415]
   | { e: 'scored'; p: PlayerId; bf: number; how: 'conquer' | 'hold'; wasUncontrolled?: boolean }   // [471]
   | { e: 'died'; deaths: { snap: Snapshot; at: Loc | null; item?: number | null; alone?: boolean; by?: PlayerId | null;
@@ -80,7 +82,9 @@ export type TriggerEvent =
   | { e: 'returned'; objs: { snap: Snapshot; at: Loc | null }[] }    // returned to a hand from the board
   | { e: 'buffed' | 'stunned'; objs: ObjId[]; by: PlayerId | null }  // [427], [424]
   | { e: 'mighty'; objs: ObjId[] }                                   // becomes Mighty [709]
-  | { e: 'hid'; p: PlayerId; bf: number };                           // [422]
+  | { e: 'hid'; p: PlayerId; bf: number }                            // [422]
+  | { e: 'showdown'; bf: number }                                    // a showdown begins [341]
+  | { e: 'drew'; p: PlayerId; before: number; after: number };       // cards drawn this turn, before and after a draw
 
 const sameLoc = (a: Loc | null | undefined, b: Loc | null | undefined) => !!a && !!b && a.z === b.z
   && (a.z === 'base' ? a.p === (b as typeof a).p : a.bf === (b as typeof a).bf);
@@ -126,7 +130,8 @@ function meets(s: GameState, w: TriggerAst, ev: TriggerEvent, o: GameObject | nu
   const here = o ? hereOf(s, o.id) : null;
   switch (w.on) {
     case 'played':
-      if (o && ev.e === 'played' && ev.obj === o.id) {
+      // A token played as a copy doesn't get that card's play effects (Reflection) [446].
+      if (o && ev.e === 'played' && ev.obj === o.id && o.copiedFrom === undefined) {
         // What it showed off as it was played, for "its Power cost" [832.1.d].
         const shown = o.played?.showOff.flatMap((r) => r.picks)[0];
         instances.push({ p: ev.p, info: { p: ev.p, subject: o.id, shownPower: shown?.chars.cost?.power.length ?? 0 } });
@@ -142,6 +147,9 @@ function meets(s: GameState, w: TriggerAst, ev: TriggerEvent, o: GameObject | nu
       if (w.what?.fromFacedown && ev.from !== 'facedown') break;
       if (w.what?.other && o && ev.obj === o.id) break;
       if (w.what?.minPower !== undefined && (!ev.isCard || (findCard(ev.def)?.cost?.power.length ?? 0) < w.what.minPower)) break;
+      if (w.what?.minSpent !== undefined && (ev.spent ?? 0) < w.what.minSpent) break;   // "if you spent [4] or more"
+      if (w.what?.tag !== undefined && !(findCard(ev.def)?.tags ?? []).includes(w.what.tag)) break;
+      if (w.what?.token && ev.isCard) break;
       if (w.to === 'here' && (!o || !sameLoc(ev.to, here))) break;
       if (w.firstPerPlayer) {                                        // [383.1.b]
         const k = key(ev.p);
@@ -153,6 +161,7 @@ function meets(s: GameState, w: TriggerAst, ev: TriggerEvent, o: GameObject | nu
       }
       const info: Record<string, Json> = { p: ev.p, energy: ev.isCard ? ev.energy : 0 };
       if (ev.obj !== null) info.subject = ev.obj;
+      if (ev.cardObj !== undefined) info.cardObj = ev.cardObj;     // a spell, now in its owner's trash
       instances.push({ p: ev.p, info });
       break;
     }
@@ -245,7 +254,14 @@ function meets(s: GameState, w: TriggerAst, ev: TriggerEvent, o: GameObject | nu
       break;
     }
     case 'objDies':
-      if (ev.e === 'died' && ev.deaths.some((d) => d.snap.id === dinfo[w.info] && (dinfo.item === undefined
+      if (ev.e !== 'died') break;
+      if (w.info === undefined) {                                    // "for each unit this kills"
+        for (const d of ev.deaths) {
+          if (dinfo.item !== undefined && d.item === dinfo.item && d.snap.chars.types.includes('unit')) instances.push({ p: null, info: { subjectDef: d.snap.def } });
+        }
+        break;
+      }
+      if (ev.deaths.some((d) => d.snap.id === dinfo[w.info!] && (w.any || dinfo.item === undefined
         || d.item === dinfo.item))) instances.push({ p: null, info: {} });
       break;
     case 'phase':
@@ -272,7 +288,8 @@ function meets(s: GameState, w: TriggerAst, ev: TriggerEvent, o: GameObject | nu
       if (w.who === 'self') {
         const fromHere = o ? ev.from?.[ev.objs.indexOf(o.id)] : undefined;
         if (o && ev.objs.includes(o.id) && (w.to !== 'bf' || ev.to.z === 'bf') && (w.from !== 'bf' || fromHere?.z === 'bf')) {
-          instances.push({ p: o.controller, info: { subject: o.id, ...(ev.to.z === 'bf' ? { bf: ev.to.bf } : {}) } });
+          instances.push({ p: o.controller, info: { subject: o.id, ...(ev.to.z === 'bf' ? { bf: ev.to.bf } : {}),
+            ...(fromHere ? { from: fromHere as unknown as Json } : {}) } });
         }
       } else {
         for (const id of ev.objs) {
@@ -319,7 +336,15 @@ function meets(s: GameState, w: TriggerAst, ev: TriggerEvent, o: GameObject | nu
       }
       break;
     case 'hid':
-      if (ev.e === 'hid' && o && sameLoc({ z: 'bf', bf: ev.bf }, here)) instances.push({ p: ev.p, info: { p: ev.p, bf: ev.bf } });
+      if (ev.e === 'hid' && o && (w.at === 'any' ? c(ev.p) === ev.p : sameLoc({ z: 'bf', bf: ev.bf }, here))) {
+        instances.push({ p: ev.p, info: { p: ev.p, bf: ev.bf } });
+      }
+      break;
+    case 'showdownStart':
+      if (ev.e === 'showdown' && o && sameLoc({ z: 'bf', bf: ev.bf }, here)) instances.push({ p: o.controller, info: { bf: ev.bf } });
+      break;
+    case 'drew':
+      if (ev.e === 'drew' && c(ev.p) === ev.p && ev.before < w.nth && ev.after >= w.nth) instances.push({ p: ev.p, info: { p: ev.p } });
       break;
     case 'readied':
       if (ev.e !== 'readied' || c(ev.by) !== ev.by) break;
@@ -376,6 +401,10 @@ function meets(s: GameState, w: TriggerAst, ev: TriggerEvent, o: GameObject | nu
       break;
     case 'winCombat':
       if (ev.e !== 'wonCombat') break;
+      if (w.info !== undefined) {                                    // "When it wins a combat this turn"
+        if (ev.units.includes(dinfo[w.info] as number)) instances.push({ p: ev.p, info: { p: ev.p, bf: ev.bf } });
+        break;
+      }
       if (w.who === 'self' ? !!o && ev.units.includes(o.id) : c(ev.p) === ev.p) instances.push({ p: ev.p, info: { p: ev.p, bf: ev.bf } });
       break;
     case 'leaves': break;                                            // self-leave, placed by the zone change [383.2.c.3]
@@ -404,7 +433,15 @@ export function collect(s: GameState, ev: TriggerEvent): PendingTrigger[] {
         }
         // An intervening "if": checked now, and never again [383.2.a.1].
         if (a.if && !evalCond(s, a.if, { controller, source: o.id, facts: o.played, info: inst.info })) continue;
+        // LeBlanc, Everywhere at Once: "Your [Temporary] effects at my battlefield don't trigger."
+        if (a.id.endsWith('#kw:temporary') && staticsFor(s, o.id, 'noTemporaryTrigger').some(({ st }) => st.ctl === controller)) continue;
         out.push({ ability: a.id, source: o.id, controller, info: inst.info, group: 0 });
+        // "Your hold effects for holding here trigger an additional time" (Blue Sentinel, Red Brambleback).
+        if (ev.e === 'scored' && ev.p === controller && ['hold', 'conquer', 'score'].includes(a.when.on)) {
+          const extra = staticsFor(s, null, 'extraScoreTriggers').filter(({ st, spec }) => spec.how === ev.how && st.ctl === controller
+            && s.objects[st.host]?.zone.z === 'bf' && (s.objects[st.host].zone as { bf: number }).bf === ev.bf).length;
+          for (let n = 0; n < extra; n++) out.push({ ability: a.id, source: o.id, controller, info: { ...inst.info, again: n + 1 }, group: 0 });
+        }
       }
     }
   }
@@ -427,7 +464,7 @@ export function collect(s: GameState, ev: TriggerEvent): PendingTrigger[] {
 function delayedActive(s: GameState, d: DelayedAbility): boolean {
   const w = d.window;
   if ('during' in w) {
-    if (w.during === 'thisTurn' && d.createdTurn !== s.turn.n) return false;
+    if (w.during === 'thisTurn' && d.createdTurn !== s.turn.n) return false;   // 'game': until its uses are spent
     return w.uses === undefined || w.uses > 0;
   }
   return false;                                                      // "at" windows fire from their phase task

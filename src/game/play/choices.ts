@@ -65,7 +65,8 @@ export function modeLegal(s: GameState, m: ModeAst, it: ChoiceCtx): boolean {
   return (m.choose ?? []).every((sl) => {
     if (sl.dest) return sl.dest.to !== 'open' || s.bfs.some((b) => b.controller === null    // an open battlefield [170.11.c]
       && !b.here.some((id) => isType(s.objects[id], 'unit')));
-    return !slotActive(s, sl, it) || slotMin(sl) === 0 || dependent(sl) || candidatesFor(s, sl, it, c).length >= slotMin(sl);
+    return !slotActive(s, sl, it) || slotMin(sl) === 0 || dependent(sl) || (sl.if !== undefined && sl.if.c !== 'xp')
+      || candidatesFor(s, sl, it, c).length >= slotMin(sl);
   });
 }
 
@@ -75,8 +76,9 @@ export function modeLegal(s: GameState, m: ModeAst, it: ChoiceCtx): boolean {
 export function choicesPossible(s: GameState, prog: ProgAst | undefined, it: ChoiceCtx): boolean {
   if (!prog) return true;
   const c = { controller: it.controller, source: it.source ?? null };
+  // A slot under a condition that may still change ("If you paid the additional cost, choose … instead") is judged as it is chosen.
   if (!(prog.choose ?? []).every((sl) => sl.dest || !slotActive(s, sl, it) || slotMin(sl) === 0 || dependent(sl)
-    || candidatesFor(s, sl, it, c).length >= slotMin(sl))) return false;
+    || (sl.if !== undefined && sl.if.c !== 'xp') || candidatesFor(s, sl, it, c).length >= slotMin(sl))) return false;
   if (prog.modes) return prog.modes.of.filter((m) => modeLegal(s, m, it)).length >= prog.modes.pick;
   return true;
 }
@@ -107,6 +109,7 @@ export function destCandidates(s: GameState, slot: SlotAst, units: ObjId[]): Loc
   if (d.to !== 'base') {
     s.bfs.forEach((b, bf) => {
       if (d.to === 'open' && (b.controller !== null || b.here.some((id) => isType(s.objects[id], 'unit')))) return;   // [170.11.c]
+      if (d.to === 'controlled' && (b.controller === null || b.controller !== u.controller)) return;   // "a battlefield you control"
       out.push({ z: 'bf', bf });
     });
   }
@@ -114,6 +117,24 @@ export function destCandidates(s: GameState, slot: SlotAst, units: ObjId[]): Loc
 }
 
 const doneKey = (slot: string) => `slot:${slot}`;
+
+/** Whether choosing `id` for a slot leaves the later slots that depend on it something to choose: a destination
+    for the unit it moves, a candidate at the battlefield it names ("Choose a battlefield and an enemy unit there").
+    A choice that makes the play impossible isn't offered (§4.6). */
+function leavesChoices(s: GameState, slots: SlotAst[], slot: SlotAst, id: ObjId, it: ChoiceCtx, c: SelCtx): boolean {
+  for (const sl of slots) {
+    if (sl === slot || slotMin(sl) === 0 || !slotActive(s, sl, it)) continue;
+    if (sl.dest?.of === slot.id && slotMin(slot) <= 1 && destCandidates(s, sl, [id]).length === 0) return false;
+    if (!sl.dest && sl.sel.some((x) => typeof x.at === 'object' && x.at.slot === slot.id)) {
+      const bf = s.bfs.findIndex((b) => b.obj === id);
+      const o = s.objects[id];
+      const loc = bf >= 0 ? { z: 'bf' as const, bf } : o ? locOf(o) : null;
+      const cc: SelCtx = { ...c, slotLoc: { ...(c.slotLoc ?? {}), [slot.id]: loc } };
+      if (candidatesFor(s, sl, it, cc).filter((x) => x !== id).length < slotMin(sl)) return false;
+    }
+  }
+  return true;
+}
 
 export interface ChooseOpts {
   /** Offer 'back' (a discretionary play or activation, §4.4). */
@@ -215,9 +236,11 @@ export function chooseNext(s: GameState, f: Frame, x: RunCtx, it: ChainItem, pro
     const chosen = (ex.targets[slot.id] ?? []).map((t) => (t.k === 'obj' ? t.id : -1));
     const others = (slot.distinctFrom ?? []).flatMap((sl) => (ex.targets[sl] ?? []).map((t) => (t.k === 'obj' ? t.id : -1)));
     const total = chosen.reduce((n, id) => n + (s.objects[id] ? Math.max(0, mightOf(s, id)) : 0), 0);
+    const all = slotsOf(prog, ex.modes);
     const cands = candidatesFor(s, slot, cctx, c).filter((id) => !chosen.includes(id) && !others.includes(id)
       && (!o.affordable || o.affordable(targetRef(s, id)))
-      && (slot.sumMightMax === undefined || total + Math.max(0, mightOf(s, id)) <= slot.sumMightMax));
+      && (slot.sumMightMax === undefined || total + Math.max(0, mightOf(s, id)) <= slot.sumMightMax)
+      && leavesChoices(s, all, slot, id, cctx, c));
     const enough = chosen.length >= slotMin(slot);
     if (chosen.length >= slotMax(slot) || (enough && cands.length === 0)) {
       setField(s, it.play.choices.asPlayed, done(slot.id), true);

@@ -29,11 +29,12 @@ import { abilitiesOf, cardDef } from '../cards/registry.ts';
 import type { CostAbilityAst, CostAst, DiscountAst, NonStdCostAst, PowerReqAst, SelAst, ValueAst } from '../dsl/ast.ts';
 import type { CardType, ChainItem, Domain, GameState, ObjId, PlayerId, PowerReq, TargetRef } from '../state/types.ts';
 import { energyCostOf, hasKeyword, isType, keywordOf, mightOf, typesOf } from '../rules/chars.ts';
-import { evalCond } from '../rules/conditions.ts';
+import { evalCond, tagsAmong } from '../rules/conditions.ts';
 import type { ResourceCost } from '../rules/resources.ts';
 import { selectAll } from '../rules/targets.ts';
 import { boardObjects, staticsFor } from '../layers/derive.ts';
 import { findCard } from '../cards/oracle.ts';
+import { TOKENS } from '../cards/tokens.ts';
 
 /** A cost ability as it applies to one play: its key in
     PlayChoices.optionalCosts and PlayedRecord.paidOptional, the ability,
@@ -77,7 +78,7 @@ export function costOffers(s: GameState, def: string, types: CardType[], p: Play
     [415.4], any matching one for a kill. The card being played is on the
     chain, so it is never among them. */
 export function costCandidates(s: GameState, sel: SelAst, p: PlayerId, src: ObjId | null, exhaust: boolean): ObjId[] {
-  return selectAll(s, sel, { controller: p, source: null })
+  return selectAll(s, sel, { controller: p, source: src })            // "a unit you control here": here is the source's
     .filter((id) => id !== src && (!exhaust || !s.objects[id].exhausted));
 }
 
@@ -138,6 +139,7 @@ function discountOf(s: GameState, d: DiscountAst, src: ObjId | null, p: PlayerId
     if (v.v === 'sum') return v.of.reduce((n: number, w) => n + val(w), 0);
     if (v.v === 'holdPoints') return s.log.points.filter((r) => r.p === p && r.why === 'hold').reduce((n, r) => n + r.n, 0);
     if (v.v === 'playedThisTurn') return s.log.played.filter((r) => r.p === p && r.isCard).length;
+    if (v.v === 'tagsAmong') return tagsAmong(s, p, v.tags);
     if (v.v === 'maxMight') return Math.max(0, ...selectAll(s, v.of, { controller: p, source: src }).map((id) => mightOf(s, id)));
     return 0;
   };
@@ -162,19 +164,32 @@ export function powerOf(c: CostAst | undefined, domains: Domain[]): PowerReq[] {
 export function totalCost(s: GameState, o: { def: string; types: CardType[]; p: PlayerId; base: ResourceCost;
   chosen: readonly string[]; targets?: readonly TargetRef[]; extraAny?: number;
   /** How many each "any number" cost ability (CostAbilityAst.x) takes, by its key. */
-  xs?: Record<string, number>; origin?: string }): ResourceCost {
+  xs?: Record<string, number>; origin?: string;
+  /** Estimate the reduction of a cost read from the objects it kills (Atakhan) with the most expensive candidate. */
+  estimatePaid?: boolean }): ResourceCost {
   let energy = o.base.energy;
   let power: PowerReq[] = o.base.power.slice();
   const domains = findCard(o.def)?.domains ?? [];
+  const offers = costOffers(s, o.def, o.types, o.p, o.origin).filter((off) => !off.a.optional || o.chosen.includes(off.key));
+  for (const off of offers) {                                        // an alternative cost instead of the base cost [204.1.b]
+    if (!off.a.alt) continue;
+    energy = off.a.alt.energy ?? 0;
+    power = powerOf(off.a.alt, domains);
+  }
   const deflect = (o.targets ?? []).reduce((n, t) => n + deflectFor(s, t, o.p), 0) + (o.extraAny ?? 0);
   for (let i = 0; i < deflect; i++) power.push({ k: 'any' });       // [809.1.c.1]
-  const offers = costOffers(s, o.def, o.types, o.p, o.origin).filter((off) => !off.a.optional || o.chosen.includes(off.key));
   for (const off of offers) {                                        // additional costs, increases [356.2–356.3]
     for (const c of [off.a.add, off.a.increase]) {
       if (!c) continue;
       energy += c.energy ?? 0;
       power.push(...powerOf(c, domains));
     }
+  }
+  for (const e of s.effects) {                                       // "Your non-token units cost [1] more to play this turn"
+    const spec = e.spec as { s?: string; types?: CardType[]; energy?: number } | null;
+    if (spec?.s !== 'costMore' || !('player' in e.affects) || e.affects.player !== o.p) continue;
+    if (!(spec.types ?? []).some((t) => o.types.includes(t)) || Object.hasOwn(TOKENS, o.def)) continue;
+    energy += spec.energy ?? 0;
   }
   for (const e of s.effects) {                                       // "The next spell you play this turn costs [5] less"
     const spec = e.spec as { s?: string; types?: CardType[]; energy?: number } | null;
@@ -194,6 +209,10 @@ export function totalCost(s: GameState, o: { def: string; types: CardType[]; p: 
     }
     if (off.a.repeat) {                                              // Marai Spire: "Friendly [Repeat] costs cost [1] less"
       energy -= staticsFor(s, null, 'repeatLess').filter(({ st }) => st.ctl === o.p).length;
+    }
+    if (off.a.lessByPaid && o.estimatePaid && off.a.pay?.kill) {      // the real reduction is read in step 4
+      const best = Math.max(0, ...costCandidates(s, off.a.pay.kill.sel, o.p, null, false).map((id) => energyCostOf(s.objects[id])));
+      energy -= best;
     }
     const d = off.a.discount;
     if (!d) continue;
@@ -232,10 +251,11 @@ export function cheapestCost(s: GameState, id: ObjId, p: PlayerId, base: Resourc
   const o = s.objects[id];
   const types = typesOf(o);
   const origin = o.zone.z;
-  const free = optionalOffers(s, o.def, types, p, origin).filter((x) => x.a.discount && !x.a.add && !x.a.repeat).map((x) => x.key);
+  const free = optionalOffers(s, o.def, types, p, origin).filter((x) => (x.a.discount || x.a.lessByPaid || x.a.alt) && !x.a.add && !x.a.repeat)
+    .map((x) => x.key);
   const xs: Record<string, number> = {};
   for (const off of costOffers(s, o.def, types, p, origin)) if (off.a.x) xs[off.key] = xMax(s, off.a.x, p);
-  return totalCost(s, { def: o.def, types, p, base, chosen: free, xs, origin });
+  return totalCost(s, { def: o.def, types, p, base, chosen: free, xs, origin, estimatePaid: true });
 }
 
 /** Whether the mandatory non-standard costs of playing a card can be paid

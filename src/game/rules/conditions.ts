@@ -11,7 +11,7 @@
 import type { CondAst, RefAst } from '../dsl/ast.ts';
 import { locOf } from '../state/zones.ts';
 import type { ChainItem, GameState, Json, ObjId, Outcome, PlayedRecord, PlayerId, Snapshot } from '../state/types.ts';
-import { cmp, predOk, selectAll } from './targets.ts';
+import { cmp, predOk, selectAll, slotLocsOf } from './targets.ts';
 import { victoryScore } from './defaults.ts';
 import { findCard } from '../cards/oracle.ts';
 
@@ -35,6 +35,14 @@ export interface CondCtx {
   origin?: string;
   /** The Equipment whose effect text is evaluated. */
   thisObj?: ObjId | null;
+  /** Reads a number as the item's instructions would (CondAst 'val'). */
+  value?: (v: import('../dsl/ast.ts').ValueAst) => number;
+}
+
+/** How many of these tags p's units have among them (Ivern, Daisy, Friendship). */
+export function tagsAmong(s: GameState, p: PlayerId, tags: string[]): number {
+  const units = selectAll(s, { k: 'unit', rel: 'friendly' }, { controller: p, source: null });
+  return tags.filter((t) => units.some((u) => predOk(s, { p: 'tag', tag: t }, u, { controller: p, source: null }))).length;
 }
 
 /** Whether an outcome counts as "you do" [359.3.e.14.b]: the instruction
@@ -44,9 +52,13 @@ export const didIt = (o: Outcome | undefined) => o !== undefined && (o.o === 'ex
 /** The object a reference names for a condition, or null. */
 function refObj(s: GameState, r: RefAst, x: CondCtx): ObjId | null {
   if (r === 'self') return x.source;
+  if (r === 'this') return x.thisObj ?? x.source;
+  if (typeof r === 'object' && 'paid' in r) return null;
   if (typeof r === 'object' && 'now' in r) {                           // the card wherever it is now
     const id = refObj(s, r.now, x);
-    const card = (id !== null ? s.objects[id]?.card : undefined) ?? (r.now === 'self' ? x.lki?.card ?? x.item?.sourceLki?.card : undefined);
+    const bound = typeof r.now === 'object' && 'bound' in r.now ? x.bound?.[r.now.bound] as { cards?: number[] } | undefined : undefined;
+    const card = (id !== null ? s.objects[id]?.card ?? x.item?.play.lookBack[id]?.card : undefined) ?? bound?.cards?.[0]
+      ?? (r.now === 'self' ? x.lki?.card ?? x.item?.sourceLki?.card : undefined);
     const o = card === undefined ? undefined : Object.values(s.objects).find((y) => y.card === card && !y.token);
     return o ? o.id : null;
   }
@@ -76,8 +88,15 @@ export function evalCond(s: GameState, c: CondAst, x: CondCtx): boolean {
     }
     case 'count': {
       const eventBf = typeof x.info?.bf === 'number' ? x.info.bf : null;
-      return cmp(selectAll(s, c.of, { controller: x.controller, source: x.source, eventBf }).length, c.op, c.n);
+      const slotLoc = x.item ? slotLocsOf(s, x.item.play.choices.executions[0]) : undefined;
+      return cmp(selectAll(s, c.of, { controller: x.controller, source: x.source, eventBf, ...(slotLoc ? { slotLoc } : {}) }).length, c.op, c.n);
     }
+    case 'val': return x.value !== undefined && cmp(x.value(c.v), c.op, c.n);
+    case 'scoredThisTurn': return x.source !== null && s.log.scored.some((r) => r.how === c.how && (r.units ?? []).includes(x.source!));
+    case 'tags': return tagsAmong(s, x.controller, c.tags) >= c.n;
+    case 'showdown': return s.showdown !== null;
+    case 'phase': return s.turn.phase === c.phase && (!c.yours || s.turn.player === x.controller);
+    case 'xpGained': return (s.log.xpGained[x.controller] ?? 0) > 0;
     case 'legion': {                                                 // another card finalized by you this turn [812.1.c]
       const me = x.source === null ? undefined : s.objects[x.source]?.card;
       return s.log.finalized.some((f) => f.p === x.controller && f.isCard && f.card !== me);
@@ -101,7 +120,7 @@ export function evalCond(s: GameState, c: CondAst, x: CondCtx): boolean {
         case 'unitDied': n = s.log.deaths.filter((d) => d.snap.chars.types.includes('unit') && (c.rel === undefined
           || (c.rel === 'friendly' ? d.snap.controller === p : d.snap.controller !== null && d.snap.controller !== p))).length; break;
         case 'played': n = s.log.played.filter((r) => r.p === p && r.isCard && typed(r.types)
-          && (!c.tag || (findCard(r.def)?.tags ?? []).includes(c.tag))).length; break;
+          && (!c.tag || (findCard(r.def)?.tags ?? []).includes(c.tag)) && (c.minSpent === undefined || r.energySpent >= c.minSpent)).length; break;
         case 'playedToBf': n = s.log.played.filter((r) => r.p === p && r.to?.z === 'bf' && typed(r.types)).length; break;
         case 'finalized': n = s.log.finalized.filter((r) => r.p === p && r.isCard && typed(r.types)).length; break;
       }

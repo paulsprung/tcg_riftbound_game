@@ -36,7 +36,7 @@ import { countFinalized } from '../abilities/triggers.ts';
 import { addItem, finalizeItem, itemById, playContext, removeItem } from '../rules/chain.ts';
 import { snapshotOf } from '../rules/chars.ts';
 import { goldBonus, paymentPlans } from '../rules/resources.ts';
-import { slotLocsOf, stillLegal } from '../rules/targets.ts';
+import { selectAll, slotLocsOf, stillLegal } from '../rules/targets.ts';
 import { abilityTiming, timingOk, windowAllows, type Window } from '../rules/timing.ts';
 import { choicesPossible, chooseNext, slotsOf } from './choices.ts';
 import { payStep } from './pay.ts';
@@ -181,6 +181,10 @@ const STEPS: StepTable<AbilityFrame> = [
       const of = a.cost.energyLessBy.of;
       const t = typeof of === 'object' && 'slot' in of ? it.play.choices.executions[0].targets[of.slot]?.[0] : undefined;
       if (t?.k === 'obj' && s.objects[t.id]) c.energy = Math.max(0, c.energy - Math.max(0, mightOf(s, t.id)));
+    }
+    if (a.cost?.energyLessBy && typeof a.cost.energyLessBy === 'object' && a.cost.energyLessBy.v === 'count') {
+      // "This ability costs [1] less for each friendly unit with [Temporary]" (Lillia, Bashful Bloom).
+      c.energy = Math.max(0, c.energy - selectAll(s, a.cost.energyLessBy.of, { controller: it.controller, source: it.source ?? null }).length);
     }
     // Deflect: [A] per time it chooses an opponent's Deflect object [809.1.c], [356.2.a.2].
     const deflect = Object.values(it.play.choices.executions[0].targets).flat()

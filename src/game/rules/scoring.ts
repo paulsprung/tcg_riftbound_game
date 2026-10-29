@@ -27,6 +27,7 @@ import { opponentsOf } from './board.ts';
 import { victoryScore } from './defaults.ts';
 import { fire } from '../abilities/triggers.ts';
 import { staticsFor } from '../layers/derive.ts';
+import { isType } from './chars.ts';
 
 type X = { present: boolean };
 
@@ -40,7 +41,9 @@ export function score(s: GameState, x: X, p: PlayerId, bf: number, how: 'conquer
   const rule = how === 'conquer' ? '471.1' : '471.2';
   const finalPoint = how === 'conquer' && s.players[p].points >= victoryScore(s) - 1;
   const point = !finalPoint || s.bfs.every((other) => hasBit(other.scoredBy, p));   // [473.1.b]
-  append(s, s.log.scored, { p, bf, how, point });
+  // The units that scored it ("if I didn't conquer this turn").
+  const units = b.here.filter((id) => s.objects[id].controller === p && isType(s.objects[id], 'unit'));
+  append(s, s.log.scored, { p, bf, how, point, units });
   emit(s, x, { k: 'score', p, bf, how, point, drewInstead: !point, rule });
   if (point) gainPoints(s, x, p, 1, how, finalPoint ? '473.1.b' : '473.1');
   else drawCards(s, x, p, 1, '473.1.b.1');

@@ -7,7 +7,7 @@
 import { findCard } from '../cards/oracle.ts';
 import { TOKENS } from '../cards/tokens.ts';
 import { IMPLEMENTED_KEYWORDS } from '../cards/registry.ts';
-import { derive, keywordValue, printedKeywordValues } from '../layers/derive.ts';
+import { derive, keywordValue, printedKeywordValues, staticsFor } from '../layers/derive.ts';
 import { locOf } from '../state/zones.ts';
 import type { CardType, ContinuousEffect, GameObject, GameState, KeywordId, ObjId, Snapshot, TokenId } from '../state/types.ts';
 import { copyJson } from '../state/clone.ts';
@@ -59,7 +59,8 @@ export function effectMight(effects: readonly ContinuousEffect[], id: ObjId): nu
 export const mightRef = (s: GameState, id: ObjId) => Math.max(0, mightOf(s, id));
 
 /** What a unit adds to its side's combat total: a stunned unit adds 0 [424.1.b], [467.2.a–b]. */
-export const combatMight = (s: GameState, id: ObjId) => (s.objects[id].stunned ? 0 : mightRef(s, id));
+export const combatMight = (s: GameState, id: ObjId) => (s.objects[id].stunned
+  || staticsFor(s, id, 'noCombatDamage').length > 0 ? 0 : mightRef(s, id));   // "I don't deal combat damage" (Galio)
 
 /** Whether an object has a keyword now [803]: printed or granted (layer 3),
     for the keywords whose rules the engine implements. */
@@ -87,7 +88,11 @@ export function lethalThreshold(s: GameState, id: ObjId): number {
 }
 
 export function isLethal(s: GameState, id: ObjId): boolean {
-  const d = damageOf(s.objects[id]);
+  const o = s.objects[id];
+  const d = damageOf(o);
+  // Elder Dragon: "Any amount of your damage is enough to kill enemy units."
+  if (d > 0 && staticsFor(s, null, 'anyDamageKills').some(({ st }) => st.ctl !== o.controller
+    && o.damage.some((m) => m.by === st.ctl))) return true;
   return d > 0 && d >= lethalThreshold(s, id);
 }
 

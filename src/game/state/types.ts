@@ -294,6 +294,8 @@ export interface ChainItem {
   trigger?: Record<string, Json>;     // referents captured when the trigger condition was met [359.3.f.3]
   outcomes: Record<string, Outcome>;  // per instruction id and execution [359.3.e.14]
   onLeaveChain?: 'banish' | 'recycle' | 'hand';    // Flow / "Banish this" delayed replacement [391.3.a], [829.1.b.1]
+  /** "… may play this spell again for [A]": who plays it from the trash as it leaves the chain, for what. */
+  replay?: { who: PlayerId; cost: Json };
   countered?: boolean;
 }
 export type Outcome = { o: 'executed' } | { o: 'partial' } | { o: 'negated'; why: 'replaced' | 'skipped' | 'impossible'
@@ -382,7 +384,7 @@ export interface DelayedAbility {
   ability: AbilityAst;                 // any kind [391.1]
   window:
     | { at: 'endOfTurn' | 'startOfNextMain' | 'nextBeginning'; player?: PlayerId }   // fires once at that time point
-    | { during: 'thisTurn' | { whileObj: ObjId; zone: ZoneKind } | { whileOnChain: ItemId };
+    | { during: 'thisTurn' | 'game' | { whileObj: ObjId; zone: ZoneKind } | { whileOnChain: ItemId };
         uses?: number;                 // Fanfare: 3 triggers; Last Caress: 1
         consumedBy?: EventPatternAst };   // a permission used up by an event (Last Caress: the Play action [420.5])
   link?: string;                       // linked abilities ("When you play it, [Buff] it") [395–398]
@@ -399,12 +401,14 @@ export interface TurnLog {             // reset at turn start; the per-turn memo
   deaths: { snap: Snapshot; group: number; inCombat: boolean; at: Loc | null }[];
   moves:  { obj: ObjId; from: Loc; to: Loc; by: PlayerId | null; standard: boolean; group: number }[];
   exhausted: { p: PlayerId; objs: ObjId[]; group: number; byCost: boolean }[];   // one row per exhaust action
-  scored: { p: PlayerId; bf: number; how: 'conquer' | 'hold'; point: boolean }[];
+  scored: { p: PlayerId; bf: number; how: 'conquer' | 'hold'; point: boolean; units?: ObjId[] }[];
   points: { p: PlayerId; n: number; why: 'conquer' | 'hold' | 'effect' | 'burnOut' }[];
   targeted: { item: ItemId; by: PlayerId; obj: ObjId; spell: boolean; enemy?: boolean }[];         // "chose an enemy unit this turn"
   combatsWon: { p: PlayerId; bf: number; units: ObjId[] }[];
   hidden: { p: PlayerId; bf: number }[];
   draws: number[]; discards: number[]; xpGained: number[]; powerSpent: number[];   // per player
+  /** Cards (by CardRef) whose spell or ability dealt damage this turn, one entry per Deal (Dancing Grenade). */
+  cardDeals?: CardRef[];
 }
 export interface GameHistory {
   turnsTaken: number[];                // per player: "first turn" (Otterpus, Ol' Poro)

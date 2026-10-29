@@ -19,7 +19,9 @@ import { randomDeck } from './helpers/randomDeck.ts';
  *   FUZZ_SET_AI=20 npx vitest run tests/game/fuzz-sets.test.ts              (Normal-vs-Beginner games per set)
  */
 
-const SETS = ['ogn', 'sfd'];
+const SETS = ['ogn', 'sfd', 'unl'];
+/** Sets still being defined: their decks take only executable cards. */
+const PARTIAL = ['unl'];
 const GAMES = Number(process.env.FUZZ_SET_GAMES ?? 8);
 const AI_GAMES = Number(process.env.FUZZ_SET_AI ?? 2);
 
@@ -64,12 +66,15 @@ function play(seed: number, decks: [DeckList, DeckList], levels: [AiLevel | null
   return { end: s, record, illegal };
 }
 
-const decksFor = (set: string, seed: number): [DeckList, DeckList] => [randomDeck(set, seed * 2 + 1)!, randomDeck(set, seed * 2 + 2)!];
+const decksFor = (set: string, seed: number): [DeckList, DeckList] => {
+  const o = { executable: PARTIAL.includes(set) };
+  return [randomDeck(set, seed * 2 + 1, o)!, randomDeck(set, seed * 2 + 2, o)!];
+};
 
 for (const set of SETS) {
   describe(`§14.7 fuzzing: random ${set.toUpperCase()} decks`, () => {
     it('every set legend with a champion of its tag gives a legal random deck', () => {
-      for (let i = 0; i < 20; i++) expect(randomDeck(set, 100 + i), `seed ${100 + i}`).not.toBeNull();
+      for (let i = 0; i < 20; i++) expect(randomDeck(set, 100 + i, { executable: PARTIAL.includes(set) }), `seed ${100 + i}`).not.toBeNull();
     });
 
     const BATCH = 4;

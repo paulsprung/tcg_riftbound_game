@@ -36,6 +36,17 @@ const TOKEN_DEFS: CardDef[] = [
     { id: 'gold#0', kind: 'activated', cost: { killSelf: true, exhaustSelf: true }, timing: 'reaction', isAdd: true,
       effect: { body: [{ op: 'add', power: 1 }] } },
   ] },
+  // [187.8]
+  { id: 'brush', text: 'Bird, Cat, Dog, Poro, and Ivern units here have +1 [M].\nWhen you score here, you may replace this with the battlefield it replaced.',
+    keywords: [], abilities: [
+      { id: 'brush#0', kind: 'static', spec: { s: 'might', n: 1, to: { k: 'unit', at: 'here', where: [{ p: 'anyTag', tags: ['Bird', 'Cat', 'Dog', 'Poro', 'Ivern'] }] } } },
+      { id: 'brush#1', kind: 'triggered', when: { on: 'score', who: 'you', at: 'here' }, may: true, controller: 'eventPlayer',
+        effect: { body: [{ op: 'replaceBf', at: 'here', back: true }] } },
+    ] },
+  // [187.9]
+  { id: 'baronPit', text: 'Units can move here from anywhere.', keywords: [], abilities: [
+    { id: 'baronPit#0', kind: 'static', spec: { s: 'moveHereFromAnywhere' } },
+  ] },
 ];
 
 const DEFS: Record<DefId, CardDef> = {};
@@ -84,9 +95,9 @@ function costOfKeyword(c: OracleCost | undefined): CostAst {
 }
 
 /** The printed cost of a card's keyword (Equip, Repeat), first alternative [204.1.b]. */
-export function keywordCost(def: DefId, kw: KeywordId): CostAst | undefined {
+export function keywordCost(def: DefId, kw: KeywordId, nth = 0): CostAst | undefined {
   const c = findCard(def);
-  const k = c ? printedKeywords(c).find((x) => x.kw === kw) : undefined;
+  const k = c ? printedKeywords(c).filter((x) => x.kw === kw)[nth] : undefined;
   return k ? costOfKeyword(k.costs?.[0]) : undefined;
 }
 
@@ -146,6 +157,14 @@ function keywordAbilities(def: DefId): AbilityAst[] {
   for (const k of keywordsOf(def)) {
     const a = keywordAbility(def, k.kw);
     if (a && !out.some((b) => b.id === a.id)) out.push(a);
+  }
+  // "[Repeat] — [1] / [A] / [1][A]": each further Repeat cost its own ability, paid once each (Curtain Call).
+  const repeats = keywordsOf(def).filter((k) => k.kw === 'repeat').length;
+  for (let i = 1; i < repeats; i++) {
+    const c = keywordCost(def, 'repeat', i) ?? {};
+    const { discard, ...res } = c;
+    out.push({ id: `${def}#kw:repeat${i + 1}`, kind: 'cost', optional: true, repeat: true,
+      ...(Object.keys(res).length > 0 ? { add: res } : {}), ...(discard ? { pay: { discard } } : {}) });
   }
   return out;
 }

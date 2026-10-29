@@ -11,7 +11,8 @@
  */
 import type { LocSelAst, PredAst, SelAst, SlotAst } from '../dsl/ast.ts';
 import { locOf } from '../state/zones.ts';
-import type { GameState, Loc, ObjId, PlayerId, TargetRef, TokenId } from '../state/types.ts';
+import type { GameObject, GameState, Loc, ObjId, PlayerId, TargetRef, TokenId } from '../state/types.ts';
+import { cardDef as cardDefOf } from '../cards/registry.ts';
 import { energyCostOf, hasKeyword, isType, mightOf, tagsOf } from './chars.ts';
 import { findCard } from '../cards/oracle.ts';
 import { staticsFor } from '../layers/derive.ts';
@@ -27,6 +28,10 @@ export interface SelCtx {
   eventBf?: number | null;
   /** Where the source was as it left the board ("all units at my battlefield" in a Deathknell). */
   lkiHere?: Loc | null;
+  /** What the item's slots chose ("each other enemy unit there"). */
+  slotObjs?: Record<string, ObjId[]>;
+  /** The cost of the object a cost of the item killed ("costs no more … than the killed unit"). */
+  paidCost?: { energy: number; power: number } | null;
 }
 
 /** Every permanent on the board: in the bases and at the battlefields. */
@@ -99,6 +104,10 @@ export function inCombat(s: GameState, id: ObjId): boolean {
   return !!s.combat && !!o && o.zone.z === 'bf' && o.zone.bf === s.combat.bf && o.designation !== null;
 }
 
+/** Ivern: "As you play me, choose Bird, Cat, Dog, or Poro. I gain that tag." */
+export const hasChosenTag = (o: GameObject, tag: string) => o.named?.kind === 'tag' && o.named.value === tag
+  && locOf(o) !== null && (cardDefOf(o.def)?.abilities ?? []).some((a) => a.kind === 'static' && a.spec.s === 'chooseTag');
+
 const unitsHere = (s: GameState, bf: number) => s.bfs[bf].here.filter((u) => isType(s.objects[u], 'unit'));
 
 export function predOk(s: GameState, p: PredAst, id: ObjId, c: SelCtx): boolean {
@@ -111,7 +120,8 @@ export function predOk(s: GameState, p: PredAst, id: ObjId, c: SelCtx): boolean 
     case 'token': return o.token;
     case 'nonToken': return !o.token;
     case 'type': return p.any.some((t) => isType(o, t));
-    case 'tag': return tagsOf(o).includes(p.tag) || staticsFor(s, id, 'tag').some(({ spec }) => spec.tag === p.tag);   // "I am a Mech"
+    case 'tag': return tagsOf(o).includes(p.tag) || staticsFor(s, id, 'tag').some(({ spec }) => spec.tag === p.tag)   // "I am a Mech"
+      || hasChosenTag(o, p.tag);
     case 'buffed': return o.buffs > 0;
     case 'stunned': return o.stunned;
     case 'mighty': return locOf(o) !== null ? mightOf(s, id) >= 5 : false;   // [708], [710]
@@ -149,6 +159,25 @@ export function predOk(s: GameState, p: PredAst, id: ObjId, c: SelCtx): boolean 
     case 'energyCostVsPoints': return cmp(energyCostOf(o), p.op, s.players[c.controller].points);
     case 'notSubject': return c.subject === undefined || c.subject === null || id !== c.subject;
     case 'not': return !predOk(s, p.of, id, c);
+    case 'mightVsSource': {
+      const src = c.source === null ? undefined : s.objects[c.source];
+      return !!src && locOf(src) !== null && cmp(mightOf(s, id), p.op, mightOf(s, c.source!));
+    }
+    case 'notSlot': return !(c.slotObjs?.[p.slot] ?? []).includes(id);
+    case 'anyTag': return p.tags.some((t) => predOk(s, { p: 'tag', tag: t }, id, c));
+    case 'enemyMightBelowSource': {
+      const bf = s.bfs.findIndex((b) => b.obj === id);
+      const src = c.source === null ? undefined : s.objects[c.source];
+      if (bf < 0 || !src) return false;
+      const total = unitsHere(s, bf).filter((u) => s.objects[u].controller !== c.controller)
+        .reduce((n, u) => n + Math.max(0, mightOf(s, u)), 0);
+      return mightOf(s, c.source!) > total;
+    }
+    case 'costAtMostPaid': {
+      const pc = c.paidCost;
+      if (!pc) return false;
+      return energyCostOf(o) <= pc.energy && (findCard(o.def)?.cost?.power.length ?? 0) <= pc.power;
+    }
   }
 }
 
@@ -201,7 +230,7 @@ function pool(s: GameState, sel: SelAst): ObjId[] {
   switch (sel.k) {
     case 'battlefield': return s.bfs.map((b) => b.obj);
     case 'card': return s.players.flatMap((pl) => (sel.in === 'hand' ? pl.hand : sel.in === 'champion'
-      ? (pl.champion === null ? [] : [pl.champion]) : pl.trash));
+      ? (pl.champion === null ? [] : [pl.champion]) : sel.in === 'banish' ? pl.banish : pl.trash));
     case 'spell': return s.chain.flatMap((i) => (i.obj !== undefined ? [i.obj] : []));
     case 'legend': return s.players.flatMap((pl) => pl.legend);
     case 'facedown': return s.bfs.flatMap((b) => b.facedown);
@@ -224,6 +253,7 @@ export function slotLocsOf(s: GameState, ex: { targets: Record<string, TargetRef
     const bf = s.bfs.findIndex((b) => b.obj === t.id);
     const o = s.objects[t.id];
     out[slot] = bf >= 0 ? { z: 'bf', bf } : o ? locOf(o) : null;
+    if (t.loc) out[`was:${slot}`] = t.loc;                           // where it was as it was chosen ("that battlefield")
   }
   for (const [slot, l] of Object.entries(ex?.dests ?? {})) out[slot] = l;
   return out;
