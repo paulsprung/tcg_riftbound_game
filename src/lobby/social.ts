@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 import { api, showNotice } from '../net/api.ts';
 import type { LobbyMode, LobbyView, Presence } from '../net/protocol.ts';
 import { online } from '../net/socket.ts';
+import { MODES_OPEN } from '../play/modes.ts';
 import { DEMO, DEMO_FRIENDS } from './demo.ts';
 
 /*
@@ -60,8 +61,9 @@ export function setCustomDuo(on: boolean) { customDuo = on; }
 /** The page you invite from decides the lobby: the custom game (1v1, or 2v2 for four), or casual (2v2). */
 export function lobbyModeHere(): LobbyMode | null {
   const h = location.hash.replace(/^#\/?/, '');
-  if (h === 'play' || h.startsWith('play/custom')) return customDuo ? 'casual' : 'custom';
-  if (h.startsWith('play/casual')) return 'casual';
+  if (h === 'play' || h.startsWith('play/custom')) return customDuo && MODES_OPEN ? 'casual' : 'custom';
+  // with 2v2 closed, friends play 1v1 from casual too
+  if (h.startsWith('play/casual')) return MODES_OPEN ? 'casual' : 'custom';
   return null;
 }
 

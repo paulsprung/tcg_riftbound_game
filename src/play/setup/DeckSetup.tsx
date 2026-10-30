@@ -1,5 +1,6 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import { Icon } from '../../lobby/icons.tsx';
+import { MODES_OPEN } from '../modes.ts';
 import { CardBack } from '../../card/CardBack.tsx';
 import { HoloCard } from '../../card/HoloCard.tsx';
 import { DOMAIN_COLOR, defaultFinish, symbolFor } from '../../data/cardInfo.ts';
@@ -143,7 +144,7 @@ export function FormatSwitch({ value = '1v1', onChange }: { value?: '1v1' | '2v2
   return (
     <div className="seg seg--format" role="group" aria-label="Format">
       <button type="button" aria-pressed={value === '1v1'} onClick={() => onChange?.('1v1')}>1v1 Duel</button>
-      {onChange ? <button type="button" aria-pressed={value === '2v2'} onClick={() => onChange('2v2')}>2v2 Duo</button>
+      {onChange && MODES_OPEN ? <button type="button" aria-pressed={value === '2v2'} onClick={() => onChange('2v2')}>2v2 Duo</button>
         : <button type="button" disabled aria-pressed="false" data-soon="">2v2 Duo</button>}
     </div>
   );
@@ -357,15 +358,6 @@ export function DeckSetup({ cards, db, initial, error, onStart, saved, onResume,
           {seatView('theirs', theirs, 'Player 2', 'Opponent')}
         </div>
       )}
-      {duo && (
-        <div className="ds-friends lb-card">
-          <div>
-            <b>Play with friends</b>
-            <span className="muted small">Invite them from the friends list: four of you play a friendly 2v2 at once; two of you search together for another pair.</span>
-          </div>
-          <button type="button" className="btn btn--primary btn--small" onClick={() => social.setOpen(true)}>Invite friends</button>
-        </div>
-      )}
 
       <div className="ds__start">
         <p className="muted small ds__hint">{open.length > 0 ? 'Click an empty seat to add a computer, invite a friend, or play on this screen.' : 'Change a deck, or ✕ to empty a seat.'}</p>
@@ -386,9 +378,10 @@ export function DeckSetup({ cards, db, initial, error, onStart, saved, onResume,
               <span className="lb-label">Game mode</span>
               <div className="seg seg--format" role="group" aria-label="Game mode">
                 <button type="button" aria-pressed={!duo} onClick={() => onDuo?.(false)}>1v1 Duel</button>
-                <button type="button" aria-pressed={!!duo} disabled={!onDuo} data-soon={onDuo ? undefined : ''} onClick={() => onDuo?.(true)}>2v2 Duo</button>
-                <button type="button" aria-pressed="false" disabled={!onLimited} data-soon={onLimited ? undefined : ''} title={onLimited ? 'A pool of six boosters' : undefined} onClick={() => { setSettings(false); onLimited?.('sealed'); }}>Sealed</button>
-                <button type="button" aria-pressed="false" disabled={!onLimited} data-soon={onLimited ? undefined : ''} title={onLimited ? 'Pick by pick from three boosters' : undefined} onClick={() => { setSettings(false); onLimited?.('draft'); }}>Draft</button>
+                {/* 2v2, Sealed and Draft are closed until they play as well as 1v1 (the code stays: MODES_OPEN) */}
+                <button type="button" aria-pressed={!!duo} disabled={!MODES_OPEN || !onDuo} data-soon={MODES_OPEN && onDuo ? undefined : ''} onClick={() => onDuo?.(true)}>2v2 Duo</button>
+                <button type="button" aria-pressed="false" disabled={!MODES_OPEN || !onLimited} data-soon={MODES_OPEN && onLimited ? undefined : ''} onClick={() => { setSettings(false); onLimited?.('sealed'); }}>Sealed</button>
+                <button type="button" aria-pressed="false" disabled={!MODES_OPEN || !onLimited} data-soon={MODES_OPEN && onLimited ? undefined : ''} onClick={() => { setSettings(false); onLimited?.('draft'); }}>Draft</button>
               </div>
             </div>
             <div className="ds-settings__group">

@@ -12,6 +12,7 @@ import { useSession } from '../net/session.ts';
 import { online as socket, useOnline } from '../net/socket.ts';
 import { useSocial } from '../lobby/social.ts';
 import { DeckPicker, DeckSlot, FormatSwitch } from '../play/setup/DeckSetup.tsx';
+import { MODES_OPEN } from '../play/modes.ts';
 import { LobbyRoom } from './LobbyRoom.tsx';
 import { CasualLimited } from '../limited/OnlineLimited.tsx';
 
@@ -82,7 +83,7 @@ function OnlineMode({ db, mode }: { db: CardDb; mode: (typeof ONLINE)[number] })
           {mode.id === 'casual' && signedIn && (
             <div className="seg seg--format" role="group" aria-label="Deck">
               {(['constructed', 'sealed', 'draft'] as const).map((k) => {
-                const soon = k !== 'constructed' && duo;
+                const soon = k !== 'constructed' && (duo || !MODES_OPEN);
                 return (
                   <button key={k} type="button" aria-pressed={(soon ? 'constructed' : kind) === k} disabled={soon} data-soon={soon ? '' : undefined}
                     onClick={() => setKind(k)}>{k[0].toUpperCase() + k.slice(1)}</button>
@@ -169,7 +170,7 @@ export function PlayLobby({ db, mode }: { db: CardDb; mode: string }) {
   return (
     <Lobby side={side} bare={bare}>
       {/* in a lobby: its room, on the page it belongs to (the custom game, or casual for 2v2) */}
-      {lobby && ((lobby.mode === 'custom' && id === 'custom') || (lobby.mode === 'casual' && (id === 'casual' || id === 'custom'))) ? <LobbyRoom db={db} lobby={lobby} />
+      {lobby && ((lobby.mode === 'custom' && (id === 'custom' || (!MODES_OPEN && id === 'casual'))) || (lobby.mode === 'casual' && (id === 'casual' || id === 'custom'))) ? <LobbyRoom db={db} lobby={lobby} />
         : online?.id === 'tournament' ? <Suspense fallback={<p className="muted">Loading…</p>}><Tournaments db={db} /></Suspense>
         : online ? <OnlineMode db={db} mode={online} /> : (
         <div className={bare ? 'lb-bare' : 'lb-play-scroll'}>
