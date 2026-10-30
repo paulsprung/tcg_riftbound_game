@@ -6,37 +6,15 @@ import { useCollection } from '../collection/store.ts';
 import type { CardDb } from '../data/types.ts';
 import { DEMO, DEMO_PROFILE } from '../lobby/demo.ts';
 import { Lobby } from '../lobby/Lobby.tsx';
-import { api, showNotice } from '../net/api.ts';
+import { api } from '../net/api.ts';
 import type { RatingInfo } from '../net/protocol.ts';
-import { logout, useSession } from '../net/session.ts';
+import { useSession } from '../net/session.ts';
 import { HeroBanner } from './HeroBanner.tsx';
 import { ProfileShowcase } from './ProfileShowcase.tsx';
 import { useShowcase } from './showcasePieces.ts';
 
 type Standing = RatingInfo & { wins: number };
 interface Stats { ranked: Standing; casual: Standing; tournamentsWon: number }
-
-/** Your data (GDPR art. 15, 17, 20): download all of it, or delete the account. */
-function YourData() {
-  const [confirm, setConfirm] = useState(false);
-  const [typed, setTyped] = useState('');
-  const remove = () => api('POST', '/api/account/delete', { confirm: typed })
-    .then(() => { void logout(); location.hash = 'home'; location.reload(); })
-    .catch((e: Error) => showNotice(e.message));
-  return (
-    <section className="profile__data lb-card" aria-label="Your data">
-      <a className="btn btn--ghost btn--small" href="/api/account/export" download>Download my data</a>
-      {confirm ? (
-        <span className="profile__delete">
-          <input className="input" value={typed} onChange={(e) => setTyped(e.target.value)} placeholder="Type DELETE" aria-label="Type DELETE to confirm" />
-          <button type="button" className="btn btn--danger btn--small" disabled={typed !== 'DELETE'} onClick={remove}>Delete my account</button>
-          <button type="button" className="btn btn--ghost btn--small" onClick={() => { setConfirm(false); setTyped(''); }}>Keep it</button>
-        </span>
-      ) : <button type="button" className="lb-linkbtn" onClick={() => setConfirm(true)}>Delete account</button>}
-      <a className="lb-linkbtn" href="#privacy">Privacy</a>
-    </section>
-  );
-}
 
 /** Your public face: who you are, the cards you show off, how you play. */
 export function ProfileView({ db, onInspect }: { db: CardDb; onInspect: (t: InspectTarget) => void }) {
@@ -103,7 +81,6 @@ export function ProfileView({ db, onInspect }: { db: CardDb; onInspect: (t: Insp
         </HeroBanner>
 
         <ProfileShowcase db={db} pieces={pieces} onInspect={onInspect} />
-        {user && <YourData />}
 
       </div>
     </Lobby>

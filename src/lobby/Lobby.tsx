@@ -1,14 +1,14 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { divisionProgress, rankName, tierOf } from '../economy/ranks.ts';
 import { RankEmblem } from './RankEmblem.tsx';
-import { HoloSwitches } from '../card/HoloSwitches.tsx';
 import { useCollection } from '../collection/store.ts';
 import { api } from '../net/api.ts';
 import type { RatingInfo } from '../net/protocol.ts';
-import { logout, useSession } from '../net/session.ts';
+import { useSession } from '../net/session.ts';
 import { useOnline } from '../net/socket.ts';
 import { DEMO, DEMO_PROFILE } from './demo.ts';
 import { Icon, type IconName } from './icons.tsx';
+import { SettingsMenu } from './SettingsMenu.tsx';
 import './lobby.css';
 
 export const NAV = [
@@ -42,10 +42,10 @@ export function LobbyTop({ route }: { route: string }) {
         {DEMO && <a href="#ranks" aria-current={route === 'ranks' ? 'page' : undefined}>Ranks</a>}
       </nav>
       <div className="lb-top__right">
-        <HoloSwitches />
         <a className="lb-pill" href="#shop" title="Your coins" aria-label={`${own.coins} coins`}>
           <Coin /> {own.coins.toLocaleString('en-US')}
         </a>
+        <SettingsMenu />
         {session.status === 'online' && !user ? (
           <a className="btn btn--primary btn--small" href="/auth/discord">Sign in with Discord</a>
         ) : (
@@ -53,8 +53,6 @@ export function LobbyTop({ route }: { route: string }) {
             {user?.avatar ? <img src={user.avatar} alt="" /> : <span>{name.slice(0, 1).toUpperCase()}</span>}
           </a>
         )}
-        {user?.admin && <a className="lb-signout" href="#admin">Admin</a>}
-        {user && <button type="button" className="lb-signout" onClick={() => { void logout(); }}>Sign out</button>}
       </div>
     </header>
   );

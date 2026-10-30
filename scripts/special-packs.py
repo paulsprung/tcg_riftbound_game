@@ -138,41 +138,61 @@ def crimps(img, ven):
 
 
 def art(card, crop):
+    """The champion over the whole width of the bag, as on the boosters: fading into the foil under
+    the logo, and darkening into the foot, where the name stands on it."""
     scan = cv2.imread(os.path.join(CARDS, f'{card}.webp'))
     x0, y0, x1, y1 = crop
     a = scan[y0:y1, x0:x1]
-    # the window the champion fills: between the rails, from under the logo into the name plate
-    wx0, wy0, wx1, wy1 = 44, 170, W - 44, 760
+    wx0, wy0, wx1, wy1 = 0, 120, W, 848
     tw, th = wx1 - wx0, wy1 - wy0
     s = max(tw / a.shape[1], th / a.shape[0])
     a = cv2.resize(a, (round(a.shape[1] * s), round(a.shape[0] * s)), interpolation=cv2.INTER_AREA)
-    ox, oy = (a.shape[1] - tw) // 2, (a.shape[0] - th) // 3
+    ox, oy = (a.shape[1] - tw) // 2, (a.shape[0] - th) // 4
     a = a[oy:oy + th, ox:ox + tw]
-    m = np.zeros((th, tw), np.float32)
-    m[24:-24, 22:-22] = 1
-    m = cv2.GaussianBlur(m, (0, 0), 22)
-    # fading into the foil under the logo and down into the name
     yy = np.linspace(0, 1, th)[:, None]
-    m *= np.clip(yy / .14, 0, 1) * np.clip((1 - yy) / .32, 0, 1) ** .8
-    return a.astype(float), m, (wx0, wy0)
+    xx = np.linspace(-1, 1, tw)[None, :]
+    # in under the logo, out at the foot; a little softer at the very sides, where the bag curves away
+    m = np.clip((yy - .03) / .17, 0, 1) * np.clip((1 - yy) / .1, 0, 1) * (1 - .25 * np.abs(xx) ** 6)
+    return a.astype(float), m.astype(np.float32), (wx0, wy0)
+
+
+GOLD, GOLD_HI, GOLD_EDGE = (232, 196, 116, 255), (255, 238, 190, 255), (50, 28, 6, 210)
+
+
+def gold_line(draw, pts, width=3):
+    draw.line(pts, fill=GOLD_EDGE, width=width + 3, joint='curve')
+    draw.line(pts, fill=GOLD, width=width, joint='curve')
 
 
 def gold_rails(draw):
-    """The gold frame of the boosters: a rail down each side, opening round the name plate."""
-    for x in (36, W - 37):
-        draw.line([(x, 150), (x, 702)], fill=(60, 34, 8, 200), width=6)
-        draw.line([(x, 150), (x, 702)], fill=(232, 196, 116, 255), width=3)
-        draw.line([(x - 1, 150), (x - 1, 702)], fill=(255, 238, 190, 255), width=1)
-        for y, d in ((150, -1), (702, 1)):
-            draw.polygon([(x - 6, y), (x, y + 14 * d), (x + 6, y), (x, y - 10 * d)], fill=(232, 196, 116, 255), outline=(60, 34, 8, 220))
-    # the plate under the name: two lines joined at the rails
-    for y in (702, 842):
-        draw.line([(36, y), (W - 37, y)], fill=(60, 34, 8, 200), width=5)
-        draw.line([(36, y), (W - 37, y)], fill=(232, 196, 116, 255), width=2)
-    for x in (36, W - 37):
-        draw.line([(x, 702), (x, 842)], fill=(60, 34, 8, 200), width=5)
-        draw.line([(x, 702), (x, 842)], fill=(232, 196, 116, 255), width=2)
-    draw.ellipse([(W // 2 - 5, 837), (W // 2 + 5, 847)], fill=(232, 196, 116, 255), outline=(60, 34, 8, 220))
+    """The gold frame of the boosters: a rail down each side from under the logo, turning in at the foot
+    into a bracket round the name, with a jewel at its centre."""
+    top, turn, foot = 150, 700, 846
+    for side in (1, -1):
+        x = 34 if side == 1 else W - 35
+        gold_line(draw, [(x, top), (x, turn)])
+        draw.line([(x - side, top), (x - side, turn)], fill=GOLD_HI, width=1)
+        draw.polygon([(x - 6, top), (x, top - 12), (x + 6, top), (x, top + 16)], fill=GOLD, outline=GOLD_EDGE)
+        # at the foot: a step in, down beside the name, then under it to the middle
+        k = 14 * side
+        gold_line(draw, [(x, turn), (x + k, turn + 14), (x + k, foot - 18), (x + 2 * k, foot - 4), (W // 2 - 22 * side, foot - 4)], 2)
+        gold_line(draw, [(x + k + 7 * side, turn + 30), (x + k + 7 * side, foot - 30)], 1)
+    # the jewel under the name
+    cx, cy = W // 2, 842
+    draw.polygon([(cx - 16, cy), (cx, cy - 9), (cx + 16, cy), (cx, cy + 9)], fill=GOLD, outline=GOLD_EDGE)
+    draw.polygon([(cx - 7, cy), (cx, cy - 4), (cx + 7, cy), (cx, cy + 4)], fill=GOLD_HI)
+
+
+def glitter(img, c1, rng):
+    """The foil's fine glitter, brighter where the light falls."""
+    n = rng.random((H, W))
+    spark = (n > .9982).astype(np.float32)
+    spark = cv2.GaussianBlur(spark, (0, 0), .6) * 3
+    yy, xx = np.mgrid[0:H, 0:W].astype(float)
+    light = .4 + .6 * np.exp(-(((xx * .8 + yy * .35) - W * .55) / 160) ** 2)
+    col = c1 * .35 + 255 * .65
+    a = np.clip(spark * light * .8, 0, .75)[..., None]
+    return img * (1 - a) + col * a
 
 
 def gold_text(img, text, cy, face, max_w, size):
@@ -236,11 +256,11 @@ def main():
         a, m, (ax, ay) = art(p['card'], p['crop'])
         win = img[ay:ay + a.shape[0], ax:ax + a.shape[1]]
         img[ay:ay + a.shape[0], ax:ax + a.shape[1]] = win * (1 - m[..., None]) + a * m[..., None]
-        # the plate under the name, a shade darker so the gold reads
-        plate = np.zeros((H, W), np.float32)
-        plate[704:840, 38:W - 38] = 1
-        plate = cv2.GaussianBlur(plate, (0, 0), 10)
-        img = img * (1 - .28 * plate[..., None]) + c3 * .28 * plate[..., None]
+        # the foot darkens into the wrapper's deepest colour, so the gold name reads on the art
+        yy = np.linspace(0, 1, H)[:, None, None]
+        foot = np.clip((yy - .66) / .2, 0, 1) ** 1.2 * .72
+        img = img * (1 - foot) + c3 * foot
+        img = glitter(img, c1, rng)
         img = crimps(img, ven)
         # the logo, centred, with a soft shadow under it as printed
         lh, lw = logo_a.shape
@@ -256,7 +276,7 @@ def main():
         fr = np.asarray(frame, float)
         fa = fr[..., 3:4] / 255
         rgba[..., :3] = rgba[..., :3] * (1 - fa) + fr[..., [2, 1, 0]] * fa
-        rgba = gold_text(rgba, p['title'], 760, title_face, W - 110, 64)
+        rgba = gold_text(rgba, p['title'], 762, title_face, W - 120, 72)
         rgba = plain_text(rgba, p['sub'], 812, ui_face, 19, 1.5)
         rgba = plain_text(rgba, '14+', LOGO_TOP + logo_a.shape[0] + 14, ui_face, 17, 1, x=(W + logo_a.shape[1]) // 2 - 34)
         # a soft sheen across the foil, as the photographed packs have

@@ -175,6 +175,7 @@ export function DeckSetup({ cards, db, initial, error, onStart, saved, onResume,
   owned?: string | null;
 }) {
   const [c, setC] = useState<DeckSetupChoice>(initial);
+  const [later, setLater] = useState(false);
   const [picking, setPicking] = useState<null | 'mine' | 'theirs'>(null);
   const [settings, setSettings] = useState(false);
   const mine = deckById(c.mine), theirs = deckById(c.theirs);
@@ -185,22 +186,22 @@ export function DeckSetup({ cards, db, initial, error, onStart, saved, onResume,
 
   return (
     <section className="play-setup ds">
-      {saved && onResume && (
-        <section className="play-resume lb-card" aria-label="Saved game">
-          <div>
-            <p className="eyebrow">Game in progress</p>
-            <strong>{saved.title}</strong>
-            <p className="muted small">
-              Turn {saved.turn} · score {saved.points[0]}–{saved.points[1]} ·{' '}
-              {saved.seats[1].k === 'human' ? 'hot-seat' : saved.seats[1].k === 'ai' ? `computer (${saved.seats[1].level})` : 'simple bot'}
-              {' '}· saved {new Date(saved.savedAt).toLocaleString()}
-            </p>
-          </div>
-          <div className="play-resume__buttons">
-            <button type="button" className="btn btn--cta" onClick={() => onResume(saved)}>Resume</button>
-            {onDiscard && <button type="button" className="btn btn--ghost" onClick={onDiscard}>Discard</button>}
-          </div>
-        </section>
+      {/* a game left off: a card in the corner, as a friend's invite, not a bar that pushes the page down */}
+      {saved && onResume && !later && (
+        <div className="soc-challenge play-resume-pop lb-card" role="dialog" aria-label="Saved game">
+          <span className="play-resume-pop__kicker">Game in progress</span>
+          <b>{saved.title}</b>
+          <span>
+            Turn {saved.turn} · score {saved.points[0]}–{saved.points[1]} ·{' '}
+            {saved.seats[1].k === 'human' ? 'hot-seat' : saved.seats[1].k === 'ai' ? `computer (${saved.seats[1].level})` : 'simple bot'}
+            {' '}· saved {new Date(saved.savedAt).toLocaleString()}
+          </span>
+          <span className="soc-challenge__btns">
+            <button type="button" className="btn btn--cta btn--small" onClick={() => onResume(saved)}>Resume</button>
+            {onDiscard && <button type="button" className="btn btn--ghost btn--small" onClick={onDiscard}>Discard</button>}
+            <button type="button" className="btn btn--ghost btn--small" onClick={() => setLater(true)}>Later</button>
+          </span>
+        </div>
       )}
 
       <header className="ds__bar">
