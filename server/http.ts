@@ -176,8 +176,12 @@ export function handler({ cfg, db, fetch: f = fetch, catalog, online, director, 
   let cat: Promise<Catalog> | null = catalog ? Promise.resolve(catalog) : null;
   const getCatalog = () => (cat ??= loadCatalog(cfg.staticDir).catch((err) => { cat = null; throw err; }));
   const limited = given ?? new LimitedService(db, getCatalog);
-  const clientIp = (req: IncomingMessage) =>
-    (cfg.trustProxy && (req.headers['cf-connecting-ip'] as string)) || req.socket.remoteAddress || '?';
+  const clientIp = (req: IncomingMessage) => {
+    // the entries before the last are the visitor's own word: only the one our proxy added counts
+    const fwd = cfg.trustProxy === 'forwarded' ? String(req.headers['x-forwarded-for'] ?? '').split(',').at(-1)?.trim() : '';
+    const cf = cfg.trustProxy === true ? (req.headers['cf-connecting-ip'] as string | undefined) : '';
+    return fwd || cf || req.socket.remoteAddress || '?';
+  };
 
   return async (req: IncomingMessage, res: ServerResponse) => {
     res.setHeader('x-content-type-options', 'nosniff');
@@ -191,6 +195,7 @@ export function handler({ cfg, db, fetch: f = fetch, catalog, online, director, 
       const url = new URL(req.url ?? '/', 'http://x');
       path = url.pathname;
       const jar = cookies(req);
+      if (path === '/api/site') return json(res, 200, { operator: cfg.operator });
       if (path === '/api/health') return json(res, 200, { ok: true, ...(online ? { games: online.stats.games, queued: online.stats.queued } : {}) });
 
       if (path === '/api/me') {

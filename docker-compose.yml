@@ -13,13 +13,14 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgres://rift:${POSTGRES_PASSWORD}@db:5432/rift
-      # every request comes through the Cloudflare tunnel, which sets CF-Connecting-IP
-      TRUST_PROXY: 'true'
+      # true: every request comes through the Cloudflare tunnel, which sets CF-Connecting-IP;
+      # forwarded: a reverse proxy of your own sets X-Forwarded-For (DEPLOY.md, variant B)
+      TRUST_PROXY: ${TRUST_PROXY:-true}
       # the JS heap below the container's limit, so Node collects before Docker kills it
       NODE_OPTIONS: --max-old-space-size=1200
     mem_limit: 1536m
     ports:
-      - "127.0.0.1:${APP_PORT:-8080}:8080"
+      - "${APP_BIND:-127.0.0.1}:${APP_PORT:-8080}:8080"
     depends_on:
       db:
         condition: service_healthy

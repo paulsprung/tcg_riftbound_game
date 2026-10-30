@@ -11,8 +11,12 @@ export interface Config {
   discordClientSecret: string;
   /** Folder with the built app (vite build). */
   staticDir: string;
-  /** Behind Cloudflare (TRUST_PROXY=true, set in docker-compose.yml): trust its CF-Connecting-IP header. */
-  trustProxy: boolean;
+  /** Where a visitor's address comes from: behind Cloudflare (TRUST_PROXY=true) its CF-Connecting-IP
+      header, behind a reverse proxy of your own (TRUST_PROXY=forwarded) the last X-Forwarded-For entry,
+      which that proxy adds; otherwise the connection itself. */
+  trustProxy: boolean | 'forwarded';
+  /** Who runs the site, for the imprint and the privacy notice (§ 5 DDG). */
+  operator: { name: string; address: string[]; email: string } | null;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -29,6 +33,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     discordClientSecret: need('DISCORD_CLIENT_SECRET'),
     staticDir: env.STATIC_DIR ?? 'dist',
     // only behind a proxy that sets the header (Cloudflare): otherwise anyone could pick their address
-    trustProxy: env.TRUST_PROXY === 'true',
+    trustProxy: env.TRUST_PROXY === 'forwarded' ? 'forwarded' : env.TRUST_PROXY === 'true',
+    operator: env.OPERATOR_NAME ? {
+      name: env.OPERATOR_NAME, email: env.OPERATOR_EMAIL ?? '',
+      address: (env.OPERATOR_ADDRESS ?? '').split('|').map((l) => l.trim()).filter(Boolean),
+    } : null,
   };
 }

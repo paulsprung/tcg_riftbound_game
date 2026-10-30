@@ -25,7 +25,7 @@ describe.skipIf(!url)('server economy', () => {
   let alice = '', bob = '', aliceId = '', bobId = '';
   const catalog = catalogFrom(JSON.parse(readFileSync('public/data/cards.json', 'utf8')) as CardDb);
   const cfg: Config = {
-    port: 0, publicUrl: ORIGIN, databaseUrl: url ?? '', discordClientId: 'cid', discordClientSecret: 'secret', staticDir: 'dist', trustProxy: true,
+    port: 0, publicUrl: ORIGIN, databaseUrl: url ?? '', discordClientId: 'cid', discordClientSecret: 'secret', staticDir: 'dist', trustProxy: true, operator: null,
   };
 
   beforeAll(async () => {

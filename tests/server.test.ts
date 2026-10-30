@@ -16,7 +16,7 @@ describe.skipIf(!url)('server', () => {
   let db: Db, server: Server, base = '';
   const cfg: Config = {
     port: 0, publicUrl: 'https://rift.example', databaseUrl: url ?? '', discordClientId: 'cid',
-    discordClientSecret: 'secret', staticDir: 'dist', trustProxy: true,
+    discordClientSecret: 'secret', staticDir: 'dist', trustProxy: true, operator: null,
   };
   const fakeDiscord: typeof fetch = async (input, init) => {
     const u = String(input);

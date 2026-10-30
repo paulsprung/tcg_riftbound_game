@@ -1,19 +1,26 @@
+import { useEffect, useState } from 'react';
 import { Lobby } from '../lobby/Lobby.tsx';
 
 /*
  * '#privacy' and '#imprint'. What the privacy notice says must match what
  * the server keeps (server/privacy.ts); the imprint's details are the
- * operator's to fill in (§ 5 DDG requires them for a site run from Germany).
+ * operator's, set on the server (OPERATOR_* in .env, served at /api/site;
+ * § 5 DDG requires them for a site run from Germany).
  */
 
-// The operator: fill in before going public (name, postal address, e-mail).
-const OPERATOR = {
-  name: '[Name of the operator]',
-  address: ['[Street and number]', '[Postcode and city]', 'Germany'],
-  email: '[contact e-mail]',
-};
+type Operator = { name: string; address: string[]; email: string };
+const UNSET: Operator = { name: '[Name of the operator]', address: ['[Street and number]', '[Postcode and city]'], email: '[contact e-mail]' };
+
+function useOperator(): Operator {
+  const [op, setOp] = useState<Operator>(UNSET);
+  useEffect(() => {
+    fetch('/api/site').then((r) => (r.ok ? r.json() : null)).then((d: { operator: Operator | null } | null) => { if (d?.operator) setOp(d.operator); }).catch(() => undefined);
+  }, []);
+  return op;
+}
 
 export function LegalView({ page }: { page: 'privacy' | 'imprint' }) {
+  const OPERATOR = useOperator();
   return (
     <Lobby>
       <article className="legal lb-scroll">
