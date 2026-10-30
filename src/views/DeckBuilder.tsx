@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from
 import { HoloCard } from '../card/HoloCard.tsx';
 import type { InspectTarget } from '../card/Inspector.tsx';
 import { useCollection } from '../collection/store.ts';
-import { DOMAIN_COLOR, defaultFinish, symbolFor } from '../data/cardInfo.ts';
+import { DOMAIN_COLOR, defaultFinish, symbolFor, VARIANT_LABEL } from '../data/cardInfo.ts';
 import type { Card, CardDb } from '../data/types.ts';
-import { available, isBasicRune, LEGENDS, missingCards, ownedDefs, ownPrintings } from '../decks/ownership.ts';
+import { available, isBasicRune, LEGENDS, missingCards, ownedDefs, ownedPrints, ownPrintings } from '../decks/ownership.ts';
 import { decks, emptyDeck, type SavedDeck } from '../decks/store.ts';
 import {
   BATTLEFIELDS_PER_DECK, findCard, ORACLE, RUNES_PER_DECK, validateDeck, type DefId, type OracleCard,
@@ -56,6 +56,7 @@ function Domain({ d, db }: { d: string; db: CardDb }) {
 function LegendPick({ ix, db, own, onPick, onBack }: {
   ix: CardIndex; db: CardDb; own: Record<DefId, number>; onPick: (l: OracleCard) => void; onBack: () => void;
 }) {
+  const coll = useCollection();
   const list = useMemo(() => LEGENDS.filter((l) => (own[l.id] ?? 0) > 0).sort((a, b) => a.name.localeCompare(b.name)), [own]);
   return (
     <section className="db db--legend">
@@ -66,7 +67,7 @@ function LegendPick({ ix, db, own, onPick, onBack }: {
       <div className="db-legends lb-scroll">
         {list.length === 0 && <p className="muted">No legend yet.</p>}
         {list.map((l) => {
-          const card = cardFor(ix, l.id);
+          const card = cardFor(ix, l.id, ownedPrints((ix.byDef[l.id] ?? []).map((x) => x.id), coll)[0] ?? null);
           return (
             <button key={l.id} type="button" className="db-legend" onClick={() => onPick(l)}>
               <span className="db-legend__card">{card && <HoloCard card={card} finish={defaultFinish(card)} width="100%" tilt="hover" imageWidth={320} />}</span>
@@ -81,9 +82,11 @@ function LegendPick({ ix, db, own, onPick, onBack }: {
 }
 
 /** A card of the pool: click adds a copy, right-click takes one out. */
-function PoolCard({ c, card, inDeck, have, cap, onAdd, onRemove, onInspect }: {
+function PoolCard({ c, card, inDeck, have, cap, prints, onAdd, onRemove, onNextPrint, onInspect }: {
   c: OracleCard; card: Card | null; inDeck: number; have: number; cap: number;
-  onAdd: () => void; onRemove: () => void; onInspect: (t: InspectTarget) => void;
+  /** How many printings of it the player owns: with more than one, they pick the art. */
+  prints: number;
+  onAdd: () => void; onRemove: () => void; onNextPrint: () => void; onInspect: (t: InspectTarget) => void;
 }) {
   const room = Math.min(cap, have) - inDeck;
   const none = have === 0;
@@ -97,6 +100,10 @@ function PoolCard({ c, card, inDeck, have, cap, onAdd, onRemove, onInspect }: {
       <span className="db-pc__own" title="Copies you own">{have === Infinity ? '∞' : `${have}×`}</span>
       {inDeck > 0 && <span className="db-pc__in" title="In the deck">{inDeck}</span>}
       {card && <button type="button" className="db-pc__zoom" aria-label={`Look at ${c.name}`} onClick={() => onInspect({ card, finish: defaultFinish(card) })}><Icon name="search" size={12} /></button>}
+      {prints > 1 && (
+        <button type="button" className="db-pc__print" onClick={onNextPrint} title="Which printing the deck shows"
+          aria-label={`Next printing of ${c.name} (${prints} owned)`}>⇄ {card ? `${card.setId.toUpperCase()} ${VARIANT_LABEL[card.variant]}` : 'Art'}</button>
+      )}
     </div>
   );
 }
@@ -192,6 +199,9 @@ function Builder({ initial, db, ix, onInspect, onDone }: {
       return !needle || c.name.toLowerCase().includes(needle) || c.rules.toLowerCase().includes(needle) || c.tags.some((t) => t.toLowerCase().includes(needle));
     }).sort((a, b) => energy(a) - energy(b) || power(a) - power(b) || a.name.localeCompare(b.name));
   }, [pool, q, kind, cost, own, identity, tag]);
+  // what you own of this pool that the legend's domains keep out [133.3]
+  const outside = useMemo(() => ORACLE.cards.filter((c) => (pool === 'main' ? c.types.some((t) => t === 'unit' || t === 'gear' || t === 'spell') : c.types.includes(pool === 'runes' ? 'rune' : 'battlefield'))
+    && !inIdentity(c, identity) && available(own, c.id) > 0 && !isBasicRune(c.id)).length, [pool, own, identity]);
   const [shown, setShown] = useState(60);
   useEffect(() => setShown(60), [poolCards]);
 
@@ -210,11 +220,22 @@ function Builder({ initial, db, ix, onInspect, onDone }: {
   }).reduce((a, e) => a + e.n, 0)), [d.main]);
   const peak = Math.max(1, ...curve);
 
-  const save = () => { decks.save({ ...d, printings: ownPrintings(d, coll) }); setDirty(false); };
+  // the art: the printing picked for a card while it is owned, else the first owned in the index's order
+  const orderOf = (def: DefId) => (ix.byDef[def] ?? []).map((x) => x.id);
+  const mineOf = (def: DefId) => ownedPrints(orderOf(def), coll);
+  const printOf = (def: DefId) => ownPrintings({ ...d, legend: def, main: [], battlefields: [], runes: [] }, coll, orderOf)[def]?.[0] ?? null;
+  const nextPrint = (def: DefId) => {
+    const mine = mineOf(def);
+    if (mine.length < 2) return;
+    const next = mine[(mine.indexOf(printOf(def) ?? '') + 1) % mine.length];
+    change({ ...d, printings: { ...d.printings, [def]: [next] } });
+  };
+
+  const save = () => { decks.save({ ...d, printings: ownPrintings(d, coll, orderOf) }); setDirty(false); };
   const leave = () => { if (dirty) save(); onDone(); };
 
-  const preview = hover ? cardFor(ix, hover, ownPrintings({ ...d, main: [{ def: hover, n: 1 }] }, coll)[hover]?.[0] ?? null) : null;
-  const legendCard = cardFor(ix, d.legend);
+  const preview = hover ? cardFor(ix, hover, printOf(hover)) : null;
+  const legendCard = cardFor(ix, d.legend, printOf(d.legend));
 
   return (
     <section className="db">
@@ -259,15 +280,18 @@ function Builder({ initial, db, ix, onInspect, onDone }: {
               const have = available(own, c.id);
               const inDeck = pool === 'runes' ? runeN(c.id) : pool === 'battlefields' ? Number(d.battlefields.includes(c.id)) : count(c.id);
               const cap = pool === 'runes' ? RUNES_PER_DECK : pool === 'battlefields' ? 1 : capOf(c);
-              const print = ownPrintings({ ...d, main: [{ def: c.id, n: 1 }] }, coll)[c.id]?.[0] ?? null;
               return (
-                <PoolCard key={c.id} c={c} card={cardFor(ix, c.id, print)} inDeck={inDeck} have={have} cap={cap} onInspect={onInspect}
+                <PoolCard key={c.id} c={c} card={cardFor(ix, c.id, printOf(c.id))} inDeck={inDeck} have={have} cap={cap} onInspect={onInspect}
+                  prints={mineOf(c.id).length} onNextPrint={() => nextPrint(c.id)}
                   onAdd={() => (pool === 'runes' ? setRune(c.id, 1) : pool === 'battlefields' ? toggleField(c.id) : setMain(c.id, 1))}
                   onRemove={() => (pool === 'runes' ? setRune(c.id, -1) : pool === 'battlefields' ? (inDeck ? toggleField(c.id) : undefined) : setMain(c.id, -1))} />
               );
             })}
             {shown < poolCards.length && (
               <div className="more"><button type="button" className="btn btn--ghost btn--small" onClick={() => setShown((n) => n + 60)}>Show more ({poolCards.length - shown})</button></div>
+            )}
+            {outside > 0 && shown >= poolCards.length && (
+              <p className="db-pool__note muted">{outside} more card{outside === 1 ? '' : 's'} you own {outside === 1 ? 'is' : 'are'} outside {legend.championTag ?? legend.name}’s domains ({identity.join(', ')}): a deck holds only cards of its legend’s domains.</p>
             )}
           </div>
         </section>

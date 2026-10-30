@@ -21,6 +21,16 @@ function collectionOf(d: DeckList) {
 const annie = STARTERS.find((s) => s.set !== 'ogs' && s.deck.battlefields.length === 3)!.deck;
 
 describe('deck builder', () => {
+  it('shows the printing picked for a card while owned, else the first owned, never a promo you lack', () => {
+    const akali = 'akali-rogue-assassin';
+    const d: DeckList = { ...annie, main: [{ def: akali, n: 1 }] };
+    const coll = fromSaved({ cards: { 'ven-139-166': { normal: 1, foil: 0 }, 'pr-139a-166': { normal: 1, foil: 0 } }, starter: null });
+    expect(ownPrintings(d, coll)[akali]).toEqual(['ven-139-166']);
+    expect(ownPrintings({ ...d, printings: { [akali]: ['pr-139a-166'] } }, coll)[akali]).toEqual(['pr-139a-166']);
+    const plain = fromSaved({ cards: { 'ven-139-166': { normal: 1, foil: 0 } }, starter: null });
+    expect(ownPrintings({ ...d, printings: { [akali]: ['pr-139a-166'] } }, plain)[akali]).toEqual(['ven-139-166']);
+  });
+
   it('counts copies by card across printings and gives basic runes for free', () => {
     const own = ownedDefs(collectionOf(annie));
     expect(own[annie.legend]).toBe(1);

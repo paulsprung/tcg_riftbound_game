@@ -39,14 +39,21 @@ export function missingCards(d: DeckList, own: Owned): { def: DefId; n: number }
   });
 }
 
-/** The art for each card: a printing the player owns, else the first. */
-export function ownPrintings(d: DeckList, c: CollectionState): Record<DefId, string[]> {
+/** A card's printings the player owns, in the order given (the app's card index puts the main
+    sets' plain prints first, promos and special editions after). */
+export const ownedPrints = (order: readonly string[], c: CollectionState) =>
+  order.filter((p) => (c.cards[p]?.normal ?? 0) + (c.cards[p]?.foil ?? 0) > 0);
+
+/** The art for each card of a deck: the printing chosen for it while the player still owns it,
+    else the first they own; none for a card they own no copy of. */
+export function ownPrintings(d: DeckList, c: CollectionState, orderOf: (def: DefId) => readonly string[] = (def) => findCard(def)?.printings ?? []): Record<DefId, string[]> {
   const defs = [d.legend, ...d.main.map((e) => e.def), ...d.battlefields, ...d.runes.map((e) => e.def)];
   const out: Record<DefId, string[]> = {};
   for (const def of new Set(defs)) {
-    const prints = findCard(def)?.printings ?? [];
-    const mine = prints.find((p) => (c.cards[p]?.normal ?? 0) + (c.cards[p]?.foil ?? 0) > 0);
-    if (mine) out[def] = [mine];
+    const mine = ownedPrints(orderOf(def), c);
+    const chosen = d.printings?.[def]?.[0];
+    const pick = chosen && mine.includes(chosen) ? chosen : mine[0];
+    if (pick) out[def] = [pick];
   }
   return out;
 }

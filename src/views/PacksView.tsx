@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState, type CSSProperties } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { InspectTarget } from '../card/Inspector.tsx';
 import { collection, PACK_PRICE, useCollection } from '../collection/store.ts';
 import { packArt } from '../data/media.ts';
@@ -25,10 +25,22 @@ export function PacksView({ db, onInspect }: { db: CardDb; onInspect: (t: Inspec
   const own = useCollection();
   const sets = useBoosters(db);
   const { w: vw, h: vh } = useViewport();
-  // what is left for the packs: by the height once the bar, header and banner have their share,
-  // and five side by side by the width once the sidebar and the friends rail have theirs
+  // the packs fill the shelf: its height as laid out, less their name and price, and five side by
+  // side by the width once the sidebar and the friends rail have theirs
   const aspect = 1 / 1.72;
-  const packH = Math.max(150, Math.min(vh - 440, ((vw - 248 - 56 - 60 - 4 * 24) / 5) / 0.66, 340));
+  const shelf = useRef<HTMLDivElement>(null);
+  const [shelfH, setShelfH] = useState(0);
+  useEffect(() => {
+    const el = shelf.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setShelfH(el.clientHeight));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [sub]);
+  const LABEL_H = 84;
+  // only on a desktop window does the shelf get its height from the page; narrower, it grows with the packs
+  const byHeight = shelfH > 0 && vw > 900 ? shelfH - LABEL_H : vh - 440;
+  const packH = Math.max(120, Math.min(byHeight, ((vw - 248 - 56 - 60 - 4 * 24) / 5) / 0.66, 340));
   useEffect(() => {
     const on = () => setSub(subFromHash());
     window.addEventListener('hashchange', on);
@@ -43,7 +55,7 @@ export function PacksView({ db, onInspect }: { db: CardDb; onInspect: (t: Inspec
       <Lobby bare>
         <PackOpening key={special.id} set={{ id: special.id, name: special.name, cardCount: cards.length }} cards={cards}
           deal={() => dealSpecial(special.id, db.cards)} style={special.style}
-          onInspect={onInspect} onExit={() => { location.hash = 'shop/bundles'; }} />
+          onInspect={onInspect} onExit={() => { location.hash = 'collection/packs'; }} />
       </Lobby>
     );
   }
@@ -115,7 +127,7 @@ export function PacksView({ db, onInspect }: { db: CardDb; onInspect: (t: Inspec
           )}
 
           <p className="lb-label">All packs</p>
-          <div className="pack-shelf">
+          <div className="pack-shelf" ref={shelf}>
             {sets.map((s) => (
               <div key={s.id} className="pack-shelf__item">
                 <PackWrapper set={s.info} style={s.style} hero={heroCard(s.cards, s.style)}

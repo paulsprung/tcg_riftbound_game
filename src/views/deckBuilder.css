@@ -56,6 +56,11 @@
   border: 1px solid var(--gold-dim); background: rgba(1, 10, 19, .85); color: var(--gold); cursor: pointer; opacity: 0; transition: opacity .12s;
 }
 .db-pc:hover .db-pc__zoom { opacity: 1; }
+.db-pc__print {
+  position: absolute; left: 4px; right: 30px; top: 4px; padding: 2px 6px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; text-align: left;
+  font: 700 10px/1.5 var(--font-ui); letter-spacing: .04em; color: var(--gold); background: rgba(1, 10, 19, .85); border: 1px solid var(--gold-dim); cursor: pointer;
+}
+.db-pc__print:hover { border-color: var(--gold); }
 
 /* ---- the deck ---- */
 .db-deck { position: relative; min-height: 0; display: flex; flex-direction: column; gap: 10px; padding: 12px; }
@@ -125,3 +130,4 @@
   .db__body { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
   .db-peek { display: none; }
 }
+.db-pool__note { grid-column: 1 / -1; margin: 8px 0 0; font-size: 12px; }

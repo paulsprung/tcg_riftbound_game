@@ -35,7 +35,7 @@ export function BundlesView({ db }: { db: CardDb }) {
 
   const buyPack = async (id: string, name: string) => {
     setBusy(id);
-    if (await collection.buyPack(id, 1)) showNotice(`${name} bought: open it here or under Collection → Packs`, true);
+    if (await collection.buyPack(id, 1)) showNotice(`${name} bought: open it under Collection → Packs`, true);
     setBusy(null);
   };
   const buyDeck = async (s: StarterChoice) => {
@@ -57,7 +57,6 @@ export function BundlesView({ db }: { db: CardDb }) {
       <p className="lb-label">Collections</p>
       <div className="bundle-grid">
         {SPECIAL_PACKS.map((p) => {
-          const have = own.packs[p.id] ?? 0;
           return (
             <article key={p.id} className="bundle">
               <Shot id={p.product} alt={p.name} />
@@ -69,7 +68,6 @@ export function BundlesView({ db }: { db: CardDb }) {
                   <button type="button" className="btn btn--cta btn--small" disabled={busy !== null || own.coins < p.price} onClick={() => { void buyPack(p.id, p.name); }}>
                     <Coin /> {p.price.toLocaleString('en-US')}
                   </button>
-                  {have > 0 && <a className="btn btn--ghost btn--small" href={`#shop/${p.id}`}>Open ({have})</a>}
                 </div>
               </div>
             </article>
