@@ -7,6 +7,7 @@ import { HoloCanvas, type HoloCanvasHandle } from './HoloCanvas.tsx';
 import { useEffects } from './effects.ts';
 import { useFoilStyle } from './foilStyle.ts';
 import { lookFor, useHoloVersion } from './holoVersion.ts';
+import { printLook } from './prints.ts';
 import { createTilt, type TiltState } from './tilt.ts';
 import { TiltFeed } from './tiltFeed.ts';
 import './holo.css';
@@ -58,7 +59,10 @@ function HoloCardInner({
   // null: not tried yet; true: the shader draws the card; false: CSS foil
   const [glOk, setGlOk] = useState<boolean | null>(null);
   const foilStyle = useFoilStyle();
-  const look = lookFor(useHoloVersion(), finish);
+  // a card in a foil of its own (the T1 Signature Edition) takes the CSS look its masks are made for
+  const print = printLook(card);
+  const holoVersion = useHoloVersion();
+  const look = print ? 'c' : lookFor(holoVersion, finish);
   const classic = look === 'a';
 
   const feed = useContext(TiltFeed);
@@ -90,7 +94,7 @@ function HoloCardInner({
   const copy = (extra: string) => (
     <img className={`${imgClass} is-loaded ${extra}`} src={src} alt="" draggable={false} />
   );
-  const useGl = gl && glOk !== false && !!src && isReadable(src);
+  const useGl = gl && !print && glOk !== false && !!src && isReadable(src);
   const glShown = useGl && glOk === true;
 
   return (
@@ -100,11 +104,16 @@ function HoloCardInner({
       data-finish={finish}
       data-holo={look}
       data-rarity={card.rarity}
+      data-print={print?.print}
       data-tilt={tilt}
       data-upright={landscape && upright ? '' : undefined}
       data-thick={thick ? '' : undefined}
       data-face-down={faceDown ? '' : undefined}
-      style={{ width, ...style }}
+      style={{
+        width,
+        ...(print ? { '--glit-mask': `url("${print.glitMask}")`, ...(print.sigMask ? { '--sig-mask': `url("${print.sigMask}")` } : {}) } as CSSProperties : {}),
+        ...style,
+      }}
       onClick={onClick}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
@@ -184,9 +193,12 @@ function HoloCardInner({
               <span className="hc__fx hc__glit" aria-hidden><span className="hc__flash" /></span>
             )}
             {!classic && !glShown && loaded && finish === 'signature' && (
-              <span className="hc__fx hc__sig hc__sig--auto" aria-hidden>
-                <img className={`${imgClass} is-loaded`} src={src} alt="" draggable={false} />
-              </span>
+              print?.sigMask ? <span className="hc__fx hc__sig" aria-hidden />
+                : (
+                  <span className="hc__fx hc__sig hc__sig--auto" aria-hidden>
+                    <img className={`${imgClass} is-loaded`} src={src} alt="" draggable={false} />
+                  </span>
+                )
             )}
             {!classic && !glShown && <span className="hc__fx hc__glare" aria-hidden />}
           </div>

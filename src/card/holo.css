@@ -765,6 +765,35 @@
   background-position: calc(50% - var(--tx, 0) * 40%) calc(50% - var(--ty, 0) * 40%);
 }
 
+/* -- T1 Signature Edition: its own foil (src/card/prints.ts) --------------
+   Red glitter on the red ink, a smooth satin sheen on the light ink, a mirror-
+   gold stamp on the serial copy's signature and number: no rainbow, no etched
+   linework, no cool chrome on the darks. The glitter keeps to the card's reds
+   (--glit-mask), the gold to the stamp (--sig-mask); a trace of both shows at
+   rest, as the real foil does under room light. */
+.hc[data-print="t1s"] {
+  --etch: 0; --ridge: 0; --ink-etch: 0; --ink-rest: 0;
+  --arc: .14; --tint: .12; --hot: .9; --sheen: .42; --floor: #262626;
+  --glitter: 1.25; --rest: .3; --glare: .46;
+}
+.hc[data-print="t1s"] .hc__face--front::before { content: none; }
+.hc[data-print="t1s"] .hc__glit {
+  --glit-rb: repeating-linear-gradient(62deg,
+    #ff7a7a 0, #ffc6a0 5px, #ff4d5f 10px, #ffe3b8 15px, #ff8a8a 20px);
+  opacity: calc(var(--glitter) * (.35 + .65 * var(--on, 0)));
+  -webkit-mask: var(--glit-mask) center / 100% 100% no-repeat;
+          mask: var(--glit-mask) center / 100% 100% no-repeat;
+}
+.hc[data-print="t1s"] .hc__glit { --glit-size: 42% auto; }
+.hc[data-print="t1s"][data-upright] .hc__glit { --glit-size: 30% auto; }
+/* fine, dense sand glitter: more of the flakes glint (the ultimate's threshold) */
+.hc[data-print="t1s"] .hc__flash { filter: invert(1) brightness(.5319) contrast(23.5) grayscale(1) brightness(.6667) contrast(3); }
+/* champagne gold, as the real hot stamp, rather than yellow */
+.hc[data-print="t1s"] .hc__sig {
+  --sig-rb: 0;
+  filter: brightness(calc(.98 + .28 * var(--on, 0))) saturate(.72) sepia(.12);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hc__inner { transition-duration: .01s; }
   .hc__loading { animation: none; }

@@ -98,9 +98,12 @@ function draw(draws: Draw[], byId: Map<string, Card>, random: () => number): Pul
 
 const even = (ids: string[], finish: Finish, foil: boolean, slot: string): Draw[] => ids.map((id) => ({ id, finish, foil, weight: 1, slot }));
 
+const index = new WeakMap<Card[], Map<string, Card>>();
+const byIdOf = (all: Card[]) => index.get(all) ?? index.set(all, new Map(all.map((c) => [c.id, c]))).get(all)!;
+
 /** Deals a special pack from the card data. */
 export function dealSpecial(id: string, all: Card[], random: () => number = Math.random): Pull[] {
-  const byId = new Map(all.map((c) => [c.id, c]));
+  const byId = byIdOf(all);
   switch (id) {
     case 't1': return [draw(T1_DRAWS, byId, random)];
     case 'arcane': return [draw(even(ARCANE, 'holo', true, 'Arcane'), byId, random)];
