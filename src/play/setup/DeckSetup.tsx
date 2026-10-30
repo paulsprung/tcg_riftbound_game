@@ -3,7 +3,8 @@ import { Icon } from '../../lobby/icons.tsx';
 import { HoloCard } from '../../card/HoloCard.tsx';
 import { DOMAIN_COLOR, defaultFinish, symbolFor } from '../../data/cardInfo.ts';
 import type { CardDb } from '../../data/types.ts';
-import type { DefId } from '../../game/index.ts';
+import type { DeckList, DefId } from '../../game/index.ts';
+import { setCustomDuo, social } from '../../lobby/social.ts';
 import { BUILT_IN_DECKS, builtInDeck, customDecks, DECK_GROUPS, deckProblems, PRODUCT_LABEL, shortName, type BuiltInDeck } from '../host/decks.ts';
 import { cardFor, nameOf, type CardIndex } from '../model/cards.ts';
 import type { SavedGame } from '../host/autosave.ts';
@@ -26,6 +27,15 @@ export interface DeckSetupChoice {
   champion: DefId;
   order: OrderChoice;
   opponent: OpponentChoice;
+  /** 2v2: your teammate's deck and the second opponent's; unset, one is picked that fits (pickDuoDeck). */
+  ally?: BuiltInDeck['id'];
+  theirs2?: BuiltInDeck['id'];
+}
+
+/** A deck for a 2v2 seat: a Legend nobody at the table has, and no battlefield its teammate brings [491]. */
+export function pickDuoDeck(taken: DeckList[], mate: DeckList | null): BuiltInDeck {
+  return BUILT_IN_DECKS.find((b) => !taken.some((t) => t.legend === b.deck.legend) && !(mate && mate.battlefields.some((bf) => b.deck.battlefields.includes(bf))))
+    ?? BUILT_IN_DECKS[0];
 }
 
 const deckById = (id: BuiltInDeck['id']) => builtInDeck(id) ?? builtInDeck('seraphine')!;
@@ -176,12 +186,23 @@ export function DeckSetup({ cards, db, initial, error, onStart, saved, onResume,
 }) {
   const [c, setC] = useState<DeckSetupChoice>(initial);
   const [later, setLater] = useState(false);
-  const [picking, setPicking] = useState<null | 'mine' | 'theirs'>(null);
+  // friends invited from here while it is set to 2v2 come into a lobby for four
+  useEffect(() => { setCustomDuo(!!duo); return () => setCustomDuo(false); }, [duo]);
+  const [picking, setPicking] = useState<null | 'mine' | 'theirs' | 'ally' | 'theirs2'>(null);
   const [settings, setSettings] = useState(false);
   const mine = deckById(c.mine), theirs = deckById(c.theirs);
+  // 2v2: the teammate's and the second opponent's decks, picked to fit unless chosen
+  const ally = c.ally ? deckById(c.ally) : pickDuoDeck([mine.deck, theirs.deck], mine.deck);
+  const theirs2 = c.theirs2 ? deckById(c.theirs2) : pickDuoDeck([mine.deck, theirs.deck, ally.deck], theirs.deck);
+  const bot = c.opponent === 'hotseat' ? 'Player' : 'Computer';
   const problems = [
     ...deckProblems(mine.deck, c.champion).map((p) => `Your deck: ${p}`),
     ...deckProblems(theirs.deck).map((p) => `Opponent's deck: ${p}`),
+    // teammates bring different Legends and no shared battlefield [491]
+    ...(duo ? ([[mine, ally, 'You and your teammate'], [theirs, theirs2, 'The opponents']] as const).flatMap(([a, b, who]) => [
+      ...(a.deck.legend === b.deck.legend ? [`${who} play the same Legend`] : []),
+      ...(a.deck.battlefields.some((bf) => b.deck.battlefields.includes(bf)) ? [`${who} bring the same battlefield`] : []),
+    ]) : []),
   ];
 
   return (
@@ -219,11 +240,36 @@ export function DeckSetup({ cards, db, initial, error, onStart, saved, onResume,
         </span>
       </header>
 
-      <div className="ds__stage">
-        <DeckSlot label="You" b={mine} cards={cards} db={db} owned={mine.id === owned} onOpen={() => setPicking('mine')} />
-        <span className="play-online__vs" aria-hidden>VS</span>
-        <DeckSlot label={c.opponent === 'hotseat' ? 'Player 2' : 'Computer'} b={theirs} cards={cards} db={db} onOpen={() => setPicking('theirs')} />
-      </div>
+      {duo ? (
+        <div className="ds__stage ds__stage--duo">
+          <div className="ds-team">
+            <span className="ds-team__label">Your team</span>
+            <DeckSlot label="You" b={mine} cards={cards} db={db} owned={mine.id === owned} onOpen={() => setPicking('mine')} />
+            <DeckSlot label={c.opponent === 'hotseat' ? 'Player 3' : 'Teammate'} b={ally} cards={cards} db={db} onOpen={() => setPicking('ally')} />
+          </div>
+          <span className="play-online__vs" aria-hidden>VS</span>
+          <div className="ds-team is-them">
+            <span className="ds-team__label">Opponents</span>
+            <DeckSlot label={c.opponent === 'hotseat' ? 'Player 2' : bot} b={theirs} cards={cards} db={db} onOpen={() => setPicking('theirs')} />
+            <DeckSlot label={c.opponent === 'hotseat' ? 'Player 4' : bot} b={theirs2} cards={cards} db={db} onOpen={() => setPicking('theirs2')} />
+          </div>
+        </div>
+      ) : (
+        <div className="ds__stage">
+          <DeckSlot label="You" b={mine} cards={cards} db={db} owned={mine.id === owned} onOpen={() => setPicking('mine')} />
+          <span className="play-online__vs" aria-hidden>VS</span>
+          <DeckSlot label={c.opponent === 'hotseat' ? 'Player 2' : 'Computer'} b={theirs} cards={cards} db={db} onOpen={() => setPicking('theirs')} />
+        </div>
+      )}
+      {duo && (
+        <div className="ds-friends lb-card">
+          <div>
+            <b>Play with friends</b>
+            <span className="muted small">Invite them from the friends list: four of you play a friendly 2v2 at once; two of you search together for another pair.</span>
+          </div>
+          <button type="button" className="btn btn--primary btn--small" onClick={() => social.setOpen(true)}>Invite friends</button>
+        </div>
+      )}
 
       <div className="ds__start">
         <div className="seg" role="radiogroup" aria-label="Opponent">
@@ -268,12 +314,13 @@ export function DeckSetup({ cards, db, initial, error, onStart, saved, onResume,
       )}
 
       {picking && (
-        <DeckPicker cards={cards} db={db} title={picking === 'mine' ? 'Your deck' : c.opponent === 'hotseat' ? "Player 2's deck" : "The computer's deck"}
-          current={picking === 'mine' ? c.mine : c.theirs} owned={picking === 'mine' ? owned : null}
+        <DeckPicker cards={cards} db={db}
+          title={picking === 'mine' ? 'Your deck' : picking === 'ally' ? "Your teammate's deck" : picking === 'theirs2' ? "The second opponent's deck" : c.opponent === 'hotseat' ? "Player 2's deck" : "The computer's deck"}
+          current={picking === 'mine' ? c.mine : picking === 'ally' ? ally.id : picking === 'theirs2' ? theirs2.id : c.theirs} owned={picking === 'mine' ? owned : null}
           mine={picking === 'mine' || c.opponent === 'hotseat' ? [...BUILT_IN_DECKS.filter((b) => b.id === owned), ...customDecks()] : undefined}
-          onRandom={picking === 'theirs' ? () => { setC({ ...c, theirs: BUILT_IN_DECKS[Math.floor(Math.random() * BUILT_IN_DECKS.length)].id }); setPicking(null); } : undefined}
+          onRandom={picking !== 'mine' ? () => { setC({ ...c, [picking]: BUILT_IN_DECKS[Math.floor(Math.random() * BUILT_IN_DECKS.length)].id }); setPicking(null); } : undefined}
           onClose={() => setPicking(null)}
-          onPick={(b) => { setC(picking === 'mine' ? { ...c, mine: b.id, champion: b.deck.chosenChampion } : { ...c, theirs: b.id }); setPicking(null); }} />
+          onPick={(b) => { setC(picking === 'mine' ? { ...c, mine: b.id, champion: b.deck.chosenChampion } : { ...c, [picking]: b.id }); setPicking(null); }} />
       )}
     </section>
   );

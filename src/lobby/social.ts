@@ -53,10 +53,14 @@ async function load() {
   set({ live: true, code: r.code, friends: r.friends, incoming: r.incoming, outgoing: r.outgoing });
 }
 
-/** The page you invite from decides the lobby: the custom game, or casual (2v2). */
+/** The custom game set to 2v2 (DeckSetup): an invite from it opens a lobby for four. */
+let customDuo = false;
+export function setCustomDuo(on: boolean) { customDuo = on; }
+
+/** The page you invite from decides the lobby: the custom game (1v1, or 2v2 for four), or casual (2v2). */
 export function lobbyModeHere(): LobbyMode | null {
   const h = location.hash.replace(/^#\/?/, '');
-  if (h === 'play' || h.startsWith('play/custom')) return 'custom';
+  if (h === 'play' || h.startsWith('play/custom')) return customDuo ? 'casual' : 'custom';
   if (h.startsWith('play/casual')) return 'casual';
   return null;
 }

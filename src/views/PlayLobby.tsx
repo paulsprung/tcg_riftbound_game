@@ -164,7 +164,7 @@ export function PlayLobby({ db, mode }: { db: CardDb; mode: string }) {
   return (
     <Lobby side={side} bare={bare}>
       {/* in a lobby: its room, on the page it belongs to (the custom game, or casual for 2v2) */}
-      {lobby && ((lobby.mode === 'custom' && id === 'custom') || (lobby.mode === 'casual' && id === 'casual')) ? <LobbyRoom db={db} lobby={lobby} />
+      {lobby && ((lobby.mode === 'custom' && id === 'custom') || (lobby.mode === 'casual' && (id === 'casual' || id === 'custom'))) ? <LobbyRoom db={db} lobby={lobby} />
         : online?.id === 'tournament' ? <Suspense fallback={<p className="muted">Loading…</p>}><Tournaments db={db} /></Suspense>
         : online ? <OnlineMode db={db} mode={online} /> : (
         <div className={bare ? 'lb-bare' : 'lb-play-scroll'}>

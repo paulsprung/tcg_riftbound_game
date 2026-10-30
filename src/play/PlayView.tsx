@@ -4,13 +4,13 @@ import type { GameRecord } from '../game/index.ts';
 import { GameScreen } from './GameScreen.tsx';
 import { createAi, type AiClient } from './host/aiClient.ts';
 import { localStore, resumable, savedSeat, type SavedGame, type SaveStore } from './host/autosave.ts';
-import { BUILT_IN_DECKS, builtInDeck, shortName } from './host/decks.ts';
+import { builtInDeck, shortName } from './host/decks.ts';
 import { TWO_V_TWO } from '../game/index.ts';
 import { GameHost, type HostOptions, type SaveInfo, type Seat } from './host/GameHost.ts';
 import { cardIndex } from './model/cards.ts';
 import { gameSetup } from './model/setup.ts';
 import { getSettings, PACE_FACTOR, setSettings, usePlaySettings, type OpponentChoice } from './settings.ts';
-import { choiceFor, DeckSetup, type DeckSetupChoice } from './setup/DeckSetup.tsx';
+import { choiceFor, DeckSetup, pickDuoDeck, type DeckSetupChoice } from './setup/DeckSetup.tsx';
 import { TutorialView } from './tutorial/TutorialView.tsx';
 import { useCollection } from '../collection/store.ts';
 import { LimitedFlow } from '../limited/LimitedFlow.tsx';
@@ -115,11 +115,9 @@ export function PlayView({ db, tutorial = false, onInGame }: { db: CardDb; tutor
   const startDuo = (c: DeckSetupChoice) => {
     try {
       const mine = deckOf(c.mine), first = deckOf(c.theirs);
-      const pickFor = (taken: DeckList[], mate: DeckList | null) => BUILT_IN_DECKS.map((b) => b.deck)
-        .find((d) => !taken.some((t) => t.legend === d.legend) && !(mate && mate.battlefields.some((bf) => d.battlefields.includes(bf))))
-        ?? BUILT_IN_DECKS[0].deck;
-      const ally = pickFor([mine, first], mine);
-      const second = pickFor([mine, first, ally], first);
+      // the decks chosen for the other seats, else ones that fit (as the setup shows them)
+      const ally = c.ally ? deckOf(c.ally) : pickDuoDeck([mine, first], mine).deck;
+      const second = c.theirs2 ? deckOf(c.theirs2) : pickDuoDeck([mine, first, ally], first).deck;
       const one = gameSetup({ human: 0, mine, theirs: first, champion: c.champion, order: 'random', seed: newSeed() }, cards);
       const two = gameSetup({ human: 0, mine: ally, theirs: second, champion: ally.chosenChampion, order: 'random', seed: 0 }, cards);
       const setup = { seed: one.seed, decks: [one.decks[0], one.decks[1], two.decks[0], two.decks[1]], mode: TWO_V_TWO,
