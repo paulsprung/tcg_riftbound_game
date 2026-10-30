@@ -5118,5 +5118,32 @@
   "artist": "Luscinia Studio",
   "image": "https://static.dotgg.gg/riftbound/cards/RAD-183-STAR.webp",
   "orientation": "portrait"
+ },
+ {
+  "id": "pr-139a-166",
+  "name": "Rogue Assassin",
+  "setId": "pr",
+  "setName": "Riftbound Promotional Cards",
+  "code": "PR-139a/166",
+  "number": 139,
+  "rarity": "promo",
+  "variant": "promo",
+  "type": "Legend",
+  "supertype": null,
+  "domains": [
+   "Fury",
+   "Calm"
+  ],
+  "energy": null,
+  "might": null,
+  "power": null,
+  "tags": [
+   "Akali"
+  ],
+  "text": "[Empower] :rb_energy_3::rb_rune_rainbow: (:rb_energy_3::rb_rune_rainbow:: Empower this. Use only if not Empowered.)\n[Action][>] :rb_exhaust:: If it's your turn, move a friendly unit in a showdown to base and if I'm [Empowered], ready it.",
+  "flavor": "",
+  "artist": "Luscinia Studio, Allen Song",
+  "image": "cards/pr-139a-166.webp",
+  "orientation": "portrait"
  }
 ]

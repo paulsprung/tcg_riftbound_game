@@ -2224,5 +2224,15 @@
   "confidence": "confirmed",
   "product": "Radiance booster packs (release Oct 23, 2026)",
   "notes": "Rules data copied from our rad-183-167 (RAD-183/167). Overnumber signature (Cardmarket: V2 Signed Showcase). Riot gallery lists the unsigned RAD-183/167 only."
+ },
+ "pr-139a-166": {
+  "sources": [
+   "https://playriftbound.com/en-us/news/announcements/riftbounds-2026-drawings/",
+   "https://riftbound.zone/en/riftbound-gift-of-the-rift-year-one-bundle/",
+   "https://cmsassets.rgpub.io/sanity/images/dsfx7636/news_live/fdf97284fecd92386fac4a3a5fc7c881a931d302-1039x489.jpg"
+  ],
+  "confidence": "partial",
+  "product": "Gift of the Rift Bundle (English)",
+  "notes": "Rules data copied from our ven-139-166 (VEN-139/166). Alt-art promo (\"Ramen Akali\"), printed code read off the card: \"VEN • 139a/166 • P\". Only image: Riot's announcement render, cut out at 351x489 and scaled up; replace with a scan when one appears."
  }
 }

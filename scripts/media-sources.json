@@ -42,5 +42,112 @@
     "page": "https://playriftbound.com/en-us/news/rules-and-releases/how-to-play-get-started/",
     "crop": "PDF page 5, rendered at 1200 dpi: main deck back at 4536,6267,2976,4156; rune deck back at 1205,6267,2976,4156",
     "retouch": "Vector artwork from Riot's How to Play PDF. The 10 px page-white band at the very edge repainted in the card's background colour; rounded corners masked at the PDF's own 8.504 pt radius."
+  },
+  "products": {
+    "set-ogn": {
+      "source": "https://cdn.sanity.io/images/dsfx7636/consumer_products_live/e026ee1a44bc86095f9afc5949c5fdb519b29c66-2560x2560.png",
+      "page": "https://merch.riotgames.com/en-us/product/riftbound-origins-booster-display/",
+      "retouch": "Render, trimmed to the product."
+    },
+    "set-sfd": {
+      "source": "https://cdn.sanity.io/images/dsfx7636/consumer_products_live/22aabf7f3ab0081cf42f6b4ebc4af4c5c92437f9-2560x2560.png",
+      "page": "https://merch.riotgames.com/en-us/product/riftbound-spiritforged-booster-display/",
+      "retouch": "Transparent render, trimmed to the product."
+    },
+    "set-unl": {
+      "source": "https://cdn.sanity.io/images/dsfx7636/consumer_products_live/46c776a96cc14227a260d24489f10b4090cd2cd9-2560x2560.png",
+      "page": "https://merch.riotgames.com/en-us/product/riftbound-unleashed-booster-display/",
+      "retouch": "Transparent render, trimmed to the product."
+    },
+    "set-ven": {
+      "source": "https://cdn.sanity.io/images/dsfx7636/consumer_products_live/3102667c372acb3a074f2ca9c2fdbc1caeaef923-2560x2560.png",
+      "page": "https://merch.riotgames.com/en-us/product/riftbound-vendetta-booster-display/",
+      "retouch": "Transparent render, trimmed to the product."
+    },
+    "set-rad": {
+      "source": "https://cdn.sanity.io/images/dsfx7636/consumer_products_live/e154a63d230f3a60df89f6da867fa6adbe6585b7-2560x2560.png",
+      "page": "https://merch.riotgames.com/en-us/product/riftbound-radiance-booster-display/",
+      "retouch": "Transparent render, trimmed to the product."
+    },
+    "deck-jinx": {
+      "source": "https://cdn.sanity.io/images/dsfx7636/consumer_products_live/dab674be124ba1ad1abcb47080d5e0b80c2e63b4-2560x2560.png",
+      "page": "https://merch.riotgames.com/en-us/product/riftbound-origins-champion-deck-jinx/",
+      "retouch": "Transparent render, trimmed to the product."
+    },
+    "deck-leesin": {
+      "source": "https://cdn.sanity.io/images/dsfx7636/consumer_products_live/8489d52408008fd5a496e05f478e6230e1bf9d9b-2560x2560.png",
+      "page": "https://merch.riotgames.com/en-us/product/riftbound-origins-champion-deck-leesin/",
+      "retouch": "Transparent render, trimmed to the product."
+    },
+    "deck-viktor": {
+      "source": "https://cdn.sanity.io/images/dsfx7636/consumer_products_live/ac1559b5a8d962db8495c47b39df4f643ae2ce30-2560x2560.png",
+      "page": "https://merch.riotgames.com/en-us/product/riftbound-origins-champion-deck-viktor/",
+      "retouch": "Transparent render, trimmed to the product."
+    },
+    "deck-fiora": {
+      "source": "https://cdn.sanity.io/images/dsfx7636/consumer_products_live/8946d8deafde14849058e606fc4081d7a4072b3d-2560x2560.png",
+      "page": "https://merch.riotgames.com/en-us/product/riftbound-spiritforged-champion-deck-fiora/",
+      "retouch": "Transparent render, trimmed to the product."
+    },
+    "deck-rumble": {
+      "source": "https://cdn.sanity.io/images/dsfx7636/consumer_products_live/75af36199944858983375cc0f7004031b908ab3a-2560x2560.png",
+      "page": "https://merch.riotgames.com/en-us/product/riftbound-spiritforged-champion-deck-rumble/",
+      "retouch": "Transparent render, trimmed to the product."
+    },
+    "deck-vex": {
+      "source": "https://cdn.sanity.io/images/dsfx7636/consumer_products_live/35f6b3bdcb2e32e992d7ab4c2ded794365d452fe-2560x2560.png",
+      "page": "https://merch.riotgames.com/en-us/product/riftbound-unleashed-champion-deck-vex/",
+      "retouch": "Transparent render, trimmed to the product."
+    },
+    "deck-vi": {
+      "source": "https://cdn.sanity.io/images/dsfx7636/consumer_products_live/4ef7e906ffaaaf412a9bc67019b8bd3a9fb4889b-2560x2560.png",
+      "page": "https://merch.riotgames.com/en-us/product/riftbound-unleashed-champion-deck-vi/",
+      "retouch": "Transparent render, trimmed to the product."
+    },
+    "showdown-zed-shen": {
+      "source": "https://cdn.sanity.io/images/dsfx7636/consumer_products_live/e8238ddeff8f44a3164a3155712307fad4d9f7fb-2560x2560.png",
+      "page": "https://merch.riotgames.com/en-us/product/riftbound-vendetta-zed-shen-showdown/",
+      "retouch": "Transparent render, trimmed to the product."
+    },
+    "showdown-evelynn-seraphine": {
+      "source": "https://cdn.sanity.io/images/dsfx7636/consumer_products_live/ae1927c472cb538719aa5d1c9cfe2efb3048fa90-2560x2560.png",
+      "page": "https://merch.riotgames.com/en-us/product/riftbound-radiance-evelynn-seraphine-showdown/",
+      "retouch": "Transparent render, trimmed to the product."
+    },
+    "proving-grounds": {
+      "source": "https://cdn.sanity.io/images/dsfx7636/consumer_products_live/a2ca8f9bc247fc5435432e9a97c4efc5b79020c4-2560x2560.png",
+      "page": "https://merch.riotgames.com/en-us/product/riftbound-proving-grounds/",
+      "retouch": "Render, trimmed to the product."
+    },
+    "vault-unl": {
+      "source": "https://cdn.sanity.io/images/dsfx7636/consumer_products_live/8319a8f2dd0e29968b62918eb91cbbec5186b016-2560x2560.png",
+      "page": "https://merch.riotgames.com/en-us/product/riftbound-unleashed-vault/",
+      "retouch": "Transparent render, trimmed to the product."
+    },
+    "arcane": {
+      "source": "https://cdn.sanity.io/images/dsfx7636/consumer_products_live/2f0e070b2ea935e916cd8fa31253791a37d3a956-2560x2560.png",
+      "page": "https://merch.riotgames.com/en-us/product/riftbound-arcane-box-set/",
+      "retouch": "Transparent render, trimmed to the product."
+    },
+    "t1-signature": {
+      "source": "https://cdn.sanity.io/images/dsfx7636/consumer_products_live/2bf18d151699274b1573635b24e205526d1258d1-2560x2560.png",
+      "page": "https://merch.riotgames.com/en-us/product/riftbound-t1-2025-worlds-signature-edition/",
+      "retouch": "Transparent render, trimmed to the product."
+    },
+    "t1-player": {
+      "source": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/news_live/33482baa7c6085e79a921b3ca4cf48e34720f41c-1920x1790.jpg",
+      "page": "https://playriftbound.com/en-us/news/announcements/the-riftbound-x-t1-2025-worlds-champion-collection/",
+      "retouch": "Photo from the announcement, as is."
+    },
+    "secret-garden": {
+      "source": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/news_live/88d4655295fc06ecdd110241329cad33c2ff8610-1050x795.jpg",
+      "page": "https://playriftbound.com/en-us/news/announcements/products-and-sets-into-2027/",
+      "retouch": "Photo from the announcement, as is."
+    },
+    "gift-of-the-rift": {
+      "source": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/news_live/cce8b4c4764176c8e352bb0c74558b1f5a4a2af8-3840x2160.jpg",
+      "page": "https://playriftbound.com/en-us/news/announcements/riftbounds-2026-drawings/",
+      "retouch": "Photo from the announcement, as is."
+    }
   }
 }

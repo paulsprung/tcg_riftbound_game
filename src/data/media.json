@@ -27,5 +27,91 @@
     }
   },
   "cardBack": "card-back.webp",
-  "cardBackRune": "card-back-rune.webp"
+  "cardBackRune": "card-back-rune.webp",
+  "products": {
+    "set-ogn": {
+      "file": "products/set-ogn.webp",
+      "aspect": 0.7625
+    },
+    "set-sfd": {
+      "file": "products/set-sfd.webp",
+      "aspect": 0.7556
+    },
+    "set-unl": {
+      "file": "products/set-unl.webp",
+      "aspect": 0.7569
+    },
+    "set-ven": {
+      "file": "products/set-ven.webp",
+      "aspect": 0.7569
+    },
+    "set-rad": {
+      "file": "products/set-rad.webp",
+      "aspect": 0.75
+    },
+    "deck-jinx": {
+      "file": "products/deck-jinx.webp",
+      "aspect": 0.6278
+    },
+    "deck-leesin": {
+      "file": "products/deck-leesin.webp",
+      "aspect": 0.6278
+    },
+    "deck-viktor": {
+      "file": "products/deck-viktor.webp",
+      "aspect": 0.6278
+    },
+    "deck-fiora": {
+      "file": "products/deck-fiora.webp",
+      "aspect": 0.6806
+    },
+    "deck-rumble": {
+      "file": "products/deck-rumble.webp",
+      "aspect": 0.6806
+    },
+    "deck-vex": {
+      "file": "products/deck-vex.webp",
+      "aspect": 0.6806
+    },
+    "deck-vi": {
+      "file": "products/deck-vi.webp",
+      "aspect": 0.6806
+    },
+    "showdown-zed-shen": {
+      "file": "products/showdown-zed-shen.webp",
+      "aspect": 1.086
+    },
+    "showdown-evelynn-seraphine": {
+      "file": "products/showdown-evelynn-seraphine.webp",
+      "aspect": 1.086
+    },
+    "proving-grounds": {
+      "file": "products/proving-grounds.webp",
+      "aspect": 0.9139
+    },
+    "vault-unl": {
+      "file": "products/vault-unl.webp",
+      "aspect": 0.6806
+    },
+    "arcane": {
+      "file": "products/arcane.webp",
+      "aspect": 1.2478
+    },
+    "t1-signature": {
+      "file": "products/t1-signature.webp",
+      "aspect": 1.3235
+    },
+    "t1-player": {
+      "file": "products/t1-player.webp",
+      "aspect": 1.073
+    },
+    "secret-garden": {
+      "file": "products/secret-garden.webp",
+      "aspect": 1.3211
+    },
+    "gift-of-the-rift": {
+      "file": "products/gift-of-the-rift.webp",
+      "aspect": 1.7778
+    }
+  }
 }
