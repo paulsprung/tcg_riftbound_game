@@ -1254,3 +1254,14 @@ a.lb-rank:hover { border-color: var(--gold); box-shadow: 0 0 22px rgba(200, 170,
 .seat-pop__friends { display: grid; gap: 4px; max-height: 200px; }
 .seat-pop__friend { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 4px; border-bottom: 1px solid rgba(200, 170, 110, .1); }
 .seat-pop__friend span { display: grid; gap: 1px; }
+
+/* ---- the custom game's seats: empty until filled, ✕ to empty one again ---- */
+.ds-slot__btns { display: flex; gap: 6px; align-items: center; }
+.ds-slot__kick { padding-inline: 10px; }
+.ds-slot.is-empty .ds-slot__card { cursor: pointer; }
+.ds-slot__plus {
+  position: absolute; left: 50%; top: 46%; translate: -50% -50%; width: 54px; height: 54px; display: grid; place-items: center; z-index: 3;
+  font: 300 38px/1 var(--font-ui); color: var(--gold-hi); border: 1px solid var(--gold); border-radius: 50%; background: rgba(1, 10, 19, .7);
+  transition: transform .15s, background .15s;
+}
+.ds-slot.is-empty .ds-slot__card:hover .ds-slot__plus { transform: scale(1.08); background: rgba(10, 60, 70, .8); }

@@ -78,11 +78,11 @@ function OnlineMode({ db, mode }: { db: CardDb; mode: (typeof ONLINE)[number] })
       <header className="ds__bar">
         <h1>{mode.label}</h1>
         <span className="ds__bar-right">
-          {/* what this queue plays; what it doesn't yet is greyed out (ranked: 1v1 Constructed only; 2v2: Constructed only) */}
-          {(mode.id === 'ranked' || (mode.id === 'casual' && signedIn)) && (
+          {/* what casual plays; what it doesn't yet is greyed out (2v2: Constructed only). Ranked is 1v1 Constructed, nothing to pick */}
+          {mode.id === 'casual' && signedIn && (
             <div className="seg seg--format" role="group" aria-label="Deck">
               {(['constructed', 'sealed', 'draft'] as const).map((k) => {
-                const soon = k !== 'constructed' && (mode.id === 'ranked' || duo);
+                const soon = k !== 'constructed' && duo;
                 return (
                   <button key={k} type="button" aria-pressed={(soon ? 'constructed' : kind) === k} disabled={soon} data-soon={soon ? '' : undefined}
                     onClick={() => setKind(k)}>{k[0].toUpperCase() + k.slice(1)}</button>
@@ -91,7 +91,6 @@ function OnlineMode({ db, mode }: { db: CardDb; mode: (typeof ONLINE)[number] })
             </div>
           )}
           {mode.id === 'casual' && <FormatSwitch value={duo ? '2v2' : '1v1'} onChange={(v) => { setDuo(v === '2v2'); if (v === '2v2') setKind('constructed'); }} />}
-          {mode.id === 'ranked' && <FormatSwitch value="1v1" />}
           {note && <span className="lb-soon-note">{note}</span>}
         </span>
       </header>

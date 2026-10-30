@@ -124,8 +124,8 @@ export function PlayView({ db, tutorial = false, onInGame }: { db: CardDb; tutor
       const setup = { seed: one.seed, decks: [one.decks[0], one.decks[1], two.decks[0], two.decks[1]], mode: TWO_V_TWO,
         chosenChampion: [c.champion] };
       // seats: you, the first opponent, your teammate, the second opponent; each computer at its own level
-      const seats: Seat[] = c.opponent === 'hotseat' ? [{ k: 'human' }, { k: 'human' }, { k: 'human' }, { k: 'human' }]
-        : [{ k: 'human' }, { k: 'ai', level: levelOf(c, 'theirs') }, { k: 'ai', level: levelOf(c, 'ally') }, { k: 'ai', level: levelOf(c, 'theirs2') }];
+      const at = (s: 'theirs' | 'ally' | 'theirs2'): Seat => (c.filled?.[s] === 'hot' ? { k: 'human' } : { k: 'ai', level: levelOf(c, s) });
+      const seats: Seat[] = [{ k: 'human' }, at('theirs'), at('ally'), at('theirs2')];
       show(new GameHost({ ...options(seats), setup, started: new Date().toISOString() }));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));

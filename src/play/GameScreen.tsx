@@ -21,7 +21,7 @@ import { HandoffCover, ReportDialog } from './prompt/Dialogs.tsx';
 import { GameOver } from './prompt/GameOver.tsx';
 import { ModeSheet } from './prompt/ModeSheet.tsx';
 import { Mulligan } from './prompt/Mulligan.tsx';
-import { OrderChoice } from './prompt/OrderChoice.tsx';
+import { DiceGate, OrderChoice } from './prompt/OrderChoice.tsx';
 import { PromptBar, SetupDone } from './prompt/PromptBar.tsx';
 import { setSettings, usePlaySettings, type PaceChoice } from './settings.ts';
 import { CardZoom } from './table/CardZoom.tsx';
@@ -134,6 +134,8 @@ export function GameScreen({ host, cards, db, names, onNewGame, onChangeDecks, o
   const [zoom, setZoom] = useState<CardSlot | null>(null);
   const [atTable, setAtTable] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  // the roll for the turn order, at the player's click, before the order and the mulligan (TR 407)
+  const [diceSeen, setDiceSeen] = useState(false);
   const [report, setReport] = useState(false);
   const [confirmConcede, setConfirmConcede] = useState(false);
   const closeZoom = useCallback(() => setZoom(null), []);
@@ -356,10 +358,12 @@ export function GameScreen({ host, cards, db, names, onNewGame, onChangeDecks, o
           <Board board={board} cards={cards} onZoom={setZoom} acts={acts} kind={next?.decision?.kind ?? view.pending?.kind}
             names={seatNames} rail={rail} />
         </TableLookContext.Provider>
-        {stage.k === 'order' && handoff === null && (
+        {!diceSeen && !tutorial && handoff === null && summary.designee !== null && (stage.k === 'order' || stage.k === 'mulligan') ? (
+          <DiceGate view={view} board={board} names={names} chooser={summary.designee} first={summary.first} onSeen={() => setDiceSeen(true)} />
+        ) : stage.k === 'order' && handoff === null && (
           <OrderChoice view={view} board={board} cards={cards} names={names} onCommit={commit} onZoom={setZoom} />
         )}
-        {stage.k === 'mulligan' && handoff === null && (!tutorial || mine) && (
+        {stage.k === 'mulligan' && handoff === null && (!tutorial || mine) && (diceSeen || tutorial || summary.designee === null) && (
           <Mulligan key={view.pending?.batch ?? 'waiting'} view={view} board={board} summary={summary} cards={cards}
             preview={preview} onCommit={commit} />
         )}

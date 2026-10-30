@@ -1,5 +1,6 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import { Icon } from '../../lobby/icons.tsx';
+import { CardBack } from '../../card/CardBack.tsx';
 import { HoloCard } from '../../card/HoloCard.tsx';
 import { DOMAIN_COLOR, defaultFinish, symbolFor } from '../../data/cardInfo.ts';
 import type { CardDb } from '../../data/types.ts';
@@ -32,7 +33,13 @@ export interface DeckSetupChoice {
   theirs2?: BuiltInDeck['id'];
   /** Each computer's level, by seat; unset, the `opponent` choice's. */
   levels?: Partial<Record<BotSeat, BotLevel>>;
+  /** Who sits in each seat, as in the League client's custom game: empty until you add a computer or a
+      player at this screen (a friend you invite makes a lobby instead). */
+  filled?: Partial<Record<BotSeat, 'bot' | 'hot'>>;
 }
+
+/** The seats a game needs: the opponent, and in 2v2 your teammate and the second opponent. */
+export const seatsNeeded = (duo: boolean): BotSeat[] => (duo ? ['theirs', 'ally', 'theirs2'] : ['theirs']);
 
 /** The seats a computer (or a friend) can take: the opponent, and in 2v2 your teammate and the second opponent. */
 export type BotSeat = 'theirs' | 'ally' | 'theirs2';
@@ -219,8 +226,10 @@ export function DeckPicker({ cards, db, title, current, owned, mine, only, onRan
 }
 
 /** A deck slot on the table: the legend, big, and a button to change it. */
-export function DeckSlot({ label, b, cards, db, owned, onOpen }: {
+export function DeckSlot({ label, b, cards, db, owned, onOpen, onKick }: {
   label: string; b: BuiltInDeck; cards: CardIndex; db: CardDb; owned?: boolean; onOpen: () => void;
+  /** Take whoever sits here out again (a computer, a player at this screen). */
+  onKick?: () => void;
 }) {
   const legend = cardFor(cards, b.deck.legend);
   return (
@@ -232,7 +241,28 @@ export function DeckSlot({ label, b, cards, db, owned, onOpen }: {
       <figcaption>
         <strong>{shortName(b.deck)}{owned && <em className="ds-yours">Yours</em>}</strong>
         <DomainChips domains={legend?.domains ?? []} db={db} />
-        <button type="button" className="btn btn--small" onClick={onOpen}>Change deck</button>
+        <span className="ds-slot__btns">
+          <button type="button" className="btn btn--small" onClick={onOpen}>Change deck</button>
+          {onKick && <button type="button" className="btn btn--ghost btn--small ds-slot__kick" onClick={onKick} aria-label={`Remove ${label}`} title="Remove">✕</button>}
+        </span>
+      </figcaption>
+    </figure>
+  );
+}
+
+/** A seat nobody sits in yet: the card's back, and a way to fill it. */
+function EmptySeat({ label, onOpen }: { label: string; onOpen: () => void }) {
+  return (
+    <figure className="ds-slot is-wait is-empty">
+      <button type="button" className="ds-slot__card" onClick={onOpen} aria-label={`${label}: add a computer or invite a friend`}>
+        <div className="ds-slot__back"><CardBack /></div>
+        <span className="ds-slot__plus" aria-hidden>+</span>
+        <span className="ds-slot__tag ds-slot__tag--alt">{label}</span>
+      </button>
+      <figcaption>
+        <strong>Empty seat</strong>
+        <span className="muted small">A computer, a friend, or a player here</span>
+        <button type="button" className="btn btn--primary btn--small" onClick={onOpen}>Add</button>
       </figcaption>
     </figure>
   );
@@ -259,9 +289,15 @@ export function DeckSetup({ cards, db, initial, error, onStart, saved, onResume,
   // 2v2: the teammate's and the second opponent's decks, picked to fit unless chosen
   const ally = c.ally ? deckById(c.ally) : pickDuoDeck([mine.deck, theirs.deck], mine.deck);
   const theirs2 = c.theirs2 ? deckById(c.theirs2) : pickDuoDeck([mine.deck, theirs.deck, ally.deck], theirs.deck);
-  const hot = c.opponent === 'hotseat';
   const LEVEL_NAME: Record<BotLevel, string> = { beginner: 'Beginner', normal: 'Normal' };
-  const seatLabel = (s: BotSeat, player: string) => (hot ? player : `${s === 'ally' ? 'Teammate' : 'Computer'} · ${LEVEL_NAME[levelOf(c, s)]}`);
+  const who = (s: BotSeat) => c.filled?.[s];
+  const hot = seatsNeeded(!!duo).some((s) => who(s) === 'hot');
+  const seatLabel = (s: BotSeat, player: string) => (who(s) === 'hot' ? player : `${s === 'ally' ? 'Teammate' : 'Computer'} · ${LEVEL_NAME[levelOf(c, s)]}`);
+  const kick = (s: BotSeat) => setC({ ...c, filled: { ...c.filled, [s]: undefined } });
+  const seatView = (s: BotSeat, b: BuiltInDeck, player: string, empty: string) => (who(s)
+    ? <DeckSlot label={seatLabel(s, player)} b={b} cards={cards} db={db} onOpen={() => setPicking(s)} onKick={() => kick(s)} />
+    : <EmptySeat label={empty} onOpen={() => setSeat(s)} />);
+  const open = seatsNeeded(!!duo).filter((s) => !who(s));
   const problems = [
     ...deckProblems(mine.deck, c.champion).map((p) => `Your deck: ${p}`),
     ...deckProblems(theirs.deck).map((p) => `Opponent's deck: ${p}`),
@@ -305,20 +341,20 @@ export function DeckSetup({ cards, db, initial, error, onStart, saved, onResume,
           <div className="ds-team">
             <span className="ds-team__label">Your team</span>
             <DeckSlot label="You" b={mine} cards={cards} db={db} owned={mine.id === owned} onOpen={() => setPicking('mine')} />
-            <DeckSlot label={seatLabel('ally', 'Player 3')} b={ally} cards={cards} db={db} onOpen={() => setSeat('ally')} />
+            {seatView('ally', ally, 'Player 3', 'Teammate')}
           </div>
           <span className="play-online__vs" aria-hidden>VS</span>
           <div className="ds-team is-them">
             <span className="ds-team__label">Opponents</span>
-            <DeckSlot label={seatLabel('theirs', 'Player 2')} b={theirs} cards={cards} db={db} onOpen={() => setSeat('theirs')} />
-            <DeckSlot label={seatLabel('theirs2', 'Player 4')} b={theirs2} cards={cards} db={db} onOpen={() => setSeat('theirs2')} />
+            {seatView('theirs', theirs, 'Player 2', 'Opponent')}
+            {seatView('theirs2', theirs2, 'Player 4', 'Opponent')}
           </div>
         </div>
       ) : (
         <div className="ds__stage">
           <DeckSlot label="You" b={mine} cards={cards} db={db} owned={mine.id === owned} onOpen={() => setPicking('mine')} />
           <span className="play-online__vs" aria-hidden>VS</span>
-          <DeckSlot label={seatLabel('theirs', 'Player 2')} b={theirs} cards={cards} db={db} onOpen={() => setSeat('theirs')} />
+          {seatView('theirs', theirs, 'Player 2', 'Opponent')}
         </div>
       )}
       {duo && (
@@ -332,10 +368,11 @@ export function DeckSetup({ cards, db, initial, error, onStart, saved, onResume,
       )}
 
       <div className="ds__start">
-        <p className="muted small ds__hint">Click a seat to choose a computer and its level, invite a friend, or play on this screen.</p>
+        <p className="muted small ds__hint">{open.length > 0 ? 'Click an empty seat to add a computer, invite a friend, or play on this screen.' : 'Change a deck, or ✕ to empty a seat.'}</p>
         {problems.length > 0 && <ul className="play__error">{problems.map((p) => <li key={p}>{p}</li>)}</ul>}
         {error && <p className="play__error" role="alert">{error}</p>}
-        <button type="button" className="btn btn--cta" disabled={problems.length > 0} onClick={() => onStart(c)}>Start game</button>
+        <button type="button" className="btn btn--cta" disabled={problems.length > 0 || open.length > 0} title={open.length > 0 ? 'Fill every seat first' : undefined}
+          onClick={() => onStart({ ...c, opponent: hot ? 'hotseat' : levelOf(c, 'theirs') })}>Start game</button>
       </div>
 
       {settings && (
@@ -365,17 +402,17 @@ export function DeckSetup({ cards, db, initial, error, onStart, saved, onResume,
 
       {seat && (
         <SeatPopup title={seat === 'ally' ? 'Your teammate' : seat === 'theirs2' ? 'The second opponent' : 'Your opponent'}
-          level={levelOf(c, seat)} hot={hot}
-          onLevel={(l) => setC({ ...c, opponent: hot ? l : c.opponent, levels: { ...c.levels, [seat]: l } })}
-          onHot={() => setC({ ...c, opponent: 'hotseat' })}
-          onDeck={() => { setPicking(seat); setSeat(null); }}
+          level={levelOf(c, seat)} hot={who(seat) === 'hot'}
+          onLevel={(l) => setC({ ...c, levels: { ...c.levels, [seat]: l }, filled: { ...c.filled, [seat]: 'bot' } })}
+          onHot={() => setC({ ...c, filled: { ...c.filled, [seat]: 'hot' } })}
+          onDeck={() => { if (!who(seat)) setC({ ...c, filled: { ...c.filled, [seat]: 'bot' } }); setPicking(seat); setSeat(null); }}
           onClose={() => setSeat(null)} />
       )}
       {picking && (
         <DeckPicker cards={cards} db={db}
-          title={picking === 'mine' ? 'Your deck' : picking === 'ally' ? "Your teammate's deck" : picking === 'theirs2' ? "The second opponent's deck" : c.opponent === 'hotseat' ? "Player 2's deck" : "The computer's deck"}
+          title={picking === 'mine' ? 'Your deck' : picking === 'ally' ? "Your teammate's deck" : picking === 'theirs2' ? "The second opponent's deck" : who('theirs') === 'hot' ? "Player 2's deck" : "The computer's deck"}
           current={picking === 'mine' ? c.mine : picking === 'ally' ? ally.id : picking === 'theirs2' ? theirs2.id : c.theirs} owned={picking === 'mine' ? owned : null}
-          mine={picking === 'mine' || c.opponent === 'hotseat' ? [...BUILT_IN_DECKS.filter((b) => b.id === owned), ...customDecks()] : undefined}
+          mine={picking === 'mine' || (picking !== null && who(picking as BotSeat) === 'hot') ? [...BUILT_IN_DECKS.filter((b) => b.id === owned), ...customDecks()] : undefined}
           onRandom={picking !== 'mine' ? () => { setC({ ...c, [picking]: BUILT_IN_DECKS[Math.floor(Math.random() * BUILT_IN_DECKS.length)].id }); setPicking(null); } : undefined}
           onClose={() => setPicking(null)}
           onPick={(b) => { setC(picking === 'mine' ? { ...c, mine: b.id, champion: b.deck.chosenChampion } : { ...c, [picking]: b.id }); setPicking(null); }} />

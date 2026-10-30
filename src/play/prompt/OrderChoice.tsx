@@ -32,31 +32,70 @@ function rollsFor(seats: number, chooser: number, seed: string): number[] {
   return Array.from({ length: seats }, (_, p) => (p === chooser ? top : 1 + (hash(`${seed}:${p}`) % (top - 1))));
 }
 
-function Dice({ names, me, chooser, seed, onDone }: { names: string[]; me: number; chooser: number; seed: string; onDone: () => void }) {
+function Dice({ names, me, chooser, seed, first, onRolled }: {
+  names: string[]; me: number; chooser: number; seed: string;
+  /** Who plays first, once the chooser said (null: not yet). */
+  first: number | null;
+  onRolled: () => void;
+}) {
   const rolls = useMemo(() => rollsFor(names.length, chooser, seed), [names.length, chooser, seed]);
-  const [shown, setShown] = useState(() => rolls.map(() => 1));
-  const [done, setDone] = useState(false);
+  const [phase, setPhase] = useState<'ready' | 'rolling' | 'done'>('ready');
+  const [shown, setShown] = useState<(number | null)[]>(() => rolls.map(() => null));
   useEffect(() => {
+    if (phase !== 'rolling') return;
     const t0 = performance.now();
     let raf = 0;
     const tick = (t: number) => {
-      if (t - t0 >= ROLL_MS) { setShown(rolls); setDone(true); onDone(); return; }
+      if (t - t0 >= ROLL_MS) { setShown(rolls); setPhase('done'); onRolled(); return; }
       setShown(rolls.map((_, i) => 1 + ((Math.floor(t / 70) * 7 + i * 13) % 20)));
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [rolls, onDone]);
+  }, [phase, rolls, onRolled]);
+  const done = phase === 'done';
+  const who = (p: number) => (p === me ? 'You' : names[p]);
   return (
-    <div className={`dice-roll${done ? ' is-done' : ''}`} aria-live="polite">
+    <div className={`dice-roll is-${phase}`} aria-live="polite">
       {names.map((n, p) => (
         <figure key={p} className={`dice${done && p === chooser ? ' is-high' : ''}`}>
-          <span className="dice__face" aria-label={done ? `${n} rolled ${rolls[p]}` : `${n} is rolling`}>{shown[p]}</span>
+          <span className="dice__face" aria-label={done ? `${n} rolled ${rolls[p]}` : n}>{shown[p] ?? '?'}</span>
           <figcaption>{p === me ? 'You' : n}</figcaption>
         </figure>
       ))}
-      <p className="dice-roll__result">{done ? (chooser === me ? 'You rolled highest: you choose.' : `${names[chooser]} rolled highest and chooses.`) : 'Rolling for the turn order…'}</p>
+      <p className="dice-roll__result">
+        {phase === 'ready' ? 'Everyone rolls a d20: the highest roll chooses to play first or second.'
+          : phase === 'rolling' ? 'Rolling…'
+            : chooser === me ? 'You rolled highest: you choose.'
+              : first === null ? `${names[chooser]} rolled highest and is choosing…`
+                : `${names[chooser]} rolled highest: ${first === chooser ? `${who(chooser) === 'You' ? 'you play' : 'they play'} first` : `${who(first)} ${first === me ? 'play' : 'plays'} first`}.`}
+      </p>
+      {phase === 'ready' && <button type="button" className="btn btn--cta dice-roll__go" autoFocus onClick={() => setPhase('rolling')}>Roll the dice</button>}
     </div>
+  );
+}
+
+/**
+ * Before the turn order: the roll, at your click. It stays until you have seen
+ * it, even when a computer won it and chose at once; then `onSeen` hands over
+ * to the choice (yours) or to the game.
+ */
+export function DiceGate({ view, board, names, chooser, first, onSeen }: {
+  view: PlayerView; board: BoardModel; names: string[]; chooser: number; first: number | null; onSeen: () => void;
+}) {
+  const seats = view.players.map((_, p) => names[p] ?? `Player ${p + 1}`);
+  const [rolled, setRolled] = useState(false);
+  const onRolled = useMemo(() => () => setRolled(true), []);
+  const mine = chooser === view.me;
+  return (
+    <SetupSheet step="Setup · turn order" title="Roll for the turn order">
+      <Dice names={seats} me={view.me} chooser={chooser} seed={board.lanes.map((l) => l.bf).join('|')} first={first} onRolled={onRolled} />
+      {rolled && (
+        <button type="button" className="btn btn--primary dice-roll__next" autoFocus onClick={onSeen}>
+          {mine ? 'Choose the turn order' : first === null ? 'Wait for their choice' : 'Continue'}
+        </button>
+      )}
+    </SetupSheet>
   );
 }
 
@@ -67,12 +106,9 @@ export function OrderChoice({ view, board, cards, names, onCommit, onZoom }: {
   const d = view.pending?.kind === 'playOrder' ? view.pending : null;
   const a = d ? affordances(view, d) : null;
   const chooser = d ? d.player : view.opponentDecision?.kind === 'playOrder' ? view.opponentDecision.player : null;
-  const [rolled, setRolled] = useState(false);
-  const onRolled = useMemo(() => () => setRolled(true), []);
-  const seed = board.lanes.map((l) => l.bf).join('|');
   return (
-    <SetupSheet step="Setup · turn order" title={!rolled ? 'Roll for the turn order' : d ? 'Play first or second?' : 'Who plays first?'}>
-      {chooser !== null && <Dice names={view.players.map((_, p) => names[p] ?? `Player ${p + 1}`)} me={view.me} chooser={chooser} seed={seed} onDone={onRolled} />}
+    <SetupSheet step="Setup · turn order" title={d ? 'Play first or second?' : 'Who plays first?'}>
+      {chooser !== null && <p className="dice-roll__result">{chooser === view.me ? 'You rolled highest.' : `${names[chooser] ?? 'The opponent'} rolled highest and chooses.`}</p>}
       <div className="sheet__bfs">
         {board.lanes.map((l) => (
           <figure key={l.bf} className="sheet__bf">
@@ -81,7 +117,7 @@ export function OrderChoice({ view, board, cards, names, onCommit, onZoom }: {
           </figure>
         ))}
       </div>
-      {!rolled && chooser !== null ? null : a ? (
+      {a ? (
         <>
           <p>{a.prompt} <span className="muted small">(TR 407)</span></p>
           <Buttons buttons={a.buttons} onCommit={onCommit} />

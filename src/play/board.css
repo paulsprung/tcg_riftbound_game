@@ -433,3 +433,5 @@ body.rk-open > #root { visibility: hidden; transition: visibility 0s .45s; }
 .dice-roll__result { flex-basis: 100%; margin: 4px 0 0; text-align: center; color: var(--text, #e8e2d0); }
 @keyframes dice-shake { from { transform: rotate(-8deg) translateY(-2px); } to { transform: rotate(8deg) translateY(2px); } }
 @media (prefers-reduced-motion: reduce) { .dice-roll .dice__face { animation: none !important; } }
+.dice-roll__go, .dice-roll__next { justify-self: center; margin: 4px auto 0; display: block; }
+.dice-roll.is-ready .dice__face { opacity: .75; }
