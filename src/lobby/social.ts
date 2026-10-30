@@ -74,7 +74,8 @@ export const social = {
       if (m.t === 'friends') void load().catch(() => undefined);
       // in the lobby we were invited to (accepted from another tab): the invite is done
       else if (m.t === 'lobby') set(m.lobby && state.invite?.lobby === m.lobby.id ? { lobby: m.lobby, invite: null } : { lobby: m.lobby });
-      else if (m.t === 'lobby-invite') set({ invite: { lobby: m.lobby, mode: m.mode, from: m.from } });
+      // in a game nobody asks you anywhere (the server refuses it too)
+      else if (m.t === 'lobby-invite') { if (!online.get().game) set({ invite: { lobby: m.lobby, mode: m.mode, from: m.from } }); }
       else if (m.t === 'lobby-invite-gone' && state.invite?.lobby === m.lobby) set({ invite: null });
     });
   },

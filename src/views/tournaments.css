@@ -58,3 +58,15 @@ button.adm-row { width: 100%; border-top: 0; border-right: 0; border-bottom: 0; 
 .adm-ledger { font-size: 13px; }
 .adm-ledger .is-plus { color: var(--teal); } .adm-ledger .is-minus { color: #f2a7b0; }
 @media (max-width: 900px) { .adm__cols, .tn-top { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---- Admin → Home & news ---- */
+.adm-field { display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
+.adm-field textarea { resize: vertical; font: inherit; color: var(--text, #e8e2d0); }
+.adm-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.adm-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.adm-head { display: flex; align-items: center; justify-content: space-between; }
+.adm-check { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.adm-news-edit { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--gold-dim); background: rgba(1, 10, 19, .4); }
+.adm-news { display: grid; gap: 4px; padding: 10px 0; border-bottom: 1px solid rgba(200, 170, 110, .14); }
+.adm-news p { margin: 0; }
+.adm-news.is-hidden { opacity: .5; }

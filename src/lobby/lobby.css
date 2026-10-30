@@ -174,6 +174,7 @@
 
 .home-tag { justify-self: start; font: 800 10px/1 var(--font-ui); letter-spacing: .2em; text-transform: uppercase; }
 .home-tag--purple { color: var(--teal); } .home-tag--green { color: var(--lb-green); } .home-tag--gold { color: var(--lb-gold); }
+.home-tag--teal { color: #5fe0d4; } .home-tag--red { color: #f27a86; }
 .wide-side .lb-label { margin: 0 22px 10px; }
 .wide-side .home-news__label { margin-top: 22px; }
 
@@ -1160,3 +1161,23 @@ a.lb-rank:hover { border-color: var(--gold); box-shadow: 0 0 22px rgba(200, 170,
 .bundle__actions { display: flex; gap: 8px; align-items: center; margin-top: auto; padding-top: 4px; }
 .bundle__actions .btn { flex: none; }
 .bundle__note { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---- the banner's words from Admin → Home & news (HeroBanner) ---- */
+.hero__lede { margin: 4px 0 0; max-width: 46ch; color: var(--text, #e8e2d0); font-size: 14px; line-height: 1.5; text-shadow: 0 1px 10px rgba(0, 0, 0, .7); }
+.hero__link { justify-self: start; margin-top: 8px; }
+
+/* ---- Home's side: the showcase card fills the height the news leave it, a set gap between them ---- */
+@media (min-width: 901px) {
+  .home-page .lb-side { display: flex; flex-direction: column; }
+  .home-page .home-feat { flex: 1 1 auto; min-height: 0; container-type: size; align-content: center; padding: 6px 0; background: none; }
+  .home-page .home-feat__card { width: min(100cqw, calc(100cqh * .716)); }
+  .home-page .home-feat__card.is-slab { width: min(100cqw, calc(100cqh / 1.5)); }
+  .home-page .home-news-dock { flex: none; margin-top: 18px; }
+}
+
+/* ---- a player at the table lost their connection (OnlineGame's SeatAway): the invite's card, over the table ---- */
+.seat-away { z-index: 90; right: 24px; bottom: 24px; }
+.seat-away__row { display: grid; gap: 4px; }
+.seat-away__row > span { font-size: 13px; color: var(--muted); }
+.seat-away__clock { color: var(--lb-gold, #f0c35b); font-variant-numeric: tabular-nums; }
+.seat-away__row.is-back b { color: var(--teal); }

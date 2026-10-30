@@ -195,8 +195,13 @@ export class Online {
     const seat = g.players.indexOf(userId) as PlayerId;
     g.showed[seat] = true;
     const t = g.away[seat];
-    if (t) { clearTimeout(t); g.away[seat] = null; }
+    if (t) { clearTimeout(t); g.away[seat] = null; this.tellAway(g, seat, null); }
     await this.sendStart(g, seat, true);
+  }
+
+  /** The others at the table hear that a player lost their connection (and until when they may come back), or is back. */
+  private tellAway(g: Live, seat: PlayerId, until: number | null) {
+    for (const s of this.seats(g)) if (s !== seat) this.net.send(g.players[s], { t: 'seat-away', gameId: g.id, name: g.names[seat], until });
   }
 
   /** Their last socket closed: out of the queue; in a game, three minutes to come back. */
@@ -211,6 +216,7 @@ export class Online {
     const seat = g.players.indexOf(userId) as PlayerId;
     g.away[seat] = setTimeout(() => { if (!this.net.online(userId)) void this.concede(g, seat); }, this.t.reconnect);
     g.away[seat].unref?.();
+    this.tellAway(g, seat, this.clock.now() + this.t.reconnect);
   }
 
   async message(userId: string, name: string, m: ClientMsg) {
@@ -616,6 +622,8 @@ export class Online {
         if (!(await this.areFriends(userId, to))) throw new Error('Only friends can be invited');
         if (this.presence(to) === 'offline') throw new Error('Your friend is offline');
         if (this.byUser.has(userId)) throw new Error('You are in a game');
+        // nobody is asked into a lobby in the middle of a game
+        if (this.byUser.has(to)) throw new Error('Your friend is in a game');
         // your lobby, or a new one with you as host
         let l = mine;
         if (!l) {

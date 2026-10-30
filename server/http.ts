@@ -13,6 +13,7 @@ import type { Online } from './games/online.ts';
 import { friends } from './friends.ts';
 import { LimitedService } from './limited.ts';
 import { market } from './market.ts';
+import { site } from './site.ts';
 import { deleteAccount, exportAccount } from './privacy.ts';
 import type { Director } from './tournament/director.ts';
 
@@ -198,6 +199,12 @@ export function handler({ cfg, db, fetch: f = fetch, catalog, online, director, 
       path = url.pathname;
       const jar = cookies(req);
       if (path === '/api/site') return json(res, 200, { operator: cfg.operator, cloudflare: cfg.trustProxy === true });
+      if (path === '/api/home') {
+        // what Home shows: the news and the banner, the same for everyone
+        const [news, home] = await Promise.all([site.news(db), site.home(db)]);
+        res.setHeader('cache-control', 'no-cache');
+        return json(res, 200, { news, home });
+      }
       if (path === '/api/health') return json(res, 200, { ok: true, ...(online ? { games: online.stats.games, queued: online.stats.queued } : {}) });
 
       if (path === '/api/me') {
@@ -380,6 +387,12 @@ export function handler({ cfg, db, fetch: f = fetch, catalog, online, director, 
               if (at[2] === 'start') await director.start(at[1]); else await director.cancel(at[1]);
               return json(res, 200, { ok: true });
             }
+            if (route === 'GET /api/admin/news') return json(res, 200, { news: await site.news(db, true), home: await site.home(db) });
+            if (route === 'POST /api/admin/news') return json(res, 200, { news: await site.saveNews(db, user.id, await body(req)) });
+            if (route === 'POST /api/admin/news/order') { await site.orderNews(db, (await body(req)).ids); return json(res, 200, { ok: true }); }
+            const nd = /^\/api\/admin\/news\/([0-9a-f-]{36})$/.exec(path);
+            if (nd && req.method === 'DELETE') { await site.deleteNews(db, nd[1]); return json(res, 200, { ok: true }); }
+            if (route === 'PUT /api/admin/home') return json(res, 200, { home: await site.setHome(db, user.id, await body(req)) });
             if (route === 'GET /api/admin/users') {
               const q = (url.searchParams.get('q') ?? '').slice(0, 64);
               const r = await db.query(`SELECT u.id, u.discord_id, u.name, coalesce(a.coins, 0) AS coins FROM users u LEFT JOIN accounts a ON a.user_id = u.id

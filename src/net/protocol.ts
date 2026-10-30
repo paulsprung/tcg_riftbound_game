@@ -54,6 +54,8 @@ export type ServerMsg =
       grace time ends and both time banks (yours first) as they stood when it was asked. */
   | { t: 'update'; gameId: string; view: PlayerView; events: ObservedEvent[]; full: boolean; deadline: number | null; theirDeadline: number | null;
     clock: { grace: number | null; banks: number[] } }
+  /** A player at your table lost their connection: back by `until` (ms since the epoch) or the game is theirs to lose; null: they are back. */
+  | { t: 'seat-away'; gameId: string; name: string; until: number | null }
   | { t: 'end'; gameId: string; winner: PlayerId | null; reason: string; coins: number; bonus: number; rating: { before: RatingInfo; after: RatingInfo } | null }
   /** Your lobby as it is now (after every change); null: you are in none. */
   | { t: 'lobby'; lobby: LobbyView | null }

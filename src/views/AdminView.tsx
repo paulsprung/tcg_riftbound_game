@@ -3,13 +3,16 @@ import { api, showNotice } from '../net/api.ts';
 import { useSession } from '../net/session.ts';
 import { Lobby } from '../lobby/Lobby.tsx';
 import { BOOSTER_SETS } from '../pack/packConfig.ts';
+import { LEGENDS } from '../decks/ownership.ts';
+import { DEFAULT_BANNER, reloadHome, TONES, type HomeBanner, type NewsItem, type Tone } from '../lobby/site.ts';
 import './tournaments.css';
 
 /*
  * '#admin', for admins only (users.is_admin; the server checks every call):
  * players (find one, see their ledger, give coins or packs with a reason
- * that is kept with your name) and tournaments (make one, start it early,
- * cancel it with the fees going back).
+ * that is kept with your name), tournaments (make one, start it early,
+ * cancel it with the fees going back), and Home: the banner's words and
+ * the news column (server/site.ts).
  */
 
 interface Player { id: string; discordId: string; name: string; coins: number }
@@ -170,14 +173,119 @@ function TournamentsAdmin() {
   );
 }
 
+const BLANK: Omit<NewsItem, 'id'> = { tag: 'Update', tone: 'purple', title: '', body: '', published: true };
+
+/** Home: the banner over the season's art, and the news column, in its order. */
+function HomeAdmin() {
+  const [banner, setBanner] = useState<HomeBanner>(DEFAULT_BANNER);
+  const [news, setNews] = useState<NewsItem[]>([]);
+  const [edit, setEdit] = useState<(Omit<NewsItem, 'id'> & { id?: string }) | null>(null);
+  const load = () => api<{ news: NewsItem[]; home: HomeBanner | null }>('GET', '/api/admin/news')
+    .then((r) => { setNews(r.news); setBanner({ ...DEFAULT_BANNER, ...(r.home ?? {}) }); }).catch((e: Error) => showNotice(e.message));
+  useEffect(() => { void load(); }, []);
+  const done = (msg: string) => { showNotice(msg, true); reloadHome(); void load(); };
+  const field = (k: keyof HomeBanner) => (e: { target: { value: string } }) => setBanner({ ...banner, [k]: e.target.value });
+
+  const saveBanner = () => api('PUT', '/api/admin/home', banner).then(() => done('Banner saved: Home shows it now.')).catch((e: Error) => showNotice(e.message));
+  const saveNews = () => edit && api('POST', '/api/admin/news', edit).then(() => { setEdit(null); done('News saved.'); }).catch((e: Error) => showNotice(e.message));
+  const remove = (n: NewsItem) => { if (confirm(`Delete “${n.title}”?`)) api('DELETE', `/api/admin/news/${n.id}`).then(() => done('News deleted.')).catch((e: Error) => showNotice(e.message)); };
+  const move = (i: number, by: -1 | 1) => {
+    const next = [...news];
+    const [x] = next.splice(i, 1);
+    next.splice(i + by, 0, x);
+    setNews(next);
+    api('POST', '/api/admin/news/order', { ids: next.map((n) => n.id) }).then(() => reloadHome()).catch((e: Error) => showNotice(e.message));
+  };
+  const toggle = (n: NewsItem) => api('POST', '/api/admin/news', { ...n, published: !n.published }).then(() => done(n.published ? 'Hidden from Home.' : 'Shown on Home.')).catch((e: Error) => showNotice(e.message));
+
+  return (
+    <>
+      <section className="adm__col lb-card">
+        <h2>Home banner</h2>
+        <p className="muted small">The big picture on Home: the art of the season's legend, with your words over it. Empty fields are left out.</p>
+        <label className="adm-field">Legend (its art)
+          <input className="input" list="adm-legends" value={banner.legend} onChange={field('legend')} />
+          <datalist id="adm-legends">{LEGENDS.map((l) => <option key={l.id} value={l.name} />)}</datalist>
+        </label>
+        <label className="adm-field">Season name<input className="input" maxLength={40} value={banner.season} onChange={field('season')} /></label>
+        <label className="adm-field">Kicker, small above the headline<input className="input" maxLength={40} placeholder="Update 1.4" value={banner.kicker} onChange={field('kicker')} /></label>
+        <label className="adm-field">Headline (instead of the legend's name)<input className="input" maxLength={80} value={banner.headline} onChange={field('headline')} /></label>
+        <label className="adm-field">Text<textarea className="input" maxLength={200} rows={2} value={banner.text} onChange={field('text')} /></label>
+        <div className="adm-pair">
+          <label className="adm-field">Button<input className="input" maxLength={30} placeholder="Open the shop" value={banner.button} onChange={field('button')} /></label>
+          <label className="adm-field">Goes to<input className="input" maxLength={60} placeholder="#shop" value={banner.link} onChange={field('link')} /></label>
+        </div>
+        <div className="adm-actions">
+          <button type="button" className="btn btn--cta btn--small" onClick={() => { void saveBanner(); }}>Save banner</button>
+          <button type="button" className="btn btn--ghost btn--small" onClick={() => setBanner(DEFAULT_BANNER)}>Back to the default</button>
+        </div>
+      </section>
+
+      <section className="adm__col lb-card">
+        <div className="adm-head">
+          <h2>News</h2>
+          <button type="button" className="btn btn--primary btn--small" onClick={() => setEdit({ ...BLANK })}>New</button>
+        </div>
+        {edit && (
+          <div className="adm-news-edit">
+            <div className="adm-pair">
+              <label className="adm-field">Tag<input className="input" maxLength={20} value={edit.tag} onChange={(e) => setEdit({ ...edit, tag: e.target.value })} /></label>
+              <label className="adm-field">Colour
+                <select className="input" value={edit.tone} onChange={(e) => setEdit({ ...edit, tone: e.target.value as Tone })}>
+                  {TONES.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </label>
+            </div>
+            <label className="adm-field">Title<input className="input" maxLength={80} value={edit.title} onChange={(e) => setEdit({ ...edit, title: e.target.value })} /></label>
+            <label className="adm-field">Text<textarea className="input" maxLength={400} rows={3} value={edit.body} onChange={(e) => setEdit({ ...edit, body: e.target.value })} /></label>
+            <label className="adm-check"><input type="checkbox" checked={edit.published !== false} onChange={(e) => setEdit({ ...edit, published: e.target.checked })} /> Show on Home</label>
+            <div className="adm-actions">
+              <button type="button" className="btn btn--cta btn--small" onClick={() => { void saveNews(); }}>{edit.id ? 'Save' : 'Post'}</button>
+              <button type="button" className="btn btn--ghost btn--small" onClick={() => setEdit(null)}>Cancel</button>
+            </div>
+          </div>
+        )}
+        <div className="adm-list lb-scroll">
+          {news.length === 0 && <p className="muted small">No news yet: Home shows none until you post some.</p>}
+          {news.map((n, i) => (
+            <div key={n.id} className={`adm-news${n.published ? '' : ' is-hidden'}`}>
+              <span className={`home-tag home-tag--${n.tone}`}>{n.tag}</span>
+              <strong>{n.title}</strong>
+              <p className="muted small">{n.body}</p>
+              <div className="adm-actions">
+                <button type="button" className="btn btn--ghost btn--small" disabled={i === 0} onClick={() => move(i, -1)} aria-label="Up">↑</button>
+                <button type="button" className="btn btn--ghost btn--small" disabled={i === news.length - 1} onClick={() => move(i, 1)} aria-label="Down">↓</button>
+                <button type="button" className="btn btn--ghost btn--small" onClick={() => setEdit(n)}>Edit</button>
+                <button type="button" className="btn btn--ghost btn--small" onClick={() => { void toggle(n); }}>{n.published ? 'Hide' : 'Show'}</button>
+                <button type="button" className="btn btn--ghost btn--small" onClick={() => remove(n)}>Delete</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </>
+  );
+}
+
 export function AdminView() {
   const session = useSession();
   const admin = session.status === 'online' && !!session.user?.admin;
+  const [tab, setTab] = useState<'players' | 'home'>('players');
   return (
     <Lobby>
       <section className="adm lb-col">
-        <div className="lb-head"><h1>Admin</h1></div>
-        {admin ? <div className="adm__cols"><Players /><TournamentsAdmin /></div> : <p className="muted">Admins only.</p>}
+        <div className="lb-head">
+          <h1>Admin</h1>
+          {admin && (
+            <div className="seg seg--format" role="tablist" aria-label="Admin">
+              <button type="button" role="tab" aria-selected={tab === 'players'} aria-pressed={tab === 'players'} onClick={() => setTab('players')}>Players &amp; tournaments</button>
+              <button type="button" role="tab" aria-selected={tab === 'home'} aria-pressed={tab === 'home'} onClick={() => setTab('home')}>Home &amp; news</button>
+            </div>
+          )}
+        </div>
+        {!admin ? <p className="muted">Admins only.</p>
+          : tab === 'players' ? <div className="adm__cols"><Players /><TournamentsAdmin /></div>
+            : <div className="adm__cols"><HomeAdmin /></div>}
       </section>
     </Lobby>
   );

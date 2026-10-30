@@ -3,6 +3,7 @@ import { useEffects } from '../card/effects.ts';
 import { useCardImage } from '../data/images.ts';
 import type { Card, CardDb } from '../data/types.ts';
 import { SEASON } from '../lobby/season.ts';
+import { useHome } from '../lobby/site.ts';
 
 /** The season's picture, big: the crisp art at the right, its blur filling the rest. */
 function Scene({ card }: { card: Card }) {
@@ -27,9 +28,14 @@ export function HeroBanner({ db, children, footer, compact = false, bleed = fals
   db: CardDb; children?: React.ReactNode; footer?: React.ReactNode; compact?: boolean; bleed?: boolean; plain?: boolean;
 }) {
   const fx = useEffects();
+  // the banner as the admins set it (Admin → Home & news): its legend's art, and their words over it
+  const b = useHome().banner;
   const star = useMemo(
-    () => db.cards.find((c) => c.type === 'Legend' && c.variant === 'base' && c.name === SEASON.legend) ?? null, [db]);
-  const [name, title] = star ? star.name.split(/,\s*(.+)/) : ['', ''];
+    () => db.cards.find((c) => c.type === 'Legend' && c.variant === 'base' && c.name === b.legend)
+      ?? db.cards.find((c) => c.type === 'Legend' && c.variant === 'base' && c.name === SEASON.legend) ?? null, [db, b.legend]);
+  const [legendName, legendTitle] = star ? star.name.split(/,\s*(.+)/) : ['', ''];
+  const name = b.headline || legendName;
+  const title = b.headline ? '' : legendTitle;
 
   return (
     <section className={`hero${compact ? ' hero--compact' : ''}${bleed ? ' hero--bleed' : ''}`} data-fx={fx}>
@@ -40,10 +46,13 @@ export function HeroBanner({ db, children, footer, compact = false, bleed = fals
           {Array.from({ length: 14 }, (_, k) => <i key={k} style={{ '--k': k } as React.CSSProperties} />)}
         </div>
       )}
-      {!compact && !plain && star && (
+      {!compact && !plain && (star || b.headline) && (
         <div className="hero__text">
+          {b.kicker && <span className="hero__kicker">{b.kicker}</span>}
           <h1>{name}</h1>
           {title && <p className="hero__title">{title}</p>}
+          {b.text && <p className="hero__lede">{b.text}</p>}
+          {b.button && b.link && <a className="btn btn--primary hero__link" href={b.link}>{b.button}</a>}
         </div>
       )}
       {children && <div className="hero__actions">{children}</div>}

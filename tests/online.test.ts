@@ -137,6 +137,14 @@ describe.skipIf(!url)('online play', () => {
     await again.connected(b);
     expect(net2.last(b, 'state')?.game).toBe(gameId);
     expect(net2.last(b, 'update')?.full).toBe(true);
+    // a player drops: the table hears it, with the time they have to come back, and again when they are back
+    net2.on.delete(c);
+    again.disconnected(c);
+    expect(net2.last(b, 'seat-away')).toMatchObject({ gameId, name: 'cid' });
+    expect(net2.last(b, 'seat-away')!.until).toBeGreaterThan(Date.now());
+    net2.on.add(c);
+    await again.connected(c);
+    expect(net2.last(b, 'seat-away')!.until).toBeNull();
     await again.message(b, 'ben', { t: 'concede', gameId });
     await until(() => !!net2.last(c, 'end'));
     expect(net2.last(c, 'end')!.coins).toBe(0);   // conceded on turn 1: no reward

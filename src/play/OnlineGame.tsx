@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import type { CardDb } from '../data/types.ts';
 import { divisionProgress, PLACEMENT_GAMES, rankName } from '../economy/ranks.ts';
 import { RankEmblem } from '../lobby/RankEmblem.tsx';
-import { online } from '../net/socket.ts';
+import { online, useOnline } from '../net/socket.ts';
 import type { RatingInfo, ServerMsg } from '../net/protocol.ts';
 import { GameScreen } from './GameScreen.tsx';
 import { rankMoved, RankUp } from './prompt/RankUp.tsx';
@@ -91,6 +91,36 @@ function Outcome({ end, tournament, mode }: { end: Extract<ServerMsg, { t: 'end'
   );
 }
 
+/** Someone at the table lost their connection: a card in the corner, as a friend's invite, with the time
+    they have left to come back; "back" for a moment once they are. */
+function SeatAway() {
+  const { away, back } = useOnline();
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (away.length === 0) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [away.length]);
+  useEffect(() => {
+    if (!back) return;
+    const t = setTimeout(() => online.dismissBack(), 4000);
+    return () => clearTimeout(t);
+  }, [back]);
+  const left = (until: number) => { const s = Math.max(0, Math.ceil((until - now) / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+  if (away.length === 0 && !back) return null;
+  return (
+    <div className="soc-challenge seat-away lb-card" role="status" aria-live="polite">
+      {away.map((a) => (
+        <div key={a.name} className="seat-away__row">
+          <b>{a.name}</b>
+          <span>lost the connection. Back within <strong className="seat-away__clock">{left(a.until)}</strong>, or they lose the game.</span>
+        </div>
+      ))}
+      {back && <div className="seat-away__row is-back"><b>{back}</b><span>is back.</span></div>}
+    </div>
+  );
+}
+
 export function OnlineGame({ db, start, end }: { db: CardDb; start: Extract<ServerMsg, { t: 'start' }>; end: Extract<ServerMsg, { t: 'end' }> | null }) {
   const cards = useMemo(() => cardIndex(db), [db]);
   // every list with its art, as the table shows them
@@ -104,8 +134,11 @@ export function OnlineGame({ db, start, end }: { db: CardDb; start: Extract<Serv
   const mode = tm ? `${tm.name} · ${tm.round} · game ${tm.game} (${tm.score[start.seat]}–${tm.score[1 - start.seat]})`
     : start.mode === 'ranked' ? 'Ranked' : start.mode === 'friendly' ? 'Friendly' : start.mode === 'duo' ? 'Casual 2v2' : 'Casual';
   return (
-    <GameScreen host={host} cards={cards} db={db} names={start.names}
-      onNewGame={leave} onChangeDecks={leave}
-      online={{ mode, clock: () => host.deadlines, outcome: <Outcome end={end} tournament={!!tm} mode={start.mode} /> }} />
+    <>
+      <GameScreen host={host} cards={cards} db={db} names={start.names}
+        onNewGame={leave} onChangeDecks={leave}
+        online={{ mode, clock: () => host.deadlines, outcome: <Outcome end={end} tournament={!!tm} mode={start.mode} /> }} />
+      {!end && <SeatAway />}
+    </>
   );
 }

@@ -7,6 +7,7 @@ import { defaultFinish } from '../data/cardInfo.ts';
 import type { CardDb } from '../data/types.ts';
 import { Lobby } from '../lobby/Lobby.tsx';
 import { NewsCarousel } from '../lobby/NewsCarousel.tsx';
+import { useHome } from '../lobby/site.ts';
 import { HeroBanner } from './HeroBanner.tsx';
 import { useShowcase } from './showcasePieces.ts';
 import { Starters } from './Starters.tsx';
@@ -16,6 +17,7 @@ const hhmm = (ms: number) => `${Math.floor(ms / 3_600_000)} h ${Math.ceil((ms % 
 /** Left of the banner: your featured card (the first one in your showcase), and the news pinned to the bottom. */
 function Side({ db }: { db: CardDb }) {
   const pick = useShowcase(db)[0];
+  const news = useHome().news;
   return (
     <>
       <p className="lb-label">Your showcase</p>
@@ -34,10 +36,12 @@ function Side({ db }: { db: CardDb }) {
         )}
       </a>
 
-      <div className="home-news-dock">
-        <p className="lb-label home-news__label">Latest news</p>
-        <NewsCarousel />
-      </div>
+      {news.length > 0 && (
+        <div className="home-news-dock">
+          <p className="lb-label home-news__label">Latest news</p>
+          <NewsCarousel />
+        </div>
+      )}
     </>
   );
 }
