@@ -57,34 +57,23 @@ function LegendPick({ ix, db, own, onPick, onBack }: {
   ix: CardIndex; db: CardDb; own: Record<DefId, number>; onPick: (l: OracleCard) => void; onBack: () => void;
 }) {
   const coll = useCollection();
-  // every legend: the deck is built around one, owned or not (what it lacks, the builder lists)
-  const [mine, setMine] = useState(false);
-  const list = useMemo(() => LEGENDS.filter((l) => !mine || (own[l.id] ?? 0) > 0).sort((a, b) => a.name.localeCompare(b.name)), [own, mine]);
+  const list = useMemo(() => LEGENDS.filter((l) => (own[l.id] ?? 0) > 0).sort((a, b) => a.name.localeCompare(b.name)), [own]);
   return (
     <section className="db db--legend">
       <header className="db__bar">
         <button type="button" className="btn btn--ghost btn--small" onClick={onBack}><Icon name="back" size={14} /> Decks</button>
         <h1>Choose a legend</h1>
-        <span className="db__bar-right">
-          <span className="seg seg--format" role="group" aria-label="Which legends">
-            <button type="button" aria-pressed={!mine} onClick={() => setMine(false)}>All {LEGENDS.length}</button>
-            <button type="button" aria-pressed={mine} onClick={() => setMine(true)}>Owned</button>
-          </span>
-        </span>
       </header>
       <div className="db-legends lb-scroll">
         {list.length === 0 && <p className="muted">No legend yet: they come in packs and in the decks of the shop.</p>}
         {list.map((l) => {
           const card = cardFor(ix, l.id, ownedPrints((ix.byDef[l.id] ?? []).map((x) => x.id), coll)[0] ?? null);
-          const have = (own[l.id] ?? 0) > 0;
           return (
-            <button key={l.id} type="button" className={`db-legend${have ? '' : ' is-unowned'}`} onClick={() => onPick(l)}
-              aria-label={`${l.name}${have ? '' : ' (not owned)'}`}>
+            <button key={l.id} type="button" className="db-legend" onClick={() => onPick(l)} aria-label={l.name}>
               <span className="db-legend__card">{card && <HoloCard card={card} finish={defaultFinish(card)} width="100%" tilt="hover" imageWidth={320} />}</span>
               <strong>{l.championTag ?? l.name}</strong>
               <span className="db-legend__title">{l.name.replace(/^[^,]*,\s*/, '')}</span>
               <span className="chips">{l.domains.map((d) => <Domain key={d} d={d} db={db} />)}</span>
-              {!have && <span className="db-legend__tag">Not owned</span>}
             </button>
           );
         })}

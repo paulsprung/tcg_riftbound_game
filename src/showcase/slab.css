@@ -1,8 +1,10 @@
 /* -- graded slab ---------------------------------------------------------
 
-   A clear acrylic case, 3.25" x 5.375" like the usual graders' cases, with
-   the label in its top fifth and the card sealed in a moulded well under
-   it. The tilt engine (tilt.ts) writes its variables on .slab; the card's
+   A clear acrylic case, snug round the card, with a slim label strip
+   above it (the compact cases' layout, not the tall classic one): the
+   grader's mark, the card, its cert and the grade in one row, and the card
+   sealed in a moulded well under it. Slab.tsx's SLAB_ASPECT and WELL match
+   the numbers here. The tilt engine (tilt.ts) writes its variables on .slab; the card's
    own pointer position is re-measured over the well (Slab.tsx). Sizes in
    the label are in cqw, so it reads the same at any slab width.
    -------------------------------------------------------------------- */
@@ -10,7 +12,7 @@
 .slab {
   --tilt: 12deg;
   --thick: 0px;
-  --r: 4.4% / 2.66%;
+  --r: 4.4% / 2.93%;
   --l-bg: #f3f1ec;
   --l-ink: #17151f;
   --l-soft: #5d5a66;
@@ -19,7 +21,7 @@
   --l-num: var(--l-ink);
   position: relative;
   flex: none;
-  aspect-ratio: 3.25 / 5.375;
+  aspect-ratio: 1 / 1.5;
   perspective: 1200px;
   container-type: inline-size;
   -webkit-tap-highlight-color: transparent;
@@ -89,17 +91,17 @@
 
 .slab__label {
   position: absolute;
-  left: 5%; right: 5%; top: 3.2%;
-  height: 19%;
+  left: 4.5%; right: 4.5%; top: 2.6%;
+  height: 11.4%;
   display: grid;
-  grid-template-columns: 15cqw 1fr auto;
-  grid-template-rows: 1fr auto;
-  column-gap: 3cqw;
-  padding: 2.6cqw 3.4cqw 2.2cqw 2.8cqw;
-  border-radius: 1.6cqw;
+  grid-template-columns: 10.5cqw minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 2.4cqw;
+  padding: 0 2.4cqw 0 2cqw;
+  border-radius: 1.4cqw;
   background: var(--l-bg);
   color: var(--l-ink);
-  box-shadow: inset 0 0 0 .5cqw var(--l-line), 0 .4cqw 1.2cqw rgba(0, 0, 0, .25);
+  box-shadow: inset 0 0 0 .45cqw var(--l-line), 0 .4cqw 1.2cqw rgba(0, 0, 0, .25);
   font-family: var(--font-condensed, 'Arial Narrow', sans-serif);
   line-height: 1.1;
   text-transform: uppercase;
@@ -111,86 +113,52 @@
     var(--l-bg);
 }
 
-/* the hologram seal: a little foil square that shifts with the tilt */
-.slab__holo {
-  grid-column: 1;
-  grid-row: 1 / 3;
-  align-self: center;
-  aspect-ratio: 1;
-  border-radius: 1.4cqw;
-  background:
-    radial-gradient(circle at calc(30% + var(--tx, 0) * 40%) calc(30% + var(--ty, 0) * 40%), rgba(255, 255, 255, .9), transparent 38%),
-    conic-gradient(from calc(var(--tx, 0) * 140deg + var(--ty, 0) * 60deg),
-      #ff7ab6, #ffd36b, #8affc1, #6bd3ff, #b48cff, #ff7ab6);
-  box-shadow: inset 0 0 0 .5cqw rgba(255, 255, 255, .5), 0 0 0 .4cqw var(--l-line);
+/* the grader's mark (GraderMark): a gem cut out of holographic foil that shifts with the tilt */
+.grader-mark {
   position: relative;
+  display: block;
+  aspect-ratio: 1;
+  clip-path: polygon(50% 0, 96% 26%, 96% 74%, 50% 100%, 4% 74%, 4% 26%);
+  background:
+    radial-gradient(circle at calc(30% + var(--tx, 0) * 40%) calc(30% + var(--ty, 0) * 40%), rgba(255, 255, 255, .85), transparent 42%),
+    conic-gradient(from calc(var(--tx, 0) * 140deg + var(--ty, 0) * 60deg), #ff7ab6, #ffd36b, #8affc1, #6bd3ff, #b48cff, #ff7ab6);
 }
-.slab__holo::after {
-  content: attr(data-mark);
-  position: absolute; inset: 0;
-  display: grid; place-items: center;
-  font: 800 5cqw/1 var(--font-display, serif);
-  letter-spacing: -.04em;
-  color: rgba(255, 255, 255, .92);
-  text-shadow: 0 .3cqw .8cqw rgba(0, 0, 0, .35);
-  mix-blend-mode: overlay;
-}
+.grader-mark svg { position: absolute; inset: 0; width: 100%; height: 100%; filter: drop-shadow(0 0 1px rgba(0, 0, 0, .35)); }
+.slab__holo { width: 10.5cqw; }
 
-.slab__lines {
-  grid-column: 2;
-  grid-row: 1;
-  display: grid;
-  align-content: start;
-  gap: .9cqw;
-  min-width: 0;
-}
-.slab__brand { font-size: 2.7cqw; font-weight: 700; color: var(--l-accent); letter-spacing: .14em; }
+.slab__lines { display: grid; gap: .5cqw; min-width: 0; }
 .slab__name {
-  font: 800 4.9cqw/1.05 var(--font-card, sans-serif);
+  font: 800 4.3cqw/1.05 var(--font-card, sans-serif);
   text-transform: none;
   letter-spacing: 0;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.slab__set, .slab__code { font-size: 3cqw; color: var(--l-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.slab__code { font-size: 2.5cqw; color: var(--l-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.slab__cert { display: flex; align-items: center; gap: 1.4cqw; font-size: 2.2cqw; color: var(--l-soft); letter-spacing: .12em; }
+.slab__barcode { width: 15cqw; height: 2.4cqw; fill: currentColor; opacity: .75; }
 
 .slab__grade {
-  grid-column: 3;
-  grid-row: 1 / 3;
   display: grid;
-  justify-items: end;
+  justify-items: center;
   align-content: center;
-  gap: .6cqw;
-  padding-left: 3cqw;
-  border-left: .4cqw solid var(--l-line);
+  gap: .3cqw;
+  min-width: 13cqw;
+  padding-left: 2.4cqw;
+  border-left: .35cqw solid var(--l-line);
 }
-.slab__desc { font-size: 3.3cqw; font-weight: 700; color: var(--l-accent); letter-spacing: .1em; white-space: nowrap; }
-.slab__num { font: 800 15cqw/.85 var(--font-display, serif); color: var(--l-num); letter-spacing: -.03em; }
+.slab__num { font: 800 9.5cqw/.85 var(--font-display, serif); color: var(--l-num); letter-spacing: -.03em; }
 .slab[data-pristine] .slab__num {
   background: linear-gradient(calc(120deg + var(--tx, 0) * 40deg), #8a5a14, #f6dc8c 40%, #b8862c 60%, #fbe7a4);
   -webkit-background-clip: text;
           background-clip: text;
   color: transparent;
 }
-
-.slab__cert {
-  grid-column: 2;
-  grid-row: 2;
-  display: flex;
-  align-items: center;
-  gap: 2cqw;
-  font-size: 2.6cqw;
-  color: var(--l-soft);
-  letter-spacing: .12em;
-}
-.slab__barcode { width: 22cqw; height: 3.4cqw; fill: currentColor; opacity: .8; }
+.slab__desc { font-size: 2.2cqw; font-weight: 700; color: var(--l-accent); letter-spacing: .08em; white-space: nowrap; }
 
 /* the moulded lip around the card */
 .slab__ridge {
   position: absolute;
-  left: 8.2%; right: 8.2%; top: 26.6%; bottom: 3.1%;
+  left: 4.4%; right: 4.4%; top: 14.6%; bottom: 1.8%;
   border-radius: 3.6% / 2.4%;
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, .26),
@@ -202,8 +170,8 @@
 
 .slab__well {
   position: absolute;
-  left: 11.5%; top: 29.5%;
-  width: 77%;
+  left: 6%; top: 15.6%;
+  width: 88%;
 }
 
 /* light on the front of the case: a broad reflection that slides with the
@@ -223,7 +191,7 @@
 
 .slab__edge { position: absolute; pointer-events: none; }
 .slab__edge--top, .slab__edge--bottom { left: 4.4%; right: 4.4%; height: var(--thick); }
-.slab__edge--left, .slab__edge--right { top: 2.66%; bottom: 2.66%; width: var(--thick); }
+.slab__edge--left, .slab__edge--right { top: 2.93%; bottom: 2.93%; width: var(--thick); }
 .slab__edge--top    { top: 0;    transform-origin: top;    transform: translateZ(calc(var(--thick) / 2)) rotateX(-90deg); background: linear-gradient(180deg, rgba(235, 238, 248, .55), rgba(150, 156, 176, .35)); }
 .slab__edge--bottom { bottom: 0; transform-origin: bottom; transform: translateZ(calc(var(--thick) / 2)) rotateX(90deg);  background: linear-gradient(180deg, rgba(90, 94, 110, .45), rgba(40, 42, 54, .5)); }
 .slab__edge--left   { left: 0;   transform-origin: left;   transform: translateZ(calc(var(--thick) / 2)) rotateY(90deg);  background: linear-gradient(90deg, rgba(210, 214, 228, .5), rgba(110, 114, 130, .35)); }

@@ -5,7 +5,7 @@ import { defaultFinish } from '../data/cardInfo.ts';
 import type { Card } from '../data/types.ts';
 import { GradeReport } from './GradeReport.tsx';
 import { GRADER, SUBGRADES, type Slab as SlabData } from './grading.ts';
-import { Slab } from './Slab.tsx';
+import { Slab, SLAB_ASPECT } from './Slab.tsx';
 
 type Phase = 'scan' | 'sub' | 'seal' | 'done';
 
@@ -60,7 +60,7 @@ export function GradingRun({ card, slab, onClose, onAnother }: {
   const virt = viewport();
   const vw = Math.min(virt.w, 1100);
   const vh = virt.h;
-  const slabW = Math.round(Math.min(vw * 0.8, 340, vh * 0.7 * (3.25 / 5.375)));
+  const slabW = Math.round(Math.min(vw * 0.8, 340, vh * 0.7 * SLAB_ASPECT));
   const sealed = phase === 'seal' || phase === 'done';
   // borders as printed: their share of a 6% margin, for the centering guides
   const guides = {

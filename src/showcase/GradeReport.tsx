@@ -1,4 +1,5 @@
 import { descriptor, GRADER, ratio, SUBGRADES, type Slab } from './grading.ts';
+import { GraderMark } from './Slab.tsx';
 
 const NAMES = { centering: 'Centering', corners: 'Corners', edges: 'Edges', surface: 'Surface' };
 
@@ -29,7 +30,7 @@ export function GradeReport({ slab, shown = SUBGRADES.length, final = true }: {
         <span className="report__final-num">{final ? slab.grade : '?'}</span>
         <span>
           <b>{final ? descriptor(slab) : 'Grading…'}</b>
-          <span className="muted small">{GRADER.name} · Cert {slab.cert}</span>
+          <span className="muted small report__by"><GraderMark className="report__mark" /> {GRADER.name} · Cert {slab.cert}</span>
         </span>
       </div>
     </div>

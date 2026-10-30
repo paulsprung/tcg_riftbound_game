@@ -132,3 +132,6 @@
   .grading__stage, .scan__beam, .report__final-num { animation: none !important; }
   .scan__guide { animation: none; opacity: .6; }
 }
+
+.report__by { display: inline-flex; align-items: center; gap: 6px; }
+.report__mark { width: 16px; }

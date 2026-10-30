@@ -35,8 +35,24 @@ const VARIANT_SHORT: Partial<Record<Card['variant'], string>> = {
   'alt-art': 'Alt Art', overnumbered: 'Overnumbered', signature: 'Signature',
 };
 
+/** The case's width over its height: snug round the card, with a slim label above it (slab.css). */
+export const SLAB_ASPECT = 1 / 1.5;
 // Where the card sits in the case, as fractions of the case (see slab.css).
-const WELL = { left: 0.115, width: 0.77, top: 0.295, height: 0.65 };
+const WELL = { left: 0.06, width: 0.88, top: 0.156, height: 0.819 };
+
+/** The grader's mark: a cut gem in holographic foil, a beam of light through it bent into an L. */
+export function GraderMark({ className = '' }: { className?: string }) {
+  return (
+    <span className={`grader-mark ${className}`} aria-hidden>
+      <svg viewBox="0 0 40 40">
+        <path d="M20 3 L35 12 L35 28 L20 37 L5 28 L5 12 Z" fill="none" stroke="rgba(255,255,255,.75)" strokeWidth="1.6" />
+        <path d="M5 12 L20 19 L35 12 M20 19 L20 37" fill="none" stroke="rgba(255,255,255,.35)" strokeWidth="1" />
+        <path d="M14.5 9.5 L14.5 27 L27 27" fill="none" stroke="#fff" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx="27" cy="27" r="2.6" fill="#fff" />
+      </svg>
+    </span>
+  );
+}
 
 /** Bars for the cert number: decorative, but each number gets its own. */
 function Barcode({ cert }: { cert: string }) {
@@ -128,21 +144,16 @@ export function Slab({
       <div className="slab__shadow" />
       <div className="slab__body">
         <div className="slab__case">
-          <div className="slab__label">
-            <span className="slab__holo" data-mark={GRADER.short} aria-hidden />
+          <div className="slab__label" title={`${GRADER.name} · ${card.setName}`}>
+            <GraderMark className="slab__holo" />
             <div className="slab__lines">
-              <span className="slab__brand">{GRADER.name}</span>
               <span className="slab__name">{card.name}</span>
-              <span className="slab__set">Riftbound · {card.setName}</span>
               <span className="slab__code">#{card.code}{extras.length > 0 && <> · {extras.join(' · ')}</>}</span>
+              <span className="slab__cert"><Barcode cert={slab.cert} /> {slab.cert}</span>
             </div>
             <div className="slab__grade">
-              <span className="slab__desc">{descriptor(slab)}</span>
               <span className="slab__num">{slab.grade}</span>
-            </div>
-            <div className="slab__cert">
-              <Barcode cert={slab.cert} />
-              <span>{slab.cert}</span>
+              <span className="slab__desc">{descriptor(slab)}</span>
             </div>
           </div>
           <div className="slab__ridge" aria-hidden />

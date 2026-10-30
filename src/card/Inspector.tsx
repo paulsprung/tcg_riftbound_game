@@ -6,7 +6,7 @@ import type { Card, CardDb } from '../data/types.ts';
 import type { Finish } from '../pack/generate.ts';
 import { GradeReport } from '../showcase/GradeReport.tsx';
 import type { Slab as SlabData } from '../showcase/grading.ts';
-import { Slab } from '../showcase/Slab.tsx';
+import { Slab, SLAB_ASPECT } from '../showcase/Slab.tsx';
 import { HoloCard } from './HoloCard.tsx';
 import { HoloSwitches } from './HoloSwitches.tsx';
 import { RulesText } from './RulesText.tsx';
@@ -49,7 +49,7 @@ export function Inspector({ target, db, onClose }: { target: InspectTarget; db: 
   const portraitW = Math.min(vw * 0.86, 420, (vh * 0.68) * (744 / 1039));
   const landscapeW = Math.min(vw * 0.9, 600, (vh * 0.6) * (1039 / 744));
   const width = Math.round(upright ? landscapeW : portraitW);
-  const slabW = Math.round(Math.min(vw * 0.8, 380, vh * 0.74 * (3.25 / 5.375)));
+  const slabW = Math.round(Math.min(vw * 0.8, 380, vh * 0.74 * SLAB_ASPECT));
 
   const rarity = symbolFor(db, 'rarities', card.rarity);
   const stats = [
