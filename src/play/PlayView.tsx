@@ -10,7 +10,7 @@ import { GameHost, type HostOptions, type SaveInfo, type Seat } from './host/Gam
 import { cardIndex } from './model/cards.ts';
 import { gameSetup } from './model/setup.ts';
 import { getSettings, PACE_FACTOR, setSettings, usePlaySettings, type OpponentChoice } from './settings.ts';
-import { choiceFor, DeckSetup, pickDuoDeck, type DeckSetupChoice } from './setup/DeckSetup.tsx';
+import { choiceFor, DeckSetup, levelOf, pickDuoDeck, type DeckSetupChoice } from './setup/DeckSetup.tsx';
 import { TutorialView } from './tutorial/TutorialView.tsx';
 import { useCollection } from '../collection/store.ts';
 import { LimitedFlow } from '../limited/LimitedFlow.tsx';
@@ -38,8 +38,8 @@ const deckOf = (id: DeckSetupChoice['mine']) => (builtInDeck(id) ?? builtInDeck(
 
 const LEVEL_NAME = { beginner: 'Beginner', normal: 'Normal' } as const;
 
-export function seatsFor(o: OpponentChoice): Seat[] {
-  return o === 'hotseat' ? [{ k: 'human' }, { k: 'human' }] : [{ k: 'human' }, { k: 'ai', level: o }];
+export function seatsFor(o: OpponentChoice, level: 'beginner' | 'normal' = o === 'hotseat' ? 'normal' : o): Seat[] {
+  return o === 'hotseat' ? [{ k: 'human' }, { k: 'human' }] : [{ k: 'human' }, { k: 'ai', level }];
 }
 
 export function seatName(seats: readonly Seat[], p: number): string {
@@ -101,9 +101,10 @@ export function PlayView({ db, tutorial = false, onInGame }: { db: CardDb; tutor
     setSettings({ opponent: c.opponent });
     if (duo) { startDuo(c); return; }
     try {
+      // who plays first is rolled for at the table (TR 407), in every game
       const setup = gameSetup({ human: 0, mine: deckOf(c.mine), theirs: deckOf(c.theirs), champion: c.champion,
-        order: c.order, seed: newSeed() }, cards);
-      const seats = seatsFor(c.opponent);
+        order: 'random', seed: newSeed() }, cards);
+      const seats = seatsFor(c.opponent, levelOf(c, 'theirs'));
       show(new GameHost({ ...options(seats), setup, started: new Date().toISOString() }));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -122,9 +123,9 @@ export function PlayView({ db, tutorial = false, onInGame }: { db: CardDb; tutor
       const two = gameSetup({ human: 0, mine: ally, theirs: second, champion: ally.chosenChampion, order: 'random', seed: 0 }, cards);
       const setup = { seed: one.seed, decks: [one.decks[0], one.decks[1], two.decks[0], two.decks[1]], mode: TWO_V_TWO,
         chosenChampion: [c.champion] };
-      const level = c.opponent === 'hotseat' ? null : c.opponent;
-      const seats: Seat[] = level === null ? [{ k: 'human' }, { k: 'human' }, { k: 'human' }, { k: 'human' }]
-        : [{ k: 'human' }, { k: 'ai', level }, { k: 'ai', level }, { k: 'ai', level }];
+      // seats: you, the first opponent, your teammate, the second opponent; each computer at its own level
+      const seats: Seat[] = c.opponent === 'hotseat' ? [{ k: 'human' }, { k: 'human' }, { k: 'human' }, { k: 'human' }]
+        : [{ k: 'human' }, { k: 'ai', level: levelOf(c, 'theirs') }, { k: 'ai', level: levelOf(c, 'ally') }, { k: 'ai', level: levelOf(c, 'theirs2') }];
       show(new GameHost({ ...options(seats), setup, started: new Date().toISOString() }));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -134,8 +135,8 @@ export function PlayView({ db, tutorial = false, onInGame }: { db: CardDb; tutor
   // a Limited game: decks built from pools, the computer (or a second player) on its own
   const startLimited = (format: 'sealed' | 'draft', mine: DeckList, theirs: DeckList) => {
     try {
-      const setup = { ...gameSetup({ human: 0, mine, theirs, champion: mine.chosenChampion, order: choice.order, seed: newSeed() }, cards), limited: format };
-      const seats = seatsFor(choice.opponent);
+      const setup = { ...gameSetup({ human: 0, mine, theirs, champion: mine.chosenChampion, order: 'random', seed: newSeed() }, cards), limited: format };
+      const seats = seatsFor(choice.opponent, levelOf(choice, 'theirs'));
       show(new GameHost({ ...options(seats), setup, started: new Date().toISOString() }));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));

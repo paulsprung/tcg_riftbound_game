@@ -37,7 +37,7 @@ function SettingsWindow({ onClose }: { onClose: () => void }) {
   const play = usePlaySettings();
   const session = useSession();
   // the preview has nobody signed in: the account part shows, its buttons idle
-  const user = session.status === 'online' ? session.user : DEMO ? { name: DEMO_PROFILE.name, admin: true, avatar: null, id: '' } : null;
+  const user = session.status === 'online' ? session.user : DEMO ? { name: DEMO_PROFILE.name, admin: false, avatar: null, id: '' } : null;
   const off = !(session.status === 'online' && session.user);
   const [sure, setSure] = useState(false);
   const [typed, setTyped] = useState('');

@@ -325,7 +325,7 @@ describe('describeAll: the log (§12.7)', () => {
   });
 
   it('says how the order was settled and how each mulligan went', () => {
-    expect(orderText({ designee: 1, first: 1, setAside: {} }, 0)).toMatch(/opponent was picked .* plays first/);
+    expect(orderText({ designee: 1, first: 1, setAside: {} }, 0)).toMatch(/opponent rolled highest and plays first/);
     expect(orderText({ designee: 1, first: 0, setAside: {} }, 0)).toMatch(/lets you play first/);
     expect(orderText({ designee: 0, first: 1, setAside: {} }, 0)).toBe('You chose to play second.');
     expect(orderText({ designee: null, first: 0, setAside: {} }, 0)).toBe('You play first, as set for this game.');

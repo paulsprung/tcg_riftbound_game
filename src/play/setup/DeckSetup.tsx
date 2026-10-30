@@ -4,7 +4,7 @@ import { HoloCard } from '../../card/HoloCard.tsx';
 import { DOMAIN_COLOR, defaultFinish, symbolFor } from '../../data/cardInfo.ts';
 import type { CardDb } from '../../data/types.ts';
 import type { DeckList, DefId } from '../../game/index.ts';
-import { setCustomDuo, social } from '../../lobby/social.ts';
+import { setCustomDuo, social, useSocial } from '../../lobby/social.ts';
 import { BUILT_IN_DECKS, builtInDeck, customDecks, DECK_GROUPS, deckProblems, PRODUCT_LABEL, shortName, type BuiltInDeck } from '../host/decks.ts';
 import { cardFor, nameOf, type CardIndex } from '../model/cards.ts';
 import type { SavedGame } from '../host/autosave.ts';
@@ -30,7 +30,16 @@ export interface DeckSetupChoice {
   /** 2v2: your teammate's deck and the second opponent's; unset, one is picked that fits (pickDuoDeck). */
   ally?: BuiltInDeck['id'];
   theirs2?: BuiltInDeck['id'];
+  /** Each computer's level, by seat; unset, the `opponent` choice's. */
+  levels?: Partial<Record<BotSeat, BotLevel>>;
 }
+
+/** The seats a computer (or a friend) can take: the opponent, and in 2v2 your teammate and the second opponent. */
+export type BotSeat = 'theirs' | 'ally' | 'theirs2';
+export type BotLevel = 'beginner' | 'normal';
+
+/** A computer seat's level. */
+export const levelOf = (c: DeckSetupChoice, seat: BotSeat): BotLevel => c.levels?.[seat] ?? (c.opponent === 'hotseat' ? 'normal' : c.opponent);
 
 /** A deck for a 2v2 seat: a Legend nobody at the table has, and no battlefield its teammate brings [491]. */
 export function pickDuoDeck(taken: DeckList[], mate: DeckList | null): BuiltInDeck {
@@ -56,15 +65,70 @@ export function choiceFor(owned: string | null): DeckSetupChoice {
   return { ...DEFAULT_CHOICE, mine: mine.id, theirs: theirs.id, champion: mine.deck.chosenChampion };
 }
 
-const ORDERS: { id: OrderChoice; label: string }[] = [
-  { id: 'random', label: 'Random' }, { id: 'first', label: 'I play first' }, { id: 'second', label: 'I play second' },
+const LEVELS: { id: BotLevel; label: string; text: string }[] = [
+  { id: 'beginner', label: 'Beginner', text: 'Makes the obvious plays, often misses a Reaction.' },
+  { id: 'normal', label: 'Normal', text: 'Weighs each play by playing it out: trades in combat, holds battlefields, answers with Reactions.' },
 ];
 
-const OPPONENTS: { id: OpponentChoice; label: string; text: string }[] = [
-  { id: 'beginner', label: 'Computer: Beginner', text: 'Makes the obvious plays, often misses a Reaction.' },
-  { id: 'normal', label: 'Computer: Normal', text: 'Weighs each play by playing it out: trades in combat, holds battlefields, answers with Reactions.' },
-  { id: 'hotseat', label: 'Hot-seat', text: 'Two players on this device. The screen is covered between turns so each sees only their own hand.' },
-];
+/** A seat at the table, clicked: a computer at a level of your choice (and its deck), a friend, or a player at this screen. */
+function SeatPopup({ title, level, hot, onLevel, onHot, onDeck, onClose }: {
+  title: string; level: BotLevel; hot: boolean;
+  onLevel: (l: BotLevel) => void; onHot: () => void; onDeck: () => void; onClose: () => void;
+}) {
+  const { friends, live } = useSocial();
+  const [q, setQ] = useState('');
+  const [asked, setAsked] = useState<string[]>([]);
+  const shown = friends.filter((f) => f.name.toLowerCase().includes(q.trim().toLowerCase()))
+    .sort((a, b) => Number(b.presence === 'online') - Number(a.presence === 'online') || a.name.localeCompare(b.name));
+  return (
+    <div className="ds-modal" role="dialog" aria-modal="true" aria-label={title} onClick={onClose}>
+      <div className="ds-modal__panel seat-pop lb-card" onClick={(e) => e.stopPropagation()}>
+        <header className="ds-modal__head">
+          <h2>{title}</h2>
+          <button type="button" className="icon-btn" onClick={onClose} aria-label="Close">✕</button>
+        </header>
+        <section className="seat-pop__group">
+          <p className="lb-label">A computer</p>
+          <div className="seat-pop__levels">
+            {LEVELS.map((l) => (
+              <button key={l.id} type="button" className={`seat-pop__level${!hot && level === l.id ? ' is-on' : ''}`} onClick={() => { onLevel(l.id); onClose(); }}>
+                <b>{l.label}</b><span>{l.text}</span>
+              </button>
+            ))}
+          </div>
+          <button type="button" className="btn btn--small" onClick={onDeck}>Choose its deck</button>
+        </section>
+        <section className="seat-pop__group">
+          <p className="lb-label">A friend</p>
+          <div className="lb-search">
+            <Icon name="search" size={15} />
+            <input className="input" type="search" placeholder="Find a friend" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Find a friend" />
+          </div>
+          <div className="seat-pop__friends lb-scroll">
+            {shown.length === 0 && <p className="muted small">{friends.length === 0 ? 'No friends yet: add them with their friend code in the friends list.' : 'Nobody by that name.'}</p>}
+            {shown.map((f) => {
+              const free = f.presence === 'online';
+              return (
+                <div key={f.id} className="seat-pop__friend">
+                  <span><b>{f.name}</b><small className="muted">{free ? 'Online' : f.presence === 'offline' ? 'Offline' : 'Busy'}</small></span>
+                  <button type="button" className="btn btn--primary btn--small" disabled={!free || asked.includes(f.id)}
+                    onClick={() => { social.invite(f.id); setAsked([...asked, f.id]); }}>{asked.includes(f.id) ? 'Invited' : 'Invite'}</button>
+                </div>
+              );
+            })}
+          </div>
+          {!live && <p className="muted small">Inviting friends needs you signed in.</p>}
+        </section>
+        <section className="seat-pop__group">
+          <p className="lb-label">On this screen</p>
+          <button type="button" className={`seat-pop__level${hot ? ' is-on' : ''}`} onClick={() => { onHot(); onClose(); }}>
+            <b>Hot-seat</b><span>Everyone plays on this device; the screen is covered between turns so each sees only their own hand.</span>
+          </button>
+        </section>
+      </div>
+    </div>
+  );
+}
 
 /** 1v1 is what the engine plays today; the 2v2 Duo rules (Magma Chamber) come later. */
 /** 1v1 Duel or 2v2 (Magma Chamber [491]); without `onChange` 2v2 isn't offered there yet. */
@@ -73,7 +137,7 @@ export function FormatSwitch({ value = '1v1', onChange }: { value?: '1v1' | '2v2
     <div className="seg seg--format" role="group" aria-label="Format">
       <button type="button" aria-pressed={value === '1v1'} onClick={() => onChange?.('1v1')}>1v1 Duel</button>
       {onChange ? <button type="button" aria-pressed={value === '2v2'} onClick={() => onChange('2v2')}>2v2 Duo</button>
-        : <button type="button" disabled aria-pressed="false" title="2v2 is not playable here yet">2v2 Duo <em className="lb-soon">soon</em></button>}
+        : <button type="button" disabled aria-pressed="false" data-soon="">2v2 Duo</button>}
     </div>
   );
 }
@@ -190,11 +254,14 @@ export function DeckSetup({ cards, db, initial, error, onStart, saved, onResume,
   useEffect(() => { setCustomDuo(!!duo); return () => setCustomDuo(false); }, [duo]);
   const [picking, setPicking] = useState<null | 'mine' | 'theirs' | 'ally' | 'theirs2'>(null);
   const [settings, setSettings] = useState(false);
+  const [seat, setSeat] = useState<BotSeat | null>(null);
   const mine = deckById(c.mine), theirs = deckById(c.theirs);
   // 2v2: the teammate's and the second opponent's decks, picked to fit unless chosen
   const ally = c.ally ? deckById(c.ally) : pickDuoDeck([mine.deck, theirs.deck], mine.deck);
   const theirs2 = c.theirs2 ? deckById(c.theirs2) : pickDuoDeck([mine.deck, theirs.deck, ally.deck], theirs.deck);
-  const bot = c.opponent === 'hotseat' ? 'Player' : 'Computer';
+  const hot = c.opponent === 'hotseat';
+  const LEVEL_NAME: Record<BotLevel, string> = { beginner: 'Beginner', normal: 'Normal' };
+  const seatLabel = (s: BotSeat, player: string) => (hot ? player : `${s === 'ally' ? 'Teammate' : 'Computer'} · ${LEVEL_NAME[levelOf(c, s)]}`);
   const problems = [
     ...deckProblems(mine.deck, c.champion).map((p) => `Your deck: ${p}`),
     ...deckProblems(theirs.deck).map((p) => `Opponent's deck: ${p}`),
@@ -228,14 +295,7 @@ export function DeckSetup({ cards, db, initial, error, onStart, saved, onResume,
       <header className="ds__bar">
         <h1>Custom game</h1>
         <span className="ds__bar-right">
-          {onLimited && (
-            <div className="seg seg--format" role="group" aria-label="Deck">
-              <button type="button" aria-pressed="true">Constructed</button>
-              <button type="button" aria-pressed="false" onClick={() => onLimited('sealed')}>Sealed</button>
-              <button type="button" aria-pressed="false" onClick={() => onLimited('draft')}>Draft</button>
-            </div>
-          )}
-          <FormatSwitch value={duo ? '2v2' : '1v1'} onChange={onDuo ? (v) => onDuo(v === '2v2') : undefined} />
+          <span className="ds-mode-chip">{duo ? '2v2 Duo' : '1v1 Duel'} · Constructed</span>
           <button type="button" className="btn btn--small" onClick={() => setSettings(true)}><Icon name="sliders" size={14} /> Settings</button>
         </span>
       </header>
@@ -245,20 +305,20 @@ export function DeckSetup({ cards, db, initial, error, onStart, saved, onResume,
           <div className="ds-team">
             <span className="ds-team__label">Your team</span>
             <DeckSlot label="You" b={mine} cards={cards} db={db} owned={mine.id === owned} onOpen={() => setPicking('mine')} />
-            <DeckSlot label={c.opponent === 'hotseat' ? 'Player 3' : 'Teammate'} b={ally} cards={cards} db={db} onOpen={() => setPicking('ally')} />
+            <DeckSlot label={seatLabel('ally', 'Player 3')} b={ally} cards={cards} db={db} onOpen={() => setSeat('ally')} />
           </div>
           <span className="play-online__vs" aria-hidden>VS</span>
           <div className="ds-team is-them">
             <span className="ds-team__label">Opponents</span>
-            <DeckSlot label={c.opponent === 'hotseat' ? 'Player 2' : bot} b={theirs} cards={cards} db={db} onOpen={() => setPicking('theirs')} />
-            <DeckSlot label={c.opponent === 'hotseat' ? 'Player 4' : bot} b={theirs2} cards={cards} db={db} onOpen={() => setPicking('theirs2')} />
+            <DeckSlot label={seatLabel('theirs', 'Player 2')} b={theirs} cards={cards} db={db} onOpen={() => setSeat('theirs')} />
+            <DeckSlot label={seatLabel('theirs2', 'Player 4')} b={theirs2} cards={cards} db={db} onOpen={() => setSeat('theirs2')} />
           </div>
         </div>
       ) : (
         <div className="ds__stage">
           <DeckSlot label="You" b={mine} cards={cards} db={db} owned={mine.id === owned} onOpen={() => setPicking('mine')} />
           <span className="play-online__vs" aria-hidden>VS</span>
-          <DeckSlot label={c.opponent === 'hotseat' ? 'Player 2' : 'Computer'} b={theirs} cards={cards} db={db} onOpen={() => setPicking('theirs')} />
+          <DeckSlot label={seatLabel('theirs', 'Player 2')} b={theirs} cards={cards} db={db} onOpen={() => setSeat('theirs')} />
         </div>
       )}
       {duo && (
@@ -272,12 +332,7 @@ export function DeckSetup({ cards, db, initial, error, onStart, saved, onResume,
       )}
 
       <div className="ds__start">
-        <div className="seg" role="radiogroup" aria-label="Opponent">
-          {OPPONENTS.map((o) => (
-            <button key={o.id} type="button" role="radio" aria-checked={o.id === c.opponent} aria-pressed={o.id === c.opponent}
-              onClick={() => setC({ ...c, opponent: o.id })}>{o.label.replace('Computer: ', '')}</button>
-          ))}
-        </div>
+        <p className="muted small ds__hint">Click a seat to choose a computer and its level, invite a friend, or play on this screen.</p>
         {problems.length > 0 && <ul className="play__error">{problems.map((p) => <li key={p}>{p}</li>)}</ul>}
         {error && <p className="play__error" role="alert">{error}</p>}
         <button type="button" className="btn btn--cta" disabled={problems.length > 0} onClick={() => onStart(c)}>Start game</button>
@@ -291,28 +346,31 @@ export function DeckSetup({ cards, db, initial, error, onStart, saved, onResume,
               <button type="button" className="icon-btn" onClick={() => setSettings(false)} aria-label="Close">✕</button>
             </header>
             <div className="ds-settings__group">
-              <span className="lb-label">First player</span>
-              <div className="seg" role="group" aria-label="First player">
-                {ORDERS.map((o) => (
-                  <button key={o.id} type="button" aria-pressed={o.id === c.order} onClick={() => setC({ ...c, order: o.id })}>{o.label}</button>
-                ))}
+              <span className="lb-label">Game mode</span>
+              <div className="seg seg--format" role="group" aria-label="Game mode">
+                <button type="button" aria-pressed={!duo} onClick={() => onDuo?.(false)}>1v1 Duel</button>
+                <button type="button" aria-pressed={!!duo} disabled={!onDuo} data-soon={onDuo ? undefined : ''} onClick={() => onDuo?.(true)}>2v2 Duo</button>
+                <button type="button" aria-pressed="false" disabled={!onLimited} data-soon={onLimited ? undefined : ''} title={onLimited ? 'A pool of six boosters' : undefined} onClick={() => { setSettings(false); onLimited?.('sealed'); }}>Sealed</button>
+                <button type="button" aria-pressed="false" disabled={!onLimited} data-soon={onLimited ? undefined : ''} title={onLimited ? 'Pick by pick from three boosters' : undefined} onClick={() => { setSettings(false); onLimited?.('draft'); }}>Draft</button>
               </div>
             </div>
-            {(mine.deck.championOptions ?? []).length > 1 && (
-              <div className="ds-settings__group">
-                <span className="lb-label">Chosen champion</span>
-                <div className="seg" role="group" aria-label="Chosen champion">
-                  {(mine.deck.championOptions ?? []).map((def) => (
-                    <button key={def} type="button" aria-pressed={def === c.champion} onClick={() => setC({ ...c, champion: def })}>{nameOf(cards, def)}</button>
-                  ))}
-                </div>
-              </div>
-            )}
+            <div className="ds-settings__group">
+              <span className="lb-label">First player</span>
+              <p className="muted small ds-settings__note">Decided by the dice: everyone rolls, and the highest roll chooses to play first or second (TR 407). The same in every game.</p>
+            </div>
             <footer className="ds-settings__foot"><button type="button" className="btn btn--cta" onClick={() => setSettings(false)}>Done</button></footer>
           </div>
         </div>
       )}
 
+      {seat && (
+        <SeatPopup title={seat === 'ally' ? 'Your teammate' : seat === 'theirs2' ? 'The second opponent' : 'Your opponent'}
+          level={levelOf(c, seat)} hot={hot}
+          onLevel={(l) => setC({ ...c, opponent: hot ? l : c.opponent, levels: { ...c.levels, [seat]: l } })}
+          onHot={() => setC({ ...c, opponent: 'hotseat' })}
+          onDeck={() => { setPicking(seat); setSeat(null); }}
+          onClose={() => setSeat(null)} />
+      )}
       {picking && (
         <DeckPicker cards={cards} db={db}
           title={picking === 'mine' ? 'Your deck' : picking === 'ally' ? "Your teammate's deck" : picking === 'theirs2' ? "The second opponent's deck" : c.opponent === 'hotseat' ? "Player 2's deck" : "The computer's deck"}

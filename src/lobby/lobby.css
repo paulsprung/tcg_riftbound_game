@@ -1227,3 +1227,30 @@ a.lb-rank:hover { border-color: var(--gold); box-shadow: 0 0 22px rgba(200, 170,
 .ds-friends > div { display: grid; gap: 2px; }
 .ds-friends b { color: var(--gold-hi); letter-spacing: .04em; }
 .ds-friends .btn { flex: none; white-space: nowrap; }
+
+/* ---- a mode not playable here yet: greyed, "Coming soon" on hover (a disabled button shows no title) ---- */
+[data-soon] { position: relative; opacity: .45; cursor: not-allowed; }
+[data-soon]:hover::after {
+  content: "Coming soon"; position: absolute; left: 50%; bottom: calc(100% + 8px); translate: -50% 0; z-index: 30; white-space: nowrap; pointer-events: none;
+  padding: 5px 9px; font: 700 10px/1 var(--font-ui); letter-spacing: .14em; text-transform: uppercase;
+  color: var(--gold-hi); background: #071425; border: 1px solid var(--gold-dim); box-shadow: 0 6px 16px rgba(0, 0, 0, .5);
+}
+.ds-mode-chip { font: 700 11px/1 var(--font-ui); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); padding: 0 6px; }
+.ds-settings__note { margin: 0; max-width: 52ch; }
+.ds__hint { margin: 0 0 4px; text-align: center; }
+/* a seat clicked (DeckSetup's SeatPopup): a computer, a friend, or this screen */
+.seat-pop { width: min(560px, 100%); overflow-y: auto; gap: 8px; }
+.seat-pop__group { display: grid; gap: 8px; padding-bottom: 10px; border-bottom: 1px solid rgba(200, 170, 110, .14); }
+.seat-pop__group:last-child { border-bottom: 0; }
+.seat-pop__group .lb-label { margin: 2px 0 0; }
+.seat-pop__group > .btn { justify-self: start; }
+.seat-pop__levels { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.seat-pop__level { display: grid; gap: 3px; padding: 10px 12px; text-align: left; cursor: pointer; color: var(--text, #e8e2d0);
+  background: rgba(1, 10, 19, .5); border: 1px solid var(--gold-dim); font: inherit; }
+.seat-pop__level b { font-size: 14px; color: var(--gold-hi); }
+.seat-pop__level span { font-size: 12px; color: var(--muted); line-height: 1.4; }
+.seat-pop__level:hover { border-color: var(--gold); }
+.seat-pop__level.is-on { border-color: var(--teal); box-shadow: inset 0 0 0 1px var(--teal); }
+.seat-pop__friends { display: grid; gap: 4px; max-height: 200px; }
+.seat-pop__friend { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 4px; border-bottom: 1px solid rgba(200, 170, 110, .1); }
+.seat-pop__friend span { display: grid; gap: 1px; }

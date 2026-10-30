@@ -416,3 +416,20 @@ body.rk-open > #root { visibility: hidden; transition: visibility 0s .45s; }
 .bd-lane__who--opp { color: #f2a7b0; }
 .bd-lane__who--ally { color: var(--teal); }
 .bd-lane__bf[data-control="ally"] .hc__face { box-shadow: 0 0 0 2px var(--teal), 0 0 22px rgba(10, 200, 185, .35); }
+
+/* ---- the roll for the turn order (OrderChoice): a d20 for everyone, the highest chooses ---- */
+.dice-roll { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-end; gap: 22px; margin: 4px 0 6px; }
+.dice { margin: 0; display: grid; justify-items: center; gap: 6px; }
+.dice__face {
+  width: 64px; height: 64px; display: grid; place-items: center; font: 900 26px/1 var(--font-display); color: #f4ead2;
+  background: linear-gradient(160deg, #2a3e5c, #0d1a2c); border: 2px solid rgba(200, 170, 110, .55);
+  clip-path: polygon(50% 0, 95% 25%, 95% 75%, 50% 100%, 5% 75%, 5% 25%);
+  font-variant-numeric: tabular-nums;
+}
+.dice-roll:not(.is-done) .dice__face { animation: dice-shake .14s linear infinite alternate; }
+.dice.is-high .dice__face { color: #1d1405; background: linear-gradient(160deg, #fbe7a4, #c8962f); border-color: #fff3c4; filter: drop-shadow(0 0 14px rgba(255, 210, 110, .6)); }
+.dice figcaption { font-size: 12px; letter-spacing: .08em; color: var(--muted); }
+.dice.is-high figcaption { color: var(--gold-hi); }
+.dice-roll__result { flex-basis: 100%; margin: 4px 0 0; text-align: center; color: var(--text, #e8e2d0); }
+@keyframes dice-shake { from { transform: rotate(-8deg) translateY(-2px); } to { transform: rotate(8deg) translateY(2px); } }
+@media (prefers-reduced-motion: reduce) { .dice-roll .dice__face { animation: none !important; } }

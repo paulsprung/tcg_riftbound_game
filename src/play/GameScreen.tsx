@@ -357,7 +357,7 @@ export function GameScreen({ host, cards, db, names, onNewGame, onChangeDecks, o
             names={seatNames} rail={rail} />
         </TableLookContext.Provider>
         {stage.k === 'order' && handoff === null && (
-          <OrderChoice view={view} board={board} cards={cards} onCommit={commit} onZoom={setZoom} />
+          <OrderChoice view={view} board={board} cards={cards} names={names} onCommit={commit} onZoom={setZoom} />
         )}
         {stage.k === 'mulligan' && handoff === null && (!tutorial || mine) && (
           <Mulligan key={view.pending?.batch ?? 'waiting'} view={view} board={board} summary={summary} cards={cards}

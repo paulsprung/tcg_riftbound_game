@@ -284,7 +284,7 @@ export function describeAll(events: readonly ObservedEvent[], c: DescribeCtx): L
     its kind and context, never its options (§12.5). */
 export function waitingText(stub: DecisionStub): string {
   switch (stub.kind) {
-    case 'playOrder': return 'The opponent was picked at random to choose who plays first…';
+    case 'playOrder': return 'The opponent rolled highest and chooses who plays first…';
     case 'mulligan': return 'The opponent is choosing cards to set aside…';
     default: return 'The opponent is deciding…';
   }
@@ -314,8 +314,8 @@ export function orderText(sum: SetupSummary, me: PlayerId): string {
   const meFirst = sum.first === me;
   if (sum.designee === null) return `${meFirst ? 'You play' : 'The opponent plays'} first, as set for this game.`;
   if (sum.designee === me) return `You chose to play ${meFirst ? 'first' : 'second'}.`;
-  return meFirst ? 'The opponent was picked at random to choose, and lets you play first.'
-    : 'The opponent was picked at random to choose, and plays first: you play second.';
+  return meFirst ? 'The opponent rolled highest and lets you play first.'
+    : 'The opponent rolled highest and plays first: you play second.';
 }
 
 /** A finished mulligan in words; null while that player hasn't done it. */

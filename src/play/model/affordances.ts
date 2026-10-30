@@ -62,7 +62,7 @@ const defOf = (id: unknown) => (typeof id === 'string' ? (id.includes('#') ? id.
 export function promptText(d: Pick<Decision, 'kind' | 'prompt'>, names: Names = plainName): string {
   const card = defOf(d.prompt.card);
   switch (d.kind) {
-    case 'playOrder': return 'You were picked at random to choose: play first or second?';
+    case 'playOrder': return 'You rolled highest: play first or second?';
     case 'mulligan': {
       const max = typeof d.prompt.max === 'number' ? d.prompt.max : 2;
       return `Choose up to ${max} cards to set aside. You draw that many, then they go to the bottom of your deck.`;
