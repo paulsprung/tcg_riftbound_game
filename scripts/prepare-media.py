@@ -35,7 +35,7 @@ OUT = os.path.join(ROOT, 'public', 'media')
 MANIFEST = os.path.join(ROOT, 'src', 'data', 'media.json')
 
 PACK_HEIGHT = 900      # px; a pack shows at most ~560 CSS px tall
-PRODUCT_SIZE = 720     # px, the longer side; a product shows at most ~360 CSS px
+PRODUCT_SIZE = 480     # px, the longer side; a shot shows at most ~170 CSS px high (2x screens)
 BACK_SIZE = (744, 1039)  # same as the card scans
 
 
