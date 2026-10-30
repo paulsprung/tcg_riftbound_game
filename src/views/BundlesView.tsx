@@ -15,10 +15,9 @@ import { showNotice } from '../net/api.ts';
 
 const Coin = () => <span className="lb-coin" aria-hidden />;
 
-/** The decks by product, oldest first. */
+/** The decks' products, oldest first, by their short names. */
 const DECK_GROUPS: [string, string][] = [
-  ['ogs', 'Proving Grounds'], ['ogn', 'Origins Champion Decks'], ['sfd', 'Spiritforged Champion Decks'],
-  ['unl', 'Unleashed Champion Decks'], ['rad', 'Radiance Showdown Decks'],
+  ['ogs', 'Proving Grounds'], ['ogn', 'Origins'], ['sfd', 'Spiritforged'], ['unl', 'Unleashed'], ['rad', 'Radiance Showdown'],
 ];
 
 function Shot({ id, alt }: { id: string; alt: string }) {
@@ -31,9 +30,8 @@ export function BundlesView({ db }: { db: CardDb }) {
   const [starters, setStarters] = useState<StarterChoice[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   useEffect(() => { loadStarters(db).then(setStarters).catch(() => setStarters([])); }, [db]);
-  const groups = useMemo(() => DECK_GROUPS
-    .map(([set, label]) => [label, (starters ?? []).filter((s) => s.set === set)] as const)
-    .filter(([, list]) => list.length > 0), [starters]);
+  // one grid for every deck, in product order; the product is a tag on the tile
+  const deckList = useMemo(() => DECK_GROUPS.flatMap(([set, label]) => (starters ?? []).filter((s) => s.set === set).map((s) => ({ s, label }))), [starters]);
 
   const buyPack = async (id: string, name: string) => {
     setBusy(id);
@@ -65,7 +63,7 @@ export function BundlesView({ db }: { db: CardDb }) {
               <Shot id={p.product} alt={p.name} />
               <div className="bundle__body">
                 <strong>{p.name}</strong>
-                <p className="muted small">{p.blurb}</p>
+                <p className="bundle__text">{p.blurb}</p>
                 <ul className="bundle__odds">{p.odds.map((o) => <li key={o}>{o}</li>)}</ul>
                 <div className="bundle__actions">
                   <button type="button" className="btn btn--cta btn--small" disabled={busy !== null || own.coins < p.price} onClick={() => { void buyPack(p.id, p.name); }}>
@@ -80,27 +78,26 @@ export function BundlesView({ db }: { db: CardDb }) {
       </div>
 
       <p className="lb-label">Decks</p>
-      {starters === null ? <p className="muted">Loading…</p> : groups.map(([product, list]) => (
-        <div key={product} className="bundle-decks">
-          <span className="bundle-decks__title">{product}</span>
-          <div className="bundle-grid bundle-grid--decks">
-            {list.map((s) => (
-              <article key={s.id} className="bundle bundle--deck">
-                <Shot id={DECK_PRODUCT[s.id] ?? ''} alt={s.title} />
-                <div className="bundle__body">
-                  <strong>{s.title.replace(/^[^:]*: /, '')}</strong>
-                  <p className="muted small">{s.blurb} {s.size} cards and a booster.</p>
-                  <div className="bundle__actions">
-                    <button type="button" className="btn btn--cta btn--small" disabled={busy !== null || own.coins < DECK_PRICE} onClick={() => { void buyDeck(s); }}>
-                      <Coin /> {DECK_PRICE}
-                    </button>
-                  </div>
+      {starters === null ? <p className="muted">Loading…</p> : (
+        <div className="bundle-grid bundle-grid--decks">
+          {deckList.map(({ s: d, label }) => (
+            <article key={d.id} className="bundle bundle--deck">
+              <Shot id={DECK_PRODUCT[d.id] ?? ''} alt={d.title} />
+              <span className="bundle__tag">{label}</span>
+              <div className="bundle__body">
+                <strong>{d.title.replace(/^[^:]*: /, '').replace(/ Showdown Deck$/, '')}</strong>
+                <p className="bundle__text">{d.blurb.replace(/\.$/, '')}</p>
+                <div className="bundle__actions">
+                  <button type="button" className="btn btn--cta btn--small" disabled={busy !== null || own.coins < DECK_PRICE} onClick={() => { void buyDeck(d); }}>
+                    <Coin /> {DECK_PRICE}
+                  </button>
+                  <span className="bundle__note" title="The deck and a booster of its set">{d.size} cards</span>
                 </div>
-              </article>
-            ))}
-          </div>
+              </div>
+            </article>
+          ))}
         </div>
-      ))}
+      )}
     </section>
   );
 }
