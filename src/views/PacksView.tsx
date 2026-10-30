@@ -3,6 +3,7 @@ import type { InspectTarget } from '../card/Inspector.tsx';
 import { collection, PACK_PRICE, useCollection } from '../collection/store.ts';
 import { packArt } from '../data/media.ts';
 import type { CardDb } from '../data/types.ts';
+import { DEMO } from '../lobby/demo.ts';
 import { Lobby, SideLink, SideTitle } from '../lobby/Lobby.tsx';
 import { useViewport } from '../lobby/scale.ts';
 import { PackOpening } from '../pack/PackOpening.tsx';
@@ -99,8 +100,8 @@ export function PacksView({ db, onInspect }: { db: CardDb; onInspect: (t: Inspec
           <div className="lb-head">
             <h1>Featured Packs</h1>
             <div className="lb-tools">
-              {/* testing aid in this browser only: on the server, coins come from play and from an admin */}
-              {!collection.isRemote() && <button type="button" className="btn btn--ghost btn--small" onClick={() => collection.addCoins(1000)}>+1000 coins (test)</button>}
+              {/* testing aid in the preview only: on the server, coins come from play and from an admin */}
+              {DEMO && !collection.isRemote() && <button type="button" className="btn btn--ghost btn--small" onClick={() => collection.addCoins(1000)}>+1000 coins (test)</button>}
               <a className="btn btn--ghost btn--small" href="#collection/packs">Your packs ({Object.values(own.packs).reduce((a, b) => a + b, 0)})</a>
             </div>
           </div>
