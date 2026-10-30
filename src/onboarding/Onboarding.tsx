@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { HoloSwitches } from '../card/HoloSwitches.tsx';
+import { SettingsMenu } from '../lobby/SettingsMenu.tsx';
+import { useSession } from '../net/session.ts';
 import { HoloCard } from '../card/HoloCard.tsx';
 import { collection, useCollection } from '../collection/store.ts';
 import type { CardDb } from '../data/types.ts';
@@ -26,6 +27,23 @@ const STEPS = [
 ] as const;
 const PRODUCT_ORDER = ['ogs', 'ogn', 'sfd', 'unl', 'rad'];
 
+/** Top right on every step: sign in (or who you are) and the settings. */
+function Account() {
+  const session = useSession();
+  const user = session.status === 'online' ? session.user : null;
+  return (
+    <div className="ob__account">
+      <SettingsMenu />
+      {user ? (
+        <span className="lb-avatar" title={user.name}>{user.avatar ? <img src={user.avatar} alt="" /> : <span>{user.name.slice(0, 1).toUpperCase()}</span>}</span>
+      ) : session.status === 'online' && (
+        // signed in, your collection and progress are kept on the server; until then, in this browser
+        <a className="btn btn--primary btn--small" href="/auth/discord">Sign in with Discord</a>
+      )}
+    </div>
+  );
+}
+
 function Bar({ at }: { at: 0 | 1 | 2 }) {
   return (
     <header className="ob__bar">
@@ -37,7 +55,7 @@ function Bar({ at }: { at: 0 | 1 | 2 }) {
           </li>
         ))}
       </ol>
-      <HoloSwitches />
+      <Account />
     </header>
   );
 }
@@ -162,7 +180,7 @@ export function Onboarding({ db, onDone }: { db: CardDb; onDone: (to: 'shop' | '
           <button type="button" className="btn btn--cta" onClick={() => setStep('deck')}>Begin</button>
         </div>
       </HeroBanner>
-      <header className="ob__bar ob__bar--float"><span aria-hidden /><HoloSwitches /></header>
+      <header className="ob__bar ob__bar--float"><span aria-hidden /><Account /></header>
       {preview && <button type="button" className="ob__skip" onClick={skipPreview}>Skip onboarding (preview only)</button>}
     </div>
   );

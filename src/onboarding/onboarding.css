@@ -68,3 +68,5 @@
   .ob-ready__body { flex-direction: column; }
   .ob__page { min-height: calc(calc(100 * var(--vh)) - 40px); }
 }
+
+.ob__account { display: flex; align-items: center; gap: 10px; justify-self: end; }
