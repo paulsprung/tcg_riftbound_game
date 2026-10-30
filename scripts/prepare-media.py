@@ -49,7 +49,9 @@ def main(src_dir):
     sources = json.load(open(SOURCES))
     os.makedirs(OUT, exist_ok=True)
     old = json.load(open(MANIFEST)) if os.path.exists(MANIFEST) else {}
-    manifest = {'packs': {}, 'cardBack': None, 'cardBackRune': None, 'products': old.get('products', {})}
+    # the special packs' wrappers are drawn by scripts/special-packs.py: kept as they are
+    kept = {k: v for k, v in old.get('packs', {}).items() if k not in sources['packs']}
+    manifest = {'packs': kept, 'cardBack': None, 'cardBackRune': None, 'products': old.get('products', {})}
 
     for set_id, meta in sources['packs'].items():
         path = os.path.join(src_dir, f'pack-{set_id}.png')

@@ -24,6 +24,26 @@
       "file": "pack-ogn.webp",
       "tear": 0.053,
       "aspect": 0.5924
+    },
+    "t1": {
+      "file": "pack-t1.webp",
+      "tear": 0.0515,
+      "aspect": 0.6133
+    },
+    "arcane": {
+      "file": "pack-arcane.webp",
+      "tear": 0.0515,
+      "aspect": 0.6133
+    },
+    "secret-garden": {
+      "file": "pack-secret-garden.webp",
+      "tear": 0.0515,
+      "aspect": 0.6133
+    },
+    "gift-of-the-rift": {
+      "file": "pack-gift-of-the-rift.webp",
+      "tear": 0.0515,
+      "aspect": 0.6133
     }
   },
   "cardBack": "card-back.webp",
