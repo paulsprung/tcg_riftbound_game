@@ -44,7 +44,8 @@ type X = { present: boolean };
 export function openCombat(s: GameState, x: X, bf: number, newShowdown: boolean) {
   const b = s.bfs[bf];
   const attacker = b.contested!;
-  const defender = opponentsOf(s, attacker)[0];
+  // the other player there: with more than two players, the opponent whose units are at this battlefield [491]
+  const defender = playersWithUnitsAt(s, bf).find((p) => p !== attacker) ?? opponentsOf(s, attacker)[0];
   setField(s, b.staged, 'showdown', false);
   setField(s, b.staged, 'combat', false);
   setField(s, s, 'showdown', { bf, kind: 'combat' });

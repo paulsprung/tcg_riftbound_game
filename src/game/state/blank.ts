@@ -27,7 +27,7 @@ export function emptyTurnLog(turn: number, players: number): TurnLog {
   const zeros = () => new Array<number>(players).fill(0);
   return {
     turn, playActions: [], finalized: [], played: [], abilitiesResolved: [], deaths: [], moves: [], exhausted: [],
-    scored: [], points: [], targeted: [], combatsWon: [], hidden: [],
+    scored: [], points: [], targeted: [], combatsWon: [], hidden: [], allyHeld: null,
     draws: zeros(), discards: zeros(), xpGained: zeros(), powerSpent: zeros(),
   };
 }

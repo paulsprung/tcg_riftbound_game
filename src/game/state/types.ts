@@ -422,6 +422,9 @@ export interface TurnLog {             // reset at turn start; the per-turn memo
   targeted: { item: ItemId; by: PlayerId; obj: ObjId; spell: boolean; enemy?: boolean }[];         // "chose an enemy unit this turn"
   combatsWon: { p: PlayerId; bf: number; units: ObjId[] }[];
   hidden: { p: PlayerId; bf: number }[];
+  /** 2v2: the battlefields the Turn Player's teammate controlled at this turn's Scoring Step; the team
+      can't score them this turn [491] (null until that step). */
+  allyHeld: number[] | null;
   draws: number[]; discards: number[]; xpGained: number[]; powerSpent: number[];   // per player
   /** Cards (by CardRef) whose spell or ability dealt damage this turn, one entry per Deal (Dancing Grenade). */
   cardDeals?: CardRef[];

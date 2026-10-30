@@ -20,6 +20,7 @@
  * applied here. The actions triggers listen to (an Exhaust action, a Kill
  * action) tell abilities/triggers.ts what happened once committed.
  */
+import { opposed, sideOf } from './teams.ts';
 import { endGame } from '../core/end.ts';
 import { emit, emitZone, knowers, newGroup } from '../core/events.ts';
 import { emptyPool } from '../state/blank.ts';
@@ -104,7 +105,7 @@ export function gainPoints(s: GameState, x: X, p: PlayerId, n: number, why: 'con
   rule: string) {
   if (n <= 0) return;
   // "While I'm at a battlefield, opponents can't gain points" (Tianna Crownguard).
-  if (staticsFor(s, null, 'noPointsForOpponents').some(({ st }) => st.ctl !== p)) return;
+  if (staticsFor(s, null, 'noPointsForOpponents').some(({ st }) => opposed(s, st.ctl, p))) return;
   // Otterpus: "If a player would score 1 point from conquering or holding during their first or second turn, they draw 1 instead."
   if (n === 1 && (why === 'conquer' || why === 'hold') && s.turn.player === p && s.history.turnsTaken[p] <= 2
     && staticsFor(s, null, 'earlyPointsToDraw').length > 0) {
@@ -113,7 +114,8 @@ export function gainPoints(s: GameState, x: X, p: PlayerId, n: number, why: 'con
     return;
   }
   const total = s.players[p].points + n;
-  setField(s, s.players[p], 'points', total);
+  // a team's points are shared: both players always have the same total [491]
+  for (const q of sideOf(s, p)) setField(s, s.players[q], 'points', total);
   append(s, s.log.points, { p, n, why });
   emit(s, x, { k: 'points', p, delta: n, total, rule });
   requestCleanup(s);

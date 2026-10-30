@@ -37,6 +37,8 @@
  * to S2 and its card returns to where it came from with the identity it
  * had there; a token whose play fails ceases to exist (Spec D §8.5, OQ-6).
  */
+import { bfOpenTo } from '../rules/board.ts';
+import { allied } from '../rules/teams.ts';
 import { abilityById, cardDef } from '../cards/registry.ts';
 import { ALL_TAGS, findCard, ORACLE } from '../cards/oracle.ts';
 import { K, parseKey, type Option } from '../core/decisions.ts';
@@ -211,9 +213,10 @@ export function playLocations(s: GameState, id: ObjId, p: PlayerId, origin?: Cha
 
 /** Where the item's permanent may be played: as playLocations says, or any battlefield when an instruction says so. */
 function itemLocations(s: GameState, it: ChainItem, obj: ObjId): Loc[] {
-  if (overridesOf(it).anyBf && isType(s.objects[obj], 'unit')) return s.bfs.map((_, bf): Loc => ({ z: 'bf', bf }));
-  if (overridesOf(it).locs) return overridesOf(it).locs!;
-  return playLocations(s, obj, it.controller, it.play.origin);
+  const locs = overridesOf(it).anyBf && isType(s.objects[obj], 'unit') ? s.bfs.map((_, bf): Loc => ({ z: 'bf', bf }))
+    : overridesOf(it).locs ?? playLocations(s, obj, it.controller, it.play.origin);
+  // a unit isn't played where its controller couldn't move it either [491]
+  return isType(s.objects[obj], 'unit') ? locs.filter((l) => l.z !== 'bf' || bfOpenTo(s, l.bf, it.controller)) : locs;
 }
 
 /** A card in a trash given [Flow] this turn ("Flow equal to its cost"). */
@@ -977,7 +980,7 @@ function matchesEntering(s: GameState, sel: SelAst, o: GameObject, p: PlayerId, 
   if (sel.k === 'unit' && !isType(o, 'unit')) return false;
   // "Units you play to battlefields you control enter ready" (Riven, the Exile).
   if (sel.at === 'battlefield' && !(loc.z === 'bf' && s.bfs[loc.bf].controller === p)) return false;
-  if (sel.rel === 'friendly' && p !== ctl) return false;
-  if (sel.rel === 'enemy' && p === ctl) return false;
+  if (sel.rel === 'friendly' && !allied(s, p, ctl)) return false;
+  if (sel.rel === 'enemy' && allied(s, p, ctl)) return false;
   return (sel.where ?? []).every((w) => w.p !== 'tag' || tagsOf(o).includes(w.tag));
 }

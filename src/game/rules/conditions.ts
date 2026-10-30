@@ -8,6 +8,7 @@
  * trigger condition captured [359.3.f.3] and the last-known information of
  * the source [383.2.c.3.b].
  */
+import { allied, opposed } from './teams.ts';
 import type { CondAst, RefAst } from '../dsl/ast.ts';
 import { locOf } from '../state/zones.ts';
 import type { ChainItem, GameState, Json, ObjId, Outcome, PlayedRecord, PlayerId, Snapshot } from '../state/types.ts';
@@ -133,9 +134,9 @@ export function evalCond(s: GameState, c: CondAst, x: CondCtx): boolean {
       switch (c.what) {
         case 'discarded': n = s.log.discards[p]; break;
         case 'unitDied': n = s.log.deaths.filter((d) => (types ?? ['unit']).some((t) => d.snap.chars.types.includes(t)) && (c.rel === undefined
-          || (c.rel === 'friendly' ? d.snap.controller === p : d.snap.controller !== null && d.snap.controller !== p))
+          || (c.rel === 'friendly' ? allied(s, d.snap.controller, p) : opposed(s, d.snap.controller, p)))
           && (!c.yourBeginning || (d.phase === 'beginning' && s.turn.player === p))).length; break;
-        case 'played': n = s.log.played.filter((r) => (c.who === 'opponent' ? r.p !== p : r.p === p) && r.isCard && typed(r.types)
+        case 'played': n = s.log.played.filter((r) => (c.who === 'opponent' ? opposed(s, r.p, p) : r.p === p) && r.isCard && typed(r.types)
           && (!c.tag || (findCard(r.def)?.tags ?? []).includes(c.tag)) && (c.minSpent === undefined || r.energySpent >= c.minSpent)).length; break;
         case 'playedToBf': n = s.log.played.filter((r) => r.p === p && r.to?.z === 'bf' && typed(r.types)).length; break;
         case 'finalized': n = s.log.finalized.filter((r) => r.p === p && r.isCard && typed(r.types)).length; break;

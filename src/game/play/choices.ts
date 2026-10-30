@@ -8,6 +8,7 @@
  * from the choices recorded so far on the item, so an answer always belongs
  * to the question that is open now.
  */
+import { bfOpenTo } from '../rules/board.ts';
 import type { ModeAst, ProgAst, SlotAst } from '../dsl/ast.ts';
 import { K, parseKey, type Option } from '../core/decisions.ts';
 import { answer, ask, type RunCtx, type StepOut } from '../core/frames.ts';
@@ -120,7 +121,10 @@ export function destCandidates(s: GameState, slot: SlotAst, units: ObjId[], p?: 
       out.push({ z: 'bf', bf });
     });
   }
-  return out.filter((l) => !at || !(l.z === at.z && (l.z === 'base' ? l.p === (at as typeof l).p : l.bf === (at as typeof l).bf)));
+  // more than two players: no battlefield of the mover's teammate, none with two others or a fight it isn't in [491]
+  const mover = u.controller;
+  return out.filter((l) => !at || !(l.z === at.z && (l.z === 'base' ? l.p === (at as typeof l).p : l.bf === (at as typeof l).bf)))
+    .filter((l) => l.z !== 'bf' || mover === null || bfOpenTo(s, l.bf, mover));
 }
 
 const doneKey = (slot: string) => `slot:${slot}`;

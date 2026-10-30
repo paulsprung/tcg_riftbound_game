@@ -3,6 +3,7 @@
  * ask: which units are where, who has units at a battlefield, the state of
  * the turn [307–310], who comes next in turn order. Nothing here writes.
  */
+import { allied } from './teams.ts';
 import type { GameState, Loc, ObjId, PlayerId, TurnStateName } from '../state/types.ts';
 import { isType } from './chars.ts';
 import { turnOrder } from './defaults.ts';
@@ -53,6 +54,30 @@ export function turnOrderFromTurnPlayer(s: GameState): PlayerId[] {
   return [...order.slice(i), ...order.slice(0, i)];
 }
 
-/** The other players. A Duel has one opponent [487]. */
+/** The players of the other sides: a Duel has one opponent [487], a 2v2 two [491]. */
 export const opponentsOf = (s: GameState, p: PlayerId): PlayerId[] =>
-  s.players.map((pl) => pl.id).filter((q) => q !== p);
+  s.players.map((pl) => pl.id).filter((q) => !allied(s, p, q));
+
+/**
+ * Whether p may move or play units to a battlefield. In a Duel always; with
+ * more players [491]: not where p's teammate has units (control is never
+ * shared), not where two other players already are (a battlefield holds at
+ * most two players' units: combat is between exactly two), and not into a
+ * staged or running combat p is not part of.
+ */
+export function bfOpenTo(s: GameState, bf: number, p: PlayerId): boolean {
+  if (s.players.length <= 2) return true;
+  const b = s.bfs[bf];
+  const others = new Set<PlayerId>();
+  let mine = false;
+  for (const id of b.here) {
+    const o = s.objects[id];
+    if (!isType(o, 'unit') || o.controller === null) continue;
+    if (o.controller === p) mine = true; else others.add(o.controller);
+  }
+  if ([...others].some((q) => allied(s, q, p))) return false;
+  if (others.size >= 2) return false;
+  if (s.combat && s.combat.bf === bf && s.combat.attacker !== p && s.combat.defender !== p) return false;
+  if (b.staged.combat && !mine) return false;
+  return true;
+}

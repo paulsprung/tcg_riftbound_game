@@ -22,6 +22,7 @@
  * itself in every phase but the Main Phase once nothing is outstanding,
  * pending or ongoing [335] (core/loop.ts).
  */
+import { teammates } from './teams.ts';
 import { K, parseKey } from '../core/decisions.ts';
 import { endGame } from '../core/end.ts';
 import { emit } from '../core/events.ts';
@@ -168,6 +169,11 @@ defineTask('beginning.startEffects', [(s, _f, x) => {
  */
 defineTask('scoring.holdAll', [(s, f, x) => {
   const p = s.turn.player;
+  // 2v2: what the teammate controls now is the team's dead ground this turn [491]
+  if (s.log.allyHeld === null) {
+    const mates = teammates(s, p);
+    setField(s, s.log, 'allyHeld', s.bfs.flatMap((b, bf) => (b.controller !== null && mates.includes(b.controller) ? [bf] : [])));
+  }
   const held = s.bfs.map((b, bf) => ({ b, bf })).filter(({ b }) => b.controller === p && !hasBit(b.scoredBy, p))
     .map(({ bf }) => bf);
   if (held.length === 0) return 'done';
@@ -200,6 +206,8 @@ defineTask('channel.channel', [(s, _f, x) => {
 defineTask('draw.draw', [(s, _f, x) => {
   // Endless Riches: "Skip your Draw Phase."
   if (staticsFor(s, null, 'skipDraw').some(({ st }) => st.ctl === s.turn.player)) return 'done';
+  // modes of more than two: the First Player draws nothing in their first Draw Phase [489], [491]
+  if (s.mode.firstTurn.firstPlayerSkipsFirstDraw && s.turn.n === 1) return 'done';
   drawCards(s, x, s.turn.player, drawCount(s, s.turn.player), '315.4.b');
   return 'done';
 }]);

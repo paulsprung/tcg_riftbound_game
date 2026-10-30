@@ -17,6 +17,7 @@
  *               control, Contested cleared [190.3.b], and a Conquer if the
  *               battlefield wasn't scored by that player this turn.
  */
+import { allied, sideOf } from './teams.ts';
 import { endGame } from '../core/end.ts';
 import { emit } from '../core/events.ts';
 import { bit, hasBit } from '../state/ids.ts';
@@ -31,16 +32,25 @@ import { isType } from './chars.ts';
 
 type X = { present: boolean };
 
+/** A battlefield scored by p's side this turn: once per team per turn in 2v2 [472], [491]. */
+const scoredBySide = (s: GameState, b: GameState['bfs'][number], p: PlayerId) => sideOf(s, p).some((q) => hasBit(b.scoredBy, q));
+
 export function score(s: GameState, x: X, p: PlayerId, bf: number, how: 'conquer' | 'hold', wasUncontrolled = false) {
   const b = s.bfs[bf];
-  if (hasBit(b.scoredBy, p)) return;                                  // [472]
+  if (scoredBySide(s, b, p)) return;                                  // [472]
+  // 2v2: what the Turn Player's teammate held at the Scoring Step, the team can't score this turn [491]
+  const allyHeld = (s.log.allyHeld ?? []).includes(bf) && allied(s, p, s.turn.player);
+  if (allyHeld) return;
   // "Players can't score here until their third turn" (Forgotten Monument).
   if (staticsFor(s, null, 'noScoreBefore').some(({ st, spec }) => s.objects[st.host]?.zone.z === 'bf'
     && (s.objects[st.host].zone as { bf: number }).bf === bf && s.history.turnsTaken[p] < spec.turn)) return;
-  setField(s, b, 'scoredBy', b.scoredBy | bit(p));
+  setField(s, b, 'scoredBy', sideOf(s, p).reduce((m, q) => m | bit(q), b.scoredBy));
   const rule = how === 'conquer' ? '471.1' : '471.2';
   const finalPoint = how === 'conquer' && s.players[p].points >= victoryScore(s) - 1;
-  const point = !finalPoint || s.bfs.every((other) => hasBit(other.scoredBy, p));   // [473.1.b]
+  // [473.1.b]: the final point by conquering needs every battlefield scored this turn; in 2v2 those the
+  // teammate held at the Scoring Step are excepted, on the team's own turns [491]
+  const point = !finalPoint || s.bfs.every((other, i) => scoredBySide(s, other, p)
+    || (allied(s, p, s.turn.player) && (s.log.allyHeld ?? []).includes(i)));
   // The units that scored it ("if I didn't conquer this turn").
   const units = b.here.filter((id) => s.objects[id].controller === p && isType(s.objects[id], 'unit'));
   append(s, s.log.scored, { p, bf, how, point, units });

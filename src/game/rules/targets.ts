@@ -9,6 +9,7 @@
  * of [740] are predicates: alone, one on one, in combat [740.2]; "open" and
  * "occupied" battlefields [170.11]; Mighty [708].
  */
+import { allied, opposed } from './teams.ts';
 import type { LocSelAst, PredAst, SelAst, SlotAst } from '../dsl/ast.ts';
 import { locOf } from '../state/zones.ts';
 import type { ChainItem, GameObject, GameState, ItemId, Loc, ObjId, PlayerId, TargetRef, TokenId } from '../state/types.ts';
@@ -155,7 +156,7 @@ export function predOk(s: GameState, p: PredAst, id: ObjId, c: SelCtx): boolean 
       return !!it && itemChoosesFriendly(s, it, c);
     }
     case 'linked': return o.links.some((l) => l.group === p.group);
-    case 'rel': return p.rel === 'friendly' ? o.controller === c.controller : o.controller !== null && o.controller !== c.controller;
+    case 'rel': return p.rel === 'friendly' ? allied(s, o.controller, c.controller) : opposed(s, o.controller, c.controller);
     case 'moves': return o.moves === p.n;
     case 'name': return (findCard(o.def)?.name ?? (Object.hasOwn(TOKENS, o.def) ? TOKENS[o.def as TokenId].name : o.def)) === p.name;
     case 'atEventBf': return c.eventBf !== undefined && c.eventBf !== null && o.zone.z === 'bf' && o.zone.bf === c.eventBf;
@@ -173,14 +174,14 @@ export function predOk(s: GameState, p: PredAst, id: ObjId, c: SelCtx): boolean 
       const bf = s.bfs.findIndex((b) => b.obj === id);
       const src = c.source === null ? undefined : s.objects[c.source];
       if (bf < 0 || !src) return false;
-      const total = unitsHere(s, bf).filter((u) => s.objects[u].controller !== c.controller)
+      const total = unitsHere(s, bf).filter((u) => opposed(s, s.objects[u].controller, c.controller))
         .reduce((n, u) => n + Math.max(0, mightOf(s, u)), 0);
       return mightOf(s, c.source!) > total;
     }
     case 'unitsHere': {                                              // "a battlefield where you have units"
       const bf = s.bfs.findIndex((b) => b.obj === id);
-      return bf >= 0 && unitsHere(s, bf).some((u) => (p.rel === 'friendly' ? s.objects[u].controller === c.controller
-        : s.objects[u].controller !== null && s.objects[u].controller !== c.controller));
+      return bf >= 0 && unitsHere(s, bf).some((u) => (p.rel === 'friendly' ? allied(s, s.objects[u].controller, c.controller)
+        : opposed(s, s.objects[u].controller, c.controller)));
     }
     case 'mightVsSlot': {                                            // "with less Might than the chosen unit"
       const other = c.slotObjs?.[p.slot]?.[0];
@@ -216,8 +217,8 @@ export function predOk(s: GameState, p: PredAst, id: ObjId, c: SelCtx): boolean 
     case 'ownedByYou': return o.owner === c.controller;
     case 'domain': return (findCard(o.def)?.domains ?? []).includes(p.d);
     case 'inCombatWithDomain': return inCombat(s, id) && s.bfs[(o.zone as { bf: number }).bf].here.some((u) => u !== id
-      && inCombat(s, u) && s.objects[u].controller !== o.controller && (findCard(s.objects[u].def)?.domains ?? []).includes(p.d));
-    case 'chosenBySpellOfDomain': return s.chain.some((it) => it.kind === 'card' && it.obj !== undefined && it.controller !== c.controller
+      && inCombat(s, u) && opposed(s, s.objects[u].controller, o.controller) && (findCard(s.objects[u].def)?.domains ?? []).includes(p.d));
+    case 'chosenBySpellOfDomain': return s.chain.some((it) => it.kind === 'card' && it.obj !== undefined && opposed(s, it.controller, c.controller)
       && (findCard(s.objects[it.obj]?.def ?? '')?.domains ?? []).includes(p.d)
       && it.play.choices.executions.some((ex) => Object.values(ex.targets).flat().some((t) => t.k === 'obj' && t.id === id)));
     case 'damagedThisTurn': return (s.log.damaged ?? []).includes(id);
@@ -242,8 +243,12 @@ export function predOk(s: GameState, p: PredAst, id: ObjId, c: SelCtx): boolean 
   }
 }
 
+/** A card in a hand or trash, by its owner: those zones are a player's own, a teammate's included in neither. */
 const relOk = (rel: SelAst['rel'], owner: PlayerId | null, p: PlayerId) =>
   rel === 'friendly' ? owner === p : rel === 'enemy' ? owner !== null && owner !== p : true;
+/** Something controlled: "friendly" is yours or a teammate's, "enemy" another team's [491]. */
+const relCtl = (s: GameState, rel: SelAst['rel'], ctl: PlayerId | null, p: PlayerId) =>
+  rel === 'friendly' ? allied(s, ctl, p) : rel === 'enemy' ? opposed(s, ctl, p) : true;
 
 /** Whether an object matches a selector now. */
 export function matches(s: GameState, sel: SelAst, id: ObjId, c: SelCtx): boolean {
@@ -257,20 +262,19 @@ export function matches(s: GameState, sel: SelAst, id: ObjId, c: SelCtx): boolea
     if (o.zone.z !== 'chain' || !isType(o, 'spell')) return false;
     const it = s.chain.find((i) => i.obj === id);
     if (!it || it.status !== 'finalized' || it.kind !== 'card') return false;
-    return relOk(sel.rel, it.controller, c.controller) && (sel.where ?? []).every((p) => predOk(s, p, id, c));
+    return relCtl(s, sel.rel, it.controller, c.controller) && (sel.where ?? []).every((p) => predOk(s, p, id, c));
   }
   if (sel.k === 'facedown') {
-    if (o.zone.z !== 'facedown' || !relOk(sel.rel, o.controller, c.controller)) return false;
+    if (o.zone.z !== 'facedown' || !relCtl(s, sel.rel, o.controller, c.controller)) return false;
     return locOk(s, sel.at, { z: 'bf', bf: o.zone.bf }, c);
   }
-  if (sel.k === 'legend') return o.zone.z === 'legend' && relOk(sel.rel, o.controller, c.controller)
+  if (sel.k === 'legend') return o.zone.z === 'legend' && relCtl(s, sel.rel, o.controller, c.controller)
     && (sel.where ?? []).every((p) => predOk(s, p, id, c));
   const isBf = s.bfs.some((b) => b.obj === id);
   if (sel.k === 'battlefield' || isBf) {                           // battlefields only where a selector asks for one
     if (sel.k !== 'battlefield' || !isBf) return false;
     if (sel.other && id === c.source) return false;
-    if (sel.rel === 'friendly' && o.controller !== c.controller) return false;
-    if (sel.rel === 'enemy' && (o.controller === c.controller || o.controller === null)) return false;
+    if (!relCtl(s, sel.rel, o.controller, c.controller)) return false;
     return (sel.where ?? []).every((p) => predOk(s, p, id, c));
   }
   const loc = locOf(o);
@@ -280,8 +284,7 @@ export function matches(s: GameState, sel: SelAst, id: ObjId, c: SelCtx): boolea
   if (sel.k === 'gear' && !isType(o, 'gear')) return false;
   if (sel.k === 'permanent' && !isType(o, 'unit') && !isType(o, 'gear')) return false;
   if (sel.k === 'rune' && !isType(o, 'rune')) return false;
-  if (sel.rel === 'friendly' && o.controller !== c.controller) return false;
-  if (sel.rel === 'enemy' && (o.controller === c.controller || o.controller === null)) return false;
+  if (!relCtl(s, sel.rel, o.controller, c.controller)) return false;
   if (!locOk(s, sel.at, loc, c)) return false;
   return (sel.where ?? []).every((p) => predOk(s, p, id, c));
 }
@@ -324,14 +327,14 @@ export function slotLocsOf(s: GameState, ex: { targets: Record<string, TargetRef
 /** A chain item chose a friendly unit or gear (Not So Fast). */
 function itemChoosesFriendly(s: GameState, it: ChainItem, c: SelCtx): boolean {
   return it.play.choices.executions.some((ex) => Object.values(ex.targets).flat().some((t) => t.k === 'obj'
-    && s.objects[t.id]?.controller === c.controller && (isType(s.objects[t.id], 'unit') || isType(s.objects[t.id], 'gear'))));
+    && allied(s, s.objects[t.id]?.controller ?? null, c.controller) && (isType(s.objects[t.id], 'unit') || isType(s.objects[t.id], 'gear'))));
 }
 
 /** A chain item chooses what the slot chose and no other friendly unit (Repulse). */
 function itemChoosesOnly(s: GameState, it: ChainItem, slot: string, c: SelCtx): boolean {
   const chosen = it.play.choices.executions.flatMap((ex) => Object.values(ex.targets).flat())
     .flatMap((t) => (t.k === 'obj' && s.objects[t.id] ? [t.id] : []));
-  const friendly = [...new Set(chosen.filter((u) => isType(s.objects[u], 'unit') && s.objects[u].controller === c.controller))];
+  const friendly = [...new Set(chosen.filter((u) => isType(s.objects[u], 'unit') && allied(s, s.objects[u].controller, c.controller)))];
   const want = c.slotObjs?.[slot]?.[0];
   if (want === undefined) return friendly.length === 1;              // not chosen yet: some single friendly unit
   return friendly.length === 1 && friendly[0] === want;
@@ -341,8 +344,7 @@ function itemChoosesOnly(s: GameState, it: ChainItem, slot: string, c: SelCtx): 
 export function itemMatches(s: GameState, sel: SelAst, item: ItemId, c: SelCtx): boolean {
   const it = s.chain.find((i) => i.id === item);
   if (!sel.abilities || sel.k !== 'spell' || !it || it.obj !== undefined || it.status !== 'finalized' || it.isAdd) return false;
-  if (sel.rel === 'friendly' && it.controller !== c.controller) return false;
-  if (sel.rel === 'enemy' && it.controller === c.controller) return false;
+  if (!relCtl(s, sel.rel, it.controller, c.controller)) return false;
   return (sel.where ?? []).every((p) => (p.p === 'choosesFriendly' ? itemChoosesFriendly(s, it, c)
     : p.p === 'choosesOnly' ? itemChoosesOnly(s, it, p.slot, c) : false));
 }

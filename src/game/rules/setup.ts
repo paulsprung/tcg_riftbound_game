@@ -204,9 +204,6 @@ defineStart((s: GameState, setup: GameSetup, x: RunCtx) => {
   if (s.mode.battlefieldSelection !== 'random') {
     throw new NotImplementedError('choosing battlefields', 'the Match mode [488], M7');
   }
-  if (!s.mode.firstPlayerContributesBattlefield) {
-    throw new NotImplementedError('modes where the First Player provides no battlefield', '[490], [491], [MP]');
-  }
   if (setup.decks.length !== s.players.length) {
     throw new SetupError([`${setup.decks.length} decks for ${s.players.length} players`]);
   }
@@ -261,8 +258,17 @@ defineStart((s: GameState, setup: GameSetup, x: RunCtx) => {
     for (const c of shuffled(s, runes)) createObject(s, { ...c, owner: p, zone: Z.runeDeck(p) });
   }
 
+  // 2v2 and War: the First Player brings no battlefield [490], [491], so the order is set first, at random
+  const method0 = setup.firstPlayer ?? s.rules.firstPlayer;
+  const early = !s.mode.firstPlayerContributesBattlefield;
+  if (early) {
+    const first = typeof method0 === 'number' ? method0 : typeof method0 === 'object' ? method0.designee : s.players[randInt(s, s.players.length)].id;
+    setFirstPlayer(s, x, first, '491');
+  }
+
   const bfs: ObjId[] = [];                                                // [113], [487.5]
   for (const pl of s.players) {
+    if (early && pl.id === s.turn.firstPlayer) continue;
     const d = setup.decks[pl.id];
     for (const def of shuffled(s, d.battlefields).slice(0, s.mode.battlefieldsPerPlayer)) {
       bfs.push(s.bfs[createBattlefield(s, { def, printing: printingOf(d, def, 0), owner: pl.id })].obj);
@@ -283,7 +289,7 @@ defineStart((s: GameState, setup: GameSetup, x: RunCtx) => {
   // designated player who chooses at the setup frame's first step.
   const method = setup.firstPlayer ?? s.rules.firstPlayer;
   let designee: PlayerId | undefined;
-  if (typeof method === 'number') setFirstPlayer(s, x, method, '115');
+  if (early) { /* set above */ } else if (typeof method === 'number') setFirstPlayer(s, x, method, '115');
   else if (typeof method === 'object') designee = method.designee;
   else if (method === 'random') setFirstPlayer(s, x, s.players[randInt(s, s.players.length)].id, '115');
   else designee = s.players[randInt(s, s.players.length)].id;

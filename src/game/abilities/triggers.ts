@@ -31,6 +31,7 @@
  * or the player the trigger names ("they", "when you conquer here" on a
  * battlefield) [190.6.c].
  */
+import { allied } from '../rules/teams.ts';
 import type { TriggerAst, TriggeredAst } from '../dsl/ast.ts';
 import { abilitiesOf, abilityIn, hasTriggers } from '../cards/registry.ts';
 import { TOKENS } from '../cards/tokens.ts';
@@ -359,7 +360,7 @@ function meets(s: GameState, w: TriggerAst, ev: TriggerEvent, o: GameObject | nu
       if (ev.e !== w.on || ev.by === null || c(ev.by) !== ev.by) break;
       for (const id of ev.objs) {
         const p = ctlOf(s, id);
-        const friendly = p === ev.by;
+        const friendly = allied(s, p, ev.by);
         if (w.on === 'buffed' ? !friendly : friendly || p === null) continue;
         const at = s.objects[id] ? locOf(s.objects[id]) : null;
         if (w.on === 'stunned' && w.at === 'battlefield' && at?.z !== 'bf') continue;

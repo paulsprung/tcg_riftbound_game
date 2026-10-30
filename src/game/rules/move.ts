@@ -26,7 +26,7 @@ import { cantMove, exhaust, moveUnits } from './actions.ts';
 import { hasKeyword } from './chars.ts';
 import { staticsFor } from '../layers/derive.ts';
 import { payStep } from '../play/pay.ts';
-import { turnState, unitsOnBoard } from './board.ts';
+import { bfOpenTo, turnState, unitsOnBoard } from './board.ts';
 
 type MoveFrame = FrameOf<'move'>;
 
@@ -40,11 +40,12 @@ export function moveDestinations(s: GameState, id: ObjId): Loc[] {
   const o = s.objects[id];
   const at = locOf(o);
   if (!at || o.controller === null || cantMove(s, id)) return [];
-  if (at.z === 'base') return s.bfs.map((_, bf): Loc => ({ z: 'bf', bf }));   // [144.4.a]
+  const ctl = o.controller;
+  if (at.z === 'base') return s.bfs.flatMap((_, bf): Loc[] => (bfOpenTo(s, bf, ctl) ? [{ z: 'bf', bf }] : []));   // [144.4.a], [491]
   const out: Loc[] = noMoveToBase(s, at.bf, id) ? [] : [{ z: 'base', p: o.controller }];   // [144.4.b]; Vilemaw's Lair
   const ganking = hasKeyword(s, id, 'ganking');
   s.bfs.forEach((_, bf) => {                                         // [144.4.c], [810.1.b]; Baron Pit: "from anywhere"
-    if (bf !== at.bf && (ganking || moveHereFromAnywhere(s, bf))) out.push({ z: 'bf', bf });
+    if (bf !== at.bf && (ganking || moveHereFromAnywhere(s, bf)) && bfOpenTo(s, bf, ctl)) out.push({ z: 'bf', bf });
   });
   return out;
 }

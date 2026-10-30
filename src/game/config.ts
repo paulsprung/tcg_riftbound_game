@@ -38,6 +38,21 @@ export const DUEL: ModeConfig = {
   bestOf: 1,
 };
 
+/** 2v2, Magma Chamber [491]: two teams of two sitting alternately (turns go one team, then the
+    other), 11 shared points, three battlefields from the three players who don't go first; the
+    First Player skips their first draw and the last player channels one more rune. */
+export const TWO_V_TWO: ModeConfig = {
+  id: 'magmaChamber',
+  players: 4,
+  teams: [[0, 2], [1, 3]],
+  victoryScore: 11,
+  battlefieldsPerPlayer: 1,
+  battlefieldSelection: 'random',
+  firstPlayerContributesBattlefield: false,
+  firstTurn: { extraRuneFor: 'last', firstPlayerSkipsFirstDraw: true },
+  bestOf: 1,
+};
+
 /**
  * One position for each open question of the rules specs that has more
  * than one defensible answer (§8). Each value is recorded with the game and

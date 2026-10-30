@@ -5,6 +5,7 @@
  * until then; with no frame left it hands over to the master loop (M1), and
  * in M0, which ends at the start of the first turn, it simply stops.
  */
+import { opponentsOf } from '../rules/board.ts';
 import { DEFAULT_ENGINE, type EngineOptions } from '../config.ts';
 import { cloneState } from '../state/clone.ts';
 import { assertInvariants } from '../state/invariants.ts';
@@ -87,12 +88,12 @@ export function choose(s0: GameState, c: Choice, o: StepOptions = {}): StepResul
 }
 
 /** A player concedes [650]; valid at any time, outside the decision system.
-    In a Duel the other player wins [651.1]. */
+    In a Duel the other player wins [651.1]; in 2v2 the whole team loses [491]. */
 export function concede(s0: GameState, p: PlayerId, o: StepOptions = {}): StepResult {
   if (s0.result) throw new EngineError('the game is already over');
   if (!s0.players.some((pl) => pl.id === p)) throw new EngineError(`P${p} is not in the game`);
-  const rest = s0.players.filter((pl) => pl.id !== p).map((pl) => pl.id);
-  if (rest.length !== 1) throw new NotImplementedError('conceding with more than two players', '[MP] removePlayer [652]');
+  const rest = opponentsOf(s0, p);
+  if (rest.length === 0 || (rest.length > 1 && !s0.mode.teams)) throw new NotImplementedError('conceding in free-for-all', '[MP] removePlayer [652]');
   const s = o.inPlace ? s0 : cloneState(s0);
   const x = runCtx(o);
   endGame(s, x, { winner: rest[0], reason: 'concede', rule: '650', turn: s.turn.n });

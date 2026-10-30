@@ -24,7 +24,7 @@ export { determinize } from './ai/determinize.ts';
 export { explainUnavailable } from './core/explain.ts';
 
 export { ENGINE_VERSION } from './version.ts';
-export { DEFAULT_ENGINE, DEFAULT_RULES, DUEL, rulesFor } from './config.ts';
+export { DEFAULT_ENGINE, DEFAULT_RULES, DUEL, TWO_V_TWO, rulesFor } from './config.ts';
 export { K, compareKeys, isValidKey, parseKey } from './core/decisions.ts';
 export {
   EngineError, EngineLoopError, IllegalOptionError, InvariantError, NotImplementedError, StaleDecisionError,
