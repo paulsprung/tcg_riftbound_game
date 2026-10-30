@@ -67,7 +67,12 @@ export function App() {
   const session = useSession();
   const notice = useSyncExternalStore(noticeStore.subscribe, noticeStore.get, noticeStore.get);
   // once the account is in (or there is none), onboarding is what it says
-  useEffect(() => { if (session.status !== 'loading') setOnboarding(!(collection.get().starter && collection.get().tutorialDone)); }, [session.status]);
+  // on the live site a visitor who isn't signed in stays in the onboarding: its end asks them to sign in
+  useEffect(() => {
+    if (session.status === 'loading') return;
+    const guest = session.status === 'online' && !session.user;
+    setOnboarding(guest || !(collection.get().starter && collection.get().tutorialDone));
+  }, [session]);
 
   // signed in, the account comes from the server first: nothing starts on this browser's own collection
   if (session.status === 'loading') return <div className="app"><Ambient /><p className="status">Signing in…</p></div>;

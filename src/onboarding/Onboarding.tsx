@@ -8,7 +8,7 @@ import { loadStarters, type StarterChoice } from '../economy/starter.ts';
 import { Icon } from '../lobby/icons.tsx';
 import { PRODUCT_LABEL } from '../play/host/decks.ts';
 import { cardIndex } from '../play/model/cards.ts';
-import { TutorialView } from '../play/tutorial/TutorialView.tsx';
+import { TutorialReward, TutorialView } from '../play/tutorial/TutorialView.tsx';
 import { HeroBanner } from '../views/HeroBanner.tsx';
 import './onboarding.css';
 
@@ -19,7 +19,7 @@ import './onboarding.css';
  * the tutorial done), so a reload picks up where the player was.
  */
 
-type Step = 'intro' | 'deck' | 'ready' | 'tutorial';
+type Step = 'intro' | 'deck' | 'ready' | 'tutorial' | 'claim';
 const STEPS = [
   { id: 'deck', label: 'Choose a deck' },
   { id: 'tutorial', label: 'Learn to play' },
@@ -121,7 +121,8 @@ function DeckStep({ db, onTaken }: { db: CardDb; onTaken: () => void }) {
 
 export function Onboarding({ db, onDone }: { db: CardDb; onDone: (to: 'shop' | 'play' | 'home') => void }) {
   const own = useCollection();
-  const [step, setStep] = useState<Step>(() => (own.starter ? 'ready' : 'intro'));
+  // done here but not signed in: straight back to the tutorial's reward, which asks you to sign in
+  const [step, setStep] = useState<Step>(() => (own.starter && own.tutorialDone ? 'claim' : own.starter ? 'ready' : 'intro'));
   const cards = useMemo(() => cardIndex(db), [db]);
   const legend = useMemo(() => {
     // the deck you hold, as its legend card (for the ready screen)
@@ -147,6 +148,14 @@ export function Onboarding({ db, onDone }: { db: CardDb; onDone: (to: 'shop' | '
       <div className="ob__page ob-play">
         <Bar at={1} />
         <div className="ob__play"><TutorialView db={db} cards={cards} starter={own.starter} onExit={() => onDone('play')} onFinish={onDone} /></div>
+      </div>
+    );
+  }
+  if (step === 'claim') {
+    return (
+      <div className="ob__page ob-play">
+        <Bar at={2} />
+        <div className="ob__play"><TutorialReward db={db} granted won={null} onReplay={() => setStep('tutorial')} onExit={() => onDone('play')} onFinish={onDone} /></div>
       </div>
     );
   }

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore } from 'react';
+import { useSession } from '../../net/session.ts';
 import { collection, TUTORIAL_PACKS, useCollection } from '../../collection/store.ts';
 import type { CardDb } from '../../data/types.ts';
 import { packArt } from '../../data/media.ts';
@@ -120,11 +121,15 @@ export function TutorialReward({ db, granted, won, onReplay, onExit, onFinish }:
     const info = db.sets.find((x) => x.id === id);
     return b && info ? { id, info, style: b.style, cards: db.cards.filter((c) => c.setId === id) } : null;
   }).filter((x) => x !== null), [db]);
-  const title = won === null ? 'Tutorial skipped' : won ? 'You won the tutorial!' : 'Tutorial complete';
+  const guest0 = useSession();
+  const title = guest0.status === 'online' && !guest0.user ? 'Claim your packs' : won === null ? 'Tutorial skipped' : won ? 'You won the tutorial!' : 'Tutorial complete';
   // as big as the window allows: by its height, and five side by side by its width
   const aspect = 1 / 1.72;
   const packH = Math.max(150, Math.min(h * 0.36, ((w - 120 - 4 * 24) / 5) / 0.66, 380));
   const total = Object.values(own.packs).reduce((a, b) => a + b, 0);
+  // not signed in on the live site: the packs are claimed with an account (the progress carries over)
+  const session = useSession();
+  const guest = session.status === 'online' && !session.user;
   return (
     <section className="tutorial-reward" aria-labelledby="tutorial-reward-title">
       <p className="lb-label tutorial-reward__kicker">Tutorial</p>
@@ -146,7 +151,9 @@ export function TutorialReward({ db, granted, won, onReplay, onExit, onFinish }:
         </div>
       )}
       <div className="tutorial-reward__actions">
-        {onFinish ? (
+        {guest ? (
+          <a className="btn btn--cta" href="/auth/discord">Sign in with Discord to claim your packs</a>
+        ) : onFinish ? (
           <button type="button" className="btn btn--cta" onClick={() => onFinish('shop')}>Enter Riftbound · {total} packs to open</button>
         ) : (
           <a className="btn btn--cta" href="#collection/packs">Open your packs · {total}</a>
@@ -154,6 +161,7 @@ export function TutorialReward({ db, granted, won, onReplay, onExit, onFinish }:
         <button type="button" className="btn btn--ghost" onClick={onReplay}>Play the tutorial again</button>
         {!onFinish && <button type="button" className="btn btn--ghost" onClick={onExit}>Play a real game</button>}
       </div>
+      {guest && <p className="muted small tutorial-reward__note">Your deck and the packs are kept with your account: sign in once and they are yours, on any device.</p>}
     </section>
   );
 }

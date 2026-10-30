@@ -36,7 +36,11 @@ export async function loadSession(): Promise<void> {
     const body = await res.json() as { user: Account | null };
     if (!body.user) return set({ status: 'online', user: null });
     const acc = await fetchAccount();
+    // what was done here before signing in (the starter deck, the tutorial) carries over to a new account once
+    const guest = collection.isRemote() ? null : collection.get();
     collection.useServer(acc.account);
+    if (guest?.starter && !acc.account.starter) await collection.grantStarter(guest.starter, {}, {}, 0);
+    if (guest?.tutorialDone && !acc.account.tutorialDone) await collection.completeTutorial();
     decks.useServer(acc.decks);
     // a game's coins, a sale, a gift: the account again
     online.onAccount(() => { void fetchAccount().then((a) => collection.useServer(a.account)).catch(() => undefined); });
