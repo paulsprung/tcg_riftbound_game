@@ -220,9 +220,10 @@ async function main() {
   const media = resolve(root, 'public/media');
   if (existsSync(media)) {
     await cp(media, resolve(out, 'media'), { recursive: true });
-    for (const name of await readdir(media)) {
+    // and one folder down: the shop's product shots in media/products
+    for (const name of await readdir(media, { recursive: true })) {
       if (!/\.(webp|png|jpe?g)$/i.test(name)) continue;
-      files.push({ path: `media/${name}`, bytes: (await stat(resolve(media, name))).size });
+      files.push({ path: `media/${name.replaceAll('\\', '/')}`, bytes: (await stat(resolve(media, name))).size });
     }
   }
 
