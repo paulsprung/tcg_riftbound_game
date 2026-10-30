@@ -37,7 +37,7 @@ const deckOf = (id: DeckSetupChoice['mine']) => (builtInDeck(id) ?? builtInDeck(
 
 const LEVEL_NAME = { beginner: 'Beginner', normal: 'Normal' } as const;
 
-export function seatsFor(o: OpponentChoice): [Seat, Seat] {
+export function seatsFor(o: OpponentChoice): Seat[] {
   return o === 'hotseat' ? [{ k: 'human' }, { k: 'human' }] : [{ k: 'human' }, { k: 'ai', level: o }];
 }
 
@@ -50,7 +50,7 @@ export function seatName(seats: readonly Seat[], p: number): string {
   return s.name ?? 'Opponent';
 }
 
-function saveTo(store: SaveStore, seats: [Seat, Seat]) {
+function saveTo(store: SaveStore, seats: Seat[]) {
   const saved = seats.map(savedSeat);
   if (saved.some((s) => s === null)) return undefined;              // scripted games are never saved
   return (r: GameRecord, at: SaveInfo) => {
@@ -82,7 +82,7 @@ export function PlayView({ db, tutorial = false, onInGame }: { db: CardDb; tutor
   }, []);
   useEffect(() => { game?.host.setPace(PACE_FACTOR[settings.pace]); }, [game, settings.pace]);
 
-  const options = (seats: [Seat, Seat]): Omit<HostOptions, 'setup'> => ({
+  const options = (seats: Seat[]): Omit<HostOptions, 'setup'> => ({
     seats, ai: ai.current ?? undefined, check: import.meta.env.DEV, onSave: saveTo(store, seats),
     pace: PACE_FACTOR[getSettings().pace],
   });
@@ -126,7 +126,7 @@ export function PlayView({ db, tutorial = false, onInGame }: { db: CardDb; tutor
     }
   };
 
-  const load = (r: GameRecord, seats: [Seat, Seat]) => {
+  const load = (r: GameRecord, seats: Seat[]) => {
     try {
       show(GameHost.fromRecord(r, options(seats)));
     } catch (e) {

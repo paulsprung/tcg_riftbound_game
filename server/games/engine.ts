@@ -18,14 +18,14 @@ export interface SeatUpdate { view: PlayerView; events: ObservedEvent[] }
 
 export interface Update {
   gameId: string;
-  seats: [SeatUpdate, SeatUpdate];
+  seats: SeatUpdate[];
   /** Whose decision is pending, and whether it is a pass-only priority (answered for them). */
   pending: { player: PlayerId; id: number; passOnly: boolean } | null;
   result: GameState['result'];
   turn: number;
   /** Who plays first this game, once settled. */
   first: PlayerId | null;
-  points: [number, number];
+  points: number[];
   /** Answers given in this change, for the record the server keeps. */
   answers: Answer[];
   conceded?: GameRecord['concede'];
@@ -49,9 +49,9 @@ export class Engine {
     const s = g.state;
     const seat = (p: PlayerId): SeatUpdate => ({ view: viewFor(s, p), events: observe(events, p) });
     return {
-      gameId, seats: [seat(0), seat(1)],
+      gameId, seats: s.players.map((p) => seat(p.id)),
       pending: s.pending && !s.result ? { player: s.pending.player, id: s.pending.id, passOnly: passOnly(s) } : null,
-      result: s.result, turn: s.turn.n, first: s.turn.firstPlayer ?? null, points: [s.players[0].points, s.players[1].points], answers,
+      result: s.result, turn: s.turn.n, first: s.turn.firstPlayer ?? null, points: s.players.map((p) => p.points), answers,
     };
   }
 

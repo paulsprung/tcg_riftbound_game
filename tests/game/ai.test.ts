@@ -19,7 +19,7 @@ const DECKS = [SERAPHINE, SERAPHINE];
 interface Played { s: GameState; answers: number; illegal: string[] }
 
 /** A game between two agents; plans are followed while they fit, as the host does. */
-async function aiGame(seed: number, levels: [AiLevel, AiLevel], check: (cfg: AgentConfig, s: GameState) => void = () => {}): Promise<Played> {
+async function aiGame(seed: number, levels: AiLevel[], check: (cfg: AgentConfig, s: GameState) => void = () => {}): Promise<Played> {
   let s = createGame({ seed, decks: [SERAPHINE, SERAPHINE] }).state;
   const plans: string[][] = [[], []];
   const illegal: string[] = [];
@@ -102,7 +102,7 @@ describe('§11 the computer opponent', () => {
       // let the worker answer vitest between games (its RPC times out otherwise)
       await new Promise((r) => setTimeout(r, 0));
       const normalSeat: PlayerId = seed % 2 ? 0 : 1;
-      const levels: [AiLevel, AiLevel] = normalSeat === 0 ? ['normal', 'beginner'] : ['beginner', 'normal'];
+      const levels: AiLevel[] = normalSeat === 0 ? ['normal', 'beginner'] : ['beginner', 'normal'];
       const g = await aiGame(seed, levels);
       expect(g.illegal).toEqual([]);
       if (g.s.result?.winner === normalSeat) normalWins++;

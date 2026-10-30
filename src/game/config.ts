@@ -105,10 +105,10 @@ export const DEFAULT_ENGINE: EngineOptions = { feasibilityBudget: 200, stepLimit
 /** Everything a game is made from: with the answers, this is the game. */
 export interface GameSetup {
   seed: number;
-  /** Validated deck lists (§13.4); index = PlayerId. */
-  decks: [DeckList, DeckList];
+  /** Validated deck lists (§13.4); index = PlayerId, one per player of the mode. */
+  decks: DeckList[];
   /** Default: each deck's own chosen champion. */
-  chosenChampion?: [DefId?, DefId?];
+  chosenChampion?: (DefId | undefined)[];
   /** Default DUEL. */
   mode?: ModeConfig;
   rules?: Partial<RulesConfig>;
@@ -121,7 +121,7 @@ export interface GameSetup {
   limited?: 'sealed' | 'draft';
   /** Tutorials and tests: cards put on top of each deck after the shuffle
       [114], top first (a scripted lesson needs a known draw order). */
-  stack?: [DeckStack?, DeckStack?];
+  stack?: (DeckStack | undefined)[];
 }
 
 /** The cards on top of a player's decks, top first, by definition. */

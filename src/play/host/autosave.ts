@@ -24,7 +24,7 @@ export interface SavedGame {
   /** For the Resume card: the decks' names, the turn and the score. */
   title: string;
   turn: number;
-  points: [number, number];
+  points: number[];
 }
 
 export interface SaveStore {

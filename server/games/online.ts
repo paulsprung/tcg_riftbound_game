@@ -47,7 +47,7 @@ export type GameMeta = NonNullable<Extract<ServerMsg, { t: 'start' }>['tournamen
 
 /** How a game ended, for whoever ran it. */
 export interface Finished {
-  gameId: string; mode: Mode; players: [string, string]; winner: PlayerId | null; reason: string; meta: GameMeta | null;
+  gameId: string; mode: Mode; players: string[]; winner: PlayerId | null; reason: string; meta: GameMeta | null;
   /** Who played first: the next game of a drawn match keeps it (TR 407.4). */
   first: PlayerId | null;
   /** The seat that never came (it lost by the no-show time): a match loss (TR 703.8.d). */
@@ -59,12 +59,12 @@ export interface Transport { send(userId: string, msg: ServerMsg): void; online(
 interface Queued { userId: string; name: string; deck: DeckList; rating: number; since: number; limited?: 'sealed' | 'draft' }
 
 interface Live {
-  id: string; mode: Mode; players: [string, string]; names: [string, string]; decks: [DeckList, DeckList];
+  id: string; mode: Mode; players: string[]; names: string[]; decks: DeckList[];
   started: number; answers: Answer[]; setup: GameRecord['setup'];
-  pending: Update['pending']; deadline: number | null; lastView: [PlayerView, PlayerView] | null;
+  pending: Update['pending']; deadline: number | null; lastView: PlayerView[] | null;
   /** Each player's time bank left, and when the decision on the clock was asked (and of whom). */
-  bank: [number, number]; asked: { seat: PlayerId; at: number } | null;
-  strikes: [number, number]; timer: ReturnType<typeof setTimeout> | null; away: [ReturnType<typeof setTimeout> | null, ReturnType<typeof setTimeout> | null];
+  bank: number[]; asked: { seat: PlayerId; at: number } | null;
+  strikes: number[]; timer: ReturnType<typeof setTimeout> | null; away: (ReturnType<typeof setTimeout> | null)[];
   dirty: boolean; over: boolean; turn: number; busy: Promise<void>;
   /** The engine and card set the game runs on: a record replays only on the same. */
   head: { engine: string; defsHash: string };
@@ -72,7 +72,7 @@ interface Live {
   first: PlayerId | null;
   /** A tournament seat that hasn't connected since the game began; set when its no-show time ran out. */
   noShow: PlayerId | null;
-  showed: [boolean, boolean];
+  showed: boolean[];
 }
 
 type LobbyMsg = Extract<ClientMsg, { t: `lobby-${string}` }>;
@@ -320,7 +320,7 @@ export class Online {
     meta: GameMeta | null, firstPlayer: GameRecord['setup']['firstPlayer'] | null = null): Promise<string> {
     const id = randomUUID();
     const limited = p0.limited ?? p1.limited;
-    const setup: GameRecord['setup'] = { seed: randomInt(0, 2 ** 31), decks: [p0.deck, p1.deck] as [DeckList, DeckList],
+    const setup: GameRecord['setup'] = { seed: randomInt(0, 2 ** 31), decks: [p0.deck, p1.deck] as DeckList[],
       ...(firstPlayer !== null ? { firstPlayer } : {}), ...(limited ? { limited } : {}) };
     const g: Live = {
       id, mode, players: [p0.userId, p1.userId], names: [p0.name, p1.name], decks: setup.decks, started: this.clock.now(),
@@ -347,7 +347,7 @@ export class Online {
     const theirs = g.decks[1 - seat];
     const shown: DeckList = { name: theirs.name, source: theirs.source, legend: theirs.legend, chosenChampion: '' as DeckList['chosenChampion'], main: [], runes: [], battlefields: [],
       printings: theirs.printings?.[theirs.legend] ? { [theirs.legend]: theirs.printings[theirs.legend] } : {} };
-    const decks = (seat === 0 ? [g.decks[0], shown] : [shown, g.decks[1]]) as [DeckList, DeckList];
+    const decks = (seat === 0 ? [g.decks[0], shown] : [shown, g.decks[1]]) as DeckList[];
     return { t: 'start', gameId: g.id, seat, mode: g.mode, names: g.names, decks, ...(meta ? { tournament: meta } : {}) };
   }
 
@@ -363,7 +363,7 @@ export class Online {
     const mine = g.pending && g.pending.player === seat && !g.pending.passOnly ? g.deadline : null;
     const theirs = g.pending && g.pending.player !== seat && !g.pending.passOnly ? g.deadline : null;
     const grace = g.asked ? g.asked.at + this.t.grace : null;
-    return { deadline: mine, theirDeadline: theirs, clock: { grace, banks: [g.bank[seat], g.bank[1 - seat]] as [number, number] } };
+    return { deadline: mine, theirDeadline: theirs, clock: { grace, banks: [g.bank[seat], g.bank[1 - seat]] as number[] } };
   }
 
   /** One change at a time per game: answers that arrive together queue up. */
@@ -453,9 +453,9 @@ export class Online {
   async recover() {
     const r = await this.db.query('SELECT id, mode, players, data FROM live_games');
     for (const row of r.rows) {
-      const d = row.data as { engine: string; defsHash: string; setup: GameRecord['setup']; answers: Answer[]; names: [string, string]; started: number; strikes?: [number, number]; bank?: [number, number]; meta?: GameMeta | null };
+      const d = row.data as { engine: string; defsHash: string; setup: GameRecord['setup']; answers: Answer[]; names: string[]; started: number; strikes?: number[]; bank?: number[]; meta?: GameMeta | null };
       const g: Live = {
-        id: row.id, mode: row.mode, players: row.players, names: d.names, decks: d.setup.decks as [DeckList, DeckList], started: d.started,
+        id: row.id, mode: row.mode, players: row.players, names: d.names, decks: d.setup.decks as DeckList[], started: d.started,
         answers: d.answers.slice(), setup: d.setup, pending: null, deadline: null, lastView: null,
         bank: d.bank ?? [this.t.bank, this.t.bank], asked: null, strikes: d.strikes ?? [0, 0], timer: null,
         away: [null, null], dirty: false, over: false, turn: 0, busy: Promise.resolve(), head: { engine: d.engine, defsHash: d.defsHash },
@@ -631,7 +631,7 @@ export class Online {
     const record = await this.pool.engine.record(g.id, u.conceded);
     const rewarded = res.turn >= MIN_REWARD_TURNS;
     const c = await this.db.connect();
-    const outcome: { coins: [number, number]; bonus: [number, number]; rating: [{ before: RatingInfo; after: RatingInfo } | null, { before: RatingInfo; after: RatingInfo } | null] } = { coins: [0, 0], bonus: [0, 0], rating: [null, null] };
+    const outcome: { coins: number[]; bonus: number[]; rating: [{ before: RatingInfo; after: RatingInfo } | null, { before: RatingInfo; after: RatingInfo } | null] } = { coins: [0, 0], bonus: [0, 0], rating: [null, null] };
     try {
       await c.query('BEGIN');
       // both accounts first, then the ratings, each in one fixed order (as every transfer does):

@@ -65,7 +65,7 @@ const DEFAULTS: Settings = { bestOf: 1, maxPlayers: 32, entryFee: 0, topCut: 0, 
 
 interface Row { id: string; name: string; status: string; settings: Settings; starts_at: Date; round: number; stage: 'swiss' | 'top';
   draft: { pods: Pod[] } | null; build_until: Date | null }
-interface MatchRow { id: string; round: number; stage: string; tbl: number; a: string; b: string | null; wins: [number, number]; games: number; status: string; game_id: string | null }
+interface MatchRow { id: string; round: number; stage: string; tbl: number; a: string; b: string | null; wins: number[]; games: number; status: string; game_id: string | null }
 
 export function cleanSettings(s: Partial<Settings>): Settings {
   const out = { ...DEFAULTS, ...s };
@@ -106,7 +106,7 @@ export class Director {
   constructor(private readonly db: Db, private readonly online: Online, private readonly limited: LimitedService | null = null,
     private readonly now: () => number = Date.now) {
     online.onFinish((f) => (f.meta ? this.serial(() => this.gameOver(f)) : undefined));
-    this.ticker = setInterval(() => { void this.serial(() => this.tick()); }, 5000);
+    this.ticker = setInterval(() => { void this.tick(); }, 5000);
     this.ticker.unref?.();
   }
 
@@ -198,8 +198,11 @@ export class Director {
 
   // ---- the running ----
 
-  /** Starts what is due; picks up matches whose game was lost in a restart. */
-  async tick() {
+  /** Starts what is due, runs the draft clocks and build times, picks up matches whose game was lost
+      in a restart: one tick at a time, in line with everything else. */
+  tick() { return this.serial(() => this.due()); }
+
+  private async due() {
     const due = await this.db.query("SELECT id FROM tournaments WHERE status = 'open' AND starts_at <= now()");
     for (const r of due.rows) await this.begin(r.id).catch((err) => console.error(`tournament ${r.id}:`, err instanceof Error ? err.message : err));
     // the pick clock of the drafts, the end of the build time
@@ -389,7 +392,7 @@ export class Director {
 
   private async swissResults(id: string): Promise<MatchResult[]> {
     const r = await this.db.query("SELECT round, a, b, wins FROM tournament_matches WHERE tournament_id = $1 AND stage = 'swiss' AND status = 'done'", [id]);
-    return r.rows.map((m) => ({ round: m.round, a: m.a, b: m.b, wins: m.wins as [number, number] }));
+    return r.rows.map((m) => ({ round: m.round, a: m.a, b: m.b, wins: m.wins as number[] }));
   }
 
   async standings(id: string): Promise<Standing[]> {
@@ -460,7 +463,7 @@ export class Director {
     if (!m || m.status !== 'playing' || m.game_id !== f.gameId) return;
     const t = await this.get(f.meta!.id);
     if (t.status !== 'running') return;
-    const wins: [number, number] = [m.wins[0], m.wins[1]];
+    const wins: number[] = [m.wins[0], m.wins[1]];
     if (f.winner !== null) wins[f.winner]++;
     const games = m.games + 1;
     const need = Math.ceil(t.settings.bestOf / 2);

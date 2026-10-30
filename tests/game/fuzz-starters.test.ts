@@ -39,7 +39,7 @@ interface Played { end: GameState; record: GameRecord; decisions: number; illega
 const seen: Record<string, number> = {};
 const count = (k: string) => { seen[k] = (seen[k] ?? 0) + 1; };
 
-function play(seed: number, decks: [DeckList, DeckList], levels: [AiLevel | null, AiLevel | null]): Played {
+function play(seed: number, decks: [DeckList, DeckList], levels: (AiLevel | null)[]): Played {
   const setup: GameSetup = { seed, decks };
   let s = createGame(setup, { check: true }).state;
   let r = (seed * 2654435761) >>> 0;

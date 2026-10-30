@@ -21,11 +21,11 @@ import type { HostSnapshot, Preview, TableHost } from './GameHost.ts';
  */
 
 /** The chess clock: when the pending decision times out (mine or theirs), when its grace ends, both banks (mine first). */
-export interface OnlineClock { mine: number | null; theirs: number | null; grace: number | null; banks: [number, number] | null }
+export interface OnlineClock { mine: number | null; theirs: number | null; grace: number | null; banks: number[] | null }
 
 export class RemoteHost implements TableHost {
   readonly hotseat = false;
-  readonly setup: { seed: number; decks: [DeckList, DeckList] };
+  readonly setup: { seed: number; decks: DeckList[] };
   readonly seat: PlayerId;
   readonly gameId: string;
   private view: PlayerView | null = null;

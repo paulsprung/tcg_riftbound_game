@@ -18,7 +18,7 @@ import type { GameEvent } from '../core/events.ts';
 
 // ---- 3.1 Identifiers and primitives ----
 
-export type PlayerId = 0 | 1;          // [MP] widen to number; code loops over state.players, never assumes 2
+export type PlayerId = 0 | 1 | 2 | 3;  // up to four players (2v2 [491]); code loops over state.players, never assumes 2
 export type ObjId = number;            // game-object identity: a NEW id on every move to or from a non-board zone
                                        // [124], and for every card in a shuffle or random placement (§7.2)
 export type CardRef = number;          // the physical card or token for the whole game (ownership, records); never

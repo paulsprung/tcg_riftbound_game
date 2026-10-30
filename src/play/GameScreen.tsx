@@ -89,7 +89,7 @@ function DecisionClock({ clock }: { clock: OnlineFrame['clock'] }) {
 }
 
 export function GameScreen({ host, cards, db, names, onNewGame, onChangeDecks, onLoadRecord, coach, tutorial, online }: {
-  host: TableHost; cards: CardIndex; db: CardDb; names: [string, string];
+  host: TableHost; cards: CardIndex; db: CardDb; names: string[];
   onNewGame: () => void; onChangeDecks: () => void; onLoadRecord?: (r: GameRecord) => void; coach?: Coach;
   tutorial?: TutorialFrame;
   online?: OnlineFrame;
@@ -395,6 +395,6 @@ export function GameScreen({ host, cards, db, names, onNewGame, onChangeDecks, o
   );
 }
 
-function hotResult(winner: number | null, names: [string, string]): string {
+function hotResult(winner: number | null, names: string[]): string {
   return winner === null ? 'Draw' : `${names[winner]} wins`;
 }

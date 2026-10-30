@@ -57,7 +57,7 @@ export interface HostOptions {
   setup: GameSetup;
   /** One human against the simple bot (M1.1–M1.3); `seats` wins when given. */
   human?: PlayerId;
-  seats?: [Seat, Seat];
+  seats?: Seat[];
   clock?: Clock;
   /** The computer's worker client; without one it thinks on this thread. */
   ai?: AiClient;
@@ -72,7 +72,7 @@ export interface HostOptions {
 }
 
 /** Where the game is when it is saved: for a Resume card. */
-export interface SaveInfo { turn: number; points: [number, number]; over: boolean }
+export interface SaveInfo { turn: number; points: number[]; over: boolean }
 
 /** What the UI renders. A new object whenever anything changes. */
 export interface HostSnapshot {
@@ -128,14 +128,14 @@ const PLAN_KINDS = ['moveUnits', 'moveDest'];
 
 export class GameHost implements TableHost {
   readonly setup: GameSetup;
-  readonly seats: [Seat, Seat];
+  readonly seats: Seat[];
   /** The human seat (the first, in hot-seat). */
   readonly human: PlayerId;
   readonly opponent: PlayerId;
   private state: GameState;
   private answers: GameRecord['answers'] = [];
   private conceded: GameRecord['concede'] | undefined;
-  private readonly seen: [ObservedEvent[], ObservedEvent[]] = [[], []];
+  private readonly seen: ObservedEvent[][] = [[], []];
   private readonly clock: Clock;
   private readonly check: boolean;
   private readonly started: string;
@@ -147,7 +147,7 @@ export class GameHost implements TableHost {
   private readonly pick: () => number;
   private readonly pace: () => number;
   private readonly listeners = new Set<() => void>();
-  private readonly plans: [string[], string[]] = [[], []];
+  private readonly plans: string[][] = [[], []];
   private snap: HostSnapshot;
   private error: string | null = null;
   private running = false;

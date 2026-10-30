@@ -28,7 +28,7 @@ const AI_GAMES = Number(process.env.FUZZ_SET_AI ?? 2);
 
 interface Played { end: GameState; record: GameRecord; illegal: string[] }
 
-function play(seed: number, decks: [DeckList, DeckList], levels: [AiLevel | null, AiLevel | null]): Played {
+function play(seed: number, decks: [DeckList, DeckList], levels: (AiLevel | null)[]): Played {
   const setup: GameSetup = { seed, decks };
   let s = createGame(setup, { check: true }).state;
   let r = (seed * 2654435761) >>> 0;

@@ -26,7 +26,7 @@ export interface MatchResult {
   /** null: a bye for a. */
   b: PlayerId | null;
   /** Games won by a and by b; a draw has equal wins. */
-  wins: [number, number];
+  wins: number[];
 }
 
 export type Tiebreaker = 'omw' | 'gw' | 'ogw';

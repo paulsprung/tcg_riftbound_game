@@ -39,7 +39,7 @@ function playOut(seed: number, pick: (d: Decision) => string, order: 'random' | 
   const first = createGame(setupFor(seed, order), { check: true });
   let s: GameState = first.state;
   const states = [s];
-  const seen: Record<PlayerId, ObservedEvent[]> = { 0: observe(first.events, 0), 1: observe(first.events, 1) };
+  const seen: ObservedEvent[][] = [observe(first.events, 0), observe(first.events, 1)];
   while (s.pending) {
     const r = choose(s, { decision: s.pending.id, key: pick(s.pending) }, { check: true });
     s = r.state;
