@@ -35,6 +35,8 @@ export interface DescribeCtx {
   objOf: (id: ObjId) => { def: DefId | null; owner: PlayerId } | null;
   /** The object of battlefield i, for its name. */
   bfObj?: (bf: number) => ObjId | undefined;
+  /** 2v2: every seat's name, so "the opponent" says who [491]. */
+  players?: string[];
 }
 
 /** "A", "A and B", "A, B and C". */
@@ -75,7 +77,19 @@ export function describeAll(events: readonly ObservedEvent[], c: DescribeCtx): L
 
   const out: LogLine[] = [];
   const who = (p: PlayerId) => (p === c.me ? 'me' : 'opponent');
-  const add = (e: ObservedEvent, text: string, w: LogLine['who']) => out.push({ seq: e.seq, text, rule: e.rule, who: w });
+  // with more than one other player "the opponent" becomes the player's name
+  const named2 = (text: string, p: PlayerId | null | undefined) => {
+    if (!c.players || p === null || p === undefined || p === c.me) return text;
+    const n = c.players[p] ?? `Player ${p + 1}`;
+    return text.replace(/\bThe opponent's\b/, `${n}'s`).replace(/\bthe opponent's\b/, `${n}'s`)
+      .replace(/\bThe opponent\b/, n).replace(/\bthe opponent\b/, n);
+  };
+  const actor = (e: ObservedEvent): PlayerId | null => {
+    const x = e as { p?: PlayerId | null; first?: PlayerId };
+    return x.p ?? x.first ?? null;
+  };
+  const add = (e: ObservedEvent, text: string, w: LogLine['who'], by?: PlayerId | null) =>
+    out.push({ seq: e.seq, text: named2(text, by ?? actor(e)), rule: e.rule, who: w });
   const named = (group: number, p: PlayerId): string[] | null => {
     const defs = moved[`${group}:${p}`] ?? [];
     return defs.length > 0 && defs.every((d) => d !== undefined) ? defs.map((d) => c.nameOf(d!)) : null;
@@ -153,7 +167,7 @@ export function describeAll(events: readonly ObservedEvent[], c: DescribeCtx): L
         const by = p === null ? 'A card is' : p === c.me ? 'You' : 'The opponent';
         const what = TOKEN_DEFS.includes(e.def) ? `a ${c.nameOf(e.def)} token` : c.nameOf(e.def);
         add(e, `${by}${p === null ? '' : p === c.me ? ' play' : ' plays'} ${what}${p === null ? ' played' : ''}.`,
-          p === null ? 'game' : who(p));
+          p === null ? 'game' : who(p), p);
         break;
       }
       case 'chainPush': {
@@ -210,7 +224,7 @@ export function describeAll(events: readonly ObservedEvent[], c: DescribeCtx): L
         const r = e.result ?? [];
         const won = r.findIndex((x) => x === 'won');
         add(e, won < 0 ? 'The combat ends with no result.' : won === c.me ? 'You win the combat.' : 'The opponent wins the combat.',
-          'game');
+          'game', won < 0 ? null : (won as PlayerId));
         break;
       }
       case 'control':
@@ -245,7 +259,7 @@ export function describeAll(events: readonly ObservedEvent[], c: DescribeCtx): L
       case 'hide': {
         const o = c.objOf(e.obj ?? -1);
         const mine = o?.owner === c.me;
-        add(e, `${mine ? 'You hide a card' : 'The opponent hides a card'} face down at ${bfName(e.bf)}.`, mine ? 'me' : 'opponent');
+        add(e, `${mine ? 'You hide a card' : 'The opponent hides a card'} face down at ${bfName(e.bf)}.`, mine ? 'me' : 'opponent', o?.owner ?? null);
         break;
       }
       case 'counter': add(e, 'A spell is countered.', 'game'); break;

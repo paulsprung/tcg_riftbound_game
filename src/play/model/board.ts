@@ -66,9 +66,13 @@ export interface LaneModel {
   owner: PlayerId;
   controller: PlayerId | null;
   contested: PlayerId | null;
-  /** Permanents here, split by controller: theirs on top, yours below. */
+  /** Permanents here, split by side: the other side's on top, your side's below (yours, or in 2v2 your
+      teammate's: a battlefield holds one player of each side at most [491]). */
   mine: CardSlot[];
   theirs: CardSlot[];
+  /** Whose units those are (null: none). */
+  mineBy: PlayerId | null;
+  theirsBy: PlayerId | null;
   facedown: CardSlot[];
   /** A showdown or a combat is on here. */
   showdown: boolean;
@@ -93,7 +97,14 @@ export interface ChainEntry {
 
 export interface BoardModel {
   me: SideModel;
+  /** The first opponent (the only one in a Duel). */
   opponent: SideModel;
+  /** Every player by seat; in 2v2 your teammate and the two opponents. */
+  sides: SideModel[];
+  teammate: SideModel | null;
+  opponents: SideModel[];
+  /** The teams by seat (2v2), or null. */
+  teams: PlayerId[][] | null;
   lanes: LaneModel[];
   /** 0 during setup [118]. */
   turn: number;
@@ -153,22 +164,29 @@ function sideOf(v: PlayerView, p: PlayerId, isRune: (def: DefId) => boolean): Si
 /** The board of a view. `isRune` tells runes from other permanents in
     base; the view itself holds only DefIds. */
 export function boardOf(v: PlayerView, isRune: (def: DefId) => boolean = () => false): BoardModel {
-  const opp = v.players.find((pl) => pl.id !== v.me)!.id;
+  const teams = v.mode.teams;
+  const team = (p: PlayerId | null) => (p === null ? -1 : teams ? teams.findIndex((t) => t.includes(p)) : p);
+  const mySide = (p: PlayerId | null) => p !== null && team(p) === team(v.me);
+  const opps = v.players.filter((pl) => !mySide(pl.id)).map((pl) => pl.id);
+  const mate = v.players.find((pl) => pl.id !== v.me && mySide(pl.id))?.id ?? null;
   const lanes = v.bfs.map((b, bf): LaneModel => {
     const here = b.here.map((id) => slotOf(v, id, isRune));
     const controllerOf = (c: CardSlot) => v.objects[c.id].controller;
     const card = slotOf(v, b.obj, isRune);
+    const mine = here.filter((c) => mySide(controllerOf(c)));
+    const theirs = here.filter((c) => !mySide(controllerOf(c)));
     return {
       bf, card, owner: card.owner, controller: b.controller, contested: b.contested,
-      mine: here.filter((c) => controllerOf(c) === v.me),
-      theirs: here.filter((c) => controllerOf(c) !== v.me),
+      mine, theirs, mineBy: mine.length ? controllerOf(mine[0]) : null, theirsBy: theirs.length ? controllerOf(theirs[0]) : null,
       facedown: b.facedown.map((id) => slotOf(v, id, isRune)),
       showdown: v.showdown?.bf === bf, combat: v.combat?.bf === bf,
     };
   });
+  const sides = v.players.map((pl) => sideOf(v, pl.id, isRune));
   return {
-    me: sideOf(v, v.me, isRune),
-    opponent: sideOf(v, opp, isRune),
+    me: sides[v.me],
+    opponent: sides[opps[0]],
+    sides, teammate: mate === null ? null : sides[mate], opponents: opps.map((p) => sides[p]), teams,
     lanes,
     turn: v.turn.n,
     phase: v.turn.phase,

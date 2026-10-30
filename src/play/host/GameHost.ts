@@ -135,7 +135,7 @@ export class GameHost implements TableHost {
   private state: GameState;
   private answers: GameRecord['answers'] = [];
   private conceded: GameRecord['concede'] | undefined;
-  private readonly seen: ObservedEvent[][] = [[], []];
+  private readonly seen: ObservedEvent[][];
   private readonly clock: Clock;
   private readonly check: boolean;
   private readonly started: string;
@@ -147,7 +147,7 @@ export class GameHost implements TableHost {
   private readonly pick: () => number;
   private readonly pace: () => number;
   private readonly listeners = new Set<() => void>();
-  private readonly plans: string[][] = [[], []];
+  private readonly plans: string[][];
   private snap: HostSnapshot;
   private error: string | null = null;
   private running = false;
@@ -167,6 +167,9 @@ export class GameHost implements TableHost {
     this.human = humans[0] ?? 0;
     this.opponent = other(this.human);
     this.viewer = this.human;
+    // one log and one computer plan per seat: two in a Duel, four in 2v2
+    this.seen = o.setup.decks.map(() => []);
+    this.plans = o.setup.decks.map(() => []);
     this.clock = o.clock ?? realClock;
     this.check = o.check ?? false;
     this.started = o.started ?? '';
@@ -179,13 +182,13 @@ export class GameHost implements TableHost {
       this.state = resume.state;
       this.answers = resume.record.answers.slice();
       this.conceded = resume.record.concede;
-      for (const p of [0, 1] as const) this.seen[p].push(...observe(resume.events, p));
+      for (const p of this.seatIds()) this.seen[p].push(...observe(resume.events, p));
       const d = this.state.pending;
       if (d && this.hotseat && autoAnswer(d) === null) this.viewer = d.player;
     } else {
       const first = createGame(o.setup, { check: this.check });
       this.state = first.state;
-      for (const p of [0, 1] as const) this.seen[p].push(...observe(first.events, p));
+      for (const p of this.seatIds()) this.seen[p].push(...observe(first.events, p));
     }
     this.updateHandoff();
     this.snap = this.snapshot();
@@ -201,6 +204,8 @@ export class GameHost implements TableHost {
   }
 
   get hotseat(): boolean { return this.seats.every((s) => s.k === 'human'); }
+
+  private seatIds(): PlayerId[] { return this.setup.decks.map((_, p) => p as PlayerId); }
 
   // ---- for React's useSyncExternalStore (host/useHost.ts) ----
 
@@ -299,7 +304,7 @@ export class GameHost implements TableHost {
     const r = concedeGame(this.state, p, { check: this.check });
     this.state = r.state;
     this.conceded = { p, afterAnswer: this.answers.length };
-    for (const q of [0, 1] as const) this.seen[q].push(...observe(r.events, q));
+    for (const q of this.seatIds()) this.seen[q].push(...observe(r.events, q));
     this.handoff = null;
     this.save();
     this.publish();
@@ -340,7 +345,7 @@ export class GameHost implements TableHost {
     }
     this.state = s;
     this.answers.push(...answers);
-    for (const p of [0, 1] as const) this.seen[p].push(...observe(events, p));
+    for (const p of this.seatIds()) this.seen[p].push(...observe(events, p));
     this.error = null;
     this.generation++;
     this.updateHandoff();
@@ -352,7 +357,7 @@ export class GameHost implements TableHost {
   private save() {
     if (!this.onSave) return;
     const s = this.state;
-    const at: SaveInfo = { turn: s.turn.n, points: [s.players[0].points, s.players[1].points], over: s.result !== null };
+    const at: SaveInfo = { turn: s.turn.n, points: s.players.map((p) => p.points), over: s.result !== null };
     try { this.onSave(this.record(), at); } catch { /* storage full or blocked: play on */ }
   }
 

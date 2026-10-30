@@ -119,6 +119,32 @@ function BaseRow({ side, cards, onZoom, acts, kind }: Common & { side: SideModel
   );
 }
 
+/** 2v2: another player compact, their legend and champion, what they hold, their base [491]. */
+function MiniSide({ side, cards, onZoom, acts, name, tag }: Common & { side: SideModel; name: string; tag: 'ally' | 'opp' }) {
+  return (
+    <section className={`bd-mini bd-mini--${tag}`} aria-label={`${name}'s side`}>
+      <div className="bd-mini__who">
+        <strong>{name}</strong>
+        <em>{tag === 'ally' ? 'Teammate' : 'Opponent'}</em>
+        <span>{side.deckName}</span>
+      </div>
+      <div className="bd-mini__zones">
+        {side.legend.map((c) => <TableCard key={c.id} slot={c} cards={cards} size="xs" onTap={onZoom} />)}
+        {side.champion && <TableCard slot={side.champion} cards={cards} size="xs" onTap={onZoom} />}
+      </div>
+      <ul className="bd-mini__counts">
+        <li><b>{side.hand.length}</b> hand</li>
+        <li><b>{side.deck}</b> deck</li>
+        <li><b>{side.runes.length}</b> runes</li>
+        <li><b>{side.trash.length}</b> trash</li>
+      </ul>
+      <Fan n={side.base.length} className="bd-mini__base" label={`${name}'s base`}>
+        {side.base.map((c) => <TableCard key={c.id} slot={c} cards={cards} size="xs" onTap={onZoom} onAct={actOn(acts, c)} />)}
+      </Fan>
+    </section>
+  );
+}
+
 function Units({ slots, cards, onZoom, acts, className }: Common & { slots: CardSlot[]; className: string }) {
   return (
     <Fan n={slots.length} className={className}>
@@ -127,17 +153,20 @@ function Units({ slots, cards, onZoom, acts, className }: Common & { slots: Card
   );
 }
 
-function Lane({ lane, me, cards, onZoom, acts, kind }: Common & { lane: LaneModel; me: number }) {
+function Lane({ lane, me, mate, names, cards, onZoom, acts, kind }: Common & { lane: LaneModel; me: number; mate: number | null; names?: string[] }) {
   const look = useTableLook();
   const buttons = laneButtons(acts, lane.bf, kind);
   const flash = look.fx.lanes[lane.bf];
-  const ring = lane.controller === null ? 'none' : lane.controller === me ? 'me' : 'opp';
+  const ring = lane.controller === null ? 'none' : lane.controller === me ? 'me' : lane.controller === mate ? 'ally' : 'opp';
+  // 2v2: whose units each row holds, when it isn't simply you and your opponent
+  const who = (p: number | null) => (p === null || !names ? null : p === me ? null : names[p]);
   return (
     <section className={`bd-lane${flash ? ` lane--fx-${flash}` : ''}${look.coachLanes.has(lane.bf) ? ' is-coached' : ''}${buttons.length > 0 ? ' is-choice' : ''}`}
       aria-label={`Battlefield ${lane.bf + 1}`} data-active={lane.showdown || lane.combat} data-lane={lane.bf}
       data-contested={lane.contested !== null || undefined}>
       <i className="bd-lane__c bd-lane__c--tl" /><i className="bd-lane__c bd-lane__c--tr" />
       <i className="bd-lane__c bd-lane__c--bl" /><i className="bd-lane__c bd-lane__c--br" />
+      {mate !== null && who(lane.theirsBy) && <span className="bd-lane__who bd-lane__who--opp">{who(lane.theirsBy)}</span>}
       <Units slots={lane.theirs} cards={cards} onZoom={onZoom} acts={acts} className="bd-lane__theirs" />
       <div className="bd-lane__bf" data-control={ring}>
         <TableCard slot={lane.card} cards={cards} size="xl" landscape onTap={onZoom} onAct={actOn(acts, lane.card)} />
@@ -149,6 +178,7 @@ function Lane({ lane, me, cards, onZoom, acts, kind }: Common & { lane: LaneMode
         {lane.combat ? <span className="bd-lane__tag">Combat</span> : lane.showdown ? <span className="bd-lane__tag">Showdown</span> : null}
       </div>
       <Units slots={lane.mine} cards={cards} onZoom={onZoom} acts={acts} className="bd-lane__mine" />
+      {mate !== null && who(lane.mineBy) && <span className="bd-lane__who bd-lane__who--ally">{who(lane.mineBy)}</span>}
       {buttons.length > 0 && (
         <div className="bd-lane__choose">
           {buttons.map((b) => (
@@ -164,17 +194,25 @@ function Lane({ lane, me, cards, onZoom, acts, kind }: Common & { lane: LaneMode
 
 export function Board({ board, cards, onZoom, acts, kind, names, rail }: {
   board: BoardModel; cards: CardIndex; onZoom: (s: CardSlot) => void; acts?: Acts; kind?: string;
-  names?: { me: string; opponent: string }; rail: ReactNode;
+  names?: { me: string; opponent: string; all?: string[] }; rail: ReactNode;
 }) {
   const c = { cards, onZoom, acts, kind };
+  const nameOf = (p: number) => names?.all?.[p] ?? `Player ${p + 1}`;
+  // 2v2: both opponents compact on top, your teammate compact above your base [491]
+  const four = board.opponents.length > 1 || board.teammate !== null;
   return (
-    <div className="board">
+    <div className={`board${four ? ' board--four' : ''}`}>
       <div className="board__main">
-        <Strip side={board.opponent} name={names?.opponent} {...c} />
-        <BaseRow side={board.opponent} {...c} />
+        {four ? (
+          <div className="bd-opps">{board.opponents.map((o) => <MiniSide key={o.p} side={o} name={nameOf(o.p)} tag="opp" {...c} />)}</div>
+        ) : <>
+          <Strip side={board.opponent} name={names?.opponent} {...c} />
+          <BaseRow side={board.opponent} {...c} />
+        </>}
         <div className="bd-lanes" style={{ gridTemplateColumns: `repeat(${board.lanes.length}, minmax(0, 1fr))` }}>
-          {board.lanes.map((l) => <Lane key={l.bf} lane={l} me={board.me.p} {...c} />)}
+          {board.lanes.map((l) => <Lane key={l.bf} lane={l} me={board.me.p} mate={board.teammate?.p ?? null} names={names?.all} {...c} />)}
         </div>
+        {board.teammate && <MiniSide side={board.teammate} name={nameOf(board.teammate.p)} tag="ally" {...c} />}
         <BaseRow side={board.me} {...c} />
         <Strip side={board.me} name={names?.me} {...c} />
       </div>

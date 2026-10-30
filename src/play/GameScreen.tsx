@@ -47,7 +47,8 @@ import { restrict, type Coach } from './tutorial/coach.ts';
 
 const FX_MS = 1500;
 
-export interface SeatNames { me: string; opponent: string }
+/** The names at the table: yours, the (first) opponent's, every seat's (2v2: four). */
+export interface SeatNames { me: string; opponent: string; all?: string[] }
 
 /** A guided game (tutorial/TutorialView.tsx): its own subtitle and header
     buttons; no setup sheets, concede or game-over sheet (the tutorial shows
@@ -100,7 +101,9 @@ export function GameScreen({ host, cards, db, names, onNewGame, onChangeDecks, o
   const board = useMemo(() => boardOf(view, isRune), [view]);
   const stage = stageOf(view);
   const summary = useMemo(() => setupSummary(events), [events]);
-  const seatNames: SeatNames = { me: names[viewer], opponent: names[viewer === 0 ? 1 : 0] };
+  const seatNames: SeatNames = { me: names[viewer], opponent: names[board.opponent.p], all: names };
+  // you won: you, or in 2v2 your team [491]
+  const won = (w: number) => w === view.me || board.teammate?.p === w;
   const log = useMemo(() => describeAll(events, {
     me: view.me,
     nameOf: (d) => nameOf(cards, d),
@@ -109,7 +112,8 @@ export function GameScreen({ host, cards, db, names, onNewGame, onChangeDecks, o
       return o ? { def: 'def' in o ? o.def : null, owner: o.owner } : null;
     },
     bfObj: (bf) => view.bfs[bf]?.obj,
-  }), [events, view, cards]);
+    ...(view.players.length > 2 ? { players: names } : {}),
+  }), [events, view, cards, names]);
 
   // ---- animations of the newest events (§12.6) ----
   const [fx, setFx] = useState<Fx>(NO_FX);
@@ -298,7 +302,7 @@ export function GameScreen({ host, cards, db, names, onNewGame, onChangeDecks, o
           <div className="gmenu__panel" role="menu">
             <p className="gmenu__title">
               {board.me.deckName} <span className="muted">vs</span> {board.opponent.deckName}
-              <small>{tutorial ? tutorial.subtitle : online ? `${seatNames.opponent} · ${online.mode} · 1v1 Duel` : `${hot ? 'Hot-seat' : seatNames.opponent} · 1v1 Duel · seed ${host.setup.seed}`}</small>
+              <small>{tutorial ? tutorial.subtitle : online ? `${seatNames.opponent} · ${online.mode} · ${board.teams ? '2v2' : '1v1 Duel'}` : `${hot ? 'Hot-seat' : seatNames.opponent} · ${board.teams ? '2v2 Duo' : '1v1 Duel'} · seed ${host.setup.seed}`}</small>
             </p>
             {!hot && !online && (
               <div className="gmenu__row">
@@ -364,8 +368,8 @@ export function GameScreen({ host, cards, db, names, onNewGame, onChangeDecks, o
         )}
         {stage.k === 'over' && !dismissed && !tutorial && (
           <GameOver
-            tone={hot ? 'neutral' : stage.result.winner === null ? 'draw' : stage.result.winner === view.me ? 'win' : 'loss'}
-            title={hot ? hotResult(stage.result.winner, names) : stage.result.winner === null ? 'Draw' : stage.result.winner === view.me ? 'Victory' : 'Defeat'}
+            tone={hot ? 'neutral' : stage.result.winner === null ? 'draw' : won(stage.result.winner) ? 'win' : 'loss'}
+            title={hot ? hotResult(stage.result.winner, names) : stage.result.winner === null ? 'Draw' : won(stage.result.winner) ? 'Victory' : 'Defeat'}
             detail={`${resultHow(stage.result, hot ? null : view.me)} [${stage.result.rule}]`}
             eyebrow={`${online ? `${online.mode} · ` : ''}Turn ${view.turn.n}`}
             names={[seatNames.me, seatNames.opponent]} points={[board.me.points, board.opponent.points]}

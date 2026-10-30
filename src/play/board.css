@@ -378,3 +378,26 @@ html:not([data-scaled]) .play__stage { min-height: 760px; overflow: visible; }
 .rank-demo__tier > div { display: flex; flex-wrap: wrap; gap: 6px; }
 .rank-demo figure { margin: 0; display: grid; justify-items: center; gap: 2px; width: 130px; }
 .rank-demo figcaption { font-size: 12px; color: var(--muted); letter-spacing: .06em; }
+
+/* ---- 2v2 [491]: both opponents compact on top, the teammate compact above your base ---- */
+.board--four .board__main { grid-template-rows: 19fr 36fr 12fr 12fr 21fr; }
+.bd-opps { display: grid; grid-template-columns: 1fr 1fr; gap: calc(var(--cu) * 1); min-height: 0; }
+.bd-mini {
+  display: grid; grid-template-columns: auto auto auto minmax(0, 1fr); align-items: center; gap: calc(var(--cu) * 1);
+  min-height: 0; padding: calc(var(--cu) * .5) calc(var(--cu) * 1); border: 1px solid rgba(224, 71, 95, .35);
+  background: linear-gradient(180deg, rgba(60, 14, 24, .35), rgba(10, 6, 12, .25));
+}
+.bd-mini--ally { border-color: rgba(10, 200, 185, .4); background: linear-gradient(180deg, rgba(6, 50, 54, .35), rgba(2, 12, 18, .25)); }
+.bd-mini__who { display: grid; gap: 2px; min-width: 0; }
+.bd-mini__who strong { font: 700 calc(var(--cu) * 1.4)/1.1 var(--font-ui); color: var(--gold-hi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: calc(var(--cu) * 16); }
+.bd-mini__who em { font: 700 calc(var(--cu) * .95)/1 var(--font-ui); font-style: normal; letter-spacing: .14em; text-transform: uppercase; color: #f2a7b0; }
+.bd-mini--ally .bd-mini__who em { color: var(--teal); }
+.bd-mini__who span { font-size: calc(var(--cu) * 1); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: calc(var(--cu) * 16); }
+.bd-mini__zones { display: flex; gap: calc(var(--cu) * .4); }
+.bd-mini__counts { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: auto auto; gap: 1px calc(var(--cu) * .8); font-size: calc(var(--cu) * 1); color: var(--muted); }
+.bd-mini__counts b { color: var(--text, #e8e2d0); font-variant-numeric: tabular-nums; }
+.bd-mini__base { justify-content: flex-start; }
+.bd-lane__who { justify-self: center; font: 700 calc(var(--cu) * .95)/1 var(--font-ui); letter-spacing: .12em; text-transform: uppercase; padding: 2px 6px; }
+.bd-lane__who--opp { color: #f2a7b0; }
+.bd-lane__who--ally { color: var(--teal); }
+.bd-lane__bf[data-control="ally"] .hc__face { box-shadow: 0 0 0 2px var(--teal), 0 0 22px rgba(10, 200, 185, .35); }

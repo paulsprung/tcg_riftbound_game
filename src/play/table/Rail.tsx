@@ -38,9 +38,13 @@ export function RailHead({ board, names, menu }: { board: BoardModel; names: { m
   );
 }
 
-export function Scores({ board, names }: { board: BoardModel; names: { me: string; opponent: string } }) {
+export function Scores({ board, names }: { board: BoardModel; names: { me: string; opponent: string; all?: string[] } }) {
   const look = useTableLook();
-  const rows = [{ label: names.opponent, side: board.opponent }, { label: names.me, side: board.me }];
+  // 2v2: a team's points are shared, one row for each team [491]
+  const both = (ps: number[]) => ps.map((p) => names.all?.[p] ?? `Player ${p + 1}`).join(' & ');
+  const rows = board.teams
+    ? [{ label: both(board.opponents.map((o) => o.p)), side: board.opponent }, { label: both([board.me.p, ...(board.teammate ? [board.teammate.p] : [])]), side: board.me }]
+    : [{ label: names.opponent, side: board.opponent }, { label: names.me, side: board.me }];
   const steps = Array.from({ length: board.victoryScore + 1 }, (_, i) => i);
   return (
     <section className="rail__scores" aria-label={`Score, ${board.victoryScore} to win`}>

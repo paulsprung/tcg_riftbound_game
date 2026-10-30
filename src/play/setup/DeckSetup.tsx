@@ -57,11 +57,13 @@ const OPPONENTS: { id: OpponentChoice; label: string; text: string }[] = [
 ];
 
 /** 1v1 is what the engine plays today; the 2v2 Duo rules (Magma Chamber) come later. */
-export function FormatSwitch() {
+/** 1v1 Duel or 2v2 (Magma Chamber [491]); without `onChange` 2v2 isn't offered there yet. */
+export function FormatSwitch({ value = '1v1', onChange }: { value?: '1v1' | '2v2'; onChange?: (v: '1v1' | '2v2') => void }) {
   return (
     <div className="seg seg--format" role="group" aria-label="Format">
-      <button type="button" aria-pressed="true">1v1 Duel</button>
-      <button type="button" disabled aria-pressed="false" title="2v2 is not playable yet">2v2 Duo <em className="lb-soon">soon</em></button>
+      <button type="button" aria-pressed={value === '1v1'} onClick={() => onChange?.('1v1')}>1v1 Duel</button>
+      {onChange ? <button type="button" aria-pressed={value === '2v2'} onClick={() => onChange('2v2')}>2v2 Duo</button>
+        : <button type="button" disabled aria-pressed="false" title="2v2 is not playable here yet">2v2 Duo <em className="lb-soon">soon</em></button>}
     </div>
   );
 }
@@ -162,10 +164,12 @@ export function DeckSlot({ label, b, cards, db, owned, onOpen }: {
   );
 }
 
-export function DeckSetup({ cards, db, initial, error, onStart, saved, onResume, onDiscard, owned, onLimited }: {
+export function DeckSetup({ cards, db, initial, error, onStart, saved, onResume, onDiscard, owned, onLimited, duo, onDuo }: {
   cards: CardIndex; db: CardDb; initial: DeckSetupChoice; error: string | null; onStart: (c: DeckSetupChoice) => void;
   /** Sealed or Draft instead of your own deck. */
   onLimited?: (format: 'sealed' | 'draft') => void;
+  /** 2v2: you and a computer teammate against two computers. */
+  duo?: boolean; onDuo?: (on: boolean) => void;
   saved?: SavedGame | null; onResume?: (g: SavedGame) => void; onDiscard?: () => void;
   /** The starter deck the player owns (collection), if any. */
   owned?: string | null;
@@ -209,7 +213,7 @@ export function DeckSetup({ cards, db, initial, error, onStart, saved, onResume,
               <button type="button" aria-pressed="false" onClick={() => onLimited('draft')}>Draft</button>
             </div>
           )}
-          <FormatSwitch />
+          <FormatSwitch value={duo ? '2v2' : '1v1'} onChange={onDuo ? (v) => onDuo(v === '2v2') : undefined} />
           <button type="button" className="btn btn--small" onClick={() => setSettings(true)}><Icon name="sliders" size={14} /> Settings</button>
         </span>
       </header>

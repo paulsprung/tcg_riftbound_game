@@ -4,7 +4,8 @@ import type { GameRecord } from '../game/index.ts';
 import { GameScreen } from './GameScreen.tsx';
 import { createAi, type AiClient } from './host/aiClient.ts';
 import { localStore, resumable, savedSeat, type SavedGame, type SaveStore } from './host/autosave.ts';
-import { builtInDeck, shortName } from './host/decks.ts';
+import { BUILT_IN_DECKS, builtInDeck, shortName } from './host/decks.ts';
+import { TWO_V_TWO } from '../game/index.ts';
 import { GameHost, type HostOptions, type SaveInfo, type Seat } from './host/GameHost.ts';
 import { cardIndex } from './model/cards.ts';
 import { gameSetup } from './model/setup.ts';
@@ -45,6 +46,8 @@ export function seatName(seats: readonly Seat[], p: number): string {
   const s = seats[p];
   const hot = seats.every((x) => x.k === 'human');
   if (s.k === 'human') return hot ? `Player ${p + 1}` : 'You';
+  // 2v2: the computer across from you is your teammate (seats 0 and 2 are a team)
+  if (s.k === 'ai' && seats.length === 4) return p === 2 ? 'Teammate (computer)' : `Computer ${p === 1 ? 'A' : 'B'}`;
   if (s.k === 'ai') return `Computer (${LEVEL_NAME[s.level]})`;
   if (s.k === 'bot') return 'Simple bot';
   return s.name ?? 'Opponent';
@@ -72,6 +75,7 @@ export function PlayView({ db, tutorial = false, onInGame }: { db: CardDb; tutor
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<SavedGame | null>(() => store.load());
   const [limited, setLimited] = useState<'sealed' | 'draft' | null>(null);
+  const [duo, setDuo] = useState(false);
   const ai = useRef<AiClient | null>(null);
   useEffect(() => { onInGame?.(game !== null); }, [game, onInGame]);
 
@@ -95,10 +99,34 @@ export function PlayView({ db, tutorial = false, onInGame }: { db: CardDb; tutor
   const start = (c: DeckSetupChoice) => {
     setChoice(c);
     setSettings({ opponent: c.opponent });
+    if (duo) { startDuo(c); return; }
     try {
       const setup = gameSetup({ human: 0, mine: deckOf(c.mine), theirs: deckOf(c.theirs), champion: c.champion,
         order: c.order, seed: newSeed() }, cards);
       const seats = seatsFor(c.opponent);
+      show(new GameHost({ ...options(seats), setup, started: new Date().toISOString() }));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  // 2v2 [491]: you and a computer teammate against two computers (or four at one screen); seats 0 and 2 are a team.
+  // The other decks are starters with other Legends; teammates don't share a battlefield.
+  const startDuo = (c: DeckSetupChoice) => {
+    try {
+      const mine = deckOf(c.mine), first = deckOf(c.theirs);
+      const pickFor = (taken: DeckList[], mate: DeckList | null) => BUILT_IN_DECKS.map((b) => b.deck)
+        .find((d) => !taken.some((t) => t.legend === d.legend) && !(mate && mate.battlefields.some((bf) => d.battlefields.includes(bf))))
+        ?? BUILT_IN_DECKS[0].deck;
+      const ally = pickFor([mine, first], mine);
+      const second = pickFor([mine, first, ally], first);
+      const one = gameSetup({ human: 0, mine, theirs: first, champion: c.champion, order: 'random', seed: newSeed() }, cards);
+      const two = gameSetup({ human: 0, mine: ally, theirs: second, champion: ally.chosenChampion, order: 'random', seed: 0 }, cards);
+      const setup = { seed: one.seed, decks: [one.decks[0], one.decks[1], two.decks[0], two.decks[1]], mode: TWO_V_TWO,
+        chosenChampion: [c.champion] };
+      const level = c.opponent === 'hotseat' ? null : c.opponent;
+      const seats: Seat[] = level === null ? [{ k: 'human' }, { k: 'human' }, { k: 'human' }, { k: 'human' }]
+        : [{ k: 'human' }, { k: 'ai', level }, { k: 'ai', level }, { k: 'ai', level }];
       show(new GameHost({ ...options(seats), setup, started: new Date().toISOString() }));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -143,6 +171,7 @@ export function PlayView({ db, tutorial = false, onInGame }: { db: CardDb; tutor
     return (
       <>
         <DeckSetup cards={cards} db={db} initial={choice} error={error} onStart={start} owned={own.starter} onLimited={setLimited}
+        duo={duo} onDuo={setDuo}
         saved={saved && resumable(saved) ? saved : null} onResume={resume}
         onDiscard={() => { store.clear(); setSaved(null); }} />
       </>
@@ -150,7 +179,7 @@ export function PlayView({ db, tutorial = false, onInGame }: { db: CardDb; tutor
   }
   const seats = game.host.seats;
   return (
-    <GameScreen key={game.n} host={game.host} cards={cards} db={db} names={[seatName(seats, 0), seatName(seats, 1)]}
+    <GameScreen key={game.n} host={game.host} cards={cards} db={db} names={seats.map((_, p) => seatName(seats, p))}
       onNewGame={() => start(choice)} onLoadRecord={(r) => load(r, seats)}
       onChangeDecks={() => { setSaved(store.load()); setGame(null); }} />
   );
