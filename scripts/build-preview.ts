@@ -63,8 +63,10 @@ async function fetchBytes(url: string): Promise<Buffer> {
 
 async function cardArt(card: Card): Promise<Buffer | null> {
   if (!card.image) return null;
-  // Keyed by size, quality and source too, so changing any of them refetches.
-  const key = createHash('sha1').update(`${card.image}|${WIDTH}|${QUALITY}`).digest('hex').slice(0, 10);
+  // Keyed by size, quality and source too, so changing any of them refetches;
+  // for our own scans also by their content, so a replaced scan is picked up.
+  const own = !/^https?:/.test(card.image) ? createHash('sha1').update(await readFile(resolve(root, 'public', card.image))).digest('hex') : '';
+  const key = createHash('sha1').update(`${card.image}|${WIDTH}|${QUALITY}|${own}`).digest('hex').slice(0, 10);
   const file = resolve(cache, `${safe(card.id)}-${key}.webp`);
   if (existsSync(file)) return readFile(file);
   let bytes: Buffer;
