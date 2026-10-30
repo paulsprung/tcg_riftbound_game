@@ -8,6 +8,7 @@ import { connect, migrate, type Db } from '../server/db.ts';
 import { catalogFrom, economy } from '../server/economy.ts';
 import { handler } from '../server/http.ts';
 import type { CardDb } from '../src/data/types.ts';
+import { defOfPrinting, findCard } from '../src/game/index.ts';
 import { DAILY_COINS, PACK_PRICE } from '../src/economy/rules.ts';
 
 /*
@@ -128,6 +129,21 @@ describe.skipIf(!url)('server economy', () => {
     expect(list.map((d: { body: { name: string } }) => d.body.name)).toEqual(['Mine']);
     await call('DELETE', `/api/decks/${id}`, alice);
     expect((await (await call('GET', '/api/account', alice)).json()).decks).toEqual([]);
+  });
+
+  it('will not grade a copy a deck still needs', async () => {
+    const acc = (await (await call('GET', '/api/account', alice)).json()).account;
+    const [cardId, o] = Object.entries(acc.cards as Record<string, { normal: number; foil: number }>)
+      .find(([id, o]) => o.normal > 0 && o.foil === 0 && defOfPrinting(id) && !findCard(defOfPrinting(id)!)?.supertypes.includes('basic'))!;
+    const def = defOfPrinting(cardId)!;
+    const id = '1c7a4d2f-9e3b-4a8c-8d4e-3f2a1b0c9d8e';
+    const deck = { name: 'Uses it', legend: 'annie-dark-child', chosenChampion: '', main: [{ def, n: o.normal }], runes: [], battlefields: [] };
+    expect((await call('PUT', `/api/decks/${id}`, alice, { deck })).status).toBe(200);
+    expect((await call('POST', '/api/account/grade', alice, { cardId, foil: false })).status).toBe(400);
+    // one fewer in the deck: that copy is spare
+    await call('PUT', `/api/decks/${id}`, alice, { deck: { ...deck, main: [{ def, n: o.normal - 1 }] } });
+    expect((await call('POST', '/api/account/grade', alice, { cardId, foil: false })).status).toBe(200);
+    await call('DELETE', `/api/decks/${id}`, alice);
   });
 
   it('admin grants are for admins and land in the ledger with who gave them', async () => {

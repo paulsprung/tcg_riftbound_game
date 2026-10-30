@@ -60,3 +60,26 @@ export function ownPrintings(d: DeckList, c: CollectionState, orderOf: (def: Def
 
 /** Every legend in the oracle. */
 export const LEGENDS = ORACLE.cards.filter((c) => c.types.includes('legend'));
+
+/** The most copies of each card any one of the decks holds (basic runes left out: they are free). */
+export function deckNeeds(lists: readonly DeckList[]): Owned {
+  const out: Owned = {};
+  for (const d of lists) {
+    const n: Owned = {};
+    const add = (def: DefId, k: number) => { if (def && !isBasicRune(def)) n[def] = (n[def] ?? 0) + k; };
+    add(d.legend, 1);
+    for (const e of d.main ?? []) add(e.def, e.n);
+    for (const e of d.runes ?? []) add(e.def, e.n);
+    for (const b of d.battlefields ?? []) add(b, 1);
+    for (const [def, k] of Object.entries(n)) out[def] = Math.max(out[def] ?? 0, k);
+  }
+  return out;
+}
+
+/** Would grading one raw copy of this printing leave a deck short? A slab can't be played. */
+export function neededInDeck(c: CollectionState, cardId: string, lists: readonly DeckList[]): boolean {
+  const def = defOfPrinting(cardId);
+  if (!def) return false;
+  const need = deckNeeds(lists)[def] ?? 0;
+  return need > 0 && (ownedDefs(c)[def] ?? 0) - 1 < need;
+}

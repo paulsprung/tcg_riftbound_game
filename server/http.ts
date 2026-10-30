@@ -106,7 +106,7 @@ const IMAGE_HOSTS: { prefix: string; origin: string; path: RegExp }[] = [
 ];
 const IMAGE_TYPES = /^image\/(png|jpeg|webp|svg\+xml|gif)$/;
 /** An image from elsewhere: at most this big, and this long to come. */
-const IMAGE_MAX = 8 * 1024 * 1024, IMAGE_MS = 10_000;
+const IMAGE_MAX = 8 * 1024 * 1024, IMAGE_MS = 20_000;
 
 async function proxyImage(req: IncomingMessage, res: ServerResponse, url: URL, f: typeof fetch, host: (typeof IMAGE_HOSTS)[number]) {
   const rest = url.pathname.slice(host.prefix.length);
@@ -114,8 +114,16 @@ async function proxyImage(req: IncomingMessage, res: ServerResponse, url: URL, f
   // only the resize parameters of Riot's image server go along
   const q = new URLSearchParams();
   for (const k of ['w', 'fm', 'q', 'accountingTag', 'size']) { const v = url.searchParams.get(k); if (v && /^[\w-]{1,20}$/.test(v)) q.set(k, v); }
-  // the other server down or slow: a bad gateway, not an error of ours
-  const up = await f(`${host.origin}${rest}${q.size ? `?${q}` : ''}`, { redirect: 'error', signal: AbortSignal.timeout(IMAGE_MS) }).catch(() => null);
+  // the other server down or slow: a bad gateway, not an error of ours. Riot's server resizes on request and is
+  // sometimes slow or refuses a size it hasn't made yet: then the picture at its own size, which it always has
+  const get = (query: URLSearchParams) => f(`${host.origin}${rest}${query.size ? `?${query}` : ''}`, { redirect: 'error', signal: AbortSignal.timeout(IMAGE_MS) }).catch(() => null);
+  let up = await get(q);
+  if ((!up || !up.ok) && q.has('w')) {
+    void up?.body?.cancel();
+    const full = new URLSearchParams(q);
+    full.delete('w');
+    up = await get(full);
+  }
   if (!up) { res.writeHead(502); res.end(); return; }
   const type = (up.headers.get('content-type') ?? '').split(';')[0].trim();
   const size = Number(up.headers.get('content-length') ?? 0);

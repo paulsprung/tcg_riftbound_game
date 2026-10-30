@@ -56,6 +56,8 @@ function HoloCardInner({
   const holo = useRef<HoloCanvasHandle>(null);
   const [loaded, setLoaded] = useState(false);
   const [broken, setBroken] = useState(false);
+  // a picture that failed (the image server slow or busy, a dropped connection) is asked for again a few times
+  const [retry, setRetry] = useState(0);
   // null: not tried yet; true: the shader draws the card; false: CSS foil
   const [glOk, setGlOk] = useState<boolean | null>(null);
   const foilStyle = useFoilStyle();
@@ -79,13 +81,18 @@ function HoloCardInner({
     return () => t.destroy();
   }, [tilt, gyro, feed]);
 
-  useEffect(() => { setLoaded(false); setBroken(false); setGlOk(null); }, [card.id]);
+  useEffect(() => { setLoaded(false); setBroken(false); setRetry(0); setGlOk(null); }, [card.id]);
+  const onImgError = () => {
+    if (retry >= 3) { setBroken(true); return; }
+    setTimeout(() => setRetry((r) => r + 1), 800 * 2 ** retry);
+  };
 
   const landscape = card.orientation === 'landscape';
   const sideways = landscape && !upright;
   const px = typeof width === 'number' ? width : 260;
   const image = useCardImage(card, imageWidth ?? Math.min(744, Math.ceil(px * (window.devicePixelRatio || 1) / 50) * 50));
-  const src = image.src;
+  const src = image.src && retry > 0 && !image.src.startsWith('blob:') && !image.src.startsWith('data:')
+    ? `${image.src}${image.src.includes('?') ? '&' : '?'}retry=${retry}` : image.src;
   const failed = broken || image.failed;
   const imgClass = `hc__img${sideways ? ' hc__img--sideways' : ''}`;
   const glitter = ETCHED.includes(finish);
@@ -134,7 +141,7 @@ function HoloCardInner({
                 loading="lazy"
                 ref={(el) => { if (el && el.complete && el.naturalWidth > 0) setLoaded(true); }}
                 onLoad={() => setLoaded(true)}
-                onError={() => setBroken(true)}
+                onError={onImgError}
               />
             ) : failed || !card.image ? (
               <div className="hc__fallback">

@@ -6,7 +6,8 @@ import type { CollectionState, ShowcaseItem } from '../src/collection/store.ts';
 import type { CardDb } from '../src/data/types.ts';
 import { DAILY_COINS, DAY, MAX_BUY, SHOWCASE_SIZE, STARTER_COINS, TUTORIAL_PACKS } from '../src/economy/rules.ts';
 import { startersFrom, type StarterChoice } from '../src/economy/starter.ts';
-import { findCard, STARTERS } from '../src/game/index.ts';
+import { findCard, STARTERS, type DeckList } from '../src/game/index.ts';
+import { neededInDeck } from '../src/decks/ownership.ts';
 import { DECK_PRICE, dealSpecial, packPrice, specialPack } from '../src/economy/products.ts';
 import { openPack, type Pull } from '../src/pack/generate.ts';
 import { BOOSTER_SETS } from '../src/pack/packConfig.ts';
@@ -214,9 +215,13 @@ export const economy = {
     if (typeof cardId !== 'string' || typeof foil !== 'boolean') throw new Refused('Which card?');
     return withAccount(db, userId, async (c) => {
       const at = foil ? 1 : 0;
+      const lists = (await c.query('SELECT body FROM decks WHERE user_id = $1', [userId])).rows.map((r) => r.body as DeckList);
       const left = await editCards(c, userId, (cards) => {
         const o = Object.hasOwn(cards, cardId) ? cards[cardId] : undefined;
         if (!Array.isArray(o) || !(o[at] >= 1)) throw new Refused('You have no raw copy of that card');
+        // a slab can't be played: a copy a deck still needs stays raw
+        const own = { cards: Object.fromEntries(Object.entries(cards).map(([id, v]) => [id, { normal: v?.[0] ?? 0, foil: v?.[1] ?? 0 }])) } as CollectionState;
+        if (neededInDeck(own, cardId, lists)) throw new Refused('A deck of yours needs that copy: grade a spare one, or take it out of the deck first');
         o[at] -= 1;
         return o[at];
       });

@@ -38,6 +38,8 @@
 .picker__grid--slabs { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
 @media (max-width: 480px) { .picker__grid, .picker__grid--slabs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .picker__item { position: relative; }
+.picker__item--locked .hc { filter: grayscale(.85) brightness(.55); cursor: not-allowed; }
+.picker__lock { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 4px 10px; border-radius: 999px; background: rgba(0,0,0,.75); color: #fff; font-size: 12px; font-weight: 600; white-space: nowrap; pointer-events: none; }
 
 /* -- grading ----------------------------------------------------------- */
 

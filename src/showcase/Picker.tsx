@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { HoloCard } from '../card/HoloCard.tsx';
 import { collection, useCollection } from '../collection/store.ts';
 import { defaultFinish } from '../data/cardInfo.ts';
+import { neededInDeck } from '../decks/ownership.ts';
+import { useDecks } from '../decks/store.ts';
 import type { Card, CardDb } from '../data/types.ts';
 import type { Slab as SlabData } from './grading.ts';
 import { rank } from './rank.ts';
@@ -22,6 +24,7 @@ interface Props {
 /** Choose a card from the collection, rarest first. */
 export function Picker({ db, title, mode, onPickRaw, onPickSlab, onClose }: Props) {
   const owned = useCollection();
+  const lists = useDecks();
   const [tab, setTab] = useState<'slabs' | 'raw'>(mode === 'display' && owned.slabs.length ? 'slabs' : 'raw');
   const [query, setQuery] = useState('');
   const [shown, setShown] = useState(PAGE);
@@ -95,13 +98,19 @@ export function Picker({ db, title, mode, onPickRaw, onPickSlab, onClose }: Prop
           </div>
         ) : (
           <div className={`picker__grid${tab === 'slabs' ? ' picker__grid--slabs' : ''}`}>
-            {tab === 'raw' && rawShown.slice(0, shown).map(({ card, foil, count: n }) => (
-              <div key={`${card.id}-${foil}`} className="picker__item">
+            {tab === 'raw' && rawShown.slice(0, shown).map(({ card, foil, count: n }) => {
+              // grading the last copy a deck needs would leave it unplayable
+              const locked = mode === 'grade' && neededInDeck(owned, card.id, lists);
+              return (
+              <div key={`${card.id}-${foil}`} className={`picker__item${locked ? ' picker__item--locked' : ''}`}
+                title={locked ? 'In a deck: get a spare copy or take it out of the deck to grade it' : undefined}>
                 <HoloCard card={card} finish={defaultFinish(card, foil)} width="100%" imageWidth={320}
-                  onClick={() => onPickRaw(card, foil)} />
+                  onClick={locked ? undefined : () => onPickRaw(card, foil)} />
+                {locked && <span className="picker__lock">In a deck</span>}
                 <span className="count-badge">×{n}{foil && defaultFinish(card, false) === 'none' && <span className="count-badge__foil">✦ foil</span>}</span>
               </div>
-            ))}
+              );
+            })}
             {tab === 'slabs' && slabsShown.slice(0, shown).map((s) => (
               <div key={s.cert} className="picker__item">
                 <Slab slab={s} card={byId.get(s.cardId)!} width="100%" imageWidth={320} onClick={() => onPickSlab?.(s)} />
