@@ -3,13 +3,15 @@
 App, Postgres und (optional) ein Cloudflare Tunnel laufen per Docker Compose
 auf einem Server. Datenbank-Migrationen laufen beim Start von selbst.
 
-Es gibt zwei Wege ins Internet:
+Es gibt drei Wege ins Internet:
 
 - **Variante A: Cloudflare Tunnel** (Standard). Der Tunnel verbindet sich von
   innen zu Cloudflare. Es müssen keine Ports offen sein und auf dem Server
   braucht es keine Zertifikate.
 - **Variante B: eigener Reverse Proxy** (Nginx, Caddy, Traefik, Nginx Proxy
   Manager …). Der Proxy macht HTTPS und leitet an die App weiter.
+- **Variante C: Cloudflare-Proxy vor deinem Nginx** (orange Wolke im DNS).
+  Der Weg ist dann Cloudflare → Nginx auf dem Server → App.
 
 Getestet: das Image baut, `app` und `db` starten, die Migrationen laufen,
 `/api/health` antwortet.
@@ -122,6 +124,65 @@ noch im Image.
    Im **Nginx Proxy Manager** reicht ein Proxy Host auf `<Server-IP>:8080`
    mit eingeschalteter Option „Websockets Support“ und einem SSL-Zertifikat.
 
+## 3C. Cloudflare-Proxy + eigener Nginx
+
+1. Such dir einen freien Port für die App, z. B. `8095`. Gibt dieser Befehl
+   nichts aus, ist der Port frei:
+
+   ```bash
+   sudo ss -tlnp | grep ':8095 '
+   ```
+
+2. Ergänze die `.env`:
+
+   ```
+   APP_PORT=8095
+   APP_BIND=127.0.0.1
+   TRUST_PROXY=true
+   ```
+
+   - `TRUST_PROXY=true`: Die App liest die Besucher-IP aus `CF-Connecting-IP`.
+     Den Header setzt Cloudflare, und Nginx reicht ihn unverändert durch.
+   - Läuft Nginx selbst in Docker (z. B. Nginx Proxy Manager), setze
+     `APP_BIND=0.0.0.0` und sperre den Port nach außen
+     (`ufw deny 8095`). Ziel ist dann `http://<Server-IP>:8095`.
+3. Starte nur App und Datenbank:
+
+   ```bash
+   docker compose up -d --build app db
+   ```
+
+4. Nginx (`/etc/nginx/sites-available/rift`, dann verlinken und
+   `nginx -t && systemctl reload nginx`):
+
+   ```nginx
+   server {
+       listen 443 ssl http2;
+       server_name rift.shyy.dev;
+       ssl_certificate     /etc/ssl/cloudflare/rift.pem;   # Cloudflare Origin Certificate
+       ssl_certificate_key /etc/ssl/cloudflare/rift.key;
+       location / {
+           proxy_pass http://127.0.0.1:8095;
+           proxy_http_version 1.1;
+           proxy_set_header Host $host;
+           proxy_set_header Upgrade $http_upgrade;
+           proxy_set_header Connection "upgrade";
+           proxy_read_timeout 3600s;
+       }
+   }
+   ```
+
+5. In Cloudflare:
+   - Setze **SSL/TLS** auf **Full (strict)**.
+   - Das Zertifikat für Nginx holst du unter **SSL/TLS → Origin Server →
+     Create Certificate**.
+   - **Network → WebSockets** muss an sein (Standard).
+6. **Wichtig:** Lass Port 80/443 auf dem Server nur von Cloudflare erreichen,
+   z. B. in der Hetzner Cloud Firewall: Quellen sind die Bereiche von
+   https://www.cloudflare.com/ips/. Sonst könnte jemand direkt an Cloudflare
+   vorbei einen falschen `CF-Connecting-IP` schicken und so die Rate-Limits
+   umgehen.
+
 Die Seite muss über HTTPS laufen: das Login-Cookie ist dann `Secure`, und
 Discord verlangt die exakte Redirect-Adresse.
 
@@ -129,7 +190,7 @@ Discord verlangt die exakte Redirect-Adresse.
 
 ```bash
 docker compose ps                    # app und db "healthy"
-curl -s 127.0.0.1:8080/api/health    # {"ok":true,...}
+curl -s 127.0.0.1:8080/api/health    # {"ok":true,...}  (Port = APP_PORT)
 curl -s 127.0.0.1:8080/api/site      # deine Offenlegung
 docker compose logs -f app           # "migrations applied …", "Riftbound server on :8080"
 ```
@@ -164,7 +225,7 @@ der Link „Admin“ (`#admin`):
 
 ```bash
 cd rift && git pull && docker compose up -d --build          # Variante A
-cd rift && git pull && docker compose up -d --build app db   # Variante B
+cd rift && git pull && docker compose up -d --build app db   # Variante B und C
 ```
 
 Laufende Spiele überstehen einen Neustart: Sie werden aus `live_games`
