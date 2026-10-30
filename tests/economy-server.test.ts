@@ -141,4 +141,19 @@ describe.skipIf(!url)('server economy', () => {
     expect(users.users.map((u: { name: string }) => u.name)).toEqual(['alice']);
     expect((await call('POST', '/api/admin/grant', bob, { userId: aliceId, coins: 5, reason: '' })).status).toBe(400);
   });
+  it('special packs and official decks: bought with coins, dealt by the server', async () => {
+    await economy.grant(db, aliceId, aliceId, 1500 + 600, {}, 'test');
+    let acc = (await (await call('POST', '/api/account/buy', alice, { setId: 't1', n: 1 })).json()).account;
+    expect(acc.packs.t1).toBe(1);
+    const open = await (await call('POST', '/api/account/open', alice, { setId: 't1' })).json();
+    expect(open.pulls).toHaveLength(1);
+    expect(open.pulls[0].id).toMatch(/^t1[as]-/);
+    expect((await call('POST', '/api/account/buy', alice, { setId: 'nope', n: 1 })).status).toBe(400);
+    const before = (await (await call('GET', '/api/account', alice)).json()).account;
+    acc = (await (await call('POST', '/api/account/deck', alice, { id: 'jinx' })).json()).account;
+    expect(acc.coins).toBe(before.coins - 600);
+    expect((acc.packs.ogn ?? 0)).toBe((before.packs.ogn ?? 0) + 1);
+    expect((await call('POST', '/api/account/deck', alice, { id: '__proto__' })).status).toBe(400);
+    expect((await call('POST', '/api/account/deck', bob, { id: 'jinx' })).status).toBe(400);
+  });
 });

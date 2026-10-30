@@ -68,21 +68,24 @@ function askMotion() {
 interface Props {
   set: SetInfo;
   cards: Card[];
-  pack: PackConfig;
+  /** A booster's slots; or `deal` for any other pack (the shop's special packs). */
+  pack?: PackConfig;
+  deal?: () => Pull[];
   style: SetStyle;
   onInspect: (t: InspectTarget) => void;
   onExit: () => void;
 }
 
-export function PackOpening({ set, cards, pack, style, onInspect, onExit }: Props) {
+export function PackOpening({ set, cards, pack, deal: dealPack, style, onInspect, onExit }: Props) {
   const hero = useMemo(() => heroCard(cards, style), [cards, style]);
+  const deal = () => (dealPack ? dealPack() : openPack(cards, pack!));
   // A pack left mid-reveal picks up where it stopped.
   const [resumed] = useState(() => {
     const p = readPending();
     const pulls = p && p.setId === set.id ? fromPending(p, cards) : null;
     return pulls && p ? { pulls, index: Math.min(p.index, pulls.length - 1), before: p.before } : null;
   });
-  const [pulls, setPulls] = useState<Pull[]>(() => resumed?.pulls ?? openPack(cards, pack));
+  const [pulls, setPulls] = useState<Pull[]>(() => resumed?.pulls ?? deal());
   const [phase, setPhase] = useState<Phase>(resumed ? 'reveal' : 'sealed');
   const [index, setIndex] = useState(resumed?.index ?? 0);
   const [flipped, setFlipped] = useState(false);
@@ -190,7 +193,7 @@ export function PackOpening({ set, cards, pack, style, onInspect, onExit }: Prop
     if (left < 1) return;
     window.scrollTo(0, 0);
     savePending(null);
-    setPulls(openPack(cards, pack));
+    setPulls(deal());
     setIndex(0);
     setFlipped(false);
     setWantFlip(false);

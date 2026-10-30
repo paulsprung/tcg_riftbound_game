@@ -75,7 +75,7 @@ function Art({ set, style, hero }: Pick<Props, 'set' | 'style' | 'hero'>) {
       </div>
       <div className="pk__meta">
         <span>{style.tagline}</span>
-        <span>Booster · 14 cards</span>
+        <span>{style.contents ?? 'Booster · 14 cards'}</span>
       </div>
     </div>
   );

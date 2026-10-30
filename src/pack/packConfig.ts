@@ -63,6 +63,8 @@ export interface SetStyle {
   /** Champion on the real wrapper; their card art is used as key art. */
   hero?: string;
   tagline?: string;
+  /** What the drawn wrapper says it holds; a booster's 14 cards when not given. */
+  contents?: string;
 }
 
 const BOX = 24;

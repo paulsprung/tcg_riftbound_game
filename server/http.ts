@@ -284,6 +284,10 @@ export function handler({ cfg, db, fetch: f = fetch, catalog, online, director, 
             const b = await body(req);
             return json(res, 200, await economy.openPack(db, await getCatalog(), user.id, String(b.setId)));
           }
+          if (route === 'POST /api/account/deck') {
+            const b = await body(req);
+            return json(res, 200, { account: await economy.buyDeck(db, await getCatalog(), user.id, b.id) });
+          }
           if (route === 'POST /api/account/daily') return json(res, 200, { account: await economy.claimDaily(db, user.id) });
           if (route === 'POST /api/account/starter') {
             const b = await body(req);

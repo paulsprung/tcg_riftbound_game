@@ -71,6 +71,13 @@ export const decks = {
     commit(state.filter((d) => d.id !== id));
     if (remote) send(api('DELETE', `/api/decks/${id}`));
   },
+  /** A list (a deck bought in the shop) as a deck of your own, ready to play and change. */
+  saveCopy(list: DeckList): SavedDeck {
+    const d: SavedDeck = { ...list, id: newId(), source: 'custom', updatedAt: Date.now() };
+    commit([d, ...state]);
+    toServer(d);
+    return d;
+  },
   /** A copy under a new id, "(copy)" added to its name. */
   duplicate(id: string): SavedDeck | null {
     const d = state.find((x) => x.id === id);

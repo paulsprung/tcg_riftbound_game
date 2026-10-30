@@ -4,9 +4,10 @@ import { join } from 'node:path';
 import type pg from 'pg';
 import type { CollectionState, ShowcaseItem } from '../src/collection/store.ts';
 import type { CardDb } from '../src/data/types.ts';
-import { DAILY_COINS, DAY, MAX_BUY, PACK_PRICE, SHOWCASE_SIZE, STARTER_COINS, TUTORIAL_PACKS } from '../src/economy/rules.ts';
+import { DAILY_COINS, DAY, MAX_BUY, SHOWCASE_SIZE, STARTER_COINS, TUTORIAL_PACKS } from '../src/economy/rules.ts';
 import { startersFrom, type StarterChoice } from '../src/economy/starter.ts';
 import { findCard, STARTERS } from '../src/game/index.ts';
+import { DECK_PRICE, dealSpecial, packPrice, specialPack } from '../src/economy/products.ts';
 import { openPack, type Pull } from '../src/pack/generate.ts';
 import { BOOSTER_SETS } from '../src/pack/packConfig.ts';
 import { gradeCard, type Slab } from '../src/showcase/grading.ts';
@@ -132,10 +133,10 @@ export type WirePull = Pick<Pull, 'foil' | 'finish' | 'slot' | 'hype'> & { id: s
 
 export const economy = {
   async buyPack(db: Db, userId: string, setId: string, n: number) {
-    if (!BOOSTER_SETS.some((b) => b.id === setId)) throw new Refused('No such pack');
+    if (!BOOSTER_SETS.some((b) => b.id === setId) && !specialPack(setId)) throw new Refused('No such pack');
     if (!Number.isInteger(n) || n < 1 || n > MAX_BUY) throw new Refused(`Buy 1 to ${MAX_BUY} packs`);
     return withAccount(db, userId, async (c) => {
-      const cost = PACK_PRICE * n;
+      const cost = packPrice(setId) * n;
       const r = await c.query('UPDATE accounts SET coins = coins - $2 WHERE user_id = $1 AND coins >= $2', [userId, cost]);
       if (r.rowCount !== 1) throw new Refused('Not enough coins');
       await addPacks(c, userId, { [setId]: n });
@@ -146,11 +147,11 @@ export const economy = {
 
   async openPack(db: Db, cat: Catalog, userId: string, setId: string, random = secureRandom) {
     const set = cat.sets.get(setId);
-    if (!set) throw new Refused('No such pack');
+    if (!set && !specialPack(setId)) throw new Refused('No such pack');
     return withAccount(db, userId, async (c) => {
       const r = await c.query('UPDATE owned_packs SET n = n - 1, opened = opened + 1 WHERE user_id = $1 AND set_id = $2 AND n > 0', [userId, setId]);
       if (r.rowCount !== 1) throw new Refused('No such pack to open');
-      const pulls = openPack(set.cards, set.pack, random);
+      const pulls = set ? openPack(set.cards, set.pack, random) : dealSpecial(setId, cat.db.cards, random);
       await addCards(c, userId, pulls.map((p) => ({ id: p.card.id, foil: p.foil, n: 1 })));
       await ledger(c, userId, 0, { [setId]: -1 }, 'open pack');
       const wire: WirePull[] = pulls.map((p) => ({ id: p.card.id, foil: p.foil, finish: p.finish, slot: p.slot, hype: p.hype }));
@@ -178,6 +179,20 @@ export const economy = {
       await addCards(c, userId, Object.entries(s.cards).map(([id, n]) => ({ id, foil: false, n })));
       await addPacks(c, userId, { [s.booster]: 1 });
       await ledger(c, userId, STARTER_COINS, { [s.booster]: 1 }, `starter ${s.id}`);
+      return readAccount(c, userId);
+    });
+  },
+
+  /** An official deck, bought: its cards and its booster, as many times as you like. */
+  async buyDeck(db: Db, cat: Catalog, userId: string, deckId: unknown) {
+    const s = typeof deckId === 'string' ? cat.starters.get(deckId) : undefined;
+    if (!s) throw new Refused('No such deck');
+    return withAccount(db, userId, async (c) => {
+      const r = await c.query('UPDATE accounts SET coins = coins - $2 WHERE user_id = $1 AND coins >= $2', [userId, DECK_PRICE]);
+      if (r.rowCount !== 1) throw new Refused('Not enough coins');
+      await addCards(c, userId, Object.entries(s.cards).map(([id, n]) => ({ id, foil: false, n })));
+      await addPacks(c, userId, { [s.booster]: 1 });
+      await ledger(c, userId, -DECK_PRICE, { [s.booster]: 1 }, `buy deck ${s.id}`);
       return readAccount(c, userId);
     });
   },

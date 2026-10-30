@@ -4,12 +4,19 @@ import type { CardDb } from '../data/types.ts';
 import { heroCard, PackWrapper } from '../pack/PackWrapper.tsx';
 import { readPending } from '../pack/pending.ts';
 import { useViewport } from '../lobby/scale.ts';
+import { useMemo } from 'react';
+import { SPECIAL_PACKS, specialCards } from '../economy/products.ts';
 import { openPack, useBoosters } from './boosters.ts';
 
 /** Packs you own and have not opened yet. */
 export function PacksTab({ db }: { db: CardDb }) {
   const own = useCollection();
-  const sets = useBoosters(db);
+  const boosters = useBoosters(db);
+  // the boosters, then the shop's special packs (Shop → Bundles)
+  const sets = useMemo(() => [
+    ...boosters,
+    ...SPECIAL_PACKS.map((p) => ({ id: p.id, style: p.style, info: { id: p.id, name: p.name, cardCount: 0 }, cards: specialCards(p.id, db.cards) })),
+  ], [boosters, db]);
   const mine = sets.filter((s) => (own.packs[s.id] ?? 0) > 0);
   const pending = readPending();
   const total = mine.reduce((n, s) => n + (own.packs[s.id] ?? 0), 0);

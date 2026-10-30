@@ -4,6 +4,7 @@ import { api, showNotice } from '../net/api.ts';
 import type { Pull } from '../pack/generate.ts';
 import { fromPending, type PendingPack } from '../pack/pending.ts';
 import { DAILY_COINS, DAY, PACK_PRICE, SHOWCASE_SIZE, TUTORIAL_PACKS } from '../economy/rules.ts';
+import { DECK_PRICE, packPrice } from '../economy/products.ts';
 import { gradeCard, type Slab } from '../showcase/grading.ts';
 
 /*
@@ -179,9 +180,21 @@ export const collection = {
   /** Buy unopened packs with coins; false when there are not enough. */
   async buyPack(setId: string, n = 1): Promise<boolean> {
     if (remote) return !!(await ask('POST', '/api/account/buy', { setId, n }));
-    const cost = PACK_PRICE * n;
+    const cost = packPrice(setId) * n;
     if (n < 1 || state.coins < cost) return false;
     commit({ ...state, coins: state.coins - cost, packs: { ...state.packs, [setId]: (state.packs[setId] ?? 0) + n } });
+    return true;
+  },
+  /** An official deck: its cards and its booster. Signed in, the server knows the deck's cards; only its id is sent. */
+  async buyDeck(id: string, cards: Record<string, number>, booster: string): Promise<boolean> {
+    if (remote) return !!(await ask('POST', '/api/account/deck', { id }));
+    if (state.coins < DECK_PRICE) return false;
+    const next = { ...state.cards };
+    for (const [cardId, n] of Object.entries(cards)) {
+      const o = next[cardId] ?? { normal: 0, foil: 0 };
+      next[cardId] = { ...o, normal: o.normal + n };
+    }
+    commit({ ...state, cards: next, coins: state.coins - DECK_PRICE, packs: { ...state.packs, [booster]: (state.packs[booster] ?? 0) + 1 } });
     return true;
   },
   /** Coins for testing, in this browser only: on the server only an admin hands out coins. */

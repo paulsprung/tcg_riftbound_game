@@ -8,13 +8,15 @@ import { useViewport } from '../lobby/scale.ts';
 import { PackOpening } from '../pack/PackOpening.tsx';
 import { heroCard, PackWrapper } from '../pack/PackWrapper.tsx';
 import { useBoosters } from './boosters.ts';
+import { dealSpecial, specialCards, specialPack } from '../economy/products.ts';
 
 const Market = lazy(() => import('./Market.tsx').then((m) => ({ default: m.Market })));
+const Bundles = lazy(() => import('./BundlesView.tsx').then((m) => ({ default: m.BundlesView })));
 
 // What is on screen is in the address: #shop is the store, #shop/bundles the
 // bundles and sets, #shop/market the marketplace, #shop/rad the pack being opened, so the browser's and the
 // phone's back gesture return to the shelf.
-const subFromHash = () => /^#\/?shop\/([a-z0-9]+)/.exec(location.hash)?.[1] ?? null;
+const subFromHash = () => /^#\/?shop\/([a-z0-9-]+)/.exec(location.hash)?.[1] ?? null;
 
 const Coin = () => <span className="lb-coin" aria-hidden />;
 
@@ -34,6 +36,17 @@ export function PacksView({ db, onInspect }: { db: CardDb; onInspect: (t: Inspec
   }, []);
 
   const active = sets.find((s) => s.id === sub);
+  const special = sub ? specialPack(sub) : undefined;
+  if (special) {
+    const cards = specialCards(special.id, db.cards);
+    return (
+      <Lobby bare>
+        <PackOpening key={special.id} set={{ id: special.id, name: special.name, cardCount: cards.length }} cards={cards}
+          deal={() => dealSpecial(special.id, db.cards)} style={special.style}
+          onInspect={onInspect} onExit={() => { location.hash = 'shop/bundles'; }} />
+      </Lobby>
+    );
+  }
   if (active) {
     return (
       <Lobby bare>
@@ -68,10 +81,7 @@ export function PacksView({ db, onInspect }: { db: CardDb; onInspect: (t: Inspec
       {market ? (
         <Suspense fallback={<p className="muted">Loading…</p>}><Market db={db} onInspect={onInspect} /></Suspense>
       ) : bundles ? (
-        <section className="lb-col">
-          <div className="lb-head"><h1>Bundles &amp; Sets</h1></div>
-          <p className="muted">Bundles and sets are coming soon.</p>
-        </section>
+        <Suspense fallback={<p className="muted">Loading…</p>}><Bundles db={db} /></Suspense>
       ) : (
         <section className="lb-col">
           <div className="lb-head">

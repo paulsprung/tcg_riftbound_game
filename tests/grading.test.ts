@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { PACK_PRICE } from '../src/economy/rules.ts';
 import { collection } from '../src/collection/store.ts';
 import { rng } from '../src/pack/generate.ts';
 import { centeringGrade, descriptor, gradeCard, overall } from '../src/showcase/grading.ts';
@@ -57,7 +58,7 @@ describe('collection grading and showcase', () => {
     collection.reset();
     const card = makeCard({ id: 'c1', rarity: 'epic' });
     const pack = (foil: boolean) => async () => {
-      collection.addCoins(100);
+      collection.addCoins(PACK_PRICE);
       await collection.buyPack('tst');
       await collection.openPack('tst', () => [{ card, foil, finish: 'holo', slot: 'Rare+', hype: 2 }], [card]);
     };

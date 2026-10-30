@@ -1121,3 +1121,25 @@ a.lb-rank:hover { border-color: var(--gold); box-shadow: 0 0 22px rgba(200, 170,
 .lobby-team__label { position: absolute; top: 6px; left: 50%; translate: -50% 0; font: 600 11px/1 var(--font-display, inherit); letter-spacing: .18em; text-transform: uppercase; color: var(--gold, #c8aa6e); }
 .lobby-teams .ds-slot, .ds__stage:has(> .ds-slot:nth-child(4)) .ds-slot { width: min(clamp(110px, calc(11 * var(--vw)), 190px), calc(27 * var(--vh))); }
 .play-online__note { text-align: center; margin: 4px auto 0; max-width: 560px; }
+
+/* Shop → Bundles: the collections and the official decks */
+.bundles { overflow-y: auto; padding-right: 6px; }
+.bundle-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+.bundle-grid--decks { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+.bundle {
+  position: relative; display: flex; flex-direction: column; overflow: hidden;
+  border: 1px solid rgba(200, 170, 110, .28); background: linear-gradient(180deg, rgba(10, 30, 50, .7), rgba(3, 14, 27, .85));
+  clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+  transition: border-color .2s, transform .2s;
+}
+.bundle:hover { border-color: rgba(200, 170, 110, .7); transform: translateY(-3px); }
+.bundle__shot { flex: none; height: 190px; padding: 14px; overflow: hidden; background: radial-gradient(ellipse 60% 55% at 50% 60%, rgba(10, 200, 185, .18), transparent 70%); }
+.bundle--deck .bundle__shot { height: 170px; }
+.bundle__shot img { display: block; width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 12px 18px rgba(0, 0, 0, .55)); }
+.bundle__body { display: grid; gap: 6px; padding: 12px 14px 14px; border-top: 1px solid rgba(200, 170, 110, .18); flex: 1; align-content: start; }
+.bundle__body strong { font-size: 15px; letter-spacing: .02em; color: var(--gold-hi, #f0e6d2); }
+.bundle__body p { margin: 0; }
+.bundle__odds { margin: 2px 0 0; padding-left: 16px; font-size: 12px; color: var(--muted); display: grid; gap: 2px; }
+.bundle__actions { display: flex; gap: 8px; margin-top: 6px; align-items: center; }
+.bundle-decks { display: grid; gap: 8px; margin-bottom: 8px; }
+.bundle-decks__title { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--gold, #c8aa6e); }
