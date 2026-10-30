@@ -272,11 +272,18 @@ export function splitTokenFaces(cards: Card[]): Card[] {
  * token numbers (Origins' Recruits, the Buff promo) keep their records
  * under the front face's name.
  */
+/** Token pictures found wrong or not yet checked in the image audit (they show another token). */
+const UNVERIFIED = /\/VEN-T01t?(\.2)?\.webp$|\/VEN-T03(\.2)?\.webp$/;
+
 export function singleTokens(cards: Card[], faces: Card[]): Card[] {
   const twoFaced = cards.filter((c) => c.name.includes(' // '));
   if (twoFaced.length === 0) return cards;
   // printings whose picture is the wrong face (seen in the image audit)
-  const wrongFront = new Set(['unl-t06-t04', 'unl-t07-t04', 'unl-t08-t04', 'ven-t04-t01']);
+  const wrongFront = new Set(['unl-t06-t04', 'unl-t07-t04', 'unl-t08-t04', 'ven-t04-t01',
+    // Radiance's scans show the back face (OCR of the name, image audit)
+    'rad-t01-t02', 'rad-t03-t07', 'rad-t04-t07', 'rad-t05-t06',
+    // and these two other tokens altogether: VEN-T01's picture is the Tentacle, VEN-T03's the Recruit
+    'ven-t01-t02', 'ven-t03-t04']);
   const out: Card[] = cards.filter((c) => !c.name.includes(' // '));
   // per face: the card, and how good its picture is (3 its own render, 2 a printing with it in front, 1 another set's)
   const made = new Map<string, { card: Card; rank: number }>();
@@ -295,7 +302,9 @@ export function singleTokens(cards: Card[], faces: Card[]): Card[] {
       const id = `${set}-t${nn.padStart(2, '0')}`;
       const own = faces.find((f) => f.id === id);
       const inFront = i === 0 && !wrongFront.has(d.id) && d.image ? d : undefined;
+      // a face shown only by a picture nobody has checked is left out (Empowered: no verified render yet)
       const pick = own ?? inFront ?? faceNamed(names[i]);
+      if (pick && UNVERIFIED.test(pick.image)) continue;
       if (!pick) continue;
       const rank = pick === own ? 3 : pick === inFront ? 2 : 1;
       if ((made.get(id)?.rank ?? 0) >= rank) continue;

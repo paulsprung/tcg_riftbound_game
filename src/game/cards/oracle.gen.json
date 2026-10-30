@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "source": {"file":"public/data/cards.json","sha256":"d8fe3bde9b86da80e58a447df1c9ac134c8b4745a0fc56e3308dfd134e038a8b","generatedAt":"2026-10-30T13:03:33.410Z","printings":1722},
+  "source": {"file":"public/data/cards.json","sha256":"cd53d4613866e1f1c1d793f5f70f28faf61625fa990d0c186a555ecac58c930d","generatedAt":"2026-10-30T14:39:20.179Z","printings":1720},
   "hash": "7c7f2be223650159",
   "tokenArt": {"recruit":["ven-t04","rad-t07","rad-t07","ven-t04","ogn-271-298","ogn-272-298","ogn-273-298"],"sprite":["unl-t07","sgn-t08","unl-t07","ogn-274-298","sgn-t07","sgn-t08"],"sandSoldier":["sfd-t02"],"mech":["rad-t06","rad-t06","ven-t03","sfd-t01"],"gold":["unl-t05","sgn-t06","rad-t05","ven-t02","unl-t05","sfd-t03","sgn-t05","sgn-t06"],"reflection":["unl-t06","unl-t06"],"bird":["unl-t02","rad-t01","unl-t02","sgn-t01","sgn-t02"],"brush":["unl-t03","sgn-t03","unl-t03","sgn-t03","sgn-t04"],"baronPit":["unl-t01","unl-t01"],"tentacle":["ven-t06","ven-t06"],"shadowClone":["ven-t05"],"bomb":["rad-t02","rad-t02"]},
   "cards": [

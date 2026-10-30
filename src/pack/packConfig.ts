@@ -153,7 +153,8 @@ const UNLEASHED = pack([rarePlus(2, { ...LATER_RATES, ultPerPack: 0.0008, legend
 });
 
 const VENDETTA = pack([rarePlus(2, { ...LATER_RATES, legendPerBox: 12 })], {
-  tokens: ['VEN-T01', 'VEN-T02', 'VEN-T03', 'VEN-T04', 'VEN-T05', 'VEN-T06'],
+  // VEN-T01 (Empowered) has no checked picture yet: left out of the packs until it has one
+  tokens: ['VEN-T02', 'VEN-T03', 'VEN-T04', 'VEN-T05', 'VEN-T06'],
 });
 
 const RADIANCE = pack([
@@ -162,7 +163,7 @@ const RADIANCE = pack([
 ], {
   ultimate: ['RAD-184/167'],
   // Provisional (dotgg only); re-check once TCGplayer lists the booster tokens.
-  tokens: ['RAD-T01', 'RAD-T02', 'RAD-T03', 'RAD-T04', 'RAD-T05', 'RAD-T06', 'RAD-T07'],
+  tokens: ['RAD-T01', 'RAD-T02', 'RAD-T03', 'RAD-T05', 'RAD-T06', 'RAD-T07'],   // RAD-T04 (Empowered): no checked picture yet
 });
 
 /** Sets you can buy boosters of, newest first. */
