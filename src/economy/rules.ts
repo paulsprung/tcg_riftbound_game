@@ -3,7 +3,7 @@
  * which is the one that applies them once you are signed in.
  */
 
-export const PACK_PRICE = 100;
+export const PACK_PRICE = 200;
 export const DAILY_COINS = 100;
 export const DAY = 86_400_000;
 export const SHOWCASE_SIZE = 5;

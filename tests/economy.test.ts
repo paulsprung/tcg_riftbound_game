@@ -8,9 +8,9 @@ describe('coins and packs', () => {
 
   it('buys packs with coins and opens them from the inventory', async () => {
     expect(await collection.buyPack('rad')).toBe(false);          // no coins yet
-    collection.addCoins(250);
+    collection.addCoins(2 * PACK_PRICE + 50);
     expect(await collection.buyPack('rad', 2)).toBe(true);
-    expect(collection.get().coins).toBe(250 - 2 * PACK_PRICE);
+    expect(collection.get().coins).toBe(50);
     expect(collection.get().packs.rad).toBe(2);
     expect(await collection.buyPack('rad', 1)).toBe(false);       // 50 left
     const card = makeCard({ id: 'r1' });

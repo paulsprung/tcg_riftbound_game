@@ -11,8 +11,8 @@ import { useBoosters } from './boosters.ts';
 
 const Market = lazy(() => import('./Market.tsx').then((m) => ({ default: m.Market })));
 
-// What is on screen is in the address: #shop is the store, #shop/market the
-// marketplace, #shop/rad the pack being opened, so the browser's and the
+// What is on screen is in the address: #shop is the store, #shop/bundles the
+// bundles and sets, #shop/market the marketplace, #shop/rad the pack being opened, so the browser's and the
 // phone's back gesture return to the shelf.
 const subFromHash = () => /^#\/?shop\/([a-z0-9]+)/.exec(location.hash)?.[1] ?? null;
 
@@ -44,13 +44,15 @@ export function PacksView({ db, onInspect }: { db: CardDb; onInspect: (t: Inspec
   }
 
   const market = sub === 'market';
+  const bundles = sub === 'bundles';
   const featured = sets[0];
   const buy = (id: string, n: number) => { void collection.buyPack(id, n); };
 
   const side = (
     <>
       <SideTitle>SHOP</SideTitle>
-      <SideLink href="#shop" icon="bag" active={!market}>Store</SideLink>
+      <SideLink href="#shop" icon="bag" active={!market && !bundles}>Packs</SideLink>
+      <SideLink href="#shop/bundles" icon="gift" active={bundles}>Bundles</SideLink>
       <SideLink href="#shop/market" icon="scale" active={market}>Marketplace</SideLink>
       <div className="lb-side__gap" />
       <SideTitle>YOUR BALANCE</SideTitle>
@@ -65,6 +67,11 @@ export function PacksView({ db, onInspect }: { db: CardDb; onInspect: (t: Inspec
     <Lobby side={side}>
       {market ? (
         <Suspense fallback={<p className="muted">Loading…</p>}><Market db={db} onInspect={onInspect} /></Suspense>
+      ) : bundles ? (
+        <section className="lb-col">
+          <div className="lb-head"><h1>Bundles &amp; Sets</h1></div>
+          <p className="muted">Bundles and sets are coming soon.</p>
+        </section>
       ) : (
         <section className="lb-col">
           <div className="lb-head">
