@@ -4,6 +4,7 @@ import { setEffects, useEffects } from '../card/effects.ts';
 import { api, showNotice } from '../net/api.ts';
 import { logout, useSession } from '../net/session.ts';
 import { setSettings, usePlaySettings, type PaceChoice } from '../play/settings.ts';
+import { DEMO, DEMO_PROFILE } from './demo.ts';
 import { Icon } from './icons.tsx';
 
 /*
@@ -35,7 +36,9 @@ function SettingsWindow({ onClose }: { onClose: () => void }) {
   const fx = useEffects();
   const play = usePlaySettings();
   const session = useSession();
-  const user = session.status === 'online' ? session.user : null;
+  // the preview has nobody signed in: the account part shows, its buttons idle
+  const user = session.status === 'online' ? session.user : DEMO ? { name: DEMO_PROFILE.name, admin: true, avatar: null, id: '' } : null;
+  const off = !(session.status === 'online' && session.user);
   const [sure, setSure] = useState(false);
   const [typed, setTyped] = useState('');
   useEffect(() => {
@@ -77,16 +80,17 @@ function SettingsWindow({ onClose }: { onClose: () => void }) {
         {user && (
           <section className="set-group">
             <p className="lb-label">Account</p>
-            <Row title={user.name} note="Signed in with Discord.">
+            <Row title={user.name} note={off ? 'Signed in with Discord (not in the preview: these buttons do nothing here).' : 'Signed in with Discord.'}>
               <span className="set-btns">
-                {user.admin && <button type="button" className="btn btn--small" onClick={go('admin')}>Admin</button>}
-                <button type="button" className="btn btn--ghost btn--small" onClick={() => { void logout(); }}>Sign out</button>
+                {user.admin && <button type="button" className="btn btn--small" disabled={off} onClick={go('admin')}>Admin</button>}
+                <button type="button" className="btn btn--ghost btn--small" disabled={off} onClick={() => { void logout(); }}>Sign out</button>
               </span>
             </Row>
             <Row title="Your data" note="Everything kept about you, as a file; or the account deleted for good.">
               <span className="set-btns">
-                <a className="btn btn--ghost btn--small" href="/api/account/export" download>Download</a>
-                {!sure && <button type="button" className="btn btn--ghost btn--small set-danger" onClick={() => setSure(true)}>Delete account</button>}
+                {off ? <button type="button" className="btn btn--ghost btn--small" disabled>Download</button>
+                  : <a className="btn btn--ghost btn--small" href="/api/account/export" download>Download</a>}
+                {!sure && <button type="button" className="btn btn--ghost btn--small set-danger" disabled={off} onClick={() => setSure(true)}>Delete account</button>}
               </span>
             </Row>
             {sure && (

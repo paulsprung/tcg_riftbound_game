@@ -69,7 +69,7 @@ export function LobbyRoom({ db, lobby }: { db: CardDb; lobby: LobbyView }) {
   return (
     <section className="play-setup ds">
       <header className="ds__bar">
-        <h1>{lobby.mode === 'casual' ? 'Casual 2v2' : 'Custom game'} <em className="lobby-tag">Lobby</em></h1>
+        <h1>{lobby.mode === 'casual' ? '2v2 Duo' : 'Custom game'} <em className="lobby-tag">Lobby</em></h1>
         <span className="ds__bar-right">
           {lobby.invited.map((i) => <span key={i.id} className="lb-soon-note">Invited: {i.name}</span>)}
           <button type="button" className="btn btn--ghost btn--small" onClick={() => social.leave()}>Leave lobby</button>
