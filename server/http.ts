@@ -195,7 +195,7 @@ export function handler({ cfg, db, fetch: f = fetch, catalog, online, director, 
       const url = new URL(req.url ?? '/', 'http://x');
       path = url.pathname;
       const jar = cookies(req);
-      if (path === '/api/site') return json(res, 200, { operator: cfg.operator });
+      if (path === '/api/site') return json(res, 200, { operator: cfg.operator, cloudflare: cfg.trustProxy === true });
       if (path === '/api/health') return json(res, 200, { ok: true, ...(online ? { games: online.stats.games, queued: online.stats.queued } : {}) });
 
       if (path === '/api/me') {

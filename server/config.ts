@@ -15,8 +15,9 @@ export interface Config {
       header, behind a reverse proxy of your own (TRUST_PROXY=forwarded) the last X-Forwarded-For entry,
       which that proxy adds; otherwise the connection itself. */
   trustProxy: boolean | 'forwarded';
-  /** Who runs the site, for the imprint and the privacy notice (§ 5 DDG). */
-  operator: { name: string; address: string[]; email: string } | null;
+  /** Who runs the site, for the legal notice and the privacy notice: a name, the town (no street:
+      § 25 (5) of the Austrian Media Act asks no more of a small private site) and an e-mail. */
+  operator: { name: string; place: string; email: string; hosting: string } | null;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -35,8 +36,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     // only behind a proxy that sets the header (Cloudflare): otherwise anyone could pick their address
     trustProxy: env.TRUST_PROXY === 'forwarded' ? 'forwarded' : env.TRUST_PROXY === 'true',
     operator: env.OPERATOR_NAME ? {
-      name: env.OPERATOR_NAME, email: env.OPERATOR_EMAIL ?? '',
-      address: (env.OPERATOR_ADDRESS ?? '').split('|').map((l) => l.trim()).filter(Boolean),
+      name: env.OPERATOR_NAME, place: env.OPERATOR_PLACE ?? '', email: env.OPERATOR_EMAIL ?? '', hosting: env.OPERATOR_HOSTING ?? '',
     } : null,
   };
 }

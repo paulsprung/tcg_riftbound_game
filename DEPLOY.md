@@ -46,7 +46,8 @@ nano .env
 | `POSTGRES_PASSWORD` | langes Zufallspasswort: `openssl rand -hex 24` |
 | `TUNNEL_TOKEN` | nur Variante A (Schritt 3A) |
 | `APP_PORT` | Port auf dem Server, Standard `8080` |
-| `OPERATOR_NAME`, `OPERATOR_ADDRESS`, `OPERATOR_EMAIL` | dein Impressum (Pflicht in DE, § 5 DDG). Adresszeilen mit `\|` trennen, z. B. `Musterstr. 1\|12345 Musterstadt\|Germany` |
+| `OPERATOR_NAME`, `OPERATOR_PLACE`, `OPERATOR_EMAIL` | Offenlegung nach § 25 MedienG: Name, Wohnort ohne Straße (z. B. `Graz, Austria`) und eine Kontakt-E-Mail |
+| `OPERATOR_HOSTING` | wer den Server hostet, z. B. `Hetzner Online GmbH (Germany)`; leer = dein eigener Rechner |
 | `TRUST_PROXY`, `APP_BIND` | nur Variante B (Schritt 3B) |
 
 `.env` ist in `.gitignore` und `.dockerignore`. Sie landet also weder im Repo
@@ -129,7 +130,7 @@ Discord verlangt die exakte Redirect-Adresse.
 ```bash
 docker compose ps                    # app und db "healthy"
 curl -s 127.0.0.1:8080/api/health    # {"ok":true,...}
-curl -s 127.0.0.1:8080/api/site      # dein Impressum
+curl -s 127.0.0.1:8080/api/site      # deine Offenlegung
 docker compose logs -f app           # "migrations applied …", "Riftbound server on :8080"
 ```
 
