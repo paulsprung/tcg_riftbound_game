@@ -93,8 +93,8 @@ function Outcome({ end, tournament, mode }: { end: Extract<ServerMsg, { t: 'end'
 
 export function OnlineGame({ db, start, end }: { db: CardDb; start: Extract<ServerMsg, { t: 'start' }>; end: Extract<ServerMsg, { t: 'end' }> | null }) {
   const cards = useMemo(() => cardIndex(db), [db]);
-  // both lists with their art, as the table shows them
-  const host = useMemo(() => new RemoteHost({ ...start, decks: [withPrintings(start.decks[0], cards), withPrintings(start.decks[1], cards)] }), [start, cards]);
+  // every list with its art, as the table shows them
+  const host = useMemo(() => new RemoteHost({ ...start, decks: start.decks.map((d) => withPrintings(d, cards)) }), [start, cards]);
   useEffect(() => { host.start(); }, [host]);
   const ready = useSyncExternalStore(host.subscribe, () => host.ready, () => host.ready);
   const leave = () => online.dismissEnd();
@@ -102,7 +102,7 @@ export function OnlineGame({ db, start, end }: { db: CardDb; start: Extract<Serv
   if (!ready) return <p className="status">Waiting for the table…</p>;
   const tm = start.tournament;
   const mode = tm ? `${tm.name} · ${tm.round} · game ${tm.game} (${tm.score[start.seat]}–${tm.score[1 - start.seat]})`
-    : start.mode === 'ranked' ? 'Ranked' : start.mode === 'friendly' ? 'Friendly' : 'Casual';
+    : start.mode === 'ranked' ? 'Ranked' : start.mode === 'friendly' ? 'Friendly' : start.mode === 'duo' ? 'Casual 2v2' : 'Casual';
   return (
     <GameScreen host={host} cards={cards} db={db} names={start.names}
       onNewGame={leave} onChangeDecks={leave}

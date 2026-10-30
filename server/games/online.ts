@@ -1,7 +1,7 @@
 import { randomInt, randomUUID } from 'node:crypto';
 import { FIRST_WIN_COINS, LOSS_COINS, MIN_REWARD_TURNS, WIN_COINS } from '../../src/economy/rules.ts';
 import { missingCards, ownedDefs, ownPrintings } from '../../src/decks/ownership.ts';
-import { STARTERS, validateDeck, type DeckList, type GameRecord, type PlayerId, type PlayerView } from '../../src/game/index.ts';
+import { STARTERS, TWO_V_TWO, validateDeck, type DeckList, type GameRecord, type PlayerId, type PlayerView } from '../../src/game/index.ts';
 import type { Db } from '../db.ts';
 import { readAccount } from '../economy.ts';
 import type { LimitedService } from '../limited.ts';
@@ -25,10 +25,18 @@ import type { EnginePool } from './pool.ts';
  * The record so far (setup and every answer) is written to live_games every
  * few seconds, so a restart replays the games and carries on. At the end the
  * match goes to `matches` with its record, ratings move (Glicko-2, per
- * mode) and both players get coins, the day's first win a bonus on top.
+ * mode) and the players get coins, the day's first win a bonus on top.
+ *
+ * Casual 2v2 (duo): four players in two teams. Players search alone or two
+ * together from a lobby; four friends in a lobby play at once. Teammates
+ * bring different legends and battlefields.
  */
 
-const MODES: QueueMode[] = ['ranked', 'casual', 'sealed', 'draft'];
+const MODES: QueueMode[] = ['ranked', 'casual', 'sealed', 'draft', 'duo'];
+/** The Duel modes with a rating; 2v2 has no ladder (yet) but pays coins as casual does. */
+const RATED: Mode[] = ['ranked', 'casual', 'sealed', 'draft'];
+/** A 2v2 seats its teams alternately (Magma Chamber [491]): seats 0 and 2 against 1 and 3. */
+const sameSide = (mode: Mode, a: number, b: number) => a === b || (mode === 'duo' && a % 2 === b % 2);
 
 /** Free time for every decision; then the player's time bank runs. */
 export const GRACE_MS = 30_000;
@@ -56,7 +64,17 @@ export interface Finished {
 
 export interface Transport { send(userId: string, msg: ServerMsg): void; online(userId: string): boolean }
 
-interface Queued { userId: string; name: string; deck: DeckList; rating: number; since: number; limited?: 'sealed' | 'draft' }
+interface Queued { userId: string; name: string; deck: DeckList; rating: number; since: number; limited?: 'sealed' | 'draft';
+  /** 2v2: who searches together (a lobby's id); a team of one otherwise. */
+  party?: string }
+type Seat = Pick<Queued, 'userId' | 'name' | 'deck' | 'limited'>;
+
+/** Why two decks can't be on one 2v2 team, or null: teammates bring different legends and battlefields. */
+export function teamClash(a: DeckList, b: DeckList): string | null {
+  if (a.legend && a.legend === b.legend) return 'Teammates play different legends';
+  if (a.battlefields.some((x) => b.battlefields.includes(x))) return 'Teammates bring different battlefields';
+  return null;
+}
 
 interface Live {
   id: string; mode: Mode; players: string[]; names: string[]; decks: DeckList[];
@@ -76,11 +94,15 @@ interface Live {
 }
 
 type LobbyMsg = Extract<ClientMsg, { t: `lobby-${string}` }>;
+/** Seats in a lobby: two in the custom game, four in casual 2v2. */
+const maxOf = (l: { mode: LobbyMode }) => (l.mode === 'casual' ? 4 : 2);
+/** The team with room for one more (2v2), the other seat (custom). */
+const freeTeam = (l: { members: { team: 0 | 1 }[] }): 0 | 1 => (l.members.filter((m) => m.team === 0).length <= l.members.filter((m) => m.team === 1).length ? 0 : 1);
 const isLobbyMsg = (m: ClientMsg): m is LobbyMsg => m.t.startsWith('lobby-');
 
 interface Lobby {
   id: string; mode: LobbyMode; host: string; inGame: boolean;
-  members: { id: string; name: string; ready: boolean; deck: { ref: string; list: DeckList } | null }[];
+  members: { id: string; name: string; ready: boolean; deck: { ref: string; list: DeckList } | null; team: 0 | 1 }[];
   invites: Map<string, { id: string; name: string; timer: ReturnType<typeof setTimeout> }>;
 }
 
@@ -144,8 +166,17 @@ export class Online {
   /** Tells a player their account changed (a sale, a gift, a prize), if they are connected. */
   notify(userId: string, why: string) { this.net.send(userId, why === 'friends' ? { t: 'friends' } : { t: 'account', why }); }
   inGame(userId: string) { return this.byUser.has(userId); }
-  /** A deleted account: out of every queue. */
-  forget(userId: string) { for (const q of this.queues.values()) { const i = q.findIndex((x) => x.userId === userId); if (i >= 0) q.splice(i, 1); } }
+  /** Out of every queue (a deleted account too); a 2v2 teammate who searched with them stops searching as well. */
+  forget(userId: string) {
+    for (const q of this.queues.values()) {
+      const me = q.find((x) => x.userId === userId);
+      if (!me) continue;
+      for (const x of q.filter((y) => y === me || (me.party && y.party === me.party))) {
+        q.splice(q.indexOf(x), 1);
+        if (x !== me) { this.net.send(x.userId, { t: 'left' }); this.changed(x.userId); }
+      }
+    }
+  }
 
   get stats() { return { games: this.games.size, queued: [...this.queues.values()].reduce((n, q) => n + q.length, 0) }; }
 
@@ -169,7 +200,7 @@ export class Online {
 
   /** Their last socket closed: out of the queue; in a game, three minutes to come back. */
   disconnected(userId: string) {
-    for (const q of this.queues.values()) { const i = q.findIndex((x) => x.userId === userId); if (i >= 0) q.splice(i, 1); }
+    this.forget(userId);
     this.changed(userId);
     // gone from the site: out of their lobby (as in the League client), their invites lapse
     if (!this.net.online(userId)) this.leaveLobby(userId);
@@ -193,7 +224,7 @@ export class Online {
       }
       if (m.t === 'queue') return await this.enqueue(userId, name, m.mode, m.deck);
       if (m.t === 'leave') {
-        for (const q of this.queues.values()) { const i = q.findIndex((x) => x.userId === userId); if (i >= 0) q.splice(i, 1); }
+        this.forget(userId);
         this.changed(userId);
         return this.net.send(userId, { t: 'left' });
       }
@@ -217,7 +248,7 @@ export class Online {
   // ---- the queue ----
 
   /** A deck the player may bring: their starter, or a deck they built, legal and made of cards they own. */
-  async deckFor(userId: string, ref: string): Promise<DeckList> {
+  async deckFor(userId: string, ref: string, format: 'standard' | '2v2' = 'standard'): Promise<DeckList> {
     const account = await readAccount(this.db, userId);
     let deck: DeckList | undefined;
     if (ref.startsWith('my:')) {
@@ -229,7 +260,7 @@ export class Online {
       deck = STARTERS.find((s) => s.id === ref)?.deck;
     }
     if (!deck) throw new Error('No such deck');
-    const errors = validateDeck(deck, 'sanctioned', { format: 'standard' }).filter((i) => i.severity === 'error');
+    const errors = validateDeck(deck, 'sanctioned', { format }).filter((i) => i.severity === 'error');
     if (errors.length) throw new Error(`This deck can't be played: ${errors[0].message}`);
     if (missingCards(deck, ownedDefs(account)).length) throw new Error('This deck has cards you don\'t own');
     return { ...deck, printings: ownPrintings(deck, account) };
@@ -257,12 +288,12 @@ export class Online {
         if (format !== mode) throw new Error(`That pool is ${format}`);
         entry = { userId, name, deck, rating, since: this.clock.now(), limited: format };
       } else {
-        entry = { userId, name, deck: await this.deckFor(userId, String(ref)), rating, since: this.clock.now() };
+        entry = { userId, name, deck: await this.deckFor(userId, String(ref), mode === 'duo' ? '2v2' : 'standard'), rating, since: this.clock.now() };
       }
     } finally { this.joining.delete(userId); }
     // matched meanwhile (another tab): stay out of the queue
     if (this.byUser.has(userId)) throw new Error('You are in a game');
-    for (const q of this.queues.values()) { const i = q.findIndex((x) => x.userId === userId); if (i >= 0) q.splice(i, 1); }
+    this.forget(userId);
     const since = entry.since;
     this.queues.get(mode)!.push(entry);
     this.net.send(userId, { t: 'queued', mode, since });
@@ -273,7 +304,9 @@ export class Online {
   /** Pairs the longest-waiting players whose ratings are close; the window widens while they wait. */
   async matchmake() {
     const now = this.clock.now();
+    await this.matchDuo();
     for (const mode of MODES) {
+      if (mode === 'duo') continue;
       const q = this.queues.get(mode)!;
       q.sort((a, b) => a.since - b.since);
       for (let i = 0; i < q.length; i++) {
@@ -288,22 +321,52 @@ export class Online {
     }
   }
 
+  /** 2v2: teams from the longest waiting, two who search together or two alone whose decks go together; two teams make a game. */
+  private async matchDuo() {
+    const q = this.queues.get('duo')!;
+    q.sort((a, b) => a.since - b.since);
+    for (;;) {
+      const teams: Queued[][] = [];
+      const used = new Set<Queued>();
+      for (const a of q) {
+        if (used.has(a)) continue;
+        const mate = a.party ? q.find((b) => b !== a && b.party === a.party)
+          : q.find((b) => b !== a && !b.party && !used.has(b) && !teamClash(a.deck, b.deck));
+        if (!mate || used.has(mate)) continue;
+        used.add(a); used.add(mate);
+        teams.push([a, mate]);
+        if (teams.length === 2) break;
+      }
+      if (teams.length < 2) return;
+      for (const x of teams.flat()) q.splice(q.indexOf(x), 1);
+      await this.startDuo(teams[0], teams[1]).catch((err) => console.error('match start failed:', err));
+    }
+  }
+
   // ---- a game ----
 
-  private start(mode: Mode, a: Pick<Queued, 'userId' | 'name' | 'deck' | 'limited'>, b: Pick<Queued, 'userId' | 'name' | 'deck' | 'limited'>) {
+  private start(mode: Mode, a: Seat, b: Seat) {
     // who sits first is random; who plays first the engine settles (TR 407)
-    return randomInt(2) === 0 ? this.begin(mode, a, b, null) : this.begin(mode, b, a, null);
+    return randomInt(2) === 0 ? this.begin(mode, [a, b], null) : this.begin(mode, [b, a], null);
+  }
+
+  /** A 2v2: the teams sit alternately, which team and who of it sits first at random. */
+  private startDuo(a: Seat[], b: Seat[]) {
+    const [x, y] = randomInt(2) === 0 ? [a, b] : [b, a];
+    const [x0, x1] = randomInt(2) === 0 ? x : [x[1], x[0]];
+    const [y0, y1] = randomInt(2) === 0 ? y : [y[1], y[0]];
+    return this.begin('duo', [x0, y0, x1, y1], null);
   }
 
   /** A game between two given players (a tournament's): a in seat 0. `firstPlayer` fixes who plays first
       (the loser of the match's last game); a player not connected has `noShowMs` to come. */
-  async startPaired(a: Pick<Queued, 'userId' | 'name' | 'deck' | 'limited'>, b: Pick<Queued, 'userId' | 'name' | 'deck' | 'limited'>, meta: GameMeta,
+  async startPaired(a: Seat, b: Seat, meta: GameMeta,
     firstPlayer: GameRecord['setup']['firstPlayer'] | null, noShowMs: number): Promise<string> {
-    for (const u of [a.userId, b.userId]) for (const q of this.queues.values()) { const i = q.findIndex((x) => x.userId === u); if (i >= 0) q.splice(i, 1); }
-    const id = await this.begin('tournament', a, b, meta, firstPlayer);
+    for (const u of [a.userId, b.userId]) this.forget(u);
+    const id = await this.begin('tournament', [a, b], meta, firstPlayer);
     const g = this.games.get(id);
     if (g) {
-      for (const seat of [0, 1] as const) {
+      for (const seat of this.seats(g)) {
         if (this.net.online(g.players[seat])) { g.showed[seat] = true; continue; }
         g.away[seat] = setTimeout(() => {
           if (this.net.online(g.players[seat])) return;
@@ -316,38 +379,39 @@ export class Online {
     return id;
   }
 
-  private async begin(mode: Mode, p0: Pick<Queued, 'userId' | 'name' | 'deck' | 'limited'>, p1: Pick<Queued, 'userId' | 'name' | 'deck' | 'limited'>,
-    meta: GameMeta | null, firstPlayer: GameRecord['setup']['firstPlayer'] | null = null): Promise<string> {
+  private async begin(mode: Mode, ps: Seat[], meta: GameMeta | null, firstPlayer: GameRecord['setup']['firstPlayer'] | null = null): Promise<string> {
     const id = randomUUID();
-    const limited = p0.limited ?? p1.limited;
-    const setup: GameRecord['setup'] = { seed: randomInt(0, 2 ** 31), decks: [p0.deck, p1.deck] as DeckList[],
-      ...(firstPlayer !== null ? { firstPlayer } : {}), ...(limited ? { limited } : {}) };
+    const limited = ps.find((p) => p.limited)?.limited;
+    const n = ps.length;
+    const setup: GameRecord['setup'] = { seed: randomInt(0, 2 ** 31), decks: ps.map((p) => p.deck),
+      ...(firstPlayer !== null ? { firstPlayer } : {}), ...(limited ? { limited } : {}), ...(mode === 'duo' ? { mode: TWO_V_TWO } : {}) };
     const g: Live = {
-      id, mode, players: [p0.userId, p1.userId], names: [p0.name, p1.name], decks: setup.decks, started: this.clock.now(),
-      answers: [], setup, pending: null, deadline: null, lastView: null, bank: [this.t.bank, this.t.bank], asked: null,
-      strikes: [0, 0], timer: null, away: [null, null],
+      id, mode, players: ps.map((p) => p.userId), names: ps.map((p) => p.name), decks: setup.decks, started: this.clock.now(),
+      answers: [], setup, pending: null, deadline: null, lastView: null, bank: Array(n).fill(this.t.bank), asked: null,
+      strikes: Array(n).fill(0), timer: null, away: Array(n).fill(null),
       dirty: true, over: false, turn: 0, busy: Promise.resolve(), head: { engine: '', defsHash: '' }, meta,
-      first: null, noShow: null, showed: [false, false],
+      first: null, noShow: null, showed: Array(n).fill(false),
     };
     this.games.set(id, g);
-    this.byUser.set(p0.userId, id); this.byUser.set(p1.userId, id);
-    this.changed(p0.userId, p1.userId);
+    for (const p of g.players) this.byUser.set(p, id);
+    this.changed(...g.players);
     const u = await this.pool.engine.create(id, setup);
     const rec = await this.pool.engine.record(id);
     g.head = { engine: rec.engine, defsHash: rec.defsHash };
     await this.db.query('INSERT INTO live_games (id, mode, players, data) VALUES ($1, $2, $3, $4)', [id, mode, g.players, this.liveData(g)]);
-    for (const seat of [0, 1] as const) this.net.send(g.players[seat], this.startMsg(g, seat));
+    for (const seat of this.seats(g)) this.net.send(g.players[seat], this.startMsg(g, seat));
     await this.after(g, u, false);
     return id;
   }
 
+  private seats(g: Live): PlayerId[] { return g.players.map((_, i) => i as PlayerId); }
+
   private startMsg(g: Live, seat: PlayerId): ServerMsg {
     const meta = g.meta ? { id: g.meta.id, name: g.meta.name, round: g.meta.round, game: g.meta.game, score: g.meta.score } : undefined;
-    // decklists are private (TR 401.5): your own list, and of theirs only what the table shows anyway
-    const theirs = g.decks[1 - seat];
-    const shown: DeckList = { name: theirs.name, source: theirs.source, legend: theirs.legend, chosenChampion: '' as DeckList['chosenChampion'], main: [], runes: [], battlefields: [],
-      printings: theirs.printings?.[theirs.legend] ? { [theirs.legend]: theirs.printings[theirs.legend] } : {} };
-    const decks = (seat === 0 ? [g.decks[0], shown] : [shown, g.decks[1]]) as DeckList[];
+    // decklists are private (TR 401.5): your own list, and of the others only what the table shows anyway
+    const shown = (d: DeckList): DeckList => ({ name: d.name, source: d.source, legend: d.legend, chosenChampion: '' as DeckList['chosenChampion'], main: [], runes: [], battlefields: [],
+      printings: d.printings?.[d.legend] ? { [d.legend]: d.printings[d.legend] } : {} });
+    const decks = g.decks.map((d, i) => (i === seat ? d : shown(d)));
     return { t: 'start', gameId: g.id, seat, mode: g.mode, names: g.names, decks, ...(meta ? { tournament: meta } : {}) };
   }
 
@@ -363,7 +427,9 @@ export class Online {
     const mine = g.pending && g.pending.player === seat && !g.pending.passOnly ? g.deadline : null;
     const theirs = g.pending && g.pending.player !== seat && !g.pending.passOnly ? g.deadline : null;
     const grace = g.asked ? g.asked.at + this.t.grace : null;
-    return { deadline: mine, theirDeadline: theirs, clock: { grace, banks: [g.bank[seat], g.bank[1 - seat]] as number[] } };
+    // the other bank shown: the one of who decides now, or the next opponent's
+    const other = g.pending && g.pending.player !== seat ? g.pending.player : this.seats(g).find((x) => !sameSide(g.mode, x, seat))!;
+    return { deadline: mine, theirDeadline: theirs, clock: { grace, banks: [g.bank[seat], g.bank[other]] } };
   }
 
   /** One change at a time per game: answers that arrive together queue up. */
@@ -397,7 +463,7 @@ export class Online {
     g.pending = u.pending;
     g.turn = u.turn;
     g.first = u.first;
-    g.lastView = [u.seats[0].view, u.seats[1].view];
+    g.lastView = u.seats.map((x) => x.view);
     this.clearTimers(g, false);
     // the decision that was on the clock: what it took past its grace comes off the bank
     const now = this.clock.now();
@@ -409,7 +475,7 @@ export class Online {
     const timed = u.pending && !u.pending.passOnly ? u.pending.player : null;
     if (timed !== null) g.asked = { seat: timed, at: now };
     g.deadline = timed !== null ? now + this.t.grace + g.bank[timed] : null;
-    for (const seat of [0, 1] as const) {
+    for (const seat of this.seats(g)) {
       this.net.send(g.players[seat], { t: 'update', gameId: g.id, view: u.seats[seat].view, events: u.seats[seat].events, full, ...this.deadlines(g, seat) });
     }
     if (u.result) { await this.finish(g, u); return; }
@@ -433,7 +499,7 @@ export class Online {
   private clearTimers(g: Live, away = true) {
     if (g.timer) clearTimeout(g.timer);
     g.timer = null;
-    if (away) for (const s of [0, 1] as const) { const t = g.away[s]; if (t) clearTimeout(t); g.away[s] = null; }
+    if (away) for (const s of this.seats(g)) { const t = g.away[s]; if (t) clearTimeout(t); g.away[s] = null; }
   }
 
   private liveData(g: Live) {
@@ -454,12 +520,13 @@ export class Online {
     const r = await this.db.query('SELECT id, mode, players, data FROM live_games');
     for (const row of r.rows) {
       const d = row.data as { engine: string; defsHash: string; setup: GameRecord['setup']; answers: Answer[]; names: string[]; started: number; strikes?: number[]; bank?: number[]; meta?: GameMeta | null };
+      const n = (row.players as string[]).length;
       const g: Live = {
         id: row.id, mode: row.mode, players: row.players, names: d.names, decks: d.setup.decks as DeckList[], started: d.started,
         answers: d.answers.slice(), setup: d.setup, pending: null, deadline: null, lastView: null,
-        bank: d.bank ?? [this.t.bank, this.t.bank], asked: null, strikes: d.strikes ?? [0, 0], timer: null,
-        away: [null, null], dirty: false, over: false, turn: 0, busy: Promise.resolve(), head: { engine: d.engine, defsHash: d.defsHash },
-        meta: d.meta ?? null, first: null, noShow: null, showed: [true, true],
+        bank: d.bank ?? Array(n).fill(this.t.bank), asked: null, strikes: d.strikes ?? Array(n).fill(0), timer: null,
+        away: Array(n).fill(null), dirty: false, over: false, turn: 0, busy: Promise.resolve(), head: { engine: d.engine, defsHash: d.defsHash },
+        meta: d.meta ?? null, first: null, noShow: null, showed: Array(n).fill(true),
       };
       try {
         // an update of the engine or the cards in between: the record no longer replays, and the game is dropped
@@ -470,7 +537,7 @@ export class Online {
         this.games.set(g.id, g);
         for (const p of g.players) this.byUser.set(p, g.id);
         // the restart is nobody's fault: whoever is not back in time concedes
-        for (const seat of [0, 1] as const) if (!this.net.online(g.players[seat])) this.disconnected(g.players[seat]);
+        for (const seat of this.seats(g)) if (!this.net.online(g.players[seat])) this.disconnected(g.players[seat]);
         await this.after(g, { ...u, answers: [] }, true);
       } catch (err) {
         console.error(`live game ${g.id} could not be resumed, dropped:`, err instanceof Error ? err.message : err);
@@ -484,8 +551,9 @@ export class Online {
 
   private lobbyView(l: Lobby): LobbyView {
     return {
-      id: l.id, mode: l.mode, max: 2, inGame: l.inGame,
-      members: l.members.map((m) => ({ id: m.id, name: m.name, host: m.id === l.host, ready: m.ready, deck: m.deck && { ref: m.deck.ref, name: m.deck.list.name, legend: m.deck.list.legend } })),
+      id: l.id, mode: l.mode, max: maxOf(l), inGame: l.inGame,
+      members: l.members.map((m) => ({ id: m.id, name: m.name, host: m.id === l.host, ready: m.ready, team: m.team,
+        deck: m.deck && { ref: m.deck.ref, name: m.deck.list.name, legend: m.deck.list.legend } })),
       invited: [...l.invites.values()].map((i) => ({ id: i.id, name: i.name })),
     };
   }
@@ -507,6 +575,8 @@ export class Online {
     this.lobbyOf.delete(userId);
     l.members = l.members.filter((m) => m.id !== userId);
     this.net.send(userId, { t: 'lobby', lobby: null });
+    // a lobby searching for 2v2 stops when one of it leaves
+    if (!l.inGame) for (const m of l.members) this.forget(m.id);
     if (l.members.length === 0) {
       for (const i of l.invites.values()) { clearTimeout(i.timer); this.net.send(i.id, { t: 'lobby-invite-gone', lobby: l.id, why: 'the lobby closed' }); }
       this.lobbies.delete(l.id);
@@ -531,13 +601,13 @@ export class Online {
         // your lobby, or a new one with you as host
         let l = mine;
         if (!l) {
-          l = { id: randomUUID(), mode: m.mode, host: userId, members: [{ id: userId, name, ready: false, deck: null }], invites: new Map(), inGame: false };
+          l = { id: randomUUID(), mode: m.mode, host: userId, members: [{ id: userId, name, ready: false, deck: null, team: 0 }], invites: new Map(), inGame: false };
           this.lobbies.set(l.id, l);
           this.lobbyOf.set(userId, l.id);
         }
         if (l.host !== userId) throw new Error('Only the host invites');
         if (l.members.some((x) => x.id === to)) throw new Error('Already in your lobby');
-        if (l.members.length + l.invites.size >= 2) throw new Error('The lobby is full');
+        if (l.members.length + l.invites.size >= maxOf(l)) throw new Error('The lobby is full');
         const lobby = l;
         const timer = setTimeout(() => {
           lobby.invites.delete(to);
@@ -560,10 +630,11 @@ export class Online {
         l.invites.delete(userId);
         if (!m.accept) { this.tellLobby(l); return; }
         if (this.byUser.has(userId)) throw new Error('You are in a game');
-        if (l.members.length >= 2) throw new Error('The lobby is full');
+        if (l.members.length >= maxOf(l)) throw new Error('The lobby is full');
         this.leaveLobby(userId);
         this.forget(userId);
-        l.members.push({ id: userId, name, ready: false, deck: null });
+        for (const x of l.members) this.forget(x.id);
+        l.members.push({ id: userId, name, ready: false, deck: null, team: freeTeam(l) });
         this.lobbyOf.set(userId, l.id);
         this.tellLobby(l);
         return;
@@ -575,7 +646,7 @@ export class Online {
       case 'lobby-deck': {
         if (member.ready) throw new Error('Not ready first, then change your deck');
         const ref = String(m.deck);
-        member.deck = { ref, list: await this.deckFor(userId, ref) };
+        member.deck = { ref, list: await this.deckFor(userId, ref, mine.mode === 'casual' ? '2v2' : 'standard') };
         this.tellLobby(mine);
         return;
       }
@@ -583,6 +654,16 @@ export class Online {
         if (mine.host === userId) throw new Error('The host starts the game');
         if (m.ready && !member.deck) throw new Error('Pick a deck first');
         member.ready = !!m.ready;
+        this.tellLobby(mine);
+        return;
+      }
+      case 'lobby-team': {
+        if (mine.mode !== 'casual') throw new Error('Teams are for 2v2');
+        const to = (1 - member.team) as 0 | 1;
+        if (mine.members.filter((x) => x.team === to).length >= 2) throw new Error('That team is full');
+        for (const x of mine.members) this.forget(x.id);
+        member.team = to;
+        member.ready = false;
         this.tellLobby(mine);
         return;
       }
@@ -595,7 +676,7 @@ export class Online {
       }
       case 'lobby-start': {
         if (mine.host !== userId) throw new Error('Only the host starts');
-        if (mine.mode === 'casual') throw new Error('Casual 2v2 comes with the 2v2 rules');
+        if (mine.mode === 'casual') return await this.startDuoLobby(mine);
         if (mine.members.length < 2) throw new Error('Invite a friend first');
         if (!member.deck) throw new Error('Pick a deck first');
         if (mine.members.some((x) => x.id !== mine.host && !x.ready)) throw new Error('Not everyone is ready');
@@ -610,6 +691,38 @@ export class Online {
         return;
       }
     }
+  }
+
+  /** Casual 2v2 from a lobby: four friends play at once; two on one team search together for two more. */
+  private async startDuoLobby(l: Lobby) {
+    const team = (t: 0 | 1) => l.members.filter((x) => x.team === t);
+    const [a, b] = [team(0), team(1)];
+    const full = a.length === 2 && b.length === 2;
+    if (!full && !(l.members.length === 2 && (a.length === 2 || b.length === 2))) throw new Error('Two on one team to search together, or four to play');
+    if (l.members.some((x) => !x.deck)) throw new Error('Everyone picks a deck first');
+    if (l.members.some((x) => x.id !== l.host && !x.ready)) throw new Error('Not everyone is ready');
+    if (l.members.some((x) => this.byUser.has(x.id) || !this.net.online(x.id))) throw new Error('Someone is busy');
+    // the decks again, in case a card was sold in between
+    const seats = await Promise.all(l.members.map(async (x) => ({ userId: x.id, name: x.name, team: x.team, deck: await this.deckFor(x.id, x.deck!.ref, '2v2') })));
+    for (const t of [0, 1] as const) {
+      const [x, y] = seats.filter((s) => s.team === t);
+      const clash = x && y && teamClash(x.deck, y.deck);
+      if (clash) throw new Error(clash);
+    }
+    for (const x of l.members) this.forget(x.id);
+    if (full) {
+      l.inGame = true;
+      this.tellLobby(l);
+      await this.startDuo(seats.filter((s) => s.team === 0), seats.filter((s) => s.team === 1));
+      return;
+    }
+    const since = this.clock.now();
+    for (const s of seats) {
+      this.queues.get('duo')!.push({ userId: s.userId, name: s.name, deck: s.deck, rating: 0, since, party: l.id });
+      this.net.send(s.userId, { t: 'queued', mode: 'duo', since });
+      this.changed(s.userId);
+    }
+    await this.matchmake();
   }
 
   /** After a friendly game the lobby is back, nobody ready (as in the League client). */
@@ -631,7 +744,9 @@ export class Online {
     const record = await this.pool.engine.record(g.id, u.conceded);
     const rewarded = res.turn >= MIN_REWARD_TURNS;
     const c = await this.db.connect();
-    const outcome: { coins: number[]; bonus: number[]; rating: [{ before: RatingInfo; after: RatingInfo } | null, { before: RatingInfo; after: RatingInfo } | null] } = { coins: [0, 0], bonus: [0, 0], rating: [null, null] };
+    const seats = this.seats(g);
+    const outcome: { coins: number[]; bonus: number[]; rating: ({ before: RatingInfo; after: RatingInfo } | null)[] } = {
+      coins: seats.map(() => 0), bonus: seats.map(() => 0), rating: seats.map(() => null) };
     try {
       await c.query('BEGIN');
       // both accounts first, then the ratings, each in one fixed order (as every transfer does):
@@ -640,8 +755,9 @@ export class Online {
         await c.query('INSERT INTO accounts (user_id) VALUES ($1) ON CONFLICT DO NOTHING', [u]);
         await c.query('SELECT 1 FROM accounts WHERE user_id = $1 FOR UPDATE', [u]);
       }
-      const rated = g.mode === 'ranked' || g.mode === 'casual' || g.mode === 'sealed' || g.mode === 'draft';
-      const order = (rated ? [0, 1].sort((x, y) => (g.players[x] < g.players[y] ? -1 : 1)) : []) as PlayerId[];
+      const rated = RATED.includes(g.mode);
+      const paid = rated || g.mode === 'duo';
+      const order = rated ? seats.slice().sort((x, y) => (g.players[x] < g.players[y] ? -1 : 1)) : [];
       const before: Record<number, { rating: Rating; games: number; wins: number }> = {};
       for (const s of order) {
         await c.query('INSERT INTO ratings (user_id, mode) VALUES ($1, $2) ON CONFLICT DO NOTHING', [g.players[s], g.mode]);
@@ -649,13 +765,16 @@ export class Online {
         before[s] = { rating: { r: x.r, rd: x.rd, vol: x.vol }, games: x.games, wins: x.wins };
       }
       // a tournament or friendly game moves no rating and pays no coins (a tournament's prizes do)
-      for (const s of rated ? [0, 1] as const : []) {
-        const score = res.winner === null ? 0.5 : res.winner === s ? 1 : 0;
-        const me = before[s], opp = before[1 - s];
-        const next = rate(me.rating, opp.rating, score as 0 | 0.5 | 1);
-        await c.query('UPDATE ratings SET r = $3, rd = $4, vol = $5, games = games + 1, wins = wins + $6 WHERE user_id = $1 AND mode = $2',
-          [g.players[s], g.mode, next.r, next.rd, next.vol, score === 1 ? 1 : 0]);
-        if (g.mode === 'ranked') outcome.rating[s] = { before: infoOf(me.rating, me.games), after: infoOf(next, me.games + 1) };
+      for (const s of paid ? seats : []) {
+        // in 2v2 the team wins together
+        const score = res.winner === null ? 0.5 : sameSide(g.mode, res.winner, s) ? 1 : 0;
+        if (rated) {
+          const me = before[s], opp = before[1 - s];
+          const next = rate(me.rating, opp.rating, score as 0 | 0.5 | 1);
+          await c.query('UPDATE ratings SET r = $3, rd = $4, vol = $5, games = games + 1, wins = wins + $6 WHERE user_id = $1 AND mode = $2',
+            [g.players[s], g.mode, next.r, next.rd, next.vol, score === 1 ? 1 : 0]);
+          if (g.mode === 'ranked') outcome.rating[s] = { before: infoOf(me.rating, me.games), after: infoOf(next, me.games + 1) };
+        }
         // coins for every game that went on long enough
         if (rewarded) {
           const coins = score === 1 ? WIN_COINS : LOSS_COINS;
@@ -685,13 +804,13 @@ export class Online {
     } finally {
       c.release();
     }
-    for (const s of [0, 1] as const) {
+    for (const s of seats) {
       this.net.send(g.players[s], { t: 'end', gameId: g.id, winner: res.winner, reason: res.reason, coins: outcome.coins[s], bonus: outcome.bonus[s], rating: outcome.rating[s] });
       if (this.byUser.get(g.players[s]) === g.id) this.byUser.delete(g.players[s]);
     }
     this.games.delete(g.id);
     this.changed(...g.players);
-    if (g.mode === 'friendly') this.lobbyAfterGame(g.players);
+    if (g.mode === 'friendly' || g.mode === 'duo') this.lobbyAfterGame(g.players);
     await this.pool.engine.drop(g.id);
     const done: Finished = { gameId: g.id, mode: g.mode, players: g.players, winner: res.winner, reason: res.reason, meta: g.meta,
       first: g.first, noShow: g.noShow };

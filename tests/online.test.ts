@@ -8,6 +8,7 @@ import { EnginePool } from '../server/games/pool.ts';
 import type { CardDb } from '../src/data/types.ts';
 import { FIRST_WIN_COINS, LOSS_COINS, WIN_COINS } from '../src/economy/rules.ts';
 import type { PlayerView } from '../src/game/index.ts';
+import { hasBit } from '../src/game/state/ids.ts';
 
 /*
  * Online play end to end, without sockets: two players queue, are matched,
@@ -77,9 +78,9 @@ describe.skipIf(!url)('online play', () => {
         const v: PlayerView | undefined = views(u).at(-1)?.view;
         const d = v?.pending;
         if (!v || !d || d.player !== v.me || seen.has(`${u}:${d.id}`)) continue;
-        // the other seat's hand never shows: only stubs
+        // the other seat's hand never shows, only stubs: but for a card they know, one that went back from the board
         const theirs = v.players[1 - v.me].hand;
-        expect(theirs.every((id) => !('def' in (v.objects[id] ?? {})))).toBe(true);
+        expect(theirs.every((id) => { const o = v.objects[id]; return !o || !('def' in o) || hasBit(o.knownBy, v.me); })).toBe(true);
         seen.add(`${u}:${d.id}`);
         // play the game out quickly: past turn 4, the first player concedes
         if (v.turn.n > 4 && u === a) { await online.message(u, 'x', { t: 'concede', gameId: start.gameId }); acted = true; break; }

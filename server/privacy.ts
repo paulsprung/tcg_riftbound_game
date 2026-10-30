@@ -34,7 +34,7 @@ export async function exportAccount(db: Db, userId: string) {
     decks: await q('SELECT id, body, updated_at FROM decks WHERE user_id = $1'),
     ratings: await q('SELECT mode, r, rd, vol, games, wins FROM ratings WHERE user_id = $1'),
     ledger: await q('SELECT coins, packs, reason, created_at FROM ledger WHERE user_id = $1 ORDER BY id'),
-    matches: await q(`SELECT id, mode, (players[1] = $1) AS seat0, winner, reason, turns, started_at, ended_at, outcome
+    matches: await q(`SELECT id, mode, array_position(players, $1) - 1 AS seat, winner, reason, turns, started_at, ended_at, outcome
       FROM matches WHERE $1 = ANY(players) ORDER BY ended_at`),
     tournaments: await q(`SELECT t.name, t.status, t.starts_at, p.deck_ref, p.dropped, p.final_rank FROM tournament_players p
       JOIN tournaments t ON t.id = p.tournament_id WHERE p.user_id = $1`),

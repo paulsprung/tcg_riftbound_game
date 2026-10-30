@@ -72,7 +72,8 @@ export const social = {
     void load().catch(() => undefined);
     online.listen((m) => {
       if (m.t === 'friends') void load().catch(() => undefined);
-      else if (m.t === 'lobby') set({ lobby: m.lobby });
+      // in the lobby we were invited to (accepted from another tab): the invite is done
+      else if (m.t === 'lobby') set(m.lobby && state.invite?.lobby === m.lobby.id ? { lobby: m.lobby, invite: null } : { lobby: m.lobby });
       else if (m.t === 'lobby-invite') set({ invite: { lobby: m.lobby, mode: m.mode, from: m.from } });
       else if (m.t === 'lobby-invite-gone' && state.invite?.lobby === m.lobby) set({ invite: null });
     });
@@ -111,6 +112,7 @@ export const social = {
   deck(ref: string) { online.send({ t: 'lobby-deck', deck: ref }); },
   ready(ready: boolean) { online.send({ t: 'lobby-ready', ready }); },
   start() { online.send({ t: 'lobby-start' }); },
+  team() { online.send({ t: 'lobby-team' }); },
 };
 
 export function useSocial(): State {

@@ -34,6 +34,22 @@ function Waited({ since }: { since: number }) {
   return <>{Math.floor(s / 60)}:{String(s % 60).padStart(2, '0')}</>;
 }
 
+/** A seat matchmaking fills. */
+function Waiting({ label, queued, tournament }: { label: string; queued: { since: number } | null; tournament?: boolean }) {
+  return (
+    <figure className="ds-slot is-wait">
+      <div className="ds-slot__card">
+        <div className="ds-slot__back"><CardBack /></div>
+        <span className="ds-slot__tag ds-slot__tag--alt">{label}</span>
+      </div>
+      <figcaption>
+        <strong>{queued ? 'Searching…' : 'Matchmaking'}</strong>
+        <span className="muted small">{tournament ? 'Brackets open soon' : queued ? <>Waiting <Waited since={queued.since} /></> : 'Found for you'}</span>
+      </figcaption>
+    </figure>
+  );
+}
+
 /** Online modes need the server: the page is built, the queue waits for it. Same frame as the custom game. */
 function OnlineMode({ db, mode }: { db: CardDb; mode: (typeof ONLINE)[number] }) {
   const own = useCollection();
@@ -45,12 +61,15 @@ function OnlineMode({ db, mode }: { db: CardDb; mode: (typeof ONLINE)[number] })
   const [picking, setPicking] = useState(false);
   // casual: your own deck, or a Limited pool
   const [kind, setKind] = useState<'constructed' | 'sealed' | 'draft'>('constructed');
+  // casual: 1v1, or 2v2 with three others (or a friend from a lobby)
+  const [duo, setDuo] = useState(false);
+  const queueMode = mode.id === 'casual' && duo ? 'duo' : mode.id;
   const deck = decks.find((d) => d.id === chosen) ?? decks[0] ?? null;
   const session = useSession();
   const ol = useOnline();
   const signedIn = session.status === 'online' && !!session.user;
   const playable = mode.id === 'ranked' || mode.id === 'casual';
-  const queued = ol.queue && ol.queue.mode === mode.id ? ol.queue : null;
+  const queued = ol.queue && ol.queue.mode === queueMode ? ol.queue : null;
   const note = session.status === 'offline' ? 'Not in the preview'
     : !signedIn ? 'Sign in with Discord' : !playable ? 'Soon' : ol.status !== 'open' ? 'Connecting…' : null;
 
@@ -59,14 +78,14 @@ function OnlineMode({ db, mode }: { db: CardDb; mode: (typeof ONLINE)[number] })
       <header className="ds__bar">
         <h1>{mode.label}</h1>
         <span className="ds__bar-right">
-          {mode.id === 'casual' && signedIn && (
+          {mode.id === 'casual' && signedIn && !duo && (
             <div className="seg seg--format" role="group" aria-label="Deck">
               {(['constructed', 'sealed', 'draft'] as const).map((k) => (
                 <button key={k} type="button" aria-pressed={kind === k} onClick={() => setKind(k)}>{k[0].toUpperCase() + k.slice(1)}</button>
               ))}
             </div>
           )}
-          {mode.id === 'casual' && <FormatSwitch />}
+          {mode.id === 'casual' && <FormatSwitch value={duo ? '2v2' : '1v1'} onChange={(v) => { setDuo(v === '2v2'); if (v === '2v2') setKind('constructed'); }} />}
           {note && <span className="lb-soon-note">{note}</span>}
         </span>
       </header>
@@ -81,25 +100,18 @@ function OnlineMode({ db, mode }: { db: CardDb; mode: (typeof ONLINE)[number] })
             <figcaption><strong>No deck yet</strong><span className="muted small">Pick a starter deck on Home first.</span></figcaption>
           </figure>
         )}
+        {duo && <Waiting label="Teammate" queued={queued} />}
         <span className="play-online__vs" aria-hidden>VS</span>
-        <figure className="ds-slot is-wait">
-          <div className="ds-slot__card">
-            <div className="ds-slot__back"><CardBack /></div>
-            <span className="ds-slot__tag ds-slot__tag--alt">Opponent</span>
-          </div>
-          <figcaption>
-            <strong>{queued ? 'Searching…' : 'Matchmaking'}</strong>
-            <span className="muted small">{mode.id === 'tournament' ? 'Brackets open soon' : queued ? <>Waiting <Waited since={queued.since} /></> : 'Found for you'}</span>
-          </figcaption>
-        </figure>
+        <Waiting label={duo ? 'Opponents' : 'Opponent'} queued={queued} tournament={mode.id === 'tournament'} />
       </div>
+      {duo && <p className="muted small play-online__note">2v2 to 11 points: three battlefields, teammates share their points. Invite a friend from the friends list to search together.</p>}
 
       <div className="ds__start">
         {queued ? (
           <button type="button" className="btn btn--ghost" onClick={() => socket.send({ t: 'leave' })}>Cancel search</button>
         ) : (
           <button type="button" className="btn btn--cta" disabled={!!note || !deck}
-            onClick={() => { socket.clearError(); if (deck && playable) socket.send({ t: 'queue', mode: mode.id as 'ranked' | 'casual', deck: deck.id }); }}>
+            onClick={() => { socket.clearError(); if (deck && playable) socket.send({ t: 'queue', mode: queueMode as 'ranked' | 'casual' | 'duo', deck: deck.id }); }}>
             {mode.id === 'tournament' ? 'Browse tournaments' : 'Find match'}
           </button>
         )}

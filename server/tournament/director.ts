@@ -323,8 +323,11 @@ export class Director {
       const cat = await this.catalog();
       const pods = t.draft.pods.map((p) => {
         if (draftDone(p.draft) || this.now() < p.deadline) return p;
+        // the seats late in this turn, fixed before any pick: the last of them passes the packs,
+        // and nobody picks from the next ones before the computer seats have
+        const late = p.seats.flatMap((who, s) => (who && !p.draft.picked[s] ? [s] : []));
         let d = p.draft;
-        for (const [s, who] of p.seats.entries()) if (who && !d.picked[s]) d = pick(d, s, botPick(cat.byId, d.packs[s], d.picks[s]));
+        for (const s of late) d = pick(d, s, botPick(cat.byId, d.packs[s], d.picks[s]));
         return this.advance({ ...p, draft: d }, p.draft, t, cat.byId);
       });
       await this.saveDraft(t, pods);

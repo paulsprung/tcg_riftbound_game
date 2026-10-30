@@ -8,6 +8,7 @@ import { useDecks } from '../decks/store.ts';
 import { social } from '../lobby/social.ts';
 import type { LobbyMember, LobbyView } from '../net/protocol.ts';
 import { useSession } from '../net/session.ts';
+import { online as socket, useOnline } from '../net/socket.ts';
 import { playerDecks } from '../play/host/decks.ts';
 import { cardFor, cardIndex, type CardIndex } from '../play/model/cards.ts';
 import { DeckPicker } from '../play/setup/DeckSetup.tsx';
@@ -16,6 +17,8 @@ import { DeckPicker } from '../play/setup/DeckSetup.tsx';
  * The lobby of the custom game (or casual 2v2), as in the League client:
  * each member's deck as their legend card, who is ready; the host starts
  * when everyone is ready. Ready locks your deck: un-ready to change it.
+ * Casual 2v2 has two teams of two: four start a game at once, two on one
+ * team search together for two more.
  */
 
 function Seat({ m, cards, me, onChange }: { m: LobbyMember | null; cards: CardIndex; me: boolean; onChange?: () => void }) {
@@ -46,12 +49,23 @@ export function LobbyRoom({ db, lobby }: { db: CardDb; lobby: LobbyView }) {
   const me = lobby.members.find((m) => m.id === myId) ?? null;
   const other = lobby.members.find((m) => m.id !== myId) ?? null;
   const host = !!me?.host;
+  const duo = lobby.mode === 'casual';
+  const ol = useOnline();
+  const searching = duo && ol.queue?.mode === 'duo' ? ol.queue : null;
 
   // a deck to begin with: your first ready one
   useEffect(() => { if (me && !me.deck && decks[0]) social.deck(decks[0].id); }, [me, decks]);
 
-  const allReady = lobby.members.length === lobby.max && lobby.members.every((m) => m.host || m.ready);
-  const canStart = host && allReady && !!me?.deck && lobby.mode === 'custom' && !lobby.inGame;
+  const allReady = lobby.members.every((m) => m.host || m.ready) && lobby.members.every((m) => m.deck);
+  const team = (t: 0 | 1) => lobby.members.filter((m) => m.team === t);
+  // 2v2: four in two teams play, two on one team search
+  const duoOk = team(0).length === 2 ? team(1).length !== 1 : team(1).length === 2 && team(0).length === 0;
+  const canStart = host && allReady && !lobby.inGame && (duo ? duoOk : lobby.members.length === lobby.max);
+  const startLabel = lobby.inGame ? 'In game' : !duo ? 'Start game' : lobby.members.length === 4 ? 'Start 2v2' : 'Search together';
+  const side = (t: 0 | 1) => {
+    const ms = team(t);
+    return [0, 1].map((i) => <Seat key={ms[i]?.id ?? `free${t}${i}`} m={ms[i] ?? null} cards={cards} me={ms[i]?.id === myId} onChange={() => setPicking(true)} />);
+  };
   return (
     <section className="play-setup ds">
       <header className="ds__bar">
@@ -62,17 +76,29 @@ export function LobbyRoom({ db, lobby }: { db: CardDb; lobby: LobbyView }) {
         </span>
       </header>
 
-      <div className="ds__stage">
-        <Seat m={me} cards={cards} me onChange={() => setPicking(true)} />
-        <span className="play-online__vs" aria-hidden>VS</span>
-        <Seat m={other} cards={cards} me={false} />
-      </div>
+      {duo ? (
+        <div className="ds__stage lobby-teams">
+          <div className="lobby-team"><span className="lobby-team__label">Team 1</span>{side(0)}</div>
+          <span className="play-online__vs" aria-hidden>VS</span>
+          <div className="lobby-team"><span className="lobby-team__label">Team 2</span>{side(1)}</div>
+        </div>
+      ) : (
+        <div className="ds__stage">
+          <Seat m={me} cards={cards} me onChange={() => setPicking(true)} />
+          <span className="play-online__vs" aria-hidden>VS</span>
+          <Seat m={other} cards={cards} me={false} />
+        </div>
+      )}
+      {duo && <p className="muted small play-online__note">Four of you: start a 2v2 at once. Two of you on one team: search together for two more. Teammates play different legends and battlefields.</p>}
 
       <div className="ds__start">
-        {host ? (
-          <button type="button" className="btn btn--cta" disabled={!canStart} onClick={() => social.start()}>
-            {lobby.mode === 'casual' ? '2v2 soon' : lobby.inGame ? 'In game' : 'Start game'}
-          </button>
+        {duo && !searching && me && !me.ready && (
+          <button type="button" className="btn btn--ghost" disabled={team((1 - me.team) as 0 | 1).length >= 2} onClick={() => social.team()}>Switch team</button>
+        )}
+        {searching ? (
+          <button type="button" className="btn btn--ghost" onClick={() => socket.send({ t: 'leave' })}>Cancel search</button>
+        ) : host ? (
+          <button type="button" className="btn btn--cta" disabled={!canStart} onClick={() => { socket.clearError(); social.start(); }}>{startLabel}</button>
         ) : me?.ready ? (
           <button type="button" className="btn btn--ghost" onClick={() => social.ready(false)}>Not ready</button>
         ) : (

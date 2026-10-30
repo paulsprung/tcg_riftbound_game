@@ -7,9 +7,10 @@ import type { DeckList, ObservedEvent, PlayerId, PlayerView } from '../game/inde
  */
 
 /** What a game is: a queue's (ranked, casual), a tournament round's, or one between friends. */
-export type Mode = 'ranked' | 'casual' | 'sealed' | 'draft' | 'tournament' | 'friendly';
-/** sealed and draft: casual games with a deck built from a Limited pool (deck 'limited:<pool id>'). */
-export type QueueMode = 'ranked' | 'casual' | 'sealed' | 'draft';
+export type Mode = 'ranked' | 'casual' | 'sealed' | 'draft' | 'duo' | 'tournament' | 'friendly';
+/** sealed and draft: casual games with a deck built from a Limited pool (deck 'limited:<pool id>');
+    duo: casual 2v2 (Magma Chamber [491]), alone or with a teammate from a lobby. */
+export type QueueMode = 'ranked' | 'casual' | 'sealed' | 'draft' | 'duo';
 /** What friends see of each other. */
 export type Presence = 'online' | 'queue' | 'game' | 'offline';
 
@@ -28,11 +29,13 @@ export type ClientMsg =
   | { t: 'lobby-ready'; ready: boolean }
   | { t: 'lobby-start' }
   | { t: 'lobby-leave' }
-  | { t: 'lobby-kick'; who: string };
+  | { t: 'lobby-kick'; who: string }
+  /** Casual 2v2: change to the other team, if it has a free seat. */
+  | { t: 'lobby-team' };
 
-/** Where a lobby plays: the custom game (1v1 between friends), or casual 2v2 (with a teammate, soon). */
+/** Where a lobby plays: the custom game (1v1 between friends), or casual 2v2 (four friends, or two who search together). */
 export type LobbyMode = 'custom' | 'casual';
-export interface LobbyMember { id: string; name: string; host: boolean; ready: boolean; deck: { ref: string; name: string; legend: string } | null }
+export interface LobbyMember { id: string; name: string; host: boolean; ready: boolean; deck: { ref: string; name: string; legend: string } | null; team: 0 | 1 }
 export interface LobbyView { id: string; mode: LobbyMode; members: LobbyMember[]; max: number; inGame: boolean; invited: { id: string; name: string }[] }
 
 export interface RatingInfo { points: number; tier: string; division: number | null; games: number; placement: boolean }
@@ -42,7 +45,7 @@ export type ServerMsg =
   | { t: 'state'; queue: { mode: QueueMode; since: number } | null; game: string | null }
   | { t: 'queued'; mode: QueueMode; since: number }
   | { t: 'left' }
-  /** A game: your seat, both names, your list and of theirs only the name and legend (decklists are private, TR 401.5). */
+  /** A game: your seat, every name, your list and of the others only the name and legend (decklists are private, TR 401.5). */
   | { t: 'start'; gameId: string; seat: PlayerId; mode: Mode; names: string[]; decks: DeckList[];
       /** A tournament's game: its name, round and the match score so far. */
       tournament?: { id: string; name: string; round: string; game: number; score: number[] } }

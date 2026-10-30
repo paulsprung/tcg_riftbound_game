@@ -257,11 +257,13 @@ export function handler({ cfg, db, fetch: f = fetch, catalog, online, director, 
             if (!online) return json(res, 404, { error: 'No online play here' });
             const [ranked, casual] = await Promise.all([online.standing(user.id, 'ranked'), online.standing(user.id, 'casual')]);
             const recent = await db.query(`SELECT id, mode, players, winner, reason, turns, ended_at, outcome FROM matches
-              WHERE players[1] = $1 OR players[2] = $1 ORDER BY ended_at DESC LIMIT 10`, [user.id]);
+              WHERE $1 = ANY(players) ORDER BY ended_at DESC LIMIT 10`, [user.id]);
             const won = (await db.query('SELECT count(*)::int AS n FROM tournament_players WHERE user_id = $1 AND final_rank = 1', [user.id])).rows[0].n;
             return json(res, 200, { ranked, casual, tournamentsWon: won, recent: recent.rows.map((m) => {
-              const seat = m.players[0] === user.id ? 0 : 1;
-              return { id: m.id, mode: m.mode, won: m.winner === seat, draw: m.winner === null, reason: m.reason, turns: m.turns,
+              const seat = m.players.indexOf(user.id);
+              // in 2v2 the teams sit alternately and win together
+              const won = m.winner !== null && (m.winner === seat || (m.mode === 'duo' && m.winner % 2 === seat % 2));
+              return { id: m.id, mode: m.mode, won, draw: m.winner === null, reason: m.reason, turns: m.turns,
                 endedAt: new Date(m.ended_at).getTime(), coins: m.outcome?.coins?.[seat] ?? 0 };
             }) });
           }

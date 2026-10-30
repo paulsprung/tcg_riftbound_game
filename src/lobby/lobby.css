@@ -1120,3 +1120,10 @@ a.lb-rank:hover { border-color: var(--gold); box-shadow: 0 0 22px rgba(200, 170,
 /* the profile: the rank's crest large beside the name */
 .profile__crest { flex: none; margin: -14px -6px -14px -4px; filter: drop-shadow(0 10px 18px rgba(0, 0, 0, .6)); }
 .profile__crest .rank-emblem { display: block; }
+
+/* casual 2v2: two teams of two, and the casual 2v2 search */
+.lobby-teams { gap: clamp(14px, calc(3 * var(--vw)), 48px); }
+.lobby-team { position: relative; display: flex; gap: clamp(10px, calc(1.6 * var(--vw)), 24px); padding: 26px 14px 12px; border: 1px solid rgba(200, 170, 110, .22); background: linear-gradient(180deg, rgba(10, 30, 50, .55), rgba(3, 14, 27, .2)); }
+.lobby-team__label { position: absolute; top: 6px; left: 50%; translate: -50% 0; font: 600 11px/1 var(--font-display, inherit); letter-spacing: .18em; text-transform: uppercase; color: var(--gold, #c8aa6e); }
+.lobby-teams .ds-slot, .ds__stage:has(> .ds-slot:nth-child(4)) .ds-slot { width: min(clamp(110px, calc(11 * var(--vw)), 190px), calc(27 * var(--vh))); }
+.play-online__note { text-align: center; margin: 4px auto 0; max-width: 560px; }
