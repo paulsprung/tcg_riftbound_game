@@ -16,7 +16,7 @@ export const OGN_DEFS = [
     when({ on: 'phase', at: 'beginning', whose: 'your' }, prog([iff(cond.handSize('<=', 1), [draw(1)])])),
   ]),
 
-  unit('brazen-buccaneer', 'As you play me, you may discard 1 as an additional cost. If you do, reduce my cost by [2].', {
+  unit('brazen-buccaneer', 'As you play me, you may discard a card as an additional cost. If you do, reduce my cost by [2].', {
     abilities: [costAbility({ optional: true, pay: { discard: 1 }, discount: { energy: 2 } })],
   }),
 

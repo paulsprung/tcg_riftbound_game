@@ -447,7 +447,7 @@ export const OGN_SET_DEFS = [
     choose: [slot('f', bfSel()), { ...slot('u', unitSel({ at: { slot: 'f' } }), { min: 0, max: 99, harm: true }), sumMightMax: 4 }],
     body: [kill(ref.slot('u'))],
   }),
-  spell('guerilla-warfare', 'Return up to two cards with [Hidden] from your trash to your hand. You can hide cards ignoring costs this turn.', {
+  spell('guerilla-warfare', 'Return up to two cards with [Hidden] from your trash to your hand. You can hide ignoring costs this turn.', {
     choose: [slot('c', cardSel({ rel: 'friendly', where: [pred.keyword('hidden')] }), { min: 0, max: 2 })],
     body: [returnToHand(ref.slot('c')), playerEffect({ s: 'hideFree' })],
   }),
@@ -541,7 +541,7 @@ export const OGN_SET_DEFS = [
       iff(cond.boundDomain('r', 'mind'), [draw(1)]),
       iff(cond.boundDomain('r', 'order'), [choose(unitSel({ rel: 'enemy' }), 's'), stun(ref.bound('s'))])]))],
   }),
-  spell('unchecked-power', 'Exhaust all friendly units, then deal 12 to ALL units at battlefields.', {
+  spell('unchecked-power', 'Exhaust all friendly units, then deal 12 to all units at battlefields.', {
     body: [exhaust(friendly), deal(12, atBf)],
   }),
   gear('unlicensed-armory', 'Discard 1, [E]: Choose a friendly unit. The next time it would die this turn, you may pay [R] to heal it, exhaust it, and recall it instead.', {

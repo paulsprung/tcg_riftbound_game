@@ -416,7 +416,7 @@ export const RAD_SET_DEFS = [
     abilities: [onPlay(prog([move(ref.slot('a'), 'base')], [slot('a', unitSel({ rel: 'friendly', other: true, at: 'here' }))]),
       { may: true, if: cond.playedToBf })],
   }),
-  unit('storm-raptor', '[Deflect]\nWhen a stunned enemy unit dies here, draw 1.', {
+  unit('storm-raptor', '[Deflect]\nWhen a stunned enemy unit here dies, draw 1.', {
     abilities: [when({ on: 'unitDies', at: 'here', who: 'enemy', stunned: true, each: true }, prog([draw(1)]))],
   }),
   gear('titanic-shrine', 'When you play a unit with Might greater than each other unit on the board, exhaust me to draw 1.', {

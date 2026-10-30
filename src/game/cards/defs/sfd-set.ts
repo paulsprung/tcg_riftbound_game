@@ -96,7 +96,7 @@ export const SFD_SET_DEFS = [
     abilities: [when({ on: 'cardPlayed', by: 'you', what: { types: ['spell'] } }, prog([gold(1)]),
       { may: true, cost: { exhaustSelf: true }, if: cond.not(cond.yourTurn) })],
   }),
-  unit('corinna-veraza', '[Accelerate]\nWhen I move to a battlefield, play three 1 [M] Recruit unit tokens here.', {
+  unit('corina-veraza', '[Accelerate]\nWhen I move to a battlefield, play three 1 [M] Recruit unit tokens here.', {
     abilities: [when(movedToBf, prog([playToken('recruit', 3, 'here')]))],
   }),
   unit('corrupt-enforcer', 'When I move to a battlefield, discard 1.\nWhen I win a combat, draw 1.', {
@@ -516,7 +516,7 @@ export const SFD_SET_DEFS = [
   gear('svellsongur', "[Equip] [1][G]\nAs this is attached to a unit, copy that unit's text to this Equipment's effect text for as long as this is attached to it.", {
     abilities: [always({ s: 'copyHostText' }, fx)],
   }),
-  spell('switcheroo', '[Hidden]\n[Action]\nSwap the Might of two units at the same battlefield this turn.', {
+  spell('switcheroo', '[Hidden]\n[Action]\nSwap the Mights of two units at the same battlefield this turn.', {
     kw: [kw.action()], choose: [slot('a', atBf), slot('b', unitSel({ at: { slot: 'a' } }), { distinctFrom: ['a'] })],
     body: [{ op: 'swapMight', a: ref.slot('a'), b: ref.slot('b') }],
   }),

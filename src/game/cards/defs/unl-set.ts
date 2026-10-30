@@ -544,7 +544,7 @@ export const UNL_SET_DEFS = [
   spell('turn-to-dust', 'Give a gear [Temporary].', {
     choose: [slot('a', gearSel(), { harm: true })], body: [grant(kw.temporary(), ref.slot('a'), 'permanent')],
   }),
-  unit('ultrasoft-poro', "[E]: Play two [1] [M] Bird unit tokens with [Deflect]. Use this ability only while I'm at a battlefield.", {
+  unit('ultrasoft-poro', "[E]: Play two 1 [M] Bird unit tokens with [Deflect]. Use this ability only while I'm at a battlefield.", {
     abilities: [activated({ exhaustSelf: true }, prog([playToken('bird', 2, 'choose')]), { while: cond.selfAt('battlefield') })],
   }),
   unit('undying-legion', '[Legion][>] You may play me from your trash for [3][R].', {

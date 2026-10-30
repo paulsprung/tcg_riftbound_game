@@ -1389,7 +1389,7 @@ describe('VEN set: batch 7', () => {
   it('Sky Crusier: discard a gear, [1], [E]: deal 4 to a unit at a battlefield', () => {
     const g = tbl(10306);
     const e = foe(g, 'mountain-drake');
-    const c = put(g, 'sky-crusier', 0, base(0));
+    const c = put(g, 'sky-cruiser', 0, base(0));
     emptyHand(g);
     inHand(g, 'sumpworks-map'); inHand(g, 'shipyard-skulker');
     reask(g); act(g, `act:${c}#0`); drive(g, [`t:${e}`]);

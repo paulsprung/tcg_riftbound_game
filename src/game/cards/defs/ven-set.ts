@@ -554,7 +554,7 @@ export const VEN_SET_DEFS = [
     body: [delayed(1, { on: 'objDies', info: 'u', any: true }, prog([channel(1, { exhausted: true })]), { capture: { u: ref.slot('a') } }),
       iff(cond.count(runeSel({ rel: 'friendly' }), '>=', 7), [deal(7, ref.slot('a'))], [deal(4, ref.slot('a'))])],
   }),
-  unit('sky-crusier', 'Discard a gear, [1], [E]: Deal 4 to a unit at a battlefield.', {
+  unit('sky-cruiser', 'Discard a gear, [1], [E]: Deal 4 to a unit at a battlefield.', {
     abilities: [activated({ energy: 1, exhaustSelf: true, discard: 1, discardTypes: ['gear'] },
       prog([deal(4, ref.slot('a'))], [slot('a', unitSel({ at: 'battlefield' }), { harm: true })]))],
   }),

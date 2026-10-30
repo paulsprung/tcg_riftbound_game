@@ -209,7 +209,7 @@ describe('Spiritforged set: batch A', () => {
 
   it('Corinna Veraza: moving to a battlefield plays three Recruits there', () => {
     const g = tbl(9321);
-    moveTo(g, [put(g, 'corinna-veraza', 0, base(0))], 0);
+    moveTo(g, [put(g, 'corina-veraza', 0, base(0))], 0);
     drive(g);
     expect(onBoard(g, 'recruit', 0)).toHaveLength(3);
   });

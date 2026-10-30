@@ -19,11 +19,19 @@ export interface SavedDeck extends DeckList {
 
 const KEY = 'riftbound-sim:decks:v1';
 
+/** Cards Riot renamed (a typo fixed): a deck saved under the old name finds them again. */
+const RENAMED: Record<string, string> = { 'sky-crusier': 'sky-cruiser', 'corinna-veraza': 'corina-veraza' };
+const fix = (def: string) => RENAMED[def] ?? def;
+function upgrade<T extends DeckList>(d: T): T {
+  return { ...d, legend: fix(d.legend), chosenChampion: fix(d.chosenChampion), main: d.main.map((e) => ({ ...e, def: fix(e.def) })),
+    battlefields: d.battlefields.map(fix), runes: d.runes.map((e) => ({ ...e, def: fix(e.def) })) };
+}
+
 function read(): SavedDeck[] {
   try {
     const raw = localStorage.getItem(KEY);
     const list = raw ? JSON.parse(raw) as unknown : [];
-    return Array.isArray(list) ? list.filter((d): d is SavedDeck => !!d && typeof d === 'object' && typeof (d as SavedDeck).id === 'string') : [];
+    return Array.isArray(list) ? list.filter((d): d is SavedDeck => !!d && typeof d === 'object' && typeof (d as SavedDeck).id === 'string' && Array.isArray((d as SavedDeck).main)).map(upgrade) : [];
   } catch {
     return [];
   }
@@ -59,7 +67,7 @@ export const decks = {
   /** Signed in: the server's decks from now on. */
   useServer(rows: { id: string; body: DeckList; updatedAt: number }[]) {
     remote = true;
-    commit(rows.map((r) => ({ ...r.body, id: r.id, source: 'custom', updatedAt: r.updatedAt })));
+    commit(rows.map((r) => upgrade({ ...r.body, id: r.id, source: 'custom', updatedAt: r.updatedAt })));
   },
   /** Adds the deck or replaces the one with its id; newest first. */
   save(d: SavedDeck) {
