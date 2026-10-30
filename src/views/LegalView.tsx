@@ -11,10 +11,11 @@ import { Lobby } from '../lobby/Lobby.tsx';
 
 type Operator = { name: string; place: string; email: string; hosting: string };
 type Site = { operator: Operator; cloudflare: boolean };
-const UNSET: Site = { operator: { name: '[Name of the operator]', place: '[Town, Austria]', email: '[contact e-mail]', hosting: '' }, cloudflare: true };
+// the site's own operator, until the server says otherwise (and in the preview, which has no server)
+const DEFAULT: Site = { operator: { name: 'Paul Sprung', place: 'Salzburg, Austria', email: 'rift@shyy.dev', hosting: 'Hetzner Online GmbH (Germany)' }, cloudflare: true };
 
 function useSite(): Site {
-  const [site, setSite] = useState<Site>(UNSET);
+  const [site, setSite] = useState<Site>(DEFAULT);
   useEffect(() => {
     fetch('/api/site').then((r) => (r.ok ? r.json() : null))
       .then((d: { operator: Operator | null; cloudflare?: boolean } | null) => { if (d?.operator) setSite({ operator: d.operator, cloudflare: d.cloudflare ?? true }); })
@@ -59,7 +60,7 @@ export function LegalView({ page }: { page: 'privacy' | 'imprint' }) {
             <h2>Other services</h2>
             <ul>
               <li><b>Discord</b> (Discord Inc., USA) for signing in, only when you choose to. Discord's own privacy policy applies there.</li>
-              {cloudflare && <li><b>Cloudflare</b> (Cloudflare Inc.) carries the traffic to our server and protects it from attacks; it processes your IP address for that, under a data processing agreement and the EU-US Data Privacy Framework.</li>}
+              {cloudflare && <li><b>Cloudflare</b> (Cloudflare Inc.) carries the traffic to our server and protects it from attacks, and forwards e-mail sent to our address; it processes your IP address (and such e-mails) for that, under a data processing agreement and the EU-US Data Privacy Framework.</li>}
               <li>{OPERATOR.hosting ? <><b>{OPERATOR.hosting}</b> hosts the server and the database.</> : <>The server and the database run on the operator's own machine.</>}</li>
             </ul>
             <p>Card pictures, symbols, fonts and avatars are served from our own server: your browser does not contact Riot, Google or Discord for them.</p>
