@@ -113,7 +113,9 @@ async function proxyImage(req: IncomingMessage, res: ServerResponse, url: URL, f
   // only the resize parameters of Riot's image server go along
   const q = new URLSearchParams();
   for (const k of ['w', 'fm', 'q', 'accountingTag', 'size']) { const v = url.searchParams.get(k); if (v && /^[\w-]{1,20}$/.test(v)) q.set(k, v); }
-  const up = await f(`${host.origin}${rest}${q.size ? `?${q}` : ''}`, { redirect: 'error', signal: AbortSignal.timeout(IMAGE_MS) });
+  // the other server down or slow: a bad gateway, not an error of ours
+  const up = await f(`${host.origin}${rest}${q.size ? `?${q}` : ''}`, { redirect: 'error', signal: AbortSignal.timeout(IMAGE_MS) }).catch(() => null);
+  if (!up) { res.writeHead(502); res.end(); return; }
   const type = (up.headers.get('content-type') ?? '').split(';')[0].trim();
   const size = Number(up.headers.get('content-length') ?? 0);
   if (!up.ok || !up.body || !IMAGE_TYPES.test(type) || size > IMAGE_MAX) { res.writeHead(up.status === 404 ? 404 : 502); res.end(); void up.body?.cancel(); return; }
