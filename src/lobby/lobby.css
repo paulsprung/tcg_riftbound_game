@@ -954,6 +954,10 @@ html[data-scaled] .app {
 /* ---- rank crests: the pieces of armour move on a rank change (RankEmblem.tsx, RankUp.tsx) ---- */
 .rank-emblem { overflow: visible; }
 .rc-p { transform-box: fill-box; transform-origin: center; }
+/* the ceremony's crest: each piece a layer, moved and faded by the compositor */
+.rank-emblem--layered { position: relative; }
+.rank-emblem--layered > .rc-p { position: absolute; inset: 0; transform-box: border-box; will-change: transform, opacity; }
+.rank-emblem--layered svg { display: block; overflow: visible; }
 .rc-crest { --fx: 0px; --fy: -110px; --fs: 1.25; --fr: 0deg; }
 .rc-guards { --fx: 0px; --fy: 0px; --fs: 1.9; --fr: 0deg; }
 .rc-spikes { --fx: 0px; --fy: 120px; --fs: 1.2; --fr: 0deg; }

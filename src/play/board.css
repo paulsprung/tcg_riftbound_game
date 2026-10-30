@@ -317,16 +317,16 @@ html:not([data-scaled]) .play__stage { min-height: 760px; overflow: visible; }
 .rk.is-up:not(.is-tier) { --rk: #8ff3ea; --rk-2: rgba(40, 220, 205, .45); }
 .rk__stage { position: relative; width: 440px; height: 440px; display: grid; place-items: center; align-self: center; }
 .rk__stage > * { position: absolute; left: 50%; top: 50%; translate: -50% -50%; }
-.rk__crest { transition: filter .8s, transform .8s; }
+.rk__crest { transition: filter .8s, transform .8s; will-change: transform, filter; }
 .rk.is-charge .rk__crest:not(.is-new) { animation: rk-charge 1.2s ease-in both; }
 .rk.is-down .rk__crest.is-new { animation: rk-dim 1.2s ease-out both; }
 .rk.is-reveal .rk__crest.is-new { animation: rk-float 4s ease-in-out infinite; filter: drop-shadow(0 0 30px var(--rk-2)); }
-.rk__charge { width: 520px; height: 520px; border-radius: 50%; opacity: 0; border: 2px solid var(--rk); box-shadow: 0 0 40px var(--rk-2), inset 0 0 60px var(--rk-2); }
+.rk__charge { will-change: transform, opacity; width: 520px; height: 520px; border-radius: 50%; opacity: 0; border: 2px solid var(--rk); box-shadow: 0 0 40px var(--rk-2), inset 0 0 60px var(--rk-2); }
 .rk.is-charge .rk__charge { animation: rk-gather 1.2s ease-in forwards; }
 .rk.is-down .rk__charge { display: none; }
 .rk__flash { position: fixed; inset: 0; background: #fff; pointer-events: none; animation: rk-flash .55s ease-out forwards; }
 .rk__rays {
-  width: 200vmax; height: 200vmax; opacity: 0; pointer-events: none;
+  width: 200vmax; height: 200vmax; opacity: 0; pointer-events: none; will-change: transform, opacity;
   background: repeating-conic-gradient(from 0deg, var(--rk-2) 0deg 4deg, transparent 4deg 14deg);
   mask-image: radial-gradient(circle, #000 0, rgba(0, 0, 0, .5) 14%, transparent 34%);
 }
@@ -364,6 +364,8 @@ html:not([data-scaled]) .play__stage { min-height: 760px; overflow: visible; }
 @keyframes rk-ring { 0% { opacity: .9; transform: scale(.4); } 100% { opacity: 0; transform: scale(1.5); } }
 @keyframes rk-spark { 0% { opacity: 1; transform: rotate(var(--a)) translateY(-40px) scaleY(1.4); } 100% { opacity: 0; transform: rotate(var(--a)) translateY(calc(-40px - var(--l))) scaleY(.3); } }
 @media (prefers-reduced-motion: reduce) { .rk, .rk * { animation: none !important; } .rk__text > * { opacity: 1; } }
+/* the end scene under it holds still while it plays */
+body.rk-open .gameover, body.rk-open .gameover * { animation-play-state: paused !important; }
 
 /* ---- the preview's look at the ranks (RankDemo.tsx) ---- */
 .rank-demo { display: grid; gap: 22px; padding: 28px 32px 60px; max-width: 1400px; margin: 0 auto; }

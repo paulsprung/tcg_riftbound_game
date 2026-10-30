@@ -50,6 +50,10 @@ export function RankUp({ before, after, onDone }: { before: RatingInfo; after: R
   const build = up ? gained.length * PIECE_MS + 500 : 900;
   const [phase, setPhase] = useState<Phase>('enter');
   useEffect(() => {
+    document.body.classList.add('rk-open');
+    return () => document.body.classList.remove('rk-open');
+  }, []);
+  useEffect(() => {
     const t = [setTimeout(() => setPhase('charge'), 500), setTimeout(() => setPhase('change'), 1700), setTimeout(() => setPhase('reveal'), 1700 + (newTier && up ? 350 : 0) + build)];
     return () => t.forEach(clearTimeout);
   }, [build, newTier, up]);
@@ -66,16 +70,17 @@ export function RankUp({ before, after, onDone }: { before: RatingInfo; after: R
         <div className="rk__charge" aria-hidden />
         {/* before the change: the old crest; a tier up bursts it */}
         {(!changing || (newTier && up)) && (
-          <RankEmblem key="old" tier={placed ? null : before.tier} division={before.division} size={440}
+          <RankEmblem key="old" layered tier={placed ? null : before.tier} division={before.division} size={440}
             className={`rk__crest${changing ? ' is-gone' : ''}`} burst={changing && newTier && up} />
         )}
         {changing && (
-          <RankEmblem key="new" tier={after.tier} division={after.division} size={440} className="rk__crest is-new"
+          <RankEmblem key="new" layered tier={after.tier} division={after.division} size={440} className="rk__crest is-new"
             enter={up ? gained : undefined} leave={!up && !newTier ? lost : undefined} delay={newTier && up ? 350 : 0} />
         )}
         {changing && up && gained.map((p, i) => <Sparks key={p} at={(newTier ? 350 : 0) + i * PIECE_MS + 380} />)}
-        {phase === 'change' && newTier && up && <div className="rk__flash" aria-hidden />}
       </div>
+      {/* over the whole screen, so not on the stage, which centres what it holds */}
+      {phase === 'change' && newTier && up && <div className="rk__flash" aria-hidden />}
       <div className="rk__text">
         <p className="rk__verdict">{verdict}</p>
         <h2 className="rk__name">{rankName(after.tier, after.division)}</h2>
