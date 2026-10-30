@@ -124,6 +124,10 @@
 .db-legend { position: relative; display: grid; gap: 6px; justify-items: center; padding: 10px; border: 1px solid var(--gold-dim); background: rgba(1, 10, 19, .5); cursor: pointer; color: var(--text); }
 .db-legend:hover:not(:disabled) { border-color: var(--gold); box-shadow: 0 0 18px rgba(200, 170, 110, .25); }
 .db-legend__card { width: 100%; }
+.db-legend__title { margin-top: -4px; font-size: 11px; color: var(--muted); letter-spacing: .04em; text-align: center; }
+.db-legend.is-unowned .db-legend__card { filter: grayscale(.7) brightness(.7); }
+.db-legend__tag { position: absolute; top: 14px; left: 14px; padding: 2px 7px; font: 700 10px/1.5 var(--font-ui); letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted); background: rgba(1, 10, 19, .88); border: 1px solid var(--gold-dim); }
 .db-legend strong { font: 700 15px/1.2 var(--font-display); letter-spacing: .06em; color: var(--gold-hi); }
 
 @media (max-width: 900px) {

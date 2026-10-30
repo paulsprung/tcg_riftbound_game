@@ -47,16 +47,26 @@ export function RankUp({ before, after, onDone }: { before: RatingInfo; after: R
   // what the crest gains or loses, in the order the armour is put on
   const gained: Piece[] = newTier && up ? now : PIECE_ORDER.filter((p) => now.includes(p) && !was.includes(p));
   const lost: Piece[] = PIECE_ORDER.filter((p) => was.includes(p) && !now.includes(p));
-  const build = up ? gained.length * PIECE_MS + 500 : 900;
+  // the name comes as the last piece locks: no pause after it
+  const lastMs = gained.at(-1) === 'shield' ? 700 : 500;
+  const build = up && gained.length ? (gained.length - 1) * PIECE_MS + lastMs - 150 : 900;
   const [phase, setPhase] = useState<Phase>('enter');
+  // both crests are drawn into pictures first (RankEmblem, layered): the show starts once they are,
+  // so no frame of it waits on drawing
+  const [drawn, setDrawn] = useState(0);
+  const ready = drawn >= 2;
   useEffect(() => {
     document.body.classList.add('rk-open');
     return () => document.body.classList.remove('rk-open');
   }, []);
   useEffect(() => {
+    if (!ready) return;
     const t = [setTimeout(() => setPhase('charge'), 500), setTimeout(() => setPhase('change'), 1700), setTimeout(() => setPhase('reveal'), 1700 + (newTier && up ? 350 : 0) + build)];
     return () => t.forEach(clearTimeout);
-  }, [build, newTier, up]);
+  }, [ready, build, newTier, up]);
+  // never stuck on a picture that will not draw
+  useEffect(() => { const t = setTimeout(() => setDrawn(2), 1500); return () => clearTimeout(t); }, []);
+  const onDrawn = () => setDrawn((n) => n + 1);
 
   const changing = phase === 'change' || phase === 'reveal';
   const verdict = placed ? 'Ranked' : up ? (newTier ? 'Tier up' : 'Promoted') : 'Demoted';
@@ -68,15 +78,13 @@ export function RankUp({ before, after, onDone }: { before: RatingInfo; after: R
       <div className="rk__stage">
         <div className="rk__rays" aria-hidden />
         <div className="rk__charge" aria-hidden />
-        {/* before the change: the old crest; a tier up bursts it */}
-        {(!changing || (newTier && up)) && (
-          <RankEmblem key="old" layered tier={placed ? null : before.tier} division={before.division} size={440}
-            className={`rk__crest${changing ? ' is-gone' : ''}`} burst={changing && newTier && up} />
-        )}
-        {changing && (
-          <RankEmblem key="new" layered tier={after.tier} division={after.division} size={440} className="rk__crest is-new"
-            enter={up ? gained : undefined} leave={!up && !newTier ? lost : undefined} delay={newTier && up ? 350 : 0} />
-        )}
+        <div className="rk__glow" aria-hidden />
+        {/* both from the start, the new one hidden until the change: before it, the old crest; a tier up bursts it */}
+        <RankEmblem key="old" layered tier={placed ? null : before.tier} division={before.division} size={440} onReady={onDrawn}
+          className={`rk__crest is-old${changing && !(newTier && up) ? ' is-gone' : ''}`} burst={changing && newTier && up} />
+        <RankEmblem key="new" layered tier={after.tier} division={after.division} size={440} onReady={onDrawn}
+          className={`rk__crest is-new${changing ? '' : ' is-waiting'}`}
+          enter={changing && up ? gained : undefined} keep={!up && !newTier ? lost : undefined} leave={changing && !up && !newTier ? lost : undefined} delay={newTier && up ? 350 : 0} />
         {changing && up && gained.map((p, i) => <Sparks key={p} at={(newTier ? 350 : 0) + i * PIECE_MS + 380} />)}
       </div>
       {/* over the whole screen, so not on the stage, which centres what it holds */}

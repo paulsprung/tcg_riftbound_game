@@ -1,4 +1,4 @@
-import { useId, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { TIERS, type Tier } from '../economy/ranks.ts';
 
 /*
@@ -12,8 +12,10 @@ import { TIERS, type Tier } from '../economy/ranks.ts';
  * Each piece of armour is a group of its own, so a rank change can move
  * them (RankUp.tsx): `enter` pieces fly in and lock, `leave` pieces fall
  * away, `burst` sends all of them flying. For that the crest is `layered`:
- * each piece its own SVG in its own layer, drawn (and lit) once and then
- * only moved, so the browser never re-runs the lighting while it animates.
+ * each piece is drawn once, off screen, into a picture of its own (and a
+ * white one of its outline, for the flashes), and the pictures are what
+ * move: the lighting never runs while it animates, and the animations
+ * touch only transform and opacity, which the compositor plays alone.
  */
 
 export type Piece = 'shield' | 'crest' | 'guards' | 'spikes' | 'wings' | 'halo';
@@ -61,14 +63,18 @@ const DRAW_ORDER: Piece[] = ['halo', 'wings', 'spikes', 'guards', 'crest', 'shie
 /** Where each piece sits in the crest's box (its viewBox), for it to turn and scale about itself as a layer. */
 const ORIGIN: Record<Piece, string> = { shield: '50% 51%', crest: '50% 17%', guards: '50% 40%', spikes: '50% 87%', wings: '50% 31%', halo: '50% 51%' };
 
-export function RankEmblem({ tier, division, size = 56, className, enter, leave, burst, delay = 0, layered = false }: {
+export function RankEmblem({ tier, division, size = 56, className, enter, leave, keep, burst, delay = 0, layered = false, onReady }: {
   tier: string | null; division?: number | null; size?: number; className?: string;
-  /** Each piece in a layer of its own (the ceremony), not one SVG. */
+  /** Each piece a picture in a layer of its own (the ceremony), not one SVG. */
   layered?: boolean;
+  /** Layered: called once its pictures are drawn and decoded. */
+  onReady?: () => void;
   /** Pieces that fly in and lock, in order, from `delay` ms on. */
   enter?: Piece[];
   /** Pieces that fall away. */
   leave?: Piece[];
+  /** Pieces it still wears, though its rank does not: the ones about to fall away, drawn before they do. */
+  keep?: Piece[];
   /** Everything flies apart. */
   burst?: boolean;
   delay?: number;
@@ -76,7 +82,7 @@ export function RankEmblem({ tier, division, size = 56, className, enter, leave,
   const id = useId().replace(/:/g, '');
   const known = (TIERS as readonly string[]).includes(tier ?? '') ? (tier as Tier) : null;
   const k = known ? LOOK[known] : UNRANKED;
-  const wear = new Set([...piecesOf(known, division), ...(leave ?? [])]);
+  const wear = new Set([...piecesOf(known, division), ...(keep ?? []), ...(leave ?? [])]);
   const url = (n: string) => `url(#${n}${id})`;
   const lit = url('l');
   const anim = (p: Piece): { className: string; style?: CSSProperties } => {
@@ -200,6 +206,12 @@ export function RankEmblem({ tier, division, size = 56, className, enter, leave,
         <feComposite in="SourceGraphic" in2="s2" operator="arithmetic" k1="0" k2="1" k3="0.75" k4="0" result="lit" />
         <feDropShadow in="lit" dx="0" dy="4" stdDeviation="3.5" floodColor="#000" floodOpacity="0.65" />
       </filter>
+      {/* the piece's outline in white, softened: what flashes as it locks or bursts */}
+      <filter id={`w${id}`} x="-10%" y="-10%" width="120%" height="120%">
+        <feFlood floodColor="#fff" />
+        <feComposite in2="SourceAlpha" operator="in" />
+        <feGaussianBlur stdDeviation="1.5" />
+      </filter>
       <filter id={`gl${id}`} x="-50%" y="-50%" width="200%" height="200%">
         <feGaussianBlur stdDeviation="4" result="g" />
         <feMerge><feMergeNode in="g" /><feMergeNode in="SourceGraphic" /></feMerge>
@@ -210,18 +222,13 @@ export function RankEmblem({ tier, division, size = 56, className, enter, leave,
 
   if (layered) {
     return (
-      <div className={`rank-emblem rank-emblem--layered${className ? ` ${className}` : ''}`} style={{ width: size, height: size, opacity: known ? 1 : 0.7 }}
-        role="img" aria-label={label}>
-        <svg width="0" height="0" aria-hidden style={{ position: 'absolute' }}>{defsNode}</svg>
-        {worn.map((p) => {
-          const a = anim(p);
-          return (
-            <div key={p} className={a.className} style={{ ...a.style, transformOrigin: ORIGIN[p] }}>
-              <svg width={size} height={size} viewBox="-20 -18 280 280" aria-hidden>{draw(p)}</svg>
-            </div>
-          );
-        })}
-      </div>
+      <Layered label={label} size={size} dim={!known} className={className} worn={worn} anim={anim} onReady={onReady}
+        source={(p, white, px) => (
+          <svg xmlns="http://www.w3.org/2000/svg" width={size * px} height={size * px} viewBox="-20 -18 280 280">
+            {defsNode}
+            {white ? <g filter={url('w')}>{draw(p)}</g> : draw(p)}
+          </svg>
+        )} />
     );
   }
   return (
@@ -233,5 +240,70 @@ export function RankEmblem({ tier, division, size = 56, className, enter, leave,
         return <g key={p} {...a}>{draw(p)}</g>;
       })}
     </svg>
+  );
+}
+
+/** How sharp the pictures are drawn: the screen's density, at most twice the size. */
+const pixels = () => Math.min(2, Math.max(1, typeof devicePixelRatio === 'number' ? devicePixelRatio : 1));
+
+/** Draws each piece off screen once, into a bitmap, and shows the bitmaps as canvas layers: textures the
+    compositor moves without drawing anything again. */
+function Layered({ label, size, dim, className, worn, anim, source, onReady }: {
+  label: string; size: number; dim: boolean; className?: string; worn: Piece[];
+  anim: (p: Piece) => { className: string; style?: CSSProperties };
+  source: (p: Piece, white: boolean, px: number) => ReactNode; onReady?: () => void;
+}) {
+  const off = useRef<HTMLDivElement>(null);
+  const [maps, setMaps] = useState<Record<string, ImageBitmap> | null>(null);
+  const ready = useRef(onReady);
+  ready.current = onReady;
+  const px = pixels();
+  const key = worn.join();
+  useEffect(() => {
+    const el = off.current;
+    if (!el) return;
+    let live = true;
+    const made: string[] = [];
+    const jobs = [...el.querySelectorAll<HTMLElement>('[data-k]')].map(async (box) => {
+      const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(box.firstElementChild!)], { type: 'image/svg+xml' }));
+      made.push(url);
+      const img = new Image();
+      img.src = url;
+      await img.decode();
+      return [box.dataset.k!, await createImageBitmap(img)] as const;
+    });
+    Promise.all(jobs).then((done) => {
+      made.forEach((u) => URL.revokeObjectURL(u));
+      if (live) { setMaps(Object.fromEntries(done)); ready.current?.(); } else done.forEach(([, b]) => b.close());
+    }).catch(() => { made.forEach((u) => URL.revokeObjectURL(u)); if (live) ready.current?.(); });
+    return () => { live = false; };
+    // the drawing is the same as long as the pieces, the rank and the size are
+  }, [key, label, size, px]);
+  useEffect(() => () => { if (maps) Object.values(maps).forEach((b) => b.close()); }, [maps]);
+  const paint = (k: string) => (c: HTMLCanvasElement | null) => {
+    const b = maps?.[k];
+    if (!c || !b || c.dataset.drawn === k) return;
+    c.width = b.width; c.height = b.height;
+    c.getContext('2d')?.drawImage(b, 0, 0);
+    c.dataset.drawn = k;
+  };
+  return (
+    <div className={`rank-emblem rank-emblem--layered${className ? ` ${className}` : ''}`} style={{ width: size, height: size, opacity: dim ? 0.7 : 1 }}
+      role="img" aria-label={label}>
+      {!maps && (
+        <div ref={off} className="rank-emblem__off" aria-hidden>
+          {worn.flatMap((p) => [false, true].map((w) => <div key={`${p}${w}`} data-k={`${p}${w ? '-w' : ''}`}>{source(p, w, w ? 1 : px)}</div>))}
+        </div>
+      )}
+      {maps && worn.map((p) => {
+        const a = anim(p);
+        return (
+          <div key={p} className={a.className} style={{ ...a.style, transformOrigin: ORIGIN[p] }}>
+            <canvas ref={paint(p)} aria-hidden />
+            <canvas ref={paint(`${p}-w`)} aria-hidden className="rc-flash" />
+          </div>
+        );
+      })}
+    </div>
   );
 }

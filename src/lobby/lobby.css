@@ -953,21 +953,27 @@ html[data-scaled] .app {
 
 /* ---- rank crests: the pieces of armour move on a rank change (RankEmblem.tsx, RankUp.tsx) ---- */
 .rank-emblem { overflow: visible; }
-.rc-p { transform-box: fill-box; transform-origin: center; }
-/* the ceremony's crest: each piece a layer, moved and faded by the compositor */
+/* the ceremony's crest: each piece a picture in a layer, moved and faded by the compositor alone */
 .rank-emblem--layered { position: relative; }
-.rank-emblem--layered > .rc-p { position: absolute; inset: 0; transform-box: border-box; will-change: transform, opacity; }
-.rank-emblem--layered svg { display: block; overflow: visible; }
+.rank-emblem__off { position: absolute; width: 0; height: 0; overflow: hidden; visibility: hidden; pointer-events: none; }
+.rank-emblem--layered > .rc-p { position: absolute; inset: 0; will-change: transform, opacity; }
+.rank-emblem--layered canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+.rank-emblem--layered .rc-flash { opacity: 0; will-change: opacity; }
 .rc-crest { --fx: 0px; --fy: -110px; --fs: 1.25; --fr: 0deg; }
 .rc-guards { --fx: 0px; --fy: 0px; --fs: 1.9; --fr: 0deg; }
 .rc-spikes { --fx: 0px; --fy: 120px; --fs: 1.2; --fr: 0deg; }
 .rc-wings { --fx: 0px; --fy: -30px; --fs: 2.3; --fr: 8deg; }
 .rc-shield { --fx: 0px; --fy: 0px; --fs: .15; --fr: -25deg; }
 .rc-halo { --fx: 0px; --fy: 0px; --fs: .3; --fr: -90deg; }
+/* a piece flies in, white hot, and locks */
 .rc-enter { animation: rc-enter .5s var(--delay) cubic-bezier(.3, 1.5, .5, 1) both; }
+.rc-enter > .rc-flash { animation: rc-glint .75s var(--delay) ease-out both; }
 .rc-shield.rc-enter { animation-duration: .7s; }
+/* a piece falls away */
 .rc-leave { animation: rc-leave 1s var(--delay) cubic-bezier(.5, 0, .9, .4) forwards; }
+/* everything bursts apart, white */
 .rc-burst { animation: rc-burst .9s calc(var(--delay) + var(--i) * 40ms) cubic-bezier(.1, .7, .3, 1) forwards; }
+.rc-burst > .rc-flash { animation: rc-white .25s calc(var(--delay) + var(--i) * 40ms) ease-out forwards; }
 .rc-shield.rc-burst { --bx: 0px; --by: 0px; --bs: 1.6; --br: 0deg; }
 .rc-crest.rc-burst { --bx: 0px; --by: -200px; --bs: 1.2; --br: 30deg; }
 .rc-guards.rc-burst { --bx: 0px; --by: 10px; --bs: 2.6; --br: 0deg; }
@@ -975,21 +981,23 @@ html[data-scaled] .app {
 .rc-wings.rc-burst { --bx: 0px; --by: -40px; --bs: 2.8; --br: 12deg; }
 .rc-halo.rc-burst { --bx: 0px; --by: 0px; --bs: 2.4; --br: 0deg; }
 @keyframes rc-enter {
-  0% { opacity: 0; transform: translate(var(--fx), var(--fy)) scale(var(--fs)) rotate(var(--fr)); filter: brightness(4) blur(3px); }
-  55% { opacity: 1; filter: brightness(2.4) blur(0); }
-  72% { transform: scale(1.04); filter: brightness(3); }
-  100% { opacity: 1; transform: none; filter: none; }
+  0% { opacity: 0; transform: translate(var(--fx), var(--fy)) scale(var(--fs)) rotate(var(--fr)); }
+  45% { opacity: 1; }
+  72% { transform: scale(1.04); }
+  100% { opacity: 1; transform: none; }
 }
+@keyframes rc-glint { 0% { opacity: 1; } 55% { opacity: .85; } 100% { opacity: 0; } }
 @keyframes rc-leave {
   0% { transform: none; }
-  25% { transform: translate(0, -6px) rotate(-4deg); filter: brightness(1.4); }
-  100% { opacity: 0; transform: translate(14px, 160px) rotate(24deg); filter: grayscale(1) brightness(.4); }
+  25% { transform: translate(0, -6px) rotate(-4deg); }
+  100% { opacity: 0; transform: translate(14px, 160px) rotate(24deg); }
 }
 @keyframes rc-burst {
-  0% { transform: none; filter: brightness(3); }
-  100% { opacity: 0; transform: translate(var(--bx), var(--by)) scale(var(--bs)) rotate(var(--br)); filter: brightness(4) blur(6px); }
+  0% { transform: none; }
+  100% { opacity: 0; transform: translate(var(--bx), var(--by)) scale(var(--bs)) rotate(var(--br)); }
 }
-@media (prefers-reduced-motion: reduce) { .rc-p { animation: none !important; } .rc-leave, .rc-burst { opacity: 0; } }
+@keyframes rc-white { to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .rc-p, .rc-flash { animation: none !important; } .rc-leave, .rc-burst { opacity: 0; } }
 
 /* ======================================================= round 7: depth --
    The client's Play button, a stage for the decks on the Play pages, panels
