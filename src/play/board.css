@@ -379,6 +379,8 @@ html:not([data-scaled]) .play__stage { min-height: 760px; overflow: visible; }
 body.rk-open > #root { visibility: hidden; transition: visibility 0s .45s; }
 
 /* ---- the preview's look at the ranks (RankDemo.tsx) ---- */
+.rank-demo__ending { position: fixed; inset: 0; z-index: 60; background: #02060c; }
+.rank-demo__label { color: var(--muted); font-size: 13px; margin-right: 4px; }
 .rank-demo { display: grid; gap: 22px; padding: 28px 32px 60px; max-width: 1400px; margin: 0 auto; }
 .rank-demo h1 { margin: 0; font: 800 28px/1 var(--font-display); letter-spacing: .12em; text-transform: uppercase; color: var(--gold-hi); }
 .rank-demo header p { margin: 6px 0 0; }

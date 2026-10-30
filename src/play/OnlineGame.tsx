@@ -65,7 +65,7 @@ function RankMove({ before, after }: { before: RatingInfo; after: RatingInfo }) 
   );
 }
 
-function Outcome({ end, tournament, mode }: { end: Extract<ServerMsg, { t: 'end' }> | null; tournament: boolean; mode: string }) {
+export function Outcome({ end, tournament, mode }: { end: Extract<ServerMsg, { t: 'end' }> | null; tournament: boolean; mode: string }) {
   // a rank change plays as a ceremony first, once
   const [seen, setSeen] = useState(false);
   if (!end) return <p className="gameover__note">Saving the result…</p>;

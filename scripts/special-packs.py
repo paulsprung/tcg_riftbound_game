@@ -11,9 +11,8 @@ built the same way:
 
 - the bag's outline and the ribs of its crimps come from the Vendetta pack,
   the colour from the special pack's own wrapper colours;
-- the logo is lifted off the Vendetta pack (unmixed from the pink behind it;
-  the F and L that Akali's hair crosses there come from the Unleashed pack,
-  where the same logo sits 1 px left and 8 px up);
+- the logo is Riot's own Riftbound logo (the one on riftbound.leagueoflegends.com),
+  its RIFTBOUND / LEAGUE OF LEGENDS part, with 14+ under it as on the packs;
 - the champion is the art of one of the pack's own cards (public/cards);
 - the name is set in the app's display face, Faustina, in gold.
 
@@ -22,6 +21,7 @@ shows the boosters (PackWrapper's real art, tear line included).
 """
 import json
 import os
+import urllib.request
 
 import cv2
 import numpy as np
@@ -38,7 +38,7 @@ TMP = os.path.join(ROOT, 'node_modules', '.cache', 'special-packs')
 
 W, H = 552, 900          # the Vendetta pack's size
 TEAR = 0.0515            # its tear line
-LOGO_AT = (70, 72, 482, 226)
+LOGO_TOP = 68
 
 # id: name lines, the line under them, the card whose art it shows and the part of that card to use
 # (x0, y0, x1, y1 on the 744 x 1039 scan, clear of its cost and its text), wrapper colours light, mid, dark
@@ -70,54 +70,23 @@ def font(family, file, weight):
     return out
 
 
-def unmix(r, bg, lo=12, span=38):
-    """The foreground over a known background: its alpha and its own colour."""
-    lab = cv2.cvtColor(r, cv2.COLOR_BGR2LAB).astype(float)
-    lb = cv2.cvtColor(bg, cv2.COLOR_BGR2LAB).astype(float)
-    a = np.clip((np.sqrt(((lab - lb) ** 2).sum(-1)) - lo) / span, 0, 1)
-    return a
+# Riot's Riftbound logo, as riftbound.leagueoflegends.com shows it (a 10000 x 4389 PNG with alpha); fetched once
+LOGO_URL = ('https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/'
+            '23d41c7809a48a013f3d8a7204b81fb4d8bdb164-10000x4389.png?accountingTag=RB&w=1600')
+LOGO_WORDS = 526     # at that width, the rows of RIFTBOUND / LEAGUE OF LEGENDS (the band under them says TRADING CARD GAME)
+LOGO_W = 404         # its width on the pack, as on the boosters
 
 
 def logo():
-    """The Riftbound logo with 14+, as BGRA, lifted off the Vendetta pack."""
-    ven = cv2.imread(os.path.join(MEDIA, 'pack-ven.webp'), cv2.IMREAD_UNCHANGED)[..., :3]
-    x0, y0, x1, y1 = LOGO_AT
-    r = ven[y0:y1, x0:x1].copy()
-    hsv = cv2.cvtColor(r, cv2.COLOR_BGR2HSV)
-    hh, ss, vv = [hsv[..., k].astype(int) for k in range(3)]
-    pink = ((hh >= 150) | (hh <= 5)) & (ss > 70)
-    bg = cv2.inpaint(r, cv2.dilate((~pink).astype(np.uint8) * 255, np.ones((7, 7), np.uint8)), 9, cv2.INPAINT_TELEA)
-    bg = cv2.GaussianBlur(bg, (0, 0), 3)
-    a = unmix(r, bg)
-    yy, xx = np.mgrid[0:r.shape[0], 0:r.shape[1]]
-    ay, ax = yy + y0, xx + x0
-    plus = (ax >= 425) & (ax <= 471) & (ay >= 203)
-    a[(ay >= 204) & ~plus] = 0
-    a[ax < 84] = 0
-    # the pink shards flying about, and Akali's navy hair
-    a[(((hh >= 145) | (hh <= 4)) & (ss > 25) & (ss < 140) & (vv > 150))] *= 0
-    a[cv2.dilate(((hh >= 95) & (hh <= 135) & (ss > 50) & (vv < 170)).astype(np.uint8), np.ones((3, 3), np.uint8)) > 0] = 0
-    spot = (ax >= 244) & (ax <= 300) & (ay >= 172) & (ay <= 206)
-    a[spot & ~((ss < 70) & (vv > 175))] = 0
-    fg = np.clip((r.astype(float) - (1 - a[..., None]) * bg) / np.maximum(a[..., None], .08), 0, 255)
-    # F and L from the Unleashed pack
-    unl = cv2.imread(os.path.join(MEDIA, 'pack-unl.webp'), cv2.IMREAD_UNCHANGED)[..., :3]
-    ux0, uy0, ux1, uy1 = 264, 154, 306, 200
-    ur = unl[uy0:uy1, ux0:ux1]
-    uh = cv2.cvtColor(ur, cv2.COLOR_BGR2HSV)
-    ub = cv2.inpaint(ur, cv2.dilate(((uh[..., 1] < 70) & (uh[..., 2] > 150)).astype(np.uint8) * 255, np.ones((5, 5), np.uint8)), 7, cv2.INPAINT_TELEA)
-    ua = unmix(ur, ub)
-    ua[~((uh[..., 1] < 90) | (ua > .9))] = 0
-    ufg = np.clip((ur.astype(float) - (1 - ua[..., None]) * ub) / np.maximum(ua[..., None], .08), 0, 255)
-    ty, tx = uy0 + 8 - y0, ux0 + 1 - x0
-    a[ty:ty + ua.shape[0], tx:tx + ua.shape[1]] = ua
-    fg[ty:ty + ua.shape[0], tx:tx + ua.shape[1]] = ufg
-    # only pieces of some size: no stray flecks
-    n, lab, st, _ = cv2.connectedComponentsWithStats((a > .3).astype(np.uint8), 8)
-    keep = np.zeros(n, bool)
-    keep[1:] = st[1:, 4] >= 25
-    a[~keep[lab]] = 0
-    return fg, a
+    """The Riftbound logo's words, as BGR and alpha, at their size on the pack."""
+    os.makedirs(TMP, exist_ok=True)
+    path = os.path.join(TMP, 'riftbound-logo.png')
+    if not os.path.exists(path):
+        urllib.request.urlretrieve(LOGO_URL, path)
+    img = cv2.imread(path, cv2.IMREAD_UNCHANGED)[:LOGO_WORDS]
+    h = round(img.shape[0] * LOGO_W / img.shape[1])
+    img = cv2.resize(img, (LOGO_W, h), interpolation=cv2.INTER_AREA)
+    return img[..., :3].astype(float), img[..., 3].astype(float) / 255
 
 
 def background(c1, c2, c3, rng):
@@ -235,13 +204,13 @@ def gold_text(img, text, cy, face, max_w, size):
     return img
 
 
-def plain_text(img, text, cy, face, size, spacing):
+def plain_text(img, text, cy, face, size, spacing, x=None):
     f = ImageFont.truetype(face, size)
     widths = [f.getbbox(ch)[2] for ch in text]
     total = sum(widths) + spacing * (len(text) - 1)
     layer = Image.new('L', (W, H), 0)
     d = ImageDraw.Draw(layer)
-    x = (W - total) / 2
+    x = (W - total) / 2 if x is None else x
     for ch, w in zip(text, widths):
         d.text((x, cy - size * .62), ch, font=f, fill=255)
         x += w + spacing
@@ -273,10 +242,13 @@ def main():
         plate = cv2.GaussianBlur(plate, (0, 0), 10)
         img = img * (1 - .28 * plate[..., None]) + c3 * .28 * plate[..., None]
         img = crimps(img, ven)
-        # the logo
-        x0, y0, x1, y1 = LOGO_AT
+        # the logo, centred, with a soft shadow under it as printed
+        lh, lw = logo_a.shape
+        x0, y0 = (W - lw) // 2, LOGO_TOP
         la = logo_a[..., None]
-        img[y0:y1, x0:x1] = img[y0:y1, x0:x1] * (1 - la) + logo_fg * la
+        sh = cv2.GaussianBlur(logo_a, (0, 0), 5)[..., None] * .45
+        img[y0 + 3:y0 + 3 + lh, x0:x0 + lw] *= 1 - sh
+        img[y0:y0 + lh, x0:x0 + lw] = img[y0:y0 + lh, x0:x0 + lw] * (1 - la) + logo_fg * la
         # gold frame and the words
         rgba = np.dstack([img, np.full((H, W), 255.)])
         frame = Image.new('RGBA', (W, H), (0, 0, 0, 0))
@@ -286,6 +258,7 @@ def main():
         rgba[..., :3] = rgba[..., :3] * (1 - fa) + fr[..., [2, 1, 0]] * fa
         rgba = gold_text(rgba, p['title'], 760, title_face, W - 110, 64)
         rgba = plain_text(rgba, p['sub'], 812, ui_face, 19, 1.5)
+        rgba = plain_text(rgba, '14+', LOGO_TOP + logo_a.shape[0] + 14, ui_face, 17, 1, x=(W + logo_a.shape[1]) // 2 - 34)
         # a soft sheen across the foil, as the photographed packs have
         yy, xx = np.mgrid[0:H, 0:W].astype(float)
         sheen = np.exp(-(((xx * .8 + yy * .35) - W * .55) / 90) ** 2) * .10

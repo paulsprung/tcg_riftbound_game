@@ -83,7 +83,7 @@ export function App() {
         <>
           <LobbyTop route={route} />
           <main className="main"><div className="lb-view lb-scroll">
-            <Suspense fallback={<p className="status">Loading…</p>}><RankDemo /></Suspense>
+            <Suspense fallback={<p className="status">Loading…</p>}><RankDemo db={state.status === 'ready' ? state.db : null} /></Suspense>
           </div></main>
         </>
       ) : state.status === 'ready' && onboarding ? (
