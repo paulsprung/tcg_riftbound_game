@@ -108,6 +108,11 @@ describe.skipIf(!url)('server economy', () => {
     expect(g.slab.cardId).toBe(cardId);
     expect(g.account.slabs[0].cert).toBe(g.slab.cert);
     expect((await call('POST', '/api/account/grade', bob, { cardId, foil: false })).status).toBe(400);
+    // a name from the object prototype is no card anyone owns, and leaves the prototype alone
+    for (const name of ['__proto__', 'constructor', 'toString']) {
+      expect((await call('POST', '/api/account/grade', bob, { cardId: name, foil: false })).status).toBe(400);
+    }
+    expect(([] as unknown[])[0]).toBeUndefined();
     const ok = await call('PUT', '/api/account/showcase', alice, { items: [{ kind: 'slab', cert: g.slab.cert }] });
     expect((await ok.json()).account.showcase).toEqual([{ kind: 'slab', cert: g.slab.cert }]);
     expect((await call('PUT', '/api/account/showcase', bob, { items: [{ kind: 'slab', cert: g.slab.cert }] })).status).toBe(400);

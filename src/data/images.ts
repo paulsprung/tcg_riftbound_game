@@ -73,12 +73,6 @@ function loadBundle(name: string): Promise<Urls> {
 
 const bundleOf = (card: Card) => (card.image.startsWith(BUNDLE) ? card.image.slice(BUNDLE.length) : null);
 
-/** Start fetching these cards' bundles, one at a time, in this order. */
-export function preloadCards(cards: Card[]): void {
-  const names = [...new Set(cards.map(bundleOf).filter((n): n is string => !!n))];
-  names.reduce<Promise<unknown>>((p, n) => p.then(() => loadBundle(n).catch(() => undefined)), Promise.resolve());
-}
-
 const decoded = new Map<string, Promise<boolean>>();
 
 /** Resolves true once the card's art at about `width` px is downloaded and

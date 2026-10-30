@@ -35,7 +35,7 @@ import { mulberry32 } from '../state/rng.ts';
 import type { GameState, Loc, ObjId, PlayerId } from '../state/types.ts';
 import { determinize } from './determinize.ts';
 import { evaluate } from './evaluate.ts';
-import { argmax, cheapAnswer, heuristicScores, moveGain, readyUnits, realOptions } from './policy.ts';
+import { argmax, cheapAnswer, heuristicScores, readyUnits, realOptions } from './policy.ts';
 
 export type AiLevel = 'beginner' | 'normal';
 
@@ -310,9 +310,6 @@ function normal(cfg: AgentConfig, v: PlayerView, d: Decision, rand: () => number
   const keys = sentBy[best] ?? chosen.keys;
   return keys.length > 1 ? { key: keys[0], plan: keys.slice(1), stats } : { key: keys[0], stats };
 }
-
-/** Used by the combat preview later (§11.9); exported for tests. */
-export const estimateMove = moveGain;
 
 /** The card definitions the agent simulates with: a worker built from a
     different bundle must refuse to answer (§11.2). */

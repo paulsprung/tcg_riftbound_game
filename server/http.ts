@@ -104,6 +104,8 @@ const IMAGE_HOSTS: { prefix: string; origin: string; path: RegExp }[] = [
   { prefix: '/avatar', origin: 'https://cdn.discordapp.com', path: /^\/avatars\/\d{5,25}\/a?_?[0-9a-f]{16,40}\.png$/ },
 ];
 const IMAGE_TYPES = /^image\/(png|jpeg|webp|svg\+xml|gif)$/;
+/** An image from elsewhere: at most this big, and this long to come. */
+const IMAGE_MAX = 8 * 1024 * 1024, IMAGE_MS = 10_000;
 
 async function proxyImage(req: IncomingMessage, res: ServerResponse, url: URL, f: typeof fetch, host: (typeof IMAGE_HOSTS)[number]) {
   const rest = url.pathname.slice(host.prefix.length);
@@ -111,17 +113,19 @@ async function proxyImage(req: IncomingMessage, res: ServerResponse, url: URL, f
   // only the resize parameters of Riot's image server go along
   const q = new URLSearchParams();
   for (const k of ['w', 'fm', 'q', 'accountingTag', 'size']) { const v = url.searchParams.get(k); if (v && /^[\w-]{1,20}$/.test(v)) q.set(k, v); }
-  const up = await f(`${host.origin}${rest}${q.size ? `?${q}` : ''}`, { redirect: 'error' });
+  const up = await f(`${host.origin}${rest}${q.size ? `?${q}` : ''}`, { redirect: 'error', signal: AbortSignal.timeout(IMAGE_MS) });
   const type = (up.headers.get('content-type') ?? '').split(';')[0].trim();
-  if (!up.ok || !up.body || !IMAGE_TYPES.test(type)) { res.writeHead(up.status === 404 ? 404 : 502); res.end(); return; }
+  const size = Number(up.headers.get('content-length') ?? 0);
+  if (!up.ok || !up.body || !IMAGE_TYPES.test(type) || size > IMAGE_MAX) { res.writeHead(up.status === 404 ? 404 : 502); res.end(); void up.body?.cancel(); return; }
+  const body = Buffer.from(await up.arrayBuffer());
+  if (body.length > IMAGE_MAX) { res.writeHead(502); res.end(); return; }
   res.writeHead(200, {
     'content-type': type,
     'cache-control': 'public, max-age=604800, immutable',
     // an SVG from elsewhere is shown, never run
     ...(type === 'image/svg+xml' ? { 'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'" } : {}),
   });
-  if (req.method === 'HEAD') { res.end(); return; }
-  res.end(Buffer.from(await up.arrayBuffer()));
+  res.end(req.method === 'HEAD' ? undefined : body);
 }
 
 /** Discord's avatar URL as this site's own path. */
@@ -219,7 +223,7 @@ export function handler({ cfg, db, fetch: f = fetch, catalog, online, director, 
         if (req.method !== 'POST') return json(res, 405, { error: 'POST only' });
         // same-site only: a form on another site must not log you out
         const origin = req.headers.origin;
-        if (origin && origin !== cfg.publicUrl) return json(res, 403, { error: 'Wrong origin' });
+        if (origin !== cfg.publicUrl) return json(res, 403, { error: 'Wrong origin' });
         await endSession(db, jar[SESSION_COOKIE]);
         setCookie(res, SESSION_COOKIE, '', 0, secure);
         return json(res, 200, { ok: true });
@@ -262,7 +266,7 @@ export function handler({ cfg, db, fetch: f = fetch, catalog, online, director, 
             return json(res, 200, { ranked, casual, tournamentsWon: won, recent: recent.rows.map((m) => {
               const seat = m.players.indexOf(user.id);
               // in 2v2 the teams sit alternately and win together
-              const won = m.winner !== null && (m.winner === seat || (m.mode === 'duo' && m.winner % 2 === seat % 2));
+              const won = m.winner !== null && (m.winner === seat || (m.players.length === 4 && m.winner % 2 === seat % 2));
               return { id: m.id, mode: m.mode, won, draw: m.winner === null, reason: m.reason, turns: m.turns,
                 endedAt: new Date(m.ended_at).getTime(), coins: m.outcome?.coins?.[seat] ?? 0 };
             }) });

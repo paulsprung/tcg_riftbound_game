@@ -16,9 +16,6 @@ const BOARD: readonly ZoneKind[] = ['base', 'bf', 'facedown', 'legend'];
 /** Part of the board [107]: moving within it keeps the object [124]. */
 export const isBoard = (z: ZoneKind) => BOARD.includes(z);
 
-/** A location: a base or a battlefield [198.1]. */
-export const isLocation = (z: ZoneKind) => z === 'base' || z === 'bf';
-
 export type Visibility = 'public' | 'private' | 'secret' | 'facedown';
 
 /** Who may see the cards of a zone [109], [108.4.e], [108.7.c], [107.3.f]. */
@@ -54,9 +51,6 @@ export function sameZone(a: Zone, b: Zone): boolean {
   if ('item' in a && 'item' in b) return a.item === b.item;
   return true;
 }
-
-/** The player whose zone this is, for the zones that belong to one. */
-export const zoneOwner = (z: Zone): PlayerId | null => ('p' in z ? z.p : null);
 
 /** "hand(P1)", "bf0": for log lines and error messages. */
 export function zoneLabel(z: Zone): string {

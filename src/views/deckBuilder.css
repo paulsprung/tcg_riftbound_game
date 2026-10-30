@@ -120,8 +120,6 @@
 .db-legend:hover:not(:disabled) { border-color: var(--gold); box-shadow: 0 0 18px rgba(200, 170, 110, .25); }
 .db-legend__card { width: 100%; }
 .db-legend strong { font: 700 15px/1.2 var(--font-display); letter-spacing: .06em; color: var(--gold-hi); }
-.db-legend.is-locked { cursor: default; }
-.db-legend.is-locked .db-legend__card { filter: grayscale(.9) brightness(.5); }
 
 @media (max-width: 900px) {
   .db__body { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }

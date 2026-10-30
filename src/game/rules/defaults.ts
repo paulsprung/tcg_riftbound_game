@@ -85,11 +85,6 @@ export function buffValue(s: GameState, unit: ObjId): number {
   return buffValueOf(s, s.objects[unit]);
 }
 
-/** Times an object may be Empowered at once: it is binary [442.1.c.1]. */
-export function maxEmpowered(_s: GameState, _obj: ObjId): number {
-  return 1;
-}
-
 /** What hiding a card costs: [A], one Power of any domain [811.1.b]. Teemo's
     alternatives arrive with Hidden (M2). */
 export function hideCost(_s: GameState, _p: PlayerId, _card: ObjId): TotalCost {

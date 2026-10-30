@@ -278,6 +278,7 @@ export class Director {
     return this.serial(async () => {
       const t = await this.get(id);
       if (t.status !== 'drafting' || !t.draft) throw new Refused('Not drafting');
+      if (!t.draft.pods.some((p) => p.seats.includes(userId))) throw new Refused('Not in this draft', 404);
       const cat = await this.catalog();
       const pods = t.draft.pods.map((p) => {
         const seat = p.seats.indexOf(userId);

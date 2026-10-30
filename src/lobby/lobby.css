@@ -170,9 +170,7 @@
 /* ---------------------------------------------------------------- home -- */
 .home-feat { display: grid; gap: 10px; padding: 14px; justify-items: center; margin: 0 22px; }
 
-.home-feat__empty { margin: 28px 0; text-align: center; }
 
-.home-news { display: grid; gap: 8px; margin: 0 22px; }
 
 .home-tag { justify-self: start; font: 800 10px/1 var(--font-ui); letter-spacing: .2em; text-transform: uppercase; }
 .home-tag--purple { color: var(--teal); } .home-tag--green { color: var(--lb-green); } .home-tag--gold { color: var(--lb-gold); }
@@ -331,7 +329,6 @@ a.dk-tile--new { text-decoration: none; color: inherit; cursor: pointer; }
   flex: none; width: 292px; min-height: 0; display: flex; flex-direction: column; position: relative;
   background: linear-gradient(180deg, rgba(9, 22, 40, .96), rgba(1, 10, 19, .98)); border-left: 1px solid var(--gold-dim);
 }
-.lb-social.is-rail { width: 56px; align-items: center; gap: 12px; padding: 12px 0; overflow-y: auto; }
 .soc-head { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 12px; border-bottom: 1px solid var(--gold-dim); }
 .soc-head h2 { margin: 0; font: 800 14px/1 var(--font-display); letter-spacing: .26em; color: var(--gold-hi); }
 .soc-head em { margin-left: 8px; font: 600 9px/1 var(--font-ui); letter-spacing: .14em; color: #6f6c63; text-transform: uppercase; }
@@ -430,7 +427,7 @@ html[data-bare] .lb-social { display: none; }
   .wide-side .lb-side { order: 2; flex-direction: column; align-items: stretch; overflow: visible; border: 0; padding: 0 14px 30px; }
   .wide-side .lb-side__title { display: flex; }
   .wide-side .lb-main { order: 1; }
-  .home-feat, .home-news, .wide-side .lb-label { margin-inline: 0; }
+  .home-feat, .wide-side .lb-label { margin-inline: 0; }
 
   
 
@@ -584,7 +581,6 @@ html[data-bare] .lb-social { display: none; }
 
 /* ---- the social dock opens over the page ---- */
 .lb-social { position: relative; width: 56px; padding: 0; overflow: visible; background: none; border: 0; display: block; }
-.lb-social.is-rail { width: 56px; }
 .soc-rail {
   position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 12px 0; overflow-y: auto;
   background: linear-gradient(180deg, rgba(9, 22, 40, .96), rgba(1, 10, 19, .98)); border-left: 1px solid var(--gold-dim);
@@ -876,7 +872,6 @@ html[data-scaled] .app {
 .home-feat { display: grid; justify-items: center; margin: 4px 22px 0; text-decoration: none; color: inherit; }
 .home-feat__card { width: min(100%, max(110px, calc((100 * var(--vh) - 395px) * .716))); }
 .home-feat__card.is-slab { width: min(100%, max(100px, calc((100 * var(--vh) - 395px) * .6))); }
-.home-feat__empty { margin-top: 20px; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); text-align: center; }
 .home-news-dock { margin-top: auto; padding-bottom: 6px; }
 .home-news-dock .lb-label { margin: 0 22px 10px; }
 .ds__bar-right { display: flex; align-items: center; gap: 12px; }
@@ -903,7 +898,6 @@ html[data-scaled] .app {
   font: 600 13px/1.4 var(--font-ui); box-shadow: 0 12px 30px rgba(0, 0, 0, .6); animation: rise .25s ease;
 }
 
-.lb-pill--live { color: #ffd9de; border-color: #e0475f; text-decoration: none; animation: pulse 1.2s ease-in-out infinite alternate; }
 @keyframes pulse { to { opacity: .65; } }
 
 /* ---- the player's data, privacy and imprint ---- */

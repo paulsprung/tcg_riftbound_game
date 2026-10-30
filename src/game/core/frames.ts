@@ -130,11 +130,6 @@ export function next(f: Counted): StepOut {
   return 'continue';
 }
 
-export function goto(f: Counted, pc: number): StepOut {
-  f.pc = pc;
-  return 'continue';
-}
-
 /** The answer to the decision this frame asked, read once; undefined when
     nothing was answered yet. */
 export function answer(f: Frame): string | undefined {

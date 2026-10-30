@@ -19,9 +19,12 @@ const MAX_MSG = 16_384;
 const PER_SECOND = 30;
 /** Sockets (tabs) per player at once. */
 const MAX_SOCKETS = 5;
+/** New sockets per player a minute: each replays a running game for its log. */
+const OPENS_PER_MINUTE = 20;
 
 export class Sockets implements Transport {
   private readonly conns = new Map<string, Set<WebSocket>>();
+  private readonly opens = new Map<string, number[]>();
   readonly wss = new WebSocketServer({
     noServer: true, maxPayload: MAX_MSG,
     perMessageDeflate: { threshold: 1024, zlibDeflateOptions: { level: 6 }, serverNoContextTakeover: false },
@@ -57,6 +60,12 @@ export class Sockets implements Transport {
       void userForSession(db, cookies(req)[SESSION_COOKIE]).then((user) => {
         if (!user) return refuse(401);
         if ((this.conns.get(user.id)?.size ?? 0) >= MAX_SOCKETS) return refuse(429);
+        const now = Date.now();
+        const recent = (this.opens.get(user.id) ?? []).filter((t) => now - t < 60_000);
+        if (recent.length >= OPENS_PER_MINUTE) return refuse(429);
+        recent.push(now);
+        this.opens.set(user.id, recent);
+        if (this.opens.size > 50_000) this.opens.clear();
         this.wss.handleUpgrade(req, socket, head, (ws) => {
           // a frame too big or malformed: that connection goes, nothing else
           ws.on('error', () => ws.terminate());

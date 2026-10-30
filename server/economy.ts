@@ -91,7 +91,8 @@ type Cards = Record<string, [number, number]>;
 /** The raw copies, changed by `fn` and written back (the account row is locked). */
 export async function editCards<T>(c: Tx, userId: string, fn: (cards: Cards) => T): Promise<T> {
   const r = await c.query('SELECT cards FROM accounts WHERE user_id = $1', [userId]);
-  const cards = (r.rows[0]?.cards ?? {}) as Cards;
+  // no prototype: a card id like '__proto__' or 'constructor' finds nothing it doesn't own
+  const cards = Object.assign(Object.create(null) as Cards, r.rows[0]?.cards ?? {});
   const out = fn(cards);
   await c.query('UPDATE accounts SET cards = $2 WHERE user_id = $1', [userId, JSON.stringify(cards)]);
   return out;
@@ -199,8 +200,8 @@ export const economy = {
     return withAccount(db, userId, async (c) => {
       const at = foil ? 1 : 0;
       const left = await editCards(c, userId, (cards) => {
-        const o = cards[cardId];
-        if (!o || o[at] < 1) throw new Refused('You have no raw copy of that card');
+        const o = Object.hasOwn(cards, cardId) ? cards[cardId] : undefined;
+        if (!Array.isArray(o) || !(o[at] >= 1)) throw new Refused('You have no raw copy of that card');
         o[at] -= 1;
         return o[at];
       });
@@ -236,7 +237,7 @@ export const economy = {
           if (!s.rowCount) throw new Refused('That slab is not yours');
           item = { kind: 'slab', cert: raw.cert };
         } else if (raw?.kind === 'raw' && typeof raw.cardId === 'string' && typeof raw.foil === 'boolean') {
-          if (!((cards[raw.cardId]?.[raw.foil ? 1 : 0] ?? 0) > 0)) throw new Refused('You don\'t own that card');
+          if (!Object.hasOwn(cards, raw.cardId) || !((cards[raw.cardId]?.[raw.foil ? 1 : 0] ?? 0) > 0)) throw new Refused('You don\'t own that card');
           item = { kind: 'raw', cardId: raw.cardId, foil: raw.foil };
         } else throw new Refused('Not a showcase item');
         if (!clean.some((x) => key(x) === key(item))) clean.push(item);

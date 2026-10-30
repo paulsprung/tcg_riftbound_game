@@ -91,7 +91,8 @@ export class LimitedService {
 
   async row(userId: string, poolId: string): Promise<PoolRow> {
     if (!/^[0-9a-f-]{36}$/.test(String(poolId))) throw new Refused('No such pool', 404);
-    const r = await this.db.query('SELECT * FROM limited_pools WHERE id = $1 AND user_id = $2', [poolId, userId]);
+    // a casual pool: a tournament's pool is the tournament's (director.ts), on its clock
+    const r = await this.db.query('SELECT * FROM limited_pools WHERE id = $1 AND user_id = $2 AND tournament_id IS NULL', [poolId, userId]);
     if (!r.rowCount) throw new Refused('No such pool', 404);
     return r.rows[0] as PoolRow;
   }

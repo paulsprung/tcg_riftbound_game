@@ -14,7 +14,6 @@ const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const MAX_FRIENDS = 200, MAX_PENDING = 50;
 
 export type Presence = 'online' | 'queue' | 'game' | 'offline';
-export interface FriendRow { id: string; name: string; avatar: string | null; presence: Presence }
 
 const pair = (x: string, y: string) => (x < y ? [x, y] : [y, x]);
 const newCode = () => Array.from({ length: 8 }, () => ALPHABET[randomInt(ALPHABET.length)]).join('');

@@ -62,26 +62,26 @@ describe.skipIf(!url)('casual 2v2 online', () => {
   afterAll(async () => { online?.stop(); await db?.end(); });
 
   /** The game everyone got, checked: four seats, alternate teams, own list only. */
-  const started = async () => {
+  const started = async (mode = 'duo') => {
     await until(() => users.every((u) => !!net.last(u, 'start')));
     const starts = users.map((u) => net.last(u, 'start')!);
     expect(new Set(starts.map((s) => s.gameId)).size).toBe(1);
     expect(starts.map((s) => s.seat).sort()).toEqual([0, 1, 2, 3]);
     for (const s of starts) {
-      expect(s.mode).toBe('duo');
+      expect(s.mode).toBe(mode);
       expect(s.names).toHaveLength(4);
       s.decks.forEach((d, i) => expect(d.main.length > 0).toBe(i === s.seat));
     }
     return starts;
   };
-  const concedeAndEnd = async (u: string) => {
+  const concedeAndEnd = async (u: string, mode = 'duo') => {
     const start = net.last(u, 'start')!;
     await online.message(u, 'x', { t: 'concede', gameId: start.gameId });
     await until(() => users.every((x) => net.last(x, 'end')?.gameId === start.gameId));
     const winner = net.last(u, 'end')!.winner!;
     expect(winner % 2).not.toBe(start.seat % 2);
     const row = (await db.query('SELECT mode, players FROM matches WHERE id = $1', [start.gameId])).rows[0];
-    expect(row.mode).toBe('duo');
+    expect(row.mode).toBe(mode);
     expect(row.players).toHaveLength(4);
   };
 
@@ -130,7 +130,7 @@ describe.skipIf(!url)('casual 2v2 online', () => {
     expect(net.last(a, 'lobby')!.lobby!.inGame).toBe(false);
   });
 
-  it('four friends in a lobby start a 2v2 at once', async () => {
+  it('four friends in a lobby start a 2v2 at once, a friendly one (no coins to farm)', async () => {
     net.clear();
     const [a, , c, d] = users;
     for (const u of [c, d]) {
@@ -146,11 +146,11 @@ describe.skipIf(!url)('casual 2v2 online', () => {
     for (const u of users.slice(1)) await online.message(u, 'x', { t: 'lobby-ready', ready: true });
     lobby = net.last(a, 'lobby')!.lobby!;
     await online.message(a, 'duo0', { t: 'lobby-start' });
-    const starts = await started();
+    const starts = await started('friendly');
     const teamOf = (u: string) => lobby.members.find((m) => m.id === u)!.team;
     for (const u of users) for (const v of users) {
       if (teamOf(u) === teamOf(v)) expect(starts[users.indexOf(u)].seat % 2).toBe(starts[users.indexOf(v)].seat % 2);
     }
-    await concedeAndEnd(d);
+    await concedeAndEnd(d, 'friendly');
   }, 30_000);
 });

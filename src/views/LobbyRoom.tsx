@@ -89,7 +89,7 @@ export function LobbyRoom({ db, lobby }: { db: CardDb; lobby: LobbyView }) {
           <Seat m={other} cards={cards} me={false} />
         </div>
       )}
-      {duo && <p className="muted small play-online__note">Four of you: start a 2v2 at once. Two of you on one team: search together for two more. Teammates play different legends and battlefields.</p>}
+      {duo && <p className="muted small play-online__note">Four of you: a friendly 2v2 at once (no coins). Two of you on one team: search together for two more. Teammates play different legends and battlefields.</p>}
 
       <div className="ds__start">
         {duo && !searching && me && !me.ready && (

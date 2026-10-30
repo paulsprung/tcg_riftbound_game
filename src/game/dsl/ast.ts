@@ -1023,7 +1023,4 @@ export type TriggerAst =
   | { on: 'drew'; nth: number }
   /** "When you reduce the Might of an enemy unit here by 1 or more" (an effect of yours lowering its Might). */
   | { on: 'mightReduced'; at: 'here' };
-
-/** An ability's id as chain items and usage counters name it. */
-export type AbilityRef = string;
 export type { PlayerId };

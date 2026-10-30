@@ -3,7 +3,7 @@ import { FIRST_WIN_COINS, LOSS_COINS, MIN_REWARD_TURNS, WIN_COINS } from '../../
 import { missingCards, ownedDefs, ownPrintings } from '../../src/decks/ownership.ts';
 import { STARTERS, TWO_V_TWO, validateDeck, type DeckList, type GameRecord, type PlayerId, type PlayerView } from '../../src/game/index.ts';
 import type { Db } from '../db.ts';
-import { readAccount } from '../economy.ts';
+import { readAccount, Refused } from '../economy.ts';
 import type { LimitedService } from '../limited.ts';
 import { ladderPoints, PLACEMENT_GAMES, rate, START, tierOf, type Rating } from '../rating.ts';
 import type { ClientMsg, LobbyMode, LobbyView, Mode, Presence, QueueMode, RatingInfo, ServerMsg } from '../../src/net/protocol.ts';
@@ -36,7 +36,7 @@ const MODES: QueueMode[] = ['ranked', 'casual', 'sealed', 'draft', 'duo'];
 /** The Duel modes with a rating; 2v2 has no ladder (yet) but pays coins as casual does. */
 const RATED: Mode[] = ['ranked', 'casual', 'sealed', 'draft'];
 /** A 2v2 seats its teams alternately (Magma Chamber [491]): seats 0 and 2 against 1 and 3. */
-const sameSide = (mode: Mode, a: number, b: number) => a === b || (mode === 'duo' && a % 2 === b % 2);
+const sameSide = (g: { players: string[] }, a: number, b: number) => a === b || (g.players.length === 4 && a % 2 === b % 2);
 
 /** Free time for every decision; then the player's time bank runs. */
 export const GRACE_MS = 30_000;
@@ -126,6 +126,7 @@ export class Online {
   /** Lobbies by id, and which one each player is in. */
   private readonly lobbies = new Map<string, Lobby>();
   private readonly lobbyOf = new Map<string, string>();
+  private readonly lobbyTurns = new Map<string, Promise<void>>();
   /** Checks that two players are friends (server/friends.ts); everyone, in tests. */
   areFriends: (a: string, b: string) => Promise<boolean> = async () => true;
   /** Limited pools (server/limited.ts), for the sealed and draft queues. */
@@ -228,7 +229,7 @@ export class Online {
         this.changed(userId);
         return this.net.send(userId, { t: 'left' });
       }
-      if (isLobbyMsg(m)) return await this.lobbyMessage(userId, name, m);
+      if (isLobbyMsg(m)) return await this.lobbyInTurn(userId, () => this.lobbyMessage(userId, name, m));
       const g = this.games.get(m.gameId);
       if (!g || !g.players.includes(userId)) throw new Error('No such game');
       const seat = g.players.indexOf(userId) as PlayerId;
@@ -239,7 +240,7 @@ export class Online {
       }
     } catch (err) {
       // our own refusals keep their words; anything else (the database, a bug) is logged, not shown
-      const own = err instanceof Error && !('code' in err) && err.message.length < 200;
+      const own = (err instanceof Refused || (err instanceof Error && err.constructor === Error && !('code' in err))) && err.message.length < 200;
       if (!own) console.error('online:', err);
       this.net.send(userId, { t: 'error', message: own ? (err as Error).message : 'Something went wrong' });
     }
@@ -350,12 +351,13 @@ export class Online {
     return randomInt(2) === 0 ? this.begin(mode, [a, b], null) : this.begin(mode, [b, a], null);
   }
 
-  /** A 2v2: the teams sit alternately, which team and who of it sits first at random. */
-  private startDuo(a: Seat[], b: Seat[]) {
+  /** A 2v2: the teams sit alternately, which team and who of it sits first at random. Four friends
+      from a lobby play it as a friendly game: no coins, or a group could farm them among themselves. */
+  private startDuo(a: Seat[], b: Seat[], mode: 'duo' | 'friendly' = 'duo') {
     const [x, y] = randomInt(2) === 0 ? [a, b] : [b, a];
     const [x0, x1] = randomInt(2) === 0 ? x : [x[1], x[0]];
     const [y0, y1] = randomInt(2) === 0 ? y : [y[1], y[0]];
-    return this.begin('duo', [x0, y0, x1, y1], null);
+    return this.begin(mode, [x0, y0, x1, y1], null);
   }
 
   /** A game between two given players (a tournament's): a in seat 0. `firstPlayer` fixes who plays first
@@ -384,7 +386,7 @@ export class Online {
     const limited = ps.find((p) => p.limited)?.limited;
     const n = ps.length;
     const setup: GameRecord['setup'] = { seed: randomInt(0, 2 ** 31), decks: ps.map((p) => p.deck),
-      ...(firstPlayer !== null ? { firstPlayer } : {}), ...(limited ? { limited } : {}), ...(mode === 'duo' ? { mode: TWO_V_TWO } : {}) };
+      ...(firstPlayer !== null ? { firstPlayer } : {}), ...(limited ? { limited } : {}), ...(n === 4 ? { mode: TWO_V_TWO } : {}) };
     const g: Live = {
       id, mode, players: ps.map((p) => p.userId), names: ps.map((p) => p.name), decks: setup.decks, started: this.clock.now(),
       answers: [], setup, pending: null, deadline: null, lastView: null, bank: Array(n).fill(this.t.bank), asked: null,
@@ -428,7 +430,7 @@ export class Online {
     const theirs = g.pending && g.pending.player !== seat && !g.pending.passOnly ? g.deadline : null;
     const grace = g.asked ? g.asked.at + this.t.grace : null;
     // the other bank shown: the one of who decides now, or the next opponent's
-    const other = g.pending && g.pending.player !== seat ? g.pending.player : this.seats(g).find((x) => !sameSide(g.mode, x, seat))!;
+    const other = g.pending && g.pending.player !== seat ? g.pending.player : this.seats(g).find((x) => !sameSide(g, x, seat))!;
     return { deadline: mine, theirDeadline: theirs, clock: { grace, banks: [g.bank[seat], g.bank[other]] } };
   }
 
@@ -587,6 +589,22 @@ export class Online {
     this.tellLobby(l);
   }
 
+  /** A player's lobby messages one at a time: each sees the lobby as the last one left it. */
+  private lobbyInTurn(userId: string, fn: () => Promise<void>) {
+    const run = (this.lobbyTurns.get(userId) ?? Promise.resolve()).then(fn, fn);
+    const tail = run.catch(() => undefined);
+    this.lobbyTurns.set(userId, tail);
+    void tail.then(() => { if (this.lobbyTurns.get(userId) === tail) this.lobbyTurns.delete(userId); });
+    return run;
+  }
+
+  /** Still the lobby it was before an await, with nobody gone or in a game meanwhile. */
+  private stillReady(l: Lobby, ids: string[]) {
+    if (this.lobbies.get(l.id) !== l || l.inGame || ids.some((id) => this.lobbyOf.get(id) !== l.id || this.byUser.has(id))) {
+      throw new Error('The lobby changed meanwhile: try again');
+    }
+  }
+
   private async lobbyMessage(userId: string, name: string, m: LobbyMsg) {
     const mine = this.lobbies.get(this.lobbyOf.get(userId) ?? '');
     const member = mine?.members.find((x) => x.id === userId);
@@ -684,6 +702,7 @@ export class Online {
         // the decks again, in case a card was sold in between
         const [a, b] = mine.members;
         const [da, db] = await Promise.all([this.deckFor(a.id, a.deck!.ref), this.deckFor(b.id, b.deck!.ref)]);
+        this.stillReady(mine, [a.id, b.id]);
         for (const x of mine.members) this.forget(x.id);
         mine.inGame = true;
         this.tellLobby(mine);
@@ -709,11 +728,12 @@ export class Online {
       const clash = x && y && teamClash(x.deck, y.deck);
       if (clash) throw new Error(clash);
     }
+    this.stillReady(l, seats.map((x) => x.userId));
     for (const x of l.members) this.forget(x.id);
     if (full) {
       l.inGame = true;
       this.tellLobby(l);
-      await this.startDuo(seats.filter((s) => s.team === 0), seats.filter((s) => s.team === 1));
+      await this.startDuo(seats.filter((s) => s.team === 0), seats.filter((s) => s.team === 1), 'friendly');
       return;
     }
     const since = this.clock.now();
@@ -767,7 +787,7 @@ export class Online {
       // a tournament or friendly game moves no rating and pays no coins (a tournament's prizes do)
       for (const s of paid ? seats : []) {
         // in 2v2 the team wins together
-        const score = res.winner === null ? 0.5 : sameSide(g.mode, res.winner, s) ? 1 : 0;
+        const score = res.winner === null ? 0.5 : sameSide(g, res.winner, s) ? 1 : 0;
         if (rated) {
           const me = before[s], opp = before[1 - s];
           const next = rate(me.rating, opp.rating, score as 0 | 0.5 | 1);
