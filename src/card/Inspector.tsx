@@ -9,7 +9,6 @@ import type { Slab as SlabData } from '../showcase/grading.ts';
 import { Slab, SLAB_ASPECT } from '../showcase/Slab.tsx';
 import { HoloCard } from './HoloCard.tsx';
 import { HoloSwitches } from './HoloSwitches.tsx';
-import { printLook } from './prints.ts';
 import { RulesText } from './RulesText.tsx';
 
 export interface InspectTarget {
@@ -27,9 +26,6 @@ export function Inspector({ target, db, onClose }: { target: InspectTarget; db: 
   const graded = state.slabs.filter((s) => s.cardId === card.id).length;
   const [faceDown, setFaceDown] = useState(false);
   const [finish, setFinish] = useState<Finish>(target.finish ?? defaultFinish(card, false));
-  // a card with UV-reactive ink (prints.ts) can be held under a black light
-  const [uv, setUv] = useState(false);
-  const hasUv = !!printLook(card)?.uv && finish !== 'none';
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -79,7 +75,6 @@ export function Inspector({ target, db, onClose }: { target: InspectTarget; db: 
               upright={upright}
               imageWidth={744}
               gl
-              uv={uv}
               faceDown={faceDown}
               onClick={() => setFaceDown((f) => !f)}
             />
@@ -134,13 +129,6 @@ export function Inspector({ target, db, onClose }: { target: InspectTarget; db: 
             <div className="seg" role="group" aria-label="Printing">
               <button type="button" aria-pressed={finish === 'none'} onClick={() => setFinish('none')}>Normal</button>
               <button type="button" aria-pressed={finish === 'foil'} onClick={() => setFinish('foil')}>Foil</button>
-            </div>
-          )}
-
-          {!slab && hasUv && (
-            <div className="seg" role="group" aria-label="Light">
-              <button type="button" aria-pressed={!uv} onClick={() => setUv(false)}>Daylight</button>
-              <button type="button" aria-pressed={uv} onClick={() => setUv(true)}>UV light</button>
             </div>
           )}
 

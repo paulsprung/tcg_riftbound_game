@@ -118,7 +118,7 @@ cards:
 | Rare / Epic (always foil) | The same, stronger; epics add glitter |
 | Alt art / Overnumbered | Rainbow holo plus **etched lines that trace the card's own linework**: an SVG edge filter run over the art, lit in a band that sweeps across as you tilt |
 | Signature | Etched holo with gold glints |
-| Ultimate (Unleashed's *Baron Nashor*, Radiance's *Packed Amphitheater*) | Mirror-silver foil under thin ink: the scan's dark grey (bare foil) flashes silver in the light, a fine prismatic grain, gold hot stamp on the cost emblem and artist line. Baron's UV-reactive ink glows cyan under the inspector's **UV light** switch |
+| Ultimate (Radiance's *Packed Amphitheater*) | Everything, plus a cracked-ice field |
 
 The header's **Foil** switch toggles between *Subtle*, the warmer English
 printing, and *Vivid*, the stronger rainbow of the Chinese printing.
@@ -155,8 +155,7 @@ WebGL, which is listed below as a possible upgrade.
 - Overnumbered swirls still read a little brown on light backdrops.
 - 11 card images held back with small defects (stamp fringes, edge residue,
   one with heavy glare); see the image audit notes.
-- Ultimate rares: Packed Amphitheater's look is from sleeved photos only and
-  gets the silver and grain, not yet its own regions (gold, opaque panels).
+- Ultimate rares: our cracked-ice shards are not confirmed by any photo.
 
 ## Scripts
 
