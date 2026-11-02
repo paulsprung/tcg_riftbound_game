@@ -1,5 +1,4 @@
-/** Points at Riot's official rules for now; the interactive guide comes with
-    the play table. */
+/** Points at Riot's official rules: they are the source of truth. */
 export function RulesView() {
   return (
     <section className="prose">
@@ -23,9 +22,6 @@ export function RulesView() {
           <span className="muted"> · community hyperlinked copy of the rules (unofficial)</span>
         </li>
       </ul>
-      <p className="muted">
-        Coming next: a step-by-step guide built into the simulator, a deck builder and a play table.
-      </p>
     </section>
   );
 }
