@@ -7,7 +7,7 @@ import { HoloCanvas, type HoloCanvasHandle } from './HoloCanvas.tsx';
 import { useEffects } from './effects.ts';
 import { useFoilStyle } from './foilStyle.ts';
 import { lookFor, useHoloVersion } from './holoVersion.ts';
-import { printLook } from './prints.ts';
+import { printLook, printVars } from './prints.ts';
 import { createTilt, type TiltState } from './tilt.ts';
 import { TiltFeed } from './tiltFeed.ts';
 import './holo.css';
@@ -95,9 +95,11 @@ function HoloCardInner({
     ? `${image.src}${image.src.includes('?') ? '&' : '?'}retry=${retry}` : image.src;
   const failed = broken || image.failed;
   const imgClass = `hc__img${sideways ? ' hc__img--sideways' : ''}`;
-  const glitter = ETCHED.includes(finish);
+  // HEARTSTEEL prints carry their foil in spots (prints.ts): no glitter, no etched swirls
+  const spotPrint = print?.print === 'hs';
+  const glitter = ETCHED.includes(finish) && !spotPrint;
   // the ultimate's groove is its ice, not marbling
-  const marbled = finish === 'etched' || finish === 'signature';
+  const marbled = (finish === 'etched' || finish === 'signature') && !spotPrint;
   const copy = (extra: string) => (
     <img className={`${imgClass} is-loaded ${extra}`} src={src} alt="" draggable={false} />
   );
@@ -118,7 +120,7 @@ function HoloCardInner({
       data-face-down={faceDown ? '' : undefined}
       style={{
         width,
-        ...(print ? { '--glit-mask': `url("${print.glitMask}")`, ...(print.sigMask ? { '--sig-mask': `url("${print.sigMask}")` } : {}) } as CSSProperties : {}),
+        ...(print ? printVars(print) as CSSProperties : {}),
         ...style,
       }}
       onClick={onClick}
@@ -198,6 +200,13 @@ function HoloCardInner({
             )}
             {!classic && !glShown && loaded && finish !== 'none' && glitter && (
               <span className="hc__fx hc__glit" aria-hidden><span className="hc__flash" /></span>
+            )}
+            {!classic && !glShown && loaded && spotPrint && (
+              <>
+                <span className="hc__fx hc__hs-spot" aria-hidden />
+                <span className="hc__fx hc__hs-frame" aria-hidden />
+                <span className="hc__fx hc__hs-name" aria-hidden />
+              </>
             )}
             {!classic && !glShown && loaded && finish === 'signature' && (
               print?.sigMask ? <span className="hc__fx hc__sig" aria-hidden />
