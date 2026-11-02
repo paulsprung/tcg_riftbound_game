@@ -794,6 +794,147 @@
   filter: brightness(calc(.98 + .28 * var(--on, 0))) saturate(.72) sepia(.12);
 }
 
+/* -- Ultimate rares: silver foil (src/card/prints.ts) -----------------------
+   From videos of the real cards (Baron Nashor UNL-238 in and out of a
+   sleeve, under room light and UV; Packed Amphitheater RAD-184, sleeved):
+   the card is printed on mirror-silver foil with thin ink. The scan shows
+   bare foil as dark grey, so on the real card those areas (the text box
+   above all) flash bright silver where they mirror the light and the art
+   reads silver-grey. The rainbow is a fine prismatic grain sweeping across
+   in a band, and the foil shows a little even at rest. The name bar and the
+   domain pips are opaque ink and keep their purple; the cost emblem and the
+   artist line are gold hot stamp. No cracked ice, no galaxy glitter.
+   Layers, bottom to top:
+     silver  saturation blend: takes the scan's warm and cool casts out of the
+             art and the text box (not the name bar or pips)
+     mirror  the face's ::before, in screen: the bare foil mirroring the
+             light, a wide bright patch around it plus a sheen band, so the
+             dark grey of the scan lifts to silver (black ink stays dark)
+     shine   the usual dodge group, its groove the fine grain
+             (tex/grain.png, scripts/gen-grain.py) instead of ice seams
+     glit    fewer, finer flakes in clean spectral colours
+     gold    the hot stamp: a moving gold metal in overlay, cut to the
+             emblem and the artist line
+     uv      Baron only, the inspector's UV switch: the card goes dark violet
+             and the art's light linework glows cyan, as on camera
+   The regions are fractions of the frame (data-layout="unit": measured on
+   the UNL-238 scan); a battlefield gets the silver and grain only. */
+.hc[data-print="silver"] {
+  --etch: .8; --ridge: 0; --ink-etch: 0; --ink-rest: 0; --ice: 0;
+  --floor: #4c4c50; --rest: .4; --hot: 1; --arc: .75; --sheen: .26; --tint: .55;
+  --k-c: .95; --k-b: 1.75; --k-s: .15; --s-max: .66;
+  --glitter: .5; --glare: .46;
+  /* unit frame: name bar, domain pips, cost emblem, artist line */
+  --sv-bar: linear-gradient(to bottom, #000 55.1%, rgb(0 0 0 / .08) 55.7%, rgb(0 0 0 / .08) 63.3%, #000 63.9%);
+  --sv-pips: linear-gradient(#000, #000);
+}
+.hc[data-print="silver"] .hc__silver {
+  background: rgb(140 140 146);
+  mix-blend-mode: saturation;
+  opacity: .6;
+}
+.hc[data-print="silver"][data-layout="unit"] .hc__silver {
+  -webkit-mask-image: var(--sv-pips), var(--sv-bar);
+          mask-image: var(--sv-pips), var(--sv-bar);
+  -webkit-mask-size: 6.6% 12.6%, 100% 100%;
+          mask-size: 6.6% 12.6%, 100% 100%;
+  -webkit-mask-position: 5.6% 15.8%, 0 0;
+          mask-position: 5.6% 15.8%, 0 0;
+  -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+  /* the pips' rectangle is cut out of the bar mask */
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+}
+.hc[data-print="silver"] .hc__face--front::before {
+  content: "";
+  position: absolute; inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background-image:
+    radial-gradient(ellipse 75% calc(75% / var(--ar)) at var(--lx) var(--ly),
+      rgb(214 218 228) 0%, rgb(150 154 164) 38%, rgb(70 72 78) 70%, rgb(34 35 38) 100%),
+    linear-gradient(118deg, transparent 38%, rgb(235 238 245 / .55) 48%, rgb(255 255 255 / .8) 50%,
+      rgb(235 238 245 / .55) 52%, transparent 62%);
+  background-size: 100% 100%, 300% 300%;
+  background-position: 0 0, calc(100% - var(--px, 50) * 1%) calc(100% - var(--py, 50) * 1%);
+  background-repeat: no-repeat;
+  background-blend-mode: screen, normal;
+  mix-blend-mode: screen;
+  opacity: calc(.32 + .5 * var(--on, 0));
+}
+.hc[data-print="silver"][data-layout="unit"] .hc__face--front::before {
+  -webkit-mask-image: var(--sv-bar);
+          mask-image: var(--sv-bar);
+}
+/* the opaque name bar keeps only a trace of the foil */
+.hc[data-print="silver"][data-layout="unit"] .hc__shine {
+  -webkit-mask-image: linear-gradient(to bottom, #000 55.1%, rgb(0 0 0 / .25) 55.7%, rgb(0 0 0 / .25) 63.3%, #000 63.9%);
+          mask-image: linear-gradient(to bottom, #000 55.1%, rgb(0 0 0 / .25) 55.7%, rgb(0 0 0 / .25) 63.3%, #000 63.9%);
+}
+.hc[data-print="silver"] .hc__groove {
+  background: url("./tex/grain.png") 0 0 / 22% auto repeat;
+  opacity: var(--etch);
+}
+.hc[data-print="silver"][data-upright] .hc__groove { background-size: 15.7% auto; }
+.hc[data-print="silver"] .hc__glit {
+  --glit-size: 70% auto;
+  --glit-rb: repeating-linear-gradient(62deg,
+    #ff9d9d 0, #ffe08f 4px, #a8ff9a 8px, #8fe6ff 12px, #b3a3ff 16px, #ffa3ea 20px, #ff9d9d 24px);
+}
+.hc[data-print="silver"][data-upright] .hc__glit { --glit-size: 50% auto; }
+
+/* gold hot stamp: the cost emblem (top right) and the artist line */
+.hc__gold { display: none; }
+.hc[data-print="silver"][data-layout="unit"] .hc__gold {
+  display: block;
+  z-index: 2;
+  background-image: linear-gradient(calc(112deg + var(--tx, 0) * 16deg),
+    #6e4a0e 0%, #b8862a 14%, #f1cf6a 24%, #fff3c0 30%, #e9bf55 37%, #9c6c18 50%,
+    #d4a23c 62%, #ffe796 70%, #d9a740 80%, #7d5512 100%);
+  background-size: 260% 260%;
+  background-position: calc(50% - var(--tx, 0) * 40%) calc(50% - var(--ty, 0) * 40%);
+  mix-blend-mode: overlay;
+  opacity: calc(.7 + .3 * var(--on, 0));
+  -webkit-mask-image:
+    radial-gradient(ellipse 9.4% 6.2% at 89.4% 8.2%, #000 82%, transparent 100%),
+    linear-gradient(#000, #000);
+          mask-image:
+    radial-gradient(ellipse 9.4% 6.2% at 89.4% 8.2%, #000 82%, transparent 100%),
+    linear-gradient(#000, #000);
+  -webkit-mask-size: 100% 100%, 36% 3.4%;
+          mask-size: 100% 100%, 36% 3.4%;
+  -webkit-mask-position: 0 0, 76% 97%;
+          mask-position: 0 0, 76% 97%;
+  -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+}
+
+/* UV light (Baron): dark violet card, the art's light linework glowing cyan */
+.hc__uv { display: none; }
+.hc[data-uv] .hc__uv {
+  display: block;
+  z-index: 3;
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse 120% 90% at var(--mx) var(--my), rgb(64 30 140) 0%, rgb(24 10 58) 70%),
+    #120728;
+  transition: opacity .3s;
+}
+.hc[data-uv] .hc__uv > .hc__uv-ink {
+  mix-blend-mode: screen;
+  filter: grayscale(1) brightness(.92) contrast(3.4);
+  -webkit-mask-image: linear-gradient(to bottom, #000 49%, transparent 54%);
+          mask-image: linear-gradient(to bottom, #000 49%, transparent 54%);
+  transition: none;
+}
+.hc[data-uv] .hc__uv::after {
+  content: "";
+  position: absolute; inset: 0;
+  mix-blend-mode: multiply;
+  background: rgb(70 226 255);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hc__inner { transition-duration: .01s; }
   .hc__loading { animation: none; }

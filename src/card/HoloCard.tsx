@@ -34,6 +34,8 @@ export interface HoloCardProps {
   /** Draw the foil with the WebGL shader (big views only; falls back to CSS
       when WebGL or a same-origin image is not available). */
   gl?: boolean;
+  /** Under UV light (cards with UV-reactive ink, see prints.ts). */
+  uv?: boolean;
   onClick?: () => void;
   className?: string;
   style?: CSSProperties;
@@ -50,7 +52,7 @@ export function HoloCard(props: HoloCardProps) {
 
 function HoloCardInner({
   card, finish, width, faceDown = false, tilt = 'hover', gyro = false, thick = false,
-  upright = false, imageWidth, gl = false, onClick, className = '', style,
+  upright = false, imageWidth, gl = false, uv = false, onClick, className = '', style,
 }: HoloCardProps) {
   const scene = useRef<HTMLDivElement>(null);
   const holo = useRef<HoloCanvasHandle>(null);
@@ -63,6 +65,8 @@ function HoloCardInner({
   const foilStyle = useFoilStyle();
   // a card in a foil of its own (the T1 Signature Edition) takes the CSS look its masks are made for
   const print = printLook(card);
+  // the Ultimates' silver foil (off with the effects, like any foil)
+  const silver = print?.print === 'silver' && finish !== 'none';
   const holoVersion = useHoloVersion();
   const look = print ? 'c' : lookFor(holoVersion, finish);
   const classic = look === 'a';
@@ -111,14 +115,16 @@ function HoloCardInner({
       data-finish={finish}
       data-holo={look}
       data-rarity={card.rarity}
-      data-print={print?.print}
+      data-print={print && (print.print !== 'silver' || silver) ? print.print : undefined}
+      data-layout={silver ? print?.layout : undefined}
+      data-uv={silver && uv && print?.uv ? '' : undefined}
       data-tilt={tilt}
       data-upright={landscape && upright ? '' : undefined}
       data-thick={thick ? '' : undefined}
       data-face-down={faceDown ? '' : undefined}
       style={{
         width,
-        ...(print ? { '--glit-mask': `url("${print.glitMask}")`, ...(print.sigMask ? { '--sig-mask': `url("${print.sigMask}")` } : {}) } as CSSProperties : {}),
+        ...(print?.glitMask ? { '--glit-mask': `url("${print.glitMask}")`, ...(print.sigMask ? { '--sig-mask': `url("${print.sigMask}")` } : {}) } as CSSProperties : {}),
         ...style,
       }}
       onClick={onClick}
@@ -163,6 +169,9 @@ function HoloCardInner({
                 ridge lights each line's flank. ice: the ultimate's cracked-ice
                 flashes. glit: glitter flakes, added on top. The .hc__hold
                 copies keep the marbling off the figure. */}
+            {/* silver (the Ultimates): the scan's colour casts taken back to the
+                silver-grey of the real card, before the foil goes on */}
+            {silver && !glShown && loaded && <span className="hc__fx hc__silver" aria-hidden />}
             {/* Version A: the original CSS foil (holo-classic.css). */}
             {classic && !glShown && ETCHED.includes(finish) && loaded && (
               <span className="hcc-etch" aria-hidden>
@@ -190,7 +199,7 @@ function HoloCardInner({
                 {marbled && <span className="hc__ridge">{copy('hc__hold')}</span>}
               </span>
             )}
-            {!classic && !glShown && loaded && finish === 'ultimate' && (
+            {!classic && !glShown && loaded && finish === 'ultimate' && !silver && (
               <span className="hc__fx hc__ice" aria-hidden>
                 <span className="hc__ice-f" />
                 {copy('hc__key')}
@@ -206,6 +215,10 @@ function HoloCardInner({
                     <img className={`${imgClass} is-loaded`} src={src} alt="" draggable={false} />
                   </span>
                 )
+            )}
+            {silver && !glShown && loaded && <span className="hc__fx hc__gold" aria-hidden />}
+            {silver && print?.uv && !glShown && loaded && (
+              <span className="hc__fx hc__uv" aria-hidden>{copy('hc__uv-ink')}</span>
             )}
             {!classic && !glShown && <span className="hc__fx hc__glare" aria-hidden />}
           </div>
